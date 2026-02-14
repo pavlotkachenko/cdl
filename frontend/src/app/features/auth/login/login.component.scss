@@ -1,0 +1,454 @@
+// ============================================
+// Login Component Styles - FIXED (no deprecated functions)
+// ============================================
+
+@use 'sass:color';
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.auth-container {
+  display: flex;
+  min-height: 100vh;
+  background: $background;
+
+  @media (max-width: 968px) {
+    flex-direction: column;
+  }
+}
+
+// ============================================
+// Left Side - Branding
+// ============================================
+
+.auth-branding {
+  flex: 1;
+  background: linear-gradient(135deg, $primary-color 0%, #159a7a 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  position: relative;
+  overflow: hidden;
+
+  // Background pattern
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 968px) {
+    padding: 40px 20px;
+    min-height: 300px;
+  }
+
+  .branding-content {
+    max-width: 500px;
+    position: relative;
+    z-index: 1;
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+      }
+
+      h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0;
+      }
+    }
+
+    h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      line-height: 1.2;
+
+      @media (max-width: 968px) {
+        font-size: 28px;
+      }
+    }
+
+    p {
+      font-size: 18px;
+      line-height: 1.6;
+      opacity: 0.95;
+      margin: 0 0 40px 0;
+
+      @media (max-width: 968px) {
+        font-size: 16px;
+      }
+    }
+
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 16px;
+        opacity: 0.95;
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// Right Side - Login Form
+// ============================================
+
+.auth-form-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: white;
+
+  @media (max-width: 968px) {
+    padding: 40px 20px;
+  }
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 480px;
+}
+
+.login-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+
+  mat-card-header {
+    padding: 32px 32px 0;
+
+    @media (max-width: 480px) {
+      padding: 24px 24px 0;
+    }
+
+    mat-card-title {
+      h2 {
+        font-size: 28px;
+        font-weight: 700;
+        color: $text-dark;
+        margin: 0;
+      }
+    }
+
+    mat-card-subtitle {
+      font-size: 15px;
+      color: $text-medium;
+      margin-top: 8px;
+    }
+  }
+
+  mat-card-content {
+    padding: 32px !important;
+
+    @media (max-width: 480px) {
+      padding: 24px !important;
+    }
+  }
+}
+
+// ============================================
+// Social Login Buttons
+// ============================================
+
+.social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+
+  .social-button {
+    width: 100%;
+    height: 48px;
+    font-size: 15px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 2px solid $border-color;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: #f9fafb;
+      border-color: $text-medium;
+    }
+
+    mat-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// ============================================
+// Divider
+// ============================================
+
+.divider-with-text {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+
+  mat-divider {
+    flex: 1;
+  }
+
+  span {
+    font-size: 14px;
+    color: $text-medium;
+    white-space: nowrap;
+  }
+}
+
+// ============================================
+// Form Styles
+// ============================================
+
+form {
+  mat-form-field {
+    margin-bottom: 16px;
+
+    &.full-width {
+      width: 100%;
+    }
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      padding: 16px 0 !important;
+    }
+
+    mat-icon[matPrefix] {
+      margin-right: 12px;
+      color: $text-light;
+    }
+  }
+
+  .form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    mat-checkbox {
+      font-size: 14px;
+      color: $text-medium;
+    }
+
+    .forgot-link {
+      font-size: 14px;
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: color.adjust($primary-color, $lightness: -10%);
+      }
+    }
+  }
+
+  .submit-button {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+
+    mat-spinner {
+      margin: 0 auto;
+    }
+  }
+}
+
+// ============================================
+// Sign Up Link
+// ============================================
+
+.signup-link {
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid $border-color;
+
+  p {
+    font-size: 15px;
+    color: $text-medium;
+    margin: 0;
+
+    a {
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: color.adjust($primary-color, $lightness: -10%);
+      }
+    }
+  }
+}
+
+// ============================================
+// Footer Links
+// ============================================
+
+.auth-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  font-size: 14px;
+
+  a {
+    color: $text-medium;
+    text-decoration: none;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: $primary-color;
+    }
+  }
+
+  span {
+    color: $border-color;
+  }
+}
+
+// ============================================
+// Snackbar Styles
+// ============================================
+
+::ng-deep {
+  .success-snackbar {
+    background: #10b981 !important;
+    color: white !important;
+
+    .mat-mdc-button {
+      color: white !important;
+    }
+  }
+
+  .error-snackbar {
+    background: #ef4444 !important;
+    color: white !important;
+
+    .mat-mdc-button {
+      color: white !important;
+    }
+  }
+}
+
+// ============================================
+// Animations
+// ============================================
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+// ============================================
+// Dark Mode (Optional)
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .auth-container {
+    background: #111827;
+  }
+
+  .auth-form-container {
+    background: #1f2937;
+  }
+
+  .login-card {
+    background: #1f2937;
+
+    mat-card-header {
+      mat-card-title h2 {
+        color: #f9fafb;
+      }
+
+      mat-card-subtitle {
+        color: #d1d5db;
+      }
+    }
+  }
+
+  form {
+    mat-form-field {
+      mat-icon[matPrefix] {
+        color: #9ca3af;
+      }
+    }
+
+    .form-options {
+      mat-checkbox {
+        color: #d1d5db;
+      }
+    }
+  }
+
+  .signup-link p {
+    color: #d1d5db;
+  }
+
+  .social-login .social-button {
+    border-color: #374151;
+
+    &:hover {
+      background: #374151;
+    }
+  }
+}

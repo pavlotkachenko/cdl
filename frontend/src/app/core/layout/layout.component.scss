@@ -1,0 +1,559 @@
+// ============================================
+// Layout Component Styles - Complete App Layout
+// Location: frontend/src/app/core/layout/layout.component.scss
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+$sidebar-width: 280px;
+$header-height: 64px;
+
+// ============================================
+// App Layout Container
+// ============================================
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+// ============================================
+// Header / Toolbar
+// ============================================
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: $header-height;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, $primary-color 0%, #159a7a 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .menu-toggle {
+    margin-right: 8px;
+
+    mat-icon {
+      color: white;
+    }
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .logo {
+      height: 40px;
+      width: auto;
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin: 0;
+      white-space: nowrap;
+
+      @media (max-width: 768px) {
+        font-size: 16px;
+      }
+    }
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .header-action {
+      mat-icon {
+        color: white;
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .user-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 24px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .user-avatar {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: white;
+      }
+
+      .user-name {
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .dropdown-icon {
+        color: white;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+// User Menu Dropdown
+.user-menu-header {
+  padding: 16px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .user-avatar-large {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: $primary-color;
+    }
+
+    .user-menu-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: $text-dark;
+      margin-bottom: 2px;
+    }
+
+    .user-menu-email {
+      font-size: 13px;
+      color: $text-medium;
+    }
+  }
+}
+
+::ng-deep .mat-mdc-menu-panel {
+  min-width: 250px !important;
+}
+
+// ============================================
+// Sidenav Container
+// ============================================
+
+.sidenav-container {
+  flex: 1;
+  margin-top: $header-height;
+  background-color: $background;
+}
+
+.app-sidenav {
+  width: $sidebar-width;
+  border-right: 1px solid $border-color;
+  background-color: white;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+
+  @media (max-width: 768px) {
+    width: 280px;
+  }
+}
+
+// ============================================
+// Main Content Area
+// ============================================
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background-color: $background;
+}
+
+.content-wrapper {
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
+  
+  // Smooth scrolling
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $background;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+
+    &:hover {
+      background: #9ca3af;
+    }
+  }
+}
+
+// ============================================
+// Footer
+// ============================================
+// ============================================
+// Updated Footer Styles - Add to layout.component.scss
+// Replace the existing .app-footer section with this
+// ============================================
+
+// Footer - UPDATED
+.app-footer {
+  background: white;
+  border-top: 1px solid $border-color;
+  padding: 40px 0 24px;
+  margin-top: auto;
+
+  @media (max-width: 768px) {
+    padding: 32px 0 20px;
+  }
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+
+    @media (max-width: 768px) {
+      padding: 0 20px;
+    }
+  }
+
+  // Footer Grid
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 40px;
+
+    @media (max-width: 968px) {
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .footer-section {
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: $text-dark;
+        margin: 0 0 12px 0;
+      }
+
+      h4 {
+        font-size: 15px;
+        font-weight: 700;
+        color: $text-dark;
+        margin: 0 0 16px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      p {
+        font-size: 14px;
+        line-height: 1.6;
+        color: $text-medium;
+        margin: 0 0 16px 0;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+          margin-bottom: 10px;
+
+          a {
+            font-size: 14px;
+            color: $text-medium;
+            text-decoration: none;
+            transition: color 0.2s ease;
+
+            &:hover {
+              color: $primary-color;
+            }
+          }
+        }
+      }
+
+      .social-links {
+        display: flex;
+        gap: 12px;
+
+        a {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #f3f4f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            color: $text-medium;
+          }
+
+          &:hover {
+            background: $primary-color;
+
+            mat-icon {
+              color: white;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Footer Bottom
+  .footer-bottom {
+    padding-top: 24px;
+    border-top: 1px solid $border-color;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    p {
+      margin: 0;
+      color: $text-medium;
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      a {
+        color: $text-medium;
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: $primary-color;
+        }
+      }
+
+      .separator {
+        color: $border-color;
+      }
+    }
+  }
+}
+
+// Dark Mode Footer
+@media (prefers-color-scheme: dark) {
+  .app-footer {
+    background-color: #1f2937;
+    border-top-color: #374151;
+
+    .footer-content {
+      .footer-section {
+        h3, h4 {
+          color: #f9fafb;
+        }
+
+        p, ul li a {
+          color: #d1d5db;
+        }
+
+        ul li a:hover {
+          color: $primary-color;
+        }
+
+        .social-links a {
+          background: #374151;
+
+          mat-icon {
+            color: #d1d5db;
+          }
+
+          &:hover {
+            background: $primary-color;
+
+            mat-icon {
+              color: white;
+            }
+          }
+        }
+      }
+    }
+
+    .footer-bottom {
+      border-top-color: #374151;
+
+      p, a {
+        color: #d1d5db;
+      }
+
+      a:hover {
+        color: $primary-color;
+      }
+
+      .separator {
+        color: #4b5563;
+      }
+    }
+  }
+}
+// ============================================
+// Responsive Adjustments
+// ============================================
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 8px;
+
+    .header-left {
+      gap: 8px;
+
+      .logo {
+        height: 32px;
+      }
+    }
+
+    .header-right {
+      gap: 4px;
+
+      .user-button {
+        padding: 8px;
+        min-width: 48px;
+      }
+    }
+  }
+
+  .content-wrapper {
+    padding: 0;
+  }
+}
+
+// ============================================
+// Dark Mode Support (Optional)
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .sidenav-container {
+    background-color: #111827;
+  }
+
+  .app-sidenav {
+    background-color: #1f2937;
+    border-right-color: #374151;
+  }
+
+  .main-content {
+    background-color: #111827;
+  }
+
+  .app-footer {
+    background-color: #1f2937;
+    border-top-color: #374151;
+
+    .footer-content {
+      p, a {
+        color: #d1d5db;
+      }
+
+      a:hover {
+        color: $primary-color;
+      }
+
+      .separator {
+        color: #4b5563;
+      }
+    }
+  }
+
+  .content-wrapper {
+    &::-webkit-scrollbar-track {
+      background: #111827;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #4b5563;
+
+      &:hover {
+        background: #6b7280;
+      }
+    }
+  }
+}
+
+// ============================================
+// Animation Classes
+// ============================================
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

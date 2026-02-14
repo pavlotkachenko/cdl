@@ -1,0 +1,323 @@
+$primary-color: #1dad8c;
+$success-color: #28a745;
+$error-color: #dc3545;
+$text-dark: #090000;
+$text-light: #666;
+$background: #f8f9fa;
+
+.submit-ticket-container {
+  min-height: calc(100vh - 64px);
+  background: $background;
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+
+  .back-button {
+    color: $primary-color;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 4px 0;
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+    }
+  }
+
+  p {
+    color: $text-light;
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+// Success State
+.success-container {
+  max-width: 600px;
+  margin: 60px auto;
+  text-align: center;
+
+  .success-card {
+    padding: 40px 24px;
+  }
+
+  .success-icon {
+    mat-icon {
+      font-size: 80px;
+      width: 80px;
+      height: 80px;
+      color: $success-color;
+    }
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 16px 0 8px 0;
+  }
+
+  .ticket-number {
+    font-size: 20px;
+    font-weight: 600;
+    color: $primary-color;
+    margin: 0 0 16px 0;
+  }
+
+  .success-message {
+    color: $text-light;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 32px 0;
+  }
+
+  .success-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+
+    button {
+      min-width: 200px;
+
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+// Form Container
+.form-container {
+  max-width: 900px;
+  margin: 0 auto;
+
+  mat-stepper {
+    background: transparent;
+  }
+
+  mat-card {
+    margin-top: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+  }
+
+  mat-card-content {
+    padding: 32px;
+
+    @media (max-width: 768px) {
+      padding: 24px 16px;
+    }
+  }
+
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: $text-dark;
+    margin: 0 0 24px 0;
+  }
+}
+
+// Form Fields
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Upload Zone
+.upload-info {
+  color: $text-light;
+  margin-bottom: 24px;
+}
+
+.upload-zone {
+  margin-bottom: 24px;
+
+  .upload-area {
+    border: 2px dashed #d0d0d0;
+    border-radius: 8px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: $primary-color;
+      background: rgba(29, 173, 140, 0.05);
+    }
+
+    mat-icon {
+      font-size: 60px;
+      width: 60px;
+      height: 60px;
+      color: $primary-color;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      color: $text-light;
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+}
+
+.uploaded-files {
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-dark;
+    margin: 0 0 12px 0;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+
+    mat-icon {
+      color: $primary-color;
+    }
+
+    .file-info {
+      flex: 1;
+
+      .file-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: $text-dark;
+        margin: 0 0 4px 0;
+      }
+
+      .file-size {
+        font-size: 12px;
+        color: $text-light;
+        margin: 0;
+      }
+    }
+  }
+}
+
+// Review Section
+.review-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e0e0e0;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-dark;
+    margin: 0 0 12px 0;
+  }
+
+  p {
+    margin: 8px 0;
+    color: $text-light;
+    font-size: 14px;
+
+    strong {
+      color: $text-dark;
+      margin-right: 8px;
+    }
+  }
+}
+
+// Step Actions
+.step-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+
+  button {
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+// Error Message
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #ffebee;
+  border-radius: 4px;
+  color: $error-color;
+  margin-bottom: 16px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Spinning Icon
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

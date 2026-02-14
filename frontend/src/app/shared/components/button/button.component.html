@@ -1,0 +1,42 @@
+<!-- ============================================ -->
+<!-- Button Component Template -->
+<!-- ============================================ -->
+<!-- Location: frontend/src/app/shared/components/button/button.component.html -->
+
+<button
+  [type]="type"
+  [disabled]="disabled || loading"
+  [class]="buttonClasses"
+  [attr.aria-label]="ariaLabel || label"
+  [attr.aria-busy]="loading"
+  (click)="handleClick($event)"
+>
+  <!-- Left Icon -->
+  <mat-icon 
+    *ngIf="icon && iconPosition === 'left' && !loading" 
+    [svgIcon]="icon"
+    class="button-icon button-icon--left"
+  ></mat-icon>
+  
+  <!-- Loading Spinner -->
+  <mat-spinner 
+    *ngIf="loading" 
+    diameter="20" 
+    class="button-spinner"
+  ></mat-spinner>
+  
+  <!-- Label -->
+  <span *ngIf="label && !loading" class="button-label">
+    {{ label }}
+  </span>
+  
+  <!-- Slot for custom content -->
+  <ng-content *ngIf="!loading"></ng-content>
+  
+  <!-- Right Icon -->
+  <mat-icon 
+    *ngIf="icon && iconPosition === 'right' && !loading" 
+    [svgIcon]="icon"
+    class="button-icon button-icon--right"
+  ></mat-icon>
+</button>

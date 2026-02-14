@@ -1,0 +1,85 @@
+$border-radius: 12px;
+
+.landing-footer {
+  background: #090000;
+  color: white;
+  padding: 48px 0 32px;
+  
+  .footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    text-align: center;
+  }
+  
+  .footer-nav ul {
+    list-style: none;
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .footer-link {
+    color: white;
+    cursor: pointer;
+    text-decoration: none;
+    &:hover { color: #1dad8c; }
+  }
+  
+  .copyright {
+    margin-top: 24px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+  }
+
+  .carousel-slide {
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  
+  // Overlay for text readability
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4); // Dark overlay
+  }
+  
+  &.card-panel-1 {
+    background-image: url('/assets/images/hero/hero-1.jpg');
+  }
+  
+  &.card-panel-2 {
+    background-image: url('/assets/images/hero/hero-2.jpg');
+  }
+  
+  &.card-panel-3 {
+    background-image: url('/assets/images/hero/hero-3.jpg');
+  }
+  
+  &.card-panel-4 {
+    background-image: url('/assets/images/hero/hero-4.jpg');
+  }
+  
+  &.card-panel-5 {
+    background-image: url('/assets/images/hero/hero-5.jpg');
+  }
+}
+
+.benefits-image {
+  height: 600px;
+  border-radius: $border-radius;
+  background-image: url('/assets/images/benefits/benefits-expert.jpg');
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 32px rgba(29, 173, 140, 0.2);
+  
+  // Fallback gradient if no image
+  background-color: linear-gradient(135deg, #1dad8c 0%, #16926f 100%);
+}
+}

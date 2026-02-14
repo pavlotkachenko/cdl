@@ -1,0 +1,245 @@
+<!-- Register Template -->
+<div class="auth-container">
+
+  <!-- Left Side - Branding -->
+  <div class="auth-branding">
+    <div class="branding-content">
+      <div class="logo">
+        <mat-icon>local_shipping</mat-icon>
+        <h1>CDL Ticket Management</h1>
+      </div>
+      <h2>Join Us Today!</h2>
+      <p>Create your account and start managing your traffic violations professionally.</p>
+      
+      <div class="features">
+        <div class="feature">
+          <mat-icon>check_circle</mat-icon>
+          <span>Free Account Setup</span>
+        </div>
+        <div class="feature">
+          <mat-icon>check_circle</mat-icon>
+          <span>Expert Attorney Network</span>
+        </div>
+        <div class="feature">
+          <mat-icon>check_circle</mat-icon>
+          <span>24/7 Case Tracking</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side - Register Form -->
+  <div class="auth-form-container">
+    <div class="auth-form">
+      
+      <mat-card class="register-card">
+        <mat-card-header>
+          <mat-card-title>
+            <h2>Create Account</h2>
+          </mat-card-title>
+          <mat-card-subtitle>
+            Fill in your information to get started
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          
+          <!-- Social Registration Buttons -->
+          <div class="social-login">
+            <button 
+              mat-stroked-button 
+              class="social-button google"
+              (click)="registerWithGoogle()"
+              type="button">
+              <mat-icon>
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+              </mat-icon>
+              Sign up with Google
+            </button>
+            
+            <button 
+              mat-stroked-button 
+              class="social-button facebook"
+              (click)="registerWithFacebook()"
+              type="button">
+              <mat-icon>
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </mat-icon>
+              Sign up with Facebook
+            </button>
+          </div>
+
+          <div class="divider-with-text">
+            <mat-divider></mat-divider>
+            <span>or sign up with email</span>
+            <mat-divider></mat-divider>
+          </div>
+
+          <!-- Registration Form -->
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            
+            <!-- Full Name -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Full Name</mat-label>
+              <input 
+                matInput 
+                type="text" 
+                formControlName="name"
+                placeholder="John Doe"
+                autocomplete="name">
+              <mat-icon matPrefix>person</mat-icon>
+              <mat-error>{{ getErrorMessage('name') }}</mat-error>
+            </mat-form-field>
+
+            <!-- Email -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email Address</mat-label>
+              <input 
+                matInput 
+                type="email" 
+                formControlName="email"
+                placeholder="you@example.com"
+                autocomplete="email">
+              <mat-icon matPrefix>email</mat-icon>
+              <mat-error>{{ getErrorMessage('email') }}</mat-error>
+            </mat-form-field>
+
+            <!-- Phone -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Phone Number (Optional)</mat-label>
+              <input 
+                matInput 
+                type="tel" 
+                formControlName="phone"
+                placeholder="1234567890"
+                autocomplete="tel">
+              <mat-icon matPrefix>phone</mat-icon>
+              <mat-error>{{ getErrorMessage('phone') }}</mat-error>
+            </mat-form-field>
+
+            <!-- CDL Number -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>CDL Number (Optional)</mat-label>
+              <input 
+                matInput 
+                type="text" 
+                formControlName="cdlNumber"
+                placeholder="CDL123456">
+              <mat-icon matPrefix>badge</mat-icon>
+              <mat-hint>Enter your Commercial Driver's License number</mat-hint>
+            </mat-form-field>
+
+            <!-- Password -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input 
+                matInput 
+                [type]="hidePassword ? 'password' : 'text'"
+                formControlName="password"
+                placeholder="Create a strong password"
+                autocomplete="new-password">
+              <mat-icon matPrefix>lock</mat-icon>
+              <button 
+                mat-icon-button 
+                matSuffix 
+                (click)="hidePassword = !hidePassword"
+                type="button"
+                [attr.aria-label]="'Hide password'" 
+                [attr.aria-pressed]="hidePassword">
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error>{{ getErrorMessage('password') }}</mat-error>
+            </mat-form-field>
+
+            <!-- Password Strength Indicator -->
+            <div class="password-strength" *ngIf="registerForm.get('password')?.value">
+              <div class="strength-label">
+                <span>Password strength:</span>
+                <span class="strength-text" [class]="passwordStrengthColor">
+                  {{ passwordStrengthLabel }}
+                </span>
+              </div>
+              <mat-progress-bar 
+                [value]="passwordStrength" 
+                [color]="passwordStrengthColor">
+              </mat-progress-bar>
+            </div>
+
+            <!-- Confirm Password -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Confirm Password</mat-label>
+              <input 
+                matInput 
+                [type]="hideConfirmPassword ? 'password' : 'text'"
+                formControlName="confirmPassword"
+                placeholder="Re-enter your password"
+                autocomplete="new-password">
+              <mat-icon matPrefix>lock_outline</mat-icon>
+              <button 
+                mat-icon-button 
+                matSuffix 
+                (click)="hideConfirmPassword = !hideConfirmPassword"
+                type="button"
+                [attr.aria-label]="'Hide password'" 
+                [attr.aria-pressed]="hideConfirmPassword">
+                <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error>{{ getErrorMessage('confirmPassword') }}</mat-error>
+            </mat-form-field>
+
+            <!-- Terms & Conditions -->
+            <div class="terms-checkbox">
+              <mat-checkbox formControlName="acceptTerms">
+                I agree to the 
+                <a routerLink="/terms" target="_blank">Terms of Service</a> 
+                and 
+                <a routerLink="/privacy" target="_blank">Privacy Policy</a>
+              </mat-checkbox>
+              <mat-error *ngIf="registerForm.get('acceptTerms')?.touched && registerForm.get('acceptTerms')?.hasError('required')">
+                You must accept the terms and conditions
+              </mat-error>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit"
+              class="submit-button"
+              [disabled]="loading">
+              <span *ngIf="!loading">Create Account</span>
+              <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+            </button>
+
+          </form>
+
+          <!-- Login Link -->
+          <div class="login-link">
+            <p>Already have an account? 
+              <a routerLink="/login">Sign in</a>
+            </p>
+          </div>
+
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Footer Links -->
+      <div class="auth-footer">
+        <a routerLink="/privacy">Privacy Policy</a>
+        <span>•</span>
+        <a routerLink="/terms">Terms of Service</a>
+        <span>•</span>
+        <a routerLink="/driver/help">Help</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>

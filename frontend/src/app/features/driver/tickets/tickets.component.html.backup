@@ -1,0 +1,346 @@
+<!-- Enhanced Tickets Component - Advanced Search & Filters -->
+<div class="tickets-container">
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button mat-icon-button routerLink="/driver/dashboard" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1>My Tickets</h1>
+        <p>View and manage all your submitted tickets</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportToCSV()" matTooltip="Export to CSV">
+        <mat-icon>file_download</mat-icon>
+        Export
+      </button>
+      <button mat-raised-button color="primary" (click)="submitNewTicket()">
+        <mat-icon>add</mat-icon>
+        Submit New Ticket
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Presets Bar -->
+  <mat-card class="presets-card" *ngIf="filterPresets.length > 0">
+    <mat-card-content>
+      <div class="presets-header">
+        <mat-icon>bookmark</mat-icon>
+        <span>Saved Filter Presets:</span>
+      </div>
+      <div class="presets-list">
+        <mat-chip-listbox>
+          <mat-chip-option 
+            *ngFor="let preset of filterPresets"
+            [selected]="selectedPresetId === preset.id"
+            (click)="loadFilterPreset(preset)">
+            <mat-icon>filter_alt</mat-icon>
+            {{ preset.name }}
+            <button matChipRemove (click)="deleteFilterPreset(preset, $event)">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip-option>
+        </mat-chip-listbox>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Filters Section -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      
+      <!-- Basic Filters Row -->
+      <div class="basic-filters">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Global Search</mat-label>
+          <input matInput [formControl]="searchControl" 
+                 placeholder="Search by ticket #, type, location, citation...">
+          <mat-icon matPrefix>search</mat-icon>
+          <button matSuffix mat-icon-button *ngIf="searchControl.value" 
+                  (click)="searchControl.setValue('')">
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select [formControl]="statusFilter">
+            <mat-option *ngFor="let option of statusOptions" [value]="option.value">
+              {{ option.label }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>filter_list</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Type</mat-label>
+          <mat-select [formControl]="typeFilter">
+            <mat-option *ngFor="let option of typeOptions" [value]="option.value">
+              {{ option.label }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
+
+        <button mat-icon-button 
+                [matBadge]="activeFiltersCount" 
+                [matBadgeHidden]="activeFiltersCount === 0"
+                matBadgeColor="primary"
+                (click)="toggleAdvancedFilters()" 
+                matTooltip="Advanced Filters"
+                class="advanced-toggle">
+          <mat-icon>tune</mat-icon>
+        </button>
+      </div>
+
+      <!-- Advanced Filters Panel -->
+      <mat-expansion-panel [expanded]="showAdvancedFilters" class="advanced-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>filter_alt</mat-icon>
+            Advanced Filters
+          </mat-panel-title>
+          <mat-panel-description>
+            {{ activeFiltersCount }} filter(s) active
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="advanced-filters-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>From Date</mat-label>
+            <input matInput [matDatepicker]="pickerFrom" [formControl]="dateFromControl">
+            <mat-icon matPrefix>event</mat-icon>
+            <mat-datepicker-toggle matSuffix [for]="pickerFrom"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFrom></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>To Date</mat-label>
+            <input matInput [matDatepicker]="pickerTo" [formControl]="dateToControl">
+            <mat-icon matPrefix>event</mat-icon>
+            <mat-datepicker-toggle matSuffix [for]="pickerTo"></mat-datepicker-toggle>
+            <mat-datepicker #pickerTo></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Location / State</mat-label>
+            <input matInput [formControl]="locationControl" 
+                   placeholder="e.g., California, Los Angeles">
+            <mat-icon matPrefix>location_on</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Citation Number</mat-label>
+            <input matInput [formControl]="citationControl" 
+                   placeholder="e.g., CA-SPD-123456">
+            <mat-icon matPrefix>description</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <mat-action-row class="filter-actions">
+          <button mat-stroked-button (click)="saveCurrentFiltersAsPreset()" 
+                  [disabled]="activeFiltersCount === 0"
+                  matTooltip="Save current filters as a preset">
+            <mat-icon>bookmark_add</mat-icon>
+            Save as Preset
+          </button>
+          <button mat-stroked-button (click)="clearFilters()"
+                  [disabled]="activeFiltersCount === 0">
+            <mat-icon>clear_all</mat-icon>
+            Clear All Filters
+          </button>
+        </mat-action-row>
+      </mat-expansion-panel>
+
+      <!-- Results Info -->
+      <div class="results-info">
+        <div class="results-stats">
+          <mat-icon>info_outline</mat-icon>
+          <span>Showing <strong>{{ filteredCases.length }}</strong> of <strong>{{ cases.length }}</strong> tickets</span>
+          <mat-chip *ngIf="activeFiltersCount > 0" class="filter-chip">
+            {{ activeFiltersCount }} filter(s) active
+          </mat-chip>
+        </div>
+        <button mat-icon-button (click)="refresh()" [disabled]="loading" matTooltip="Refresh">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading your tickets...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" (click)="refresh()">
+      Try Again
+    </button>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && !error && filteredCases.length === 0 && cases.length === 0" class="empty-state">
+    <mat-icon>inbox</mat-icon>
+    <h2>No tickets yet</h2>
+    <p>Submit your first ticket to get started</p>
+    <button mat-raised-button color="primary" (click)="submitNewTicket()">
+      <mat-icon>add</mat-icon>
+      Submit Your First Ticket
+    </button>
+  </div>
+
+  <!-- No Results State -->
+  <div *ngIf="!loading && !error && filteredCases.length === 0 && cases.length > 0" class="empty-state">
+    <mat-icon>search_off</mat-icon>
+    <h2>No tickets found</h2>
+    <p>Try adjusting your filters</p>
+    <div class="empty-actions">
+      <button mat-raised-button color="primary" (click)="clearFilters()">
+        <mat-icon>clear</mat-icon>
+        Clear Filters
+      </button>
+      <button mat-stroked-button (click)="showAdvancedFilters = true">
+        <mat-icon>tune</mat-icon>
+        Adjust Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Tickets Table (Desktop) -->
+  <div *ngIf="!loading && !error && filteredCases.length > 0" class="table-container desktop-only">
+    <table mat-table [dataSource]="filteredCases" class="tickets-table">
+      
+      <!-- Ticket Number Column -->
+      <ng-container matColumnDef="ticketNumber">
+        <th mat-header-cell *matHeaderCellDef>Ticket #</th>
+        <td mat-cell *matCellDef="let case">
+          <div class="ticket-number">
+            <mat-icon class="ticket-icon">receipt</mat-icon>
+            <strong>{{ case.ticketNumber || case.id.substring(0, 8).toUpperCase() }}</strong>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Type Column -->
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef>Type</th>
+        <td mat-cell *matCellDef="let case">
+          <mat-chip class="type-chip">{{ case.type | titlecase }}</mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let case">
+          <mat-chip [color]="getStatusColor(case.status)" selected class="status-chip">
+            {{ getStatusLabel(case.status) }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- Date Column -->
+      <ng-container matColumnDef="date">
+        <th mat-header-cell *matHeaderCellDef>Date</th>
+        <td mat-cell *matCellDef="let case">
+          <div class="date-cell">
+            <mat-icon>event</mat-icon>
+            {{ formatDate(case.createdAt || case.created_at || case.violationDate) }}
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Location Column -->
+      <ng-container matColumnDef="location">
+        <th mat-header-cell *matHeaderCellDef>Location</th>
+        <td mat-cell *matCellDef="let case">
+          <div class="location-cell" *ngIf="case.location">
+            <mat-icon>location_on</mat-icon>
+            {{ case.location }}
+          </div>
+          <span *ngIf="!case.location" class="na-text">N/A</span>
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let case">
+          <button mat-icon-button 
+                  [matMenuTriggerFor]="menu" 
+                  (click)="$event.stopPropagation()"
+                  color="primary">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="viewCase(case)">
+              <mat-icon>visibility</mat-icon>
+              View Details
+            </button>
+            <button mat-menu-item>
+              <mat-icon>edit</mat-icon>
+              Edit
+            </button>
+            <button mat-menu-item>
+              <mat-icon>file_download</mat-icon>
+              Export PDF
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+          class="clickable-row"
+          (click)="viewCase(row)"></tr>
+    </table>
+  </div>
+
+  <!-- Tickets Cards (Mobile) -->
+  <div *ngIf="!loading && !error && filteredCases.length > 0" class="cards-container mobile-only">
+    <mat-card *ngFor="let case of filteredCases" class="ticket-card" (click)="viewCase(case)">
+      <mat-card-content>
+        <div class="card-header">
+          <div>
+            <h3>{{ case.ticketNumber || case.id.substring(0, 8).toUpperCase() }}</h3>
+            <p class="ticket-type">{{ case.type | titlecase }}</p>
+          </div>
+          <mat-chip [color]="getStatusColor(case.status)" selected>
+            {{ getStatusLabel(case.status) }}
+          </mat-chip>
+        </div>
+
+        <div class="card-details">
+          <div class="detail-item">
+            <mat-icon>event</mat-icon>
+            <span>{{ formatDate(case.createdAt || case.created_at || case.violationDate) }}</span>
+          </div>
+          <div class="detail-item" *ngIf="case.location">
+            <mat-icon>location_on</mat-icon>
+            <span>{{ case.location }}</span>
+          </div>
+          <div class="detail-item" *ngIf="case.citationNumber">
+            <mat-icon>description</mat-icon>
+            <span>{{ case.citationNumber }}</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button mat-button color="primary" (click)="viewCase(case); $event.stopPropagation()">
+            View Details
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+</div>

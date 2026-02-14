@@ -1,0 +1,155 @@
+<!-- Client Management Template -->
+<div class="client-management">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>people</mat-icon>
+        Client Management
+      </h1>
+      <p>Manage client information and cases</p>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" (click)="addNewClient()">
+        <mat-icon>add</mat-icon>
+        Add Client
+      </button>
+      <button mat-button (click)="exportClients()">
+        <mat-icon>download</mat-icon>
+        Export
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters & Search -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchTerm" (input)="applyFilters()" 
+               placeholder="Search by name, email, phone, or CDL number...">
+      </mat-form-field>
+      <button mat-button (click)="clearFilters()">
+        <mat-icon>clear</mat-icon>
+        Clear
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Clients Table -->
+  <mat-card class="table-card">
+    <div class="table-container">
+      <table mat-table [dataSource]="filteredClients" class="clients-table">
+
+        <!-- Name -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Client</th>
+          <td mat-cell *matCellDef="let client">
+            <div class="client-info">
+              <div class="avatar">{{ getInitials(client.name) }}</div>
+              <div class="client-details">
+                <div class="client-name">{{ client.name }}</div>
+                <div class="client-id">ID: {{ client.id }}</div>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Contact -->
+        <ng-container matColumnDef="contact">
+          <th mat-header-cell *matHeaderCellDef>Contact</th>
+          <td mat-cell *matCellDef="let client">
+            <div class="contact-info">
+              <div class="email">
+                <mat-icon>email</mat-icon>
+                {{ client.email }}
+              </div>
+              <div class="phone">
+                <mat-icon>phone</mat-icon>
+                {{ client.phone }}
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Location -->
+        <ng-container matColumnDef="location">
+          <th mat-header-cell *matHeaderCellDef>Location</th>
+          <td mat-cell *matCellDef="let client">
+            <div *ngIf="client.city && client.state">
+              {{ client.city }}, {{ client.state }}
+            </div>
+            <div *ngIf="!client.city">-</div>
+          </td>
+        </ng-container>
+
+        <!-- CDL Number -->
+        <ng-container matColumnDef="cdlNumber">
+          <th mat-header-cell *matHeaderCellDef>CDL Number</th>
+          <td mat-cell *matCellDef="let client">
+            <strong *ngIf="client.cdlNumber">{{ client.cdlNumber }}</strong>
+            <span *ngIf="!client.cdlNumber">-</span>
+          </td>
+        </ng-container>
+
+        <!-- Cases -->
+        <ng-container matColumnDef="cases">
+          <th mat-header-cell *matHeaderCellDef>Cases</th>
+          <td mat-cell *matCellDef="let client">
+            <mat-chip [color]="getCaseCountColor(client.activeCases)">
+              {{ client.activeCases }} active
+            </mat-chip>
+            <div class="total-cases">{{ client.totalCases }} total</div>
+          </td>
+        </ng-container>
+
+        <!-- Last Contact -->
+        <ng-container matColumnDef="lastContact">
+          <th mat-header-cell *matHeaderCellDef>Last Contact</th>
+          <td mat-cell *matCellDef="let client">
+            {{ formatDate(client.lastContact) }}
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let client">
+            <button mat-icon-button [matMenuTriggerFor]="menu">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="viewClient(client)">
+                <mat-icon>visibility</mat-icon>
+                View Details
+              </button>
+              <button mat-menu-item (click)="editClient(client)">
+                <mat-icon>edit</mat-icon>
+                Edit
+              </button>
+              <button mat-menu-item (click)="viewCases(client)">
+                <mat-icon>gavel</mat-icon>
+                View Cases
+              </button>
+              <button mat-menu-item (click)="sendMessage(client)">
+                <mat-icon>mail</mat-icon>
+                Send Message
+              </button>
+            </mat-menu>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="client-row"></tr>
+
+      </table>
+    </div>
+  </mat-card>
+
+  <!-- Results Footer -->
+  <div class="results-footer">
+    Showing {{ filteredClients.length }} of {{ clients.length }} client(s)
+  </div>
+
+</div>

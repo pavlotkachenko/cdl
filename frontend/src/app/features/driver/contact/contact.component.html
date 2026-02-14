@@ -1,0 +1,154 @@
+<!-- Contact Us Template -->
+<div class="contact-container">
+
+  <!-- Header -->
+  <div class="contact-header">
+    <div class="header-content">
+      <button mat-icon-button routerLink="/driver/help" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1>Contact Support</h1>
+        <p>We're here to help! Send us a message and we'll respond within 24 hours.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="contact-content">
+    
+    <!-- Contact Methods -->
+    <div class="contact-methods">
+      <h2>Get in Touch</h2>
+      <div class="methods-grid">
+        <mat-card 
+          *ngFor="let method of contactMethods"
+          class="method-card"
+          [attr.href]="method.link">
+          <mat-card-content>
+            <mat-icon class="method-icon">{{ method.icon }}</mat-icon>
+            <h3>{{ method.title }}</h3>
+            <div class="method-value">{{ method.value }}</div>
+            <p class="method-description">{{ method.description }}</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    <!-- Contact Form -->
+    <mat-card class="contact-form-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>mail</mat-icon>
+          Send us a Message
+        </mat-card-title>
+        <mat-card-subtitle>
+          Fill out the form below and we'll get back to you as soon as possible
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="contactForm" (ngSubmit)="onSubmit()">
+          
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Full Name</mat-label>
+              <mat-icon matPrefix>person</mat-icon>
+              <input matInput formControlName="name" placeholder="John Doe">
+              <mat-error>{{ getErrorMessage('name') }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>Email Address</mat-label>
+              <mat-icon matPrefix>email</mat-icon>
+              <input matInput type="email" formControlName="email" placeholder="john@example.com">
+              <mat-error>{{ getErrorMessage('email') }}</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Phone Number (Optional)</mat-label>
+              <mat-icon matPrefix>phone</mat-icon>
+              <input matInput type="tel" formControlName="phone" placeholder="(555) 123-4567">
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Reason for Contact</mat-label>
+              <mat-icon matPrefix>category</mat-icon>
+              <mat-select formControlName="reason">
+                <mat-option *ngFor="let reason of contactReasons" [value]="reason.value">
+                  {{ reason.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Subject</mat-label>
+              <mat-icon matPrefix>subject</mat-icon>
+              <input matInput formControlName="subject" placeholder="Brief description of your inquiry">
+              <mat-error>{{ getErrorMessage('subject') }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Message</mat-label>
+              <textarea 
+                matInput 
+                formControlName="message" 
+                rows="6"
+                placeholder="Please provide details about your inquiry..."></textarea>
+              <mat-hint>Minimum 10 characters</mat-hint>
+              <mat-error>{{ getErrorMessage('message') }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-actions">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit"
+              [disabled]="submitting">
+              <mat-icon *ngIf="!submitting">send</mat-icon>
+              <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
+              {{ submitting ? 'Sending...' : 'Send Message' }}
+            </button>
+            <button 
+              mat-button 
+              type="button"
+              (click)="contactForm.reset({ reason: 'general' })"
+              [disabled]="submitting">
+              Clear Form
+            </button>
+          </div>
+
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- FAQ Quick Links -->
+    <mat-card class="faq-links-card">
+      <mat-card-content>
+        <h3>Before you contact us...</h3>
+        <p>Check if your question is already answered in our FAQ</p>
+        <div class="faq-buttons">
+          <button mat-stroked-button routerLink="/driver/help">
+            <mat-icon>help</mat-icon>
+            View Help Center
+          </button>
+          <button mat-stroked-button routerLink="/driver/help#faq">
+            <mat-icon>question_answer</mat-icon>
+            Browse FAQs
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+
+</div>

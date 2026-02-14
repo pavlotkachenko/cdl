@@ -1,0 +1,263 @@
+// ============================================
+// Notification Preferences Styles
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.preferences-container {
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+}
+
+// Page Header
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  @media (max-width: 968px) {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 4px 0;
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+    }
+  }
+
+  p {
+    font-size: 16px;
+    color: $text-medium;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      
+      button {
+        flex: 1;
+      }
+    }
+
+    button {
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+// Preferences Form
+.preferences-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Preferences Card
+.preferences-card {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  mat-card-header {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    padding: 24px;
+    border-radius: 12px 12px 0 0;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      color: $text-dark;
+
+      mat-icon {
+        color: $primary-color;
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    mat-card-subtitle {
+      margin: 8px 0 0 40px;
+      font-size: 14px;
+      color: $text-medium;
+    }
+  }
+
+  mat-card-content {
+    padding: 24px !important;
+  }
+}
+
+// Preferences Grid
+.preferences-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.preference-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f9fafb;
+  border: 2px solid $border-color;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: $primary-color;
+    background: #f0fdfa;
+  }
+
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .preference-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex: 1;
+
+    .preference-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: $primary-color;
+      flex-shrink: 0;
+    }
+
+    h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-dark;
+      margin: 0 0 4px 0;
+    }
+
+    p {
+      font-size: 14px;
+      color: $text-medium;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 4px 12px;
+      background: #d1fae5;
+      color: #065f46;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      &.denied {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    }
+  }
+
+  .browser-notification-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  mat-slide-toggle {
+    ::ng-deep .mdc-switch__track {
+      height: 20px;
+    }
+  }
+
+  .days-field {
+    width: 150px;
+    margin: 0;
+  }
+}
+
+// Info Card
+.info-card {
+  border-radius: 12px;
+  border: 2px solid #dbeafe;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: none;
+
+  mat-card-content {
+    padding: 24px !important;
+  }
+
+  .info-content {
+    display: flex;
+    gap: 16px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: #3b82f6;
+      flex-shrink: 0;
+    }
+
+    h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e40af;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      font-size: 14px;
+      color: #1e40af;
+      line-height: 1.6;
+      margin: 0;
+      opacity: 0.9;
+    }
+  }
+}

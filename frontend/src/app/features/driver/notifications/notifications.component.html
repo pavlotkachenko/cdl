@@ -1,0 +1,170 @@
+<!-- Notification Center Template - Full Page View -->
+<div class="notifications-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button mat-icon-button routerLink="/driver/dashboard" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1>Notifications</h1>
+        <p>Stay updated on your cases and activities</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="refresh()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-stroked-button (click)="goToSettings()">
+        <mat-icon>settings</mat-icon>
+        Settings
+      </button>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="markAllAsRead()"
+        [disabled]="unreadCount === 0">
+        <mat-icon>done_all</mat-icon>
+        Mark All Read
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card" [class.active]="selectedFilter === 'all'" (click)="setFilter('all')">
+      <mat-icon>notifications</mat-icon>
+      <div>
+        <span class="stat-value">{{ allNotifications.length }}</span>
+        <span class="stat-label">Total</span>
+      </div>
+    </div>
+    <div class="stat-card" [class.active]="selectedFilter === 'unread'" (click)="setFilter('unread')">
+      <mat-icon>mark_email_unread</mat-icon>
+      <div>
+        <span class="stat-value">{{ unreadCount }}</span>
+        <span class="stat-label">Unread</span>
+      </div>
+    </div>
+    <div class="stat-card" [class.active]="selectedFilter === 'read'" (click)="setFilter('read')">
+      <mat-icon>drafts</mat-icon>
+      <div>
+        <span class="stat-value">{{ allNotifications.length - unreadCount }}</span>
+        <span class="stat-label">Read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Type Filters -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="type-filters">
+        <mat-chip-listbox>
+          <mat-chip-option 
+            *ngFor="let type of notificationTypes"
+            [selected]="selectedType === type.value"
+            (click)="setTypeFilter(type.value)">
+            <mat-icon>{{ type.icon }}</mat-icon>
+            {{ type.label }}
+          </mat-chip-option>
+        </mat-chip-listbox>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading notifications...</p>
+  </div>
+
+  <!-- Notifications List -->
+  <div *ngIf="!loading && filteredNotifications.length > 0" class="notifications-list">
+    <div *ngFor="let group of groupNotificationsByDate() | keyvalue: null" class="notification-group">
+      <div class="group-header">
+        <h3>{{ group.key }}</h3>
+      </div>
+
+      <mat-card *ngFor="let notification of group.value" 
+                class="notification-card"
+                [class.unread]="!notification.read"
+                (click)="onNotificationClick(notification)">
+        <mat-card-content>
+          <div class="notification-main">
+            <div class="notification-icon" [style.background-color]="getColor(notification.type)">
+              <mat-icon>{{ getIcon(notification.type) }}</mat-icon>
+            </div>
+
+            <div class="notification-content">
+              <div class="notification-title">
+                {{ notification.title }}
+                <mat-chip *ngIf="!notification.read" class="unread-chip">New</mat-chip>
+              </div>
+              <div class="notification-message">{{ notification.message }}</div>
+              <div class="notification-meta">
+                <mat-icon>schedule</mat-icon>
+                <span>{{ formatFullDate(notification.timestamp) }}</span>
+                <span class="time-ago">• {{ formatTime(notification.timestamp) }}</span>
+              </div>
+            </div>
+
+            <div class="notification-actions">
+              <button 
+                mat-icon-button 
+                *ngIf="!notification.read"
+                (click)="markAsRead(notification, $event)"
+                matTooltip="Mark as read">
+                <mat-icon>done</mat-icon>
+              </button>
+              <button 
+                mat-icon-button 
+                [matMenuTriggerFor]="menu"
+                (click)="$event.stopPropagation()"
+                matTooltip="More options">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                <button mat-menu-item *ngIf="!notification.read" (click)="markAsRead(notification, $event)">
+                  <mat-icon>done</mat-icon>
+                  Mark as read
+                </button>
+                <button mat-menu-item (click)="deleteNotification(notification, $event)">
+                  <mat-icon>delete</mat-icon>
+                  Delete
+                </button>
+              </mat-menu>
+            </div>
+          </div>
+
+          <div class="notification-priority" *ngIf="notification.metadata?.priority === 'high'">
+            <mat-icon>priority_high</mat-icon>
+            <span>High Priority</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && filteredNotifications.length === 0" class="empty-state">
+    <mat-icon>notifications_none</mat-icon>
+    <h2>No notifications</h2>
+    <p *ngIf="selectedFilter === 'all'">You don't have any notifications yet</p>
+    <p *ngIf="selectedFilter === 'unread'">No unread notifications</p>
+    <p *ngIf="selectedFilter === 'read'">No read notifications</p>
+    <button mat-raised-button color="primary" (click)="setFilter('all')" *ngIf="selectedFilter !== 'all'">
+      View All Notifications
+    </button>
+  </div>
+
+  <!-- Clear All Button -->
+  <div class="clear-all-section" *ngIf="!loading && allNotifications.length > 0">
+    <button mat-stroked-button color="warn" (click)="clearAll()">
+      <mat-icon>delete_sweep</mat-icon>
+      Clear All Notifications
+    </button>
+  </div>
+
+</div>

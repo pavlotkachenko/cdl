@@ -1,0 +1,43 @@
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { DriverDashboardComponent } from './dashboard/driver-dashboard.component';
+// Direct import of the standalone component to fix the redirect issue
+import { SubmitTicketComponent } from './submit-ticket/submit-ticket.component'; 
+
+import { TicketsComponent } from './tickets/tickets.component' ;  // ← ADD
+import { ProfileComponent } from './profile/profile.component';  // ← ADD
+
+const routes: Routes = [
+  {
+    path: '',
+    redirectTo: 'dashboard',
+    pathMatch: 'full'
+  },
+  {
+    path: 'dashboard',
+    component: DriverDashboardComponent
+  },
+  {
+    // Fix: Using 'component' instead of 'loadChildren' for a standalone component
+    // This ensures the route /driver/submit-ticket is registered correctly
+    path: 'submit-ticket',
+    component: SubmitTicketComponent
+  },
+  {
+    path: 'tickets',
+    //loadChildren: () => import('./tickets/tickets.module').then(m => m.TicketsModule)
+     component: TicketsComponent 
+  },
+  {
+    path: 'profile',
+    //loadChildren: () => import('./profile/profile.module').then(m => m.ProfileModule)
+    component: ProfileComponent
+    
+  }
+];
+
+@NgModule({
+  imports: [RouterModule.forChild(routes)],
+  exports: [RouterModule]
+})
+export class DriverRoutingModule { }

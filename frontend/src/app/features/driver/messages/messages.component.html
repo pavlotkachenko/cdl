@@ -1,0 +1,301 @@
+<!-- ============================================ -->
+<!-- Messages Component Template -->
+<!-- ============================================ -->
+
+<div class="messages-container">
+  
+  <!-- ============================================ -->
+  <!-- Conversations List (Left Sidebar) -->
+  <!-- ============================================ -->
+  <div class="conversations-sidebar">
+    
+    <!-- Header -->
+    <div class="sidebar-header">
+      <h2>Messages</h2>
+      
+      <!-- Search -->
+      <form [formGroup]="searchForm" class="search-form">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput 
+                 placeholder="Search conversations" 
+                 formControlName="query">
+        </mat-form-field>
+      </form>
+    </div>
+
+    <!-- Conversations List -->
+    <div class="conversations-list" *ngIf="!loading; else loadingTemplate">
+      <mat-nav-list>
+        <mat-list-item 
+          *ngFor="let conversation of conversations"
+          [class.active]="selectedConversation?.id === conversation.id"
+          (click)="selectConversation(conversation)">
+          
+          <div class="conversation-item">
+            <!-- Avatar -->
+            <div class="avatar-container" matListItemAvatar>
+              <div class="avatar" [class.online]="conversation.isOnline">
+                <mat-icon>person</mat-icon>
+              </div>
+              <span class="unread-badge" 
+                    *ngIf="conversation.unreadCount > 0"
+                    [matBadge]="conversation.unreadCount"
+                    matBadgeColor="warn"
+                    matBadgeSize="small">
+              </span>
+            </div>
+
+            <!-- Content -->
+            <div class="conversation-content">
+              <div class="conversation-header">
+                <h3 class="conversation-name">
+                  {{ conversation.driverId === currentUserId 
+                     ? conversation.attorney.name 
+                     : conversation.driver.name }}
+                </h3>
+                <span class="conversation-time">
+                  {{ formatTime(conversation.lastMessageAt) }}
+                </span>
+              </div>
+              
+              <div class="conversation-preview">
+                <p class="last-message" [class.unread]="conversation.unreadCount > 0">
+                  {{ conversation.lastMessage }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </mat-list-item>
+      </mat-nav-list>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="conversations.length === 0">
+        <mat-icon>chat_bubble_outline</mat-icon>
+        <p>No conversations yet</p>
+      </div>
+    </div>
+
+    <!-- Loading Template -->
+    <ng-template #loadingTemplate>
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading conversations...</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Messages Thread (Main Content) -->
+  <!-- ============================================ -->
+  <div class="messages-content">
+    
+    <!-- No Conversation Selected -->
+    <div class="no-conversation" *ngIf="!selectedConversation">
+      <mat-icon>forum</mat-icon>
+      <h2>Select a conversation to start messaging</h2>
+      <p>Choose from your existing conversations or start a new one</p>
+    </div>
+
+    <!-- Conversation View -->
+    <div class="conversation-view" *ngIf="selectedConversation">
+      
+      <!-- Conversation Header -->
+      <div class="conversation-header-bar">
+        <div class="header-info">
+          <div class="avatar small" [class.online]="isOnline">
+            <mat-icon>person</mat-icon>
+          </div>
+          <div class="header-text">
+            <h3>{{ getOtherUser()?.name }}</h3>
+            <p class="status" *ngIf="isOnline">
+              <span class="online-indicator"></span>
+              Online
+            </p>
+            <p class="status typing" *ngIf="otherUserTyping">
+              Typing...
+            </p>
+          </div>
+        </div>
+
+        <!-- Actions Menu -->
+        <div class="header-actions">
+          <button mat-icon-button [matMenuTriggerFor]="menu" matTooltip="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="generateVideoLink('zoom')">
+              <mat-icon>videocam</mat-icon>
+              <span>Start Zoom Call</span>
+            </button>
+            <button mat-menu-item (click)="generateVideoLink('meet')">
+              <mat-icon>video_call</mat-icon>
+              <span>Start Google Meet</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item>
+              <mat-icon>info</mat-icon>
+              <span>Conversation Info</span>
+            </button>
+          </mat-menu>
+        </div>
+      </div>
+
+      <!-- Messages Container -->
+      <div class="messages-container-scroll" 
+           #messageContainer
+           *ngIf="!loadingMessages; else loadingMessagesTemplate">
+        
+        <div class="messages-list">
+          <div *ngFor="let message of messages" 
+               class="message-wrapper"
+               [class.my-message]="isMyMessage(message)"
+               [class.other-message]="!isMyMessage(message)">
+            
+            <div class="message-bubble">
+              <!-- Message Content -->
+              <div class="message-content" *ngIf="message.content">
+                {{ message.content }}
+              </div>
+
+              <!-- File Attachment -->
+              <div class="message-attachment" *ngIf="message.fileUrl">
+                <div class="attachment-card">
+                  <mat-icon [color]="isMyMessage(message) ? 'primary' : ''">
+                    {{ getFileIcon(message.fileType || '') }}
+                  </mat-icon>
+                  <div class="attachment-info">
+                    <a [href]="message.fileUrl" target="_blank" class="attachment-name">
+                      {{ message.fileName }}
+                    </a>
+                    <span class="attachment-size">
+                      {{ formatFileSize(message.fileSize || 0) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Message Metadata -->
+              <div class="message-meta">
+                <span class="message-time">{{ formatTime(message.createdAt) }}</span>
+                <mat-icon class="read-receipt" 
+                         *ngIf="isMyMessage(message) && message.isRead"
+                         matTooltip="Read">
+                  done_all
+                </mat-icon>
+                <mat-icon class="read-receipt sent" 
+                         *ngIf="isMyMessage(message) && !message.isRead"
+                         matTooltip="Sent">
+                  done
+                </mat-icon>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing Indicator -->
+          <div class="typing-indicator" *ngIf="otherUserTyping">
+            <div class="typing-bubble">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Messages Template -->
+      <ng-template #loadingMessagesTemplate>
+        <div class="loading-messages">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading messages...</p>
+        </div>
+      </ng-template>
+
+      <!-- Quick Questions Panel -->
+      <div class="quick-questions-panel" 
+           *ngIf="showQuickQuestions"
+           [@slideIn]>
+        <div class="panel-header">
+          <h4>Quick Questions</h4>
+          <button mat-icon-button (click)="toggleQuickQuestions()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="quick-questions-grid">
+          <mat-chip-listbox>
+            <mat-chip-option 
+              *ngFor="let question of quickQuestions"
+              (click)="sendQuickQuestion(question.question)">
+              {{ question.question }}
+            </mat-chip-option>
+          </mat-chip-listbox>
+        </div>
+      </div>
+
+      <!-- Message Input Area -->
+      <div class="message-input-area">
+        
+        <!-- Selected File Preview -->
+        <div class="selected-file-preview" *ngIf="selectedFile">
+          <div class="file-preview-card">
+            <mat-icon>{{ getFileIcon(selectedFile.type) }}</mat-icon>
+            <div class="file-info">
+              <span class="file-name">{{ selectedFile.name }}</span>
+              <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+            </div>
+            <button mat-icon-button (click)="removeSelectedFile()" matTooltip="Remove file">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Form -->
+        <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="input-form">
+          
+          <!-- Action Buttons (Left) -->
+          <div class="input-actions-left">
+            <button mat-icon-button 
+                    type="button"
+                    (click)="triggerFileInput()"
+                    matTooltip="Attach file">
+              <mat-icon>attach_file</mat-icon>
+            </button>
+            
+            <button mat-icon-button 
+                    type="button"
+                    (click)="toggleQuickQuestions()"
+                    matTooltip="Quick questions"
+                    [color]="showQuickQuestions ? 'primary' : ''">
+              <mat-icon>quick_reference</mat-icon>
+            </button>
+          </div>
+
+          <!-- Message Input -->
+          <mat-form-field appearance="outline" class="message-input-field">
+            <input matInput 
+                   placeholder="Type a message..."
+                   formControlName="message"
+                   (keydown.enter)="$event.preventDefault(); sendMessage()"
+                   autocomplete="off">
+          </mat-form-field>
+
+          <!-- Send Button -->
+          <button mat-fab 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="(!messageForm.get('message')?.value?.trim() && !selectedFile) || sendingMessage"
+                  class="send-button">
+            <mat-icon *ngIf="!sendingMessage">send</mat-icon>
+            <mat-spinner *ngIf="sendingMessage" diameter="24"></mat-spinner>
+          </button>
+
+          <!-- Hidden File Input -->
+          <input type="file" 
+                 #fileInput 
+                 (change)="onFileSelect($event)"
+                 style="display: none;">
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

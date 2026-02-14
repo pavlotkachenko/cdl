@@ -1,0 +1,91 @@
+<!-- Document Viewer Template -->
+<div class="document-viewer-container">
+  
+  <!-- Toolbar -->
+  <div class="viewer-toolbar" *ngIf="showToolbar">
+    <div class="toolbar-left">
+      <button mat-icon-button (click)="onClose()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+      <div class="document-info">
+        <mat-icon class="file-icon">{{ getFileIcon() }}</mat-icon>
+        <div class="info-text">
+          <h3>{{ document.fileName }}</h3>
+          <p *ngIf="document.fileSize">{{ formatFileSize(document.fileSize) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- Zoom controls for images -->
+      <div class="zoom-controls" *ngIf="isImage">
+        <button mat-icon-button (click)="zoomOut()" [disabled]="zoomLevel <= 50" matTooltip="Zoom Out">
+          <mat-icon>zoom_out</mat-icon>
+        </button>
+        <span class="zoom-level">{{ zoomLevel }}%</span>
+        <button mat-icon-button (click)="zoomIn()" [disabled]="zoomLevel >= 200" matTooltip="Zoom In">
+          <mat-icon>zoom_in</mat-icon>
+        </button>
+        <button mat-icon-button (click)="resetZoom()" matTooltip="Reset Zoom">
+          <mat-icon>fit_screen</mat-icon>
+        </button>
+        <button mat-icon-button (click)="rotate()" matTooltip="Rotate">
+          <mat-icon>rotate_right</mat-icon>
+        </button>
+      </div>
+
+      <button mat-icon-button (click)="print()" matTooltip="Print">
+        <mat-icon>print</mat-icon>
+      </button>
+      <button mat-icon-button (click)="onDownload()" matTooltip="Download">
+        <mat-icon>download</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="viewer-loading" *ngIf="loading">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading document...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="viewer-error" *ngIf="error && !loading">
+    <mat-icon>error_outline</mat-icon>
+    <h3>Failed to load document</h3>
+    <p>The document could not be loaded. Please try downloading it instead.</p>
+    <button mat-raised-button color="primary" (click)="onDownload()">
+      <mat-icon>download</mat-icon>
+      Download File
+    </button>
+  </div>
+
+  <!-- PDF Viewer -->
+  <div class="viewer-content pdf-viewer" *ngIf="isPdf && !loading && !error">
+    <iframe [src]="safeUrl" frameborder="0" class="pdf-iframe"></iframe>
+  </div>
+
+  <!-- Image Viewer -->
+  <div class="viewer-content image-viewer" *ngIf="isImage && !loading && !error">
+    <div class="image-container">
+      <img 
+        [src]="document.fileUrl" 
+        [alt]="document.fileName"
+        [style.transform]="'scale(' + (zoomLevel / 100) + ') rotate(' + rotation + 'deg)'"
+        class="viewer-image">
+    </div>
+  </div>
+
+  <!-- Unsupported File Type -->
+  <div class="viewer-unsupported" *ngIf="!isSupported && !loading && !error">
+    <mat-icon>insert_drive_file</mat-icon>
+    <h3>Preview not available</h3>
+    <p>{{ document.fileName }}</p>
+    <p class="file-type">This file type cannot be previewed in the browser.</p>
+    <button mat-raised-button color="primary" (click)="onDownload()">
+      <mat-icon>download</mat-icon>
+      Download to View
+    </button>
+  </div>
+
+</div>

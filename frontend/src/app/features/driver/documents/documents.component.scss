@@ -1,0 +1,130 @@
+// ============================================
+// Documents Page Styles
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$background: #f9fafb;
+
+.documents-page {
+  min-height: 100vh;
+  background: $background;
+}
+
+// ============================================
+// Page Header
+// ============================================
+
+.page-header {
+  background: white;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .header-content {
+    flex: 1;
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+
+      mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: $primary-color;
+      }
+
+      h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: $text-dark;
+        margin: 0;
+      }
+    }
+
+    p {
+      font-size: 15px;
+      color: $text-medium;
+      margin: 0;
+    }
+  }
+
+  button {
+    mat-icon {
+      margin-right: 8px;
+    }
+
+    @media (max-width: 768px) {
+      width: 100%;
+    }
+  }
+}
+
+// ============================================
+// Tabs
+// ============================================
+
+::ng-deep {
+  .mat-mdc-tab-group {
+    background: white;
+
+    .mat-mdc-tab-label {
+      min-width: 120px;
+
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+.tab-content {
+  background: $background;
+  min-height: calc(100vh - 200px);
+}
+
+// ============================================
+// Dark Mode
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .documents-page {
+    background: #111827;
+  }
+
+  .page-header {
+    background: #1f2937;
+    border-bottom-color: #374151;
+
+    .header-title h1 {
+      color: #f9fafb;
+    }
+
+    .header-content p {
+      color: #d1d5db;
+    }
+  }
+
+  ::ng-deep {
+    .mat-mdc-tab-group {
+      background: #1f2937;
+    }
+  }
+
+  .tab-content {
+    background: #111827;
+  }
+}

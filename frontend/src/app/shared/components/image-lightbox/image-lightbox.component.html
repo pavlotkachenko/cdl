@@ -1,0 +1,102 @@
+<!-- Image Lightbox Template - FIXED NULL SAFETY -->
+<div class="lightbox-overlay" (click)="onClose()">
+  
+  <div class="lightbox-container" (click)="$event.stopPropagation()">
+    
+    <!-- Close Button -->
+    <button mat-icon-button class="close-button" (click)="onClose()" matTooltip="Close (Esc)">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <!-- Toolbar -->
+    <div class="lightbox-toolbar">
+      <div class="toolbar-left">
+        <span class="image-counter" *ngIf="images.length > 1">
+          {{ currentIndex + 1 }} / {{ images.length }}
+        </span>
+        <h3 *ngIf="currentImage?.title">{{ currentImage?.title }}</h3>
+      </div>
+
+      <div class="toolbar-right">
+        <!-- Zoom Controls -->
+        <button mat-icon-button (click)="zoomOut()" [disabled]="zoomLevel <= 50" matTooltip="Zoom Out (-)">
+          <mat-icon>zoom_out</mat-icon>
+        </button>
+        <span class="zoom-level">{{ zoomLevel }}%</span>
+        <button mat-icon-button (click)="zoomIn()" [disabled]="zoomLevel >= 300" matTooltip="Zoom In (+)">
+          <mat-icon>zoom_in</mat-icon>
+        </button>
+        <button mat-icon-button (click)="resetZoom()" matTooltip="Reset View">
+          <mat-icon>fit_screen</mat-icon>
+        </button>
+
+        <!-- Rotate -->
+        <button mat-icon-button (click)="rotate()" matTooltip="Rotate">
+          <mat-icon>rotate_right</mat-icon>
+        </button>
+
+        <!-- Download -->
+        <button mat-icon-button (click)="onDownload()" matTooltip="Download">
+          <mat-icon>download</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Image Container -->
+    <div class="image-container">
+      
+      <!-- Previous Button -->
+      <button 
+        mat-icon-button 
+        class="nav-button prev-button" 
+        (click)="previous()" 
+        *ngIf="hasPrevious"
+        matTooltip="Previous (←)">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+
+      <!-- Image -->
+      <div class="image-wrapper">
+        <img 
+          *ngIf="currentImage"
+          [src]="currentImage.url" 
+          [alt]="currentImage.title || 'Image'"
+          [style.transform]="getImageTransform()"
+          [style.cursor]="zoomLevel > 100 ? 'move' : 'default'"
+          (mousedown)="onMouseDown($event)"
+          class="lightbox-image">
+      </div>
+
+      <!-- Next Button -->
+      <button 
+        mat-icon-button 
+        class="nav-button next-button" 
+        (click)="next()" 
+        *ngIf="hasNext"
+        matTooltip="Next (→)">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+
+    </div>
+
+    <!-- Description -->
+    <div class="image-description" *ngIf="currentImage?.description">
+      <p>{{ currentImage?.description }}</p>
+    </div>
+
+    <!-- Thumbnails (if multiple images) -->
+    <div class="thumbnails-container" *ngIf="images.length > 1">
+      <div class="thumbnails">
+        <div 
+          *ngFor="let image of images; let i = index"
+          class="thumbnail"
+          [class.active]="i === currentIndex"
+          (click)="currentIndex = i; resetView()">
+          <img [src]="image.url" [alt]="image.title || 'Thumbnail'">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

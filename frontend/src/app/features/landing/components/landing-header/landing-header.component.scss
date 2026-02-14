@@ -1,0 +1,48 @@
+.landing-header {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  
+  .header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .logo {
+    cursor: pointer;
+    .logo-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #090000;
+    }
+  }
+  
+  .main-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+  
+  .nav-link {
+    color: #090000;
+    cursor: pointer;
+    text-decoration: none;
+    &:hover { color: #1dad8c; }
+    &.contact-link { color: #1dad8c; }
+  }
+  
+  .sign-in-button {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+}

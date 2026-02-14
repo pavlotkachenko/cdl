@@ -1,0 +1,180 @@
+// ============================================
+// Legal Pages Styles (Privacy, Terms, Contact)
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.legal-container {
+  min-height: calc(100vh - 64px);
+  background: $background;
+}
+
+// Header
+.legal-header {
+  background: linear-gradient(135deg, $primary-color 0%, #159a7a 100%);
+  color: white;
+  padding: 40px 32px;
+
+  @media (max-width: 768px) {
+    padding: 32px 20px;
+  }
+
+  .header-content {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    .back-button {
+      mat-icon {
+        color: white;
+      }
+    }
+
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+
+      @media (max-width: 768px) {
+        font-size: 28px;
+      }
+    }
+
+    p {
+      font-size: 14px;
+      opacity: 0.9;
+      margin: 0;
+    }
+  }
+}
+
+// Content
+.legal-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 32px 60px;
+
+  @media (max-width: 768px) {
+    padding: 32px 20px 40px;
+  }
+}
+
+.legal-card {
+  margin-bottom: 32px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  mat-card-content {
+    padding: 40px !important;
+
+    @media (max-width: 768px) {
+      padding: 32px 24px !important;
+    }
+  }
+
+  section {
+    margin-bottom: 40px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 16px 0;
+      padding-bottom: 12px;
+      border-bottom: 2px solid $primary-color;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 24px 0 12px 0;
+    }
+
+    p {
+      font-size: 15px;
+      line-height: 1.8;
+      color: $text-medium;
+      margin: 0 0 16px 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 24px;
+
+      li {
+        font-size: 15px;
+        line-height: 1.8;
+        color: $text-medium;
+        margin-bottom: 8px;
+
+        strong {
+          color: $text-dark;
+          font-weight: 600;
+        }
+      }
+    }
+
+    .contact-info {
+      background: #f9fafb;
+      border-left: 4px solid $primary-color;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 16px;
+
+      p {
+        margin: 0 0 12px 0;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        strong {
+          color: $text-dark;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  mat-divider {
+    margin: 32px 0;
+  }
+}
+
+// Legal Actions
+.legal-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+
+  button {
+    mat-icon {
+      margin-right: 8px;
+    }
+
+    @media (max-width: 768px) {
+      width: 100%;
+    }
+  }
+}

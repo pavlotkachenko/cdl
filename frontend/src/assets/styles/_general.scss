@@ -1,0 +1,76 @@
+// ============================================
+// Base General Styles
+// ============================================
+// Location: frontend/src/assets/styles/_general.scss
+
+@use 'sass:color'; // ОБЯЗАТЕЛЬНО: добавляем этот импорт
+@use 'variables' as *;
+@use 'mixins/responsive' as resp;
+
+// Базовые стили для текста
+h1, h2, h3, h4, h5, h6 {
+  font-family: $font-primary;
+  color: $title-black;
+  margin-bottom: $spacing-md;
+  line-height: $line-height-tight;
+  font-weight: $font-bold;
+}
+
+h1 { font-size: $h1-size-desktop; }
+h2 { font-size: $h2-size-desktop; }
+h3 { font-size: $h3-size-desktop; }
+
+p {
+  margin-bottom: $spacing-md;
+  line-height: $line-height-relaxed;
+}
+
+// Ссылки
+a {
+  color: $accent-green;
+  text-decoration: none;
+  transition: all $transition-fast;
+
+  &:hover {
+    // Теперь пространство имен 'color' будет найдено
+    color: color.adjust($accent-green, $lightness: -10%);
+    text-decoration: underline;
+  }
+}
+
+// Общие контейнеры
+.section {
+  padding: $spacing-4xl 0;
+  
+  @include resp.mobile {
+    padding: $spacing-2xl 0;
+  }
+}
+
+// Хелперы для выравнивания
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+
+// Списки
+ul, ol {
+  list-style: none;
+}
+
+// Картинки
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// Визуальное скрытие (для доступности)
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}

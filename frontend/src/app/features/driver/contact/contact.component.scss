@@ -1,0 +1,272 @@
+// ============================================
+// Contact Us Styles
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.contact-container {
+  min-height: calc(100vh - 64px);
+  background: $background;
+}
+
+// Header
+.contact-header {
+  background: linear-gradient(135deg, $primary-color 0%, #159a7a 100%);
+  color: white;
+  padding: 60px 32px;
+  text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+  }
+
+  .header-content {
+    max-width: 800px;
+    margin: 0 auto;
+
+    .back-button {
+      mat-icon {
+        color: white;
+      }
+    }
+
+    h1 {
+      font-size: 40px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+
+      @media (max-width: 768px) {
+        font-size: 32px;
+      }
+    }
+
+    p {
+      font-size: 18px;
+      opacity: 0.95;
+      margin: 0;
+    }
+  }
+}
+
+// Content
+.contact-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 32px 60px;
+
+  @media (max-width: 768px) {
+    padding: 32px 20px 40px;
+  }
+}
+
+// Contact Methods
+.contact-methods {
+  margin-bottom: 40px;
+
+  h2 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 32px 0;
+  }
+
+  .methods-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .method-card {
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+
+    &:hover {
+      border-color: $primary-color;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(29, 173, 140, 0.2);
+    }
+
+    mat-card-content {
+      padding: 32px 24px !important;
+    }
+
+    .method-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: $primary-color;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    .method-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: $primary-color;
+      margin-bottom: 8px;
+    }
+
+    .method-description {
+      font-size: 13px;
+      color: $text-medium;
+      margin: 0;
+    }
+  }
+}
+
+// Contact Form
+.contact-form-card {
+  margin-bottom: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  mat-card-header {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    padding: 24px;
+    border-radius: 12px 12px 0 0;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 22px;
+      font-weight: 700;
+      color: $text-dark;
+
+      mat-icon {
+        color: $primary-color;
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    mat-card-subtitle {
+      margin: 8px 0 0 40px;
+      font-size: 14px;
+      color: $text-medium;
+    }
+  }
+
+  mat-card-content {
+    padding: 32px !important;
+
+    @media (max-width: 768px) {
+      padding: 24px !important;
+    }
+  }
+
+  form {
+    .form-row {
+      margin-bottom: 20px;
+
+      &.two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+
+        @media (max-width: 768px) {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .full-width {
+        width: 100%;
+      }
+
+      mat-form-field {
+        width: 100%;
+
+        mat-icon[matPrefix] {
+          margin-right: 12px;
+          color: $text-light;
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+
+      @media (max-width: 768px) {
+        flex-direction: column;
+      }
+
+      button {
+        mat-icon,
+        mat-spinner {
+          margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+// FAQ Links Card
+.faq-links-card {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #93c5fd;
+  border-radius: 12px;
+
+  mat-card-content {
+    padding: 32px !important;
+    text-align: center;
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e40af;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      font-size: 15px;
+      color: #1e40af;
+      margin: 0 0 24px 0;
+      opacity: 0.9;
+    }
+
+    .faq-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+
+      @media (max-width: 768px) {
+        flex-direction: column;
+      }
+
+      button {
+        mat-icon {
+          margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+          width: 100%;
+        }
+      }
+    }
+  }
+}

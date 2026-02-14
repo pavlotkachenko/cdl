@@ -1,0 +1,287 @@
+<!-- Header (now imported as standalone component) -->
+<app-landing-header></app-landing-header>
+
+<!-- Hero Section with Carousel -->
+<section class="hero-section">
+  <div class="hero-carousel">
+    <div class="carousel-container">
+      <div class="carousel-slides" [style.transform]="'translateX(-' + (currentSlideIndex * 100) + '%)'">
+        <div *ngFor="let slide of heroSlides; let i = index" 
+             class="carousel-slide"
+             [class.active]="i === currentSlideIndex"
+             [ngClass]="slide.image">
+          <div class="slide-content">
+            <h1 class="hero-title" [innerHTML]="slide.title"></h1>
+            <p *ngIf="slide.subtitle" class="hero-subtitle">{{ slide.subtitle }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carousel Controls -->
+    <div class="carousel-controls">
+      <button mat-icon-button class="carousel-arrow carousel-arrow-prev" (click)="prevSlide()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button mat-icon-button class="carousel-arrow carousel-arrow-next" (click)="nextSlide()">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+
+    <!-- Pagination Dots -->
+    <div class="carousel-pagination">
+      <span *ngFor="let slide of heroSlides; let i = index" 
+            class="pagination-dot"
+            [class.active]="i === currentSlideIndex"
+            (click)="currentSlideIndex = i"></span>
+    </div>
+
+    <!-- Fixed Content Overlay -->
+    <div class="hero-overlay">
+      <button mat-flat-button color="accent" class="cta-button" (click)="navigateToSubmit()">
+        Explore now
+      </button>
+      <div class="hero-stats">
+        <div class="stat-item">
+          <p class="stat-number">FREE</p>
+          <p class="stat-label">New accounts start</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-number">10.5K</p>
+          <p class="stat-label">Customer review</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Services Section -->
+<section id="services" class="services-section container">
+  <h2 class="section-title">Services for Drivers</h2>
+  
+  <div class="services-grid">
+    <mat-card *ngFor="let service of driverServices" class="service-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="service-icon">{{ service.icon }}</mat-icon>
+        <mat-card-title>{{ service.title }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>{{ service.description }}</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</section>
+
+<!-- How We Work Section -->
+<section class="how-we-work-section">
+  <div class="container">
+    <div class="work-grid">
+      <!-- Left Side - Process Steps -->
+      <div class="work-steps">
+        <h2 class="section-title">How we work</h2>
+        <div class="steps-container">
+          <div *ngFor="let step of workSteps; let i = index; let last = last" 
+               class="step-item">
+            <div class="step-indicator">
+              <div class="step-circle"></div>
+              <div *ngIf="!last" class="step-line"></div>
+            </div>
+            <div class="step-content">
+              <mat-icon class="step-icon">{{ step.icon }}</mat-icon>
+              <div class="step-card">
+                <h3>{{ step.title }}</h3>
+                <p>{{ step.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Side - CTA -->
+      <div class="work-cta">
+        <h3>Submit your first request now</h3>
+        <p class="cta-text">
+          It's 100% free. No credit card<br>
+          information required.
+        </p>
+        <button mat-flat-button color="accent" class="submit-button" (click)="navigateToSubmit()">
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Personal Safety Expert / Benefits Section -->
+<section class="benefits-section">
+  <div class="container">
+    <h2 class="section-title">Personal Safety Expert</h2>
+    
+    <div class="benefits-grid">
+      <!-- Left Side - Image (background via CSS or <img>) -->
+      <div class="benefits-image">
+        <!-- If you have a specific image, use: <img src="assets/images/benefits/benefits-expert.jpg" alt="Expert"> -->
+      </div>
+
+      <!-- Right Side - Benefits List -->
+      <div class="benefits-content">
+        <h3>Anywhere in US and Canada</h3>
+        <p class="benefits-intro">
+          We work with professional lawyers in all 50 states and have over 20 years 
+          experience in trucking business working and consulting safety
+        </p>
+        
+        <h4>Other benefits in working with us:</h4>
+        
+        <div class="benefits-cards">
+          <div *ngFor="let benefit of benefits" class="benefit-card">
+            <mat-icon>{{ benefit.icon }}</mat-icon>
+            <p>{{ benefit.title }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="testimonials-section">
+  <div class="container">
+    <h2 class="section-title">Satisfied Clients</h2>
+    
+    <div class="testimonials-carousel">
+      <button mat-icon-button class="testimonial-arrow testimonial-arrow-prev" 
+              (click)="prevTestimonial()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+
+      <div class="testimonials-container">
+        <div class="testimonials-track" 
+             [style.transform]="'translateX(-' + (currentTestimonialIndex * 100) + '%)'">
+          <div *ngFor="let testimonial of testimonials" class="testimonial-card">
+            <mat-card>
+              <mat-card-content>
+                <p class="testimonial-text">"{{ testimonial.text }}"</p>
+              </mat-card-content>
+              <mat-card-footer class="testimonial-author">
+                <div class="author-avatar">
+                  @if (testimonial.image) {
+                    <img 
+                      [src]="testimonial.image" 
+                      alt="{{ testimonial.name }}" 
+                      (error)="onImageError($event)"
+                    />
+                  } @else {
+                    <span class="initials">{{ getInitials(testimonial.name) }}</span>
+                  }
+                </div>
+                <div class="author-info">
+                  <p class="author-name">{{ testimonial.name }}</p>
+                </div>
+              </mat-card-footer>
+            </mat-card>
+          </div>
+        </div>
+      </div>
+
+      <button mat-icon-button class="testimonial-arrow testimonial-arrow-next" 
+              (click)="nextTestimonial()">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+
+    <!-- Testimonial Pagination -->
+    <div class="testimonial-pagination">
+      <span *ngFor="let testimonial of testimonials; let i = index" 
+            class="pagination-dot"
+            [class.active]="i === currentTestimonialIndex"
+            (click)="currentTestimonialIndex = i"></span>
+    </div>
+  </div>
+</section>
+
+<!-- Contact / Submit Request Section -->
+<section id="contact" class="contact-section">
+  <div class="container">
+    <h2 class="section-title">Submit Your Request</h2>
+    <p class="section-subtitle">Get an answer in 1 hour</p>
+    
+    <div class="contact-grid">
+      <!-- Left Side - Form -->
+      <div class="contact-form">
+        <p class="form-info">
+          Fields marked with star (*) are required. The more descriptive you'll be the faster 
+          and more accurate answer you will get. Attach all the documents you think might be useful.
+        </p>
+        
+        <form class="submit-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Name *</mat-label>
+            <input matInput placeholder="Your name" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>E-mail *</mat-label>
+            <input matInput type="email" placeholder="info@gmail.com" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Phone *</mat-label>
+            <input matInput type="tel" placeholder="+1 (000) 000-00-00" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Message *</mat-label>
+            <textarea matInput rows="5" placeholder="Describe your request..." required></textarea>
+          </mat-form-field>
+
+          <div class="file-upload">
+            <label>Upload File *</label>
+            <div class="upload-zone">
+              <mat-icon>cloud_upload</mat-icon>
+              <p>Drag and Drop or <span class="upload-link">Choose file</span> to upload</p>
+              <input type="file" multiple hidden #fileInput>
+            </div>
+          </div>
+
+          <button mat-flat-button color="accent" type="submit" class="submit-form-button">
+            Submit
+          </button>
+        </form>
+      </div>
+
+      <!-- Right Side - Contact Info -->
+      <div class="contact-info">
+        <h3>Contact us</h3>
+        
+        <div class="contact-details">
+          <a href="mailto:office@cdl-advisor.com" class="contact-item">
+            <mat-icon>email</mat-icon>
+            <span>office@cdl-advisor.com</span>
+          </a>
+          
+          <a href="tel:+18669311192" class="contact-item">
+            <mat-icon>phone</mat-icon>
+            <span>+1 866-931-1192</span>
+          </a>
+          
+          <a href="https://www.instagram.com/cdladvisor/" target="_blank" class="contact-item">
+            <mat-icon>tag</mat-icon>
+            <span>@cdl-advisor</span>
+          </a>
+          
+          <a href="https://www.facebook.com/people/CDL-Advisor/100063653768052" 
+             target="_blank" class="contact-item">
+            <mat-icon>facebook</mat-icon>
+            <span>CDL - Advisor</span>
+          </a>
+        </div>
+        
+        <p class="contact-note">For general inquiries</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer (now imported as standalone component) -->
+<app-landing-footer></app-landing-footer>s

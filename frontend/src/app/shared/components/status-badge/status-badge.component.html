@@ -1,0 +1,21 @@
+<!-- ============================================ -->
+<!-- Status Badge Component Template -->
+<!-- ============================================ -->
+<!-- Location: frontend/src/app/shared/components/status-badge/status-badge.component.html -->
+
+<span 
+  [class]="badgeClasses" 
+  [style.background-color]="backgroundColor"
+  [style.color]="textColor"
+  [attr.aria-label]="displayText"
+  role="status"
+>
+  <mat-icon 
+    *ngIf="showIcon" 
+    [inline]="true"
+    class="badge-icon"
+  >
+    {{ icon }}
+  </mat-icon>
+  <span class="badge-text">{{ displayText }}</span>
+</span>

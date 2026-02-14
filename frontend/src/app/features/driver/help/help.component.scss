@@ -1,0 +1,443 @@
+// ============================================
+// Help & Support Styles
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.help-container {
+  min-height: calc(100vh - 64px);
+  background: $background;
+}
+
+// Hero Section
+.help-hero {
+  background: linear-gradient(135deg, $primary-color 0%, #159a7a 100%);
+  color: white;
+  padding: 80px 32px;
+  text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 60px 20px;
+  }
+
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+
+    h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+
+      @media (max-width: 768px) {
+        font-size: 32px;
+      }
+    }
+
+    p {
+      font-size: 20px;
+      opacity: 0.95;
+      margin: 0 0 40px 0;
+
+      @media (max-width: 768px) {
+        font-size: 16px;
+      }
+    }
+  }
+
+  .search-bar {
+    max-width: 600px;
+    margin: 0 auto;
+
+    .search-field {
+      width: 100%;
+      
+      ::ng-deep {
+        .mat-mdc-form-field {
+          background: white;
+          border-radius: 50px;
+        }
+
+        .mat-mdc-text-field-wrapper {
+          background: white !important;
+          border-radius: 50px;
+        }
+
+        .mat-mdc-form-field-infix {
+          padding: 16px 20px !important;
+        }
+
+        input {
+          font-size: 16px;
+        }
+
+        .mat-icon {
+          color: $primary-color;
+          margin-right: 12px;
+        }
+      }
+    }
+  }
+}
+
+// Support Categories
+.support-categories {
+  padding: 60px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+  }
+
+  h2 {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 40px 0;
+  }
+
+  .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+
+    @media (max-width: 968px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .category-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    border-radius: 12px;
+
+    &:hover {
+      transform: translateY(-4px);
+      border-color: $primary-color;
+      box-shadow: 0 8px 24px rgba(29, 173, 140, 0.2);
+    }
+
+    mat-card-content {
+      text-align: center;
+      padding: 32px 24px !important;
+    }
+
+    .category-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: $primary-color;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      font-size: 14px;
+      color: $text-medium;
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+}
+
+// FAQ Section
+.faq-section {
+  padding: 60px 32px;
+  background: white;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+  }
+
+  .faq-header {
+    max-width: 800px;
+    margin: 0 auto 40px;
+    text-align: center;
+
+    h2 {
+      font-size: 32px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 12px 0;
+    }
+
+    p {
+      font-size: 16px;
+      color: $text-medium;
+      margin: 0;
+    }
+  }
+
+  .category-filters {
+    max-width: 1000px;
+    margin: 0 auto 32px;
+    text-align: center;
+
+    mat-chip-listbox {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    mat-chip-option {
+      font-weight: 500;
+      border: 2px solid $border-color;
+      background: white;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: $primary-color;
+        background: #f0fdfa;
+      }
+
+      &.mat-mdc-chip-selected {
+        background: $primary-color !important;
+        color: white !important;
+        border-color: $primary-color;
+      }
+    }
+  }
+
+  .faq-accordion {
+    max-width: 900px;
+    margin: 0 auto;
+
+    mat-expansion-panel {
+      margin-bottom: 16px;
+      border-radius: 8px;
+      border: 1px solid $border-color;
+      box-shadow: none;
+
+      &:hover {
+        border-color: $primary-color;
+      }
+
+      mat-expansion-panel-header {
+        padding: 20px 24px;
+
+        mat-panel-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 16px;
+          font-weight: 600;
+          color: $text-dark;
+
+          .faq-icon {
+            color: $primary-color;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
+      }
+
+      .faq-answer {
+        padding: 0 24px 24px 60px;
+        font-size: 15px;
+        line-height: 1.7;
+        color: $text-medium;
+        margin: 0;
+      }
+    }
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 60px 20px;
+
+    mat-icon {
+      font-size: 80px;
+      width: 80px;
+      height: 80px;
+      color: $text-light;
+      opacity: 0.5;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      font-size: 15px;
+      color: $text-medium;
+      margin: 0 0 24px 0;
+    }
+  }
+}
+
+// Contact Support Section
+.contact-support-section {
+  padding: 60px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+  }
+
+  h2 {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 12px 0;
+  }
+
+  p {
+    text-align: center;
+    font-size: 16px;
+    color: $text-medium;
+    margin: 0 0 40px 0;
+  }
+
+  .contact-methods-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+
+    @media (max-width: 968px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .contact-method-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    text-align: center;
+
+    &:hover {
+      transform: translateY(-4px);
+      border-color: $primary-color;
+      box-shadow: 0 8px 24px rgba(29, 173, 140, 0.2);
+    }
+
+    mat-card-content {
+      padding: 32px 24px !important;
+    }
+
+    .contact-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: $primary-color;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    .contact-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: $primary-color;
+      margin-bottom: 8px;
+    }
+
+    .contact-description {
+      font-size: 13px;
+      color: $text-medium;
+      margin: 0;
+    }
+  }
+}
+
+// Quick Links Section
+.quick-links-section {
+  padding: 0 32px 60px;
+  max-width: 1000px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 0 20px 40px;
+  }
+
+  .quick-links-card {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-radius: 12px;
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 24px 0;
+      text-align: center;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+
+      @media (max-width: 768px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+      }
+
+      a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 16px;
+        border: 2px solid $border-color;
+        border-radius: 8px;
+        background: white;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        color: $text-dark;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+
+        &:hover {
+          border-color: $primary-color;
+          background: #f0fdfa;
+          color: $primary-color;
+
+          mat-icon {
+            color: $primary-color;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,567 @@
+// ============================================
+// Admin Dashboard Styles
+// ============================================
+
+@use 'sass:color';
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.admin-dashboard {
+  padding: 24px;
+  background: $background;
+  min-height: 100vh;
+}
+
+// ============================================
+// Page Header
+// ============================================
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  gap: 24px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-content {
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 32px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+
+      mat-icon {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+        color: $primary-color;
+      }
+    }
+
+    p {
+      font-size: 16px;
+      color: $text-medium;
+      margin: 0;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      button {
+        flex: 1;
+      }
+    }
+
+    button mat-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+// ============================================
+// Loading State
+// ============================================
+
+.loading-container {
+  margin-bottom: 24px;
+}
+
+// ============================================
+// Metrics Grid
+// ============================================
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card {
+  cursor: default;
+  transition: all 0.3s ease;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+  }
+
+  &.warning {
+    border-left: 4px solid #f59e0b;
+  }
+
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px !important;
+
+    .metric-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: white;
+      }
+
+      &.cases {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
+      &.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      &.time {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      }
+
+      &.revenue {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      }
+
+      &.clients {
+        background: linear-gradient(135deg, $primary-color 0%, #0f8a6f 100%);
+      }
+
+      &.staff {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      }
+
+      &.pending {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      &.weekly {
+        background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+      }
+    }
+
+    .metric-details {
+      flex: 1;
+
+      .metric-label {
+        font-size: 13px;
+        color: $text-medium;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+      }
+
+      .metric-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: $text-dark;
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+
+      .metric-subtitle {
+        font-size: 13px;
+        color: $text-medium;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+
+        &.positive {
+          color: #10b981;
+
+          mat-icon {
+            color: #10b981;
+          }
+        }
+
+        &.negative {
+          color: #ef4444;
+
+          mat-icon {
+            color: #ef4444;
+          }
+        }
+
+        .active {
+          color: $primary-color;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// Workload Distribution
+// ============================================
+
+.workload-card {
+  margin-bottom: 32px;
+
+  mat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid $border-color;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        color: $primary-color;
+      }
+    }
+
+    button mat-icon {
+      margin-left: 8px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  mat-card-content {
+    padding: 24px !important;
+  }
+
+  .workload-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    .workload-item {
+      .workload-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+
+        .staff-name {
+          font-size: 15px;
+          font-weight: 600;
+          color: $text-dark;
+        }
+
+        .workload-stats {
+          font-size: 13px;
+          color: $text-medium;
+        }
+      }
+
+      .workload-bar {
+        position: relative;
+
+        mat-progress-bar {
+          height: 8px;
+          border-radius: 4px;
+        }
+
+        .utilization-label {
+          position: absolute;
+          right: 0;
+          top: -24px;
+          font-size: 13px;
+          font-weight: 600;
+          color: $text-dark;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// Recent Cases
+// ============================================
+
+.recent-cases-card {
+  margin-bottom: 32px;
+
+  mat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid $border-color;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        color: $primary-color;
+      }
+    }
+
+    button mat-icon {
+      margin-left: 8px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  mat-card-content {
+    padding: 0 !important;
+  }
+
+  .table-container {
+    overflow-x: auto;
+
+    .cases-table {
+      width: 100%;
+
+      th {
+        font-weight: 700;
+        color: $text-dark;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        padding: 16px 24px;
+        background: $background;
+      }
+
+      td {
+        padding: 16px 24px;
+        border-bottom: 1px solid $border-color;
+      }
+
+      .case-row {
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: #f0fdfa;
+        }
+      }
+
+      .client-info {
+        .client-name {
+          font-weight: 600;
+          color: $text-dark;
+          margin-bottom: 4px;
+        }
+
+        .client-email {
+          font-size: 13px;
+          color: $text-medium;
+        }
+      }
+
+      .unassigned {
+        color: $text-light;
+        font-style: italic;
+      }
+
+      .priority-chip {
+        font-size: 12px;
+        height: 24px;
+        min-height: 24px;
+      }
+    }
+  }
+}
+
+// ============================================
+// Quick Actions
+// ============================================
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .action-card {
+    cursor: pointer;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      background: linear-gradient(135deg, $primary-color 0%, #0f8a6f 100%);
+      color: white;
+
+      mat-icon {
+        color: white;
+      }
+    }
+
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+      color: $primary-color;
+      transition: color 0.3s ease;
+    }
+
+    span {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  }
+}
+
+// ============================================
+// Dark Mode
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .admin-dashboard {
+    background: #111827;
+  }
+
+  .page-header {
+    .header-content {
+      h1 {
+        color: #f9fafb;
+      }
+
+      p {
+        color: #d1d5db;
+      }
+    }
+  }
+
+  .metric-card {
+    mat-card-content {
+      .metric-details {
+        .metric-label {
+          color: #d1d5db;
+        }
+
+        .metric-value {
+          color: #f9fafb;
+        }
+
+        .metric-subtitle {
+          color: #d1d5db;
+        }
+      }
+    }
+  }
+
+  .workload-card,
+  .recent-cases-card {
+    mat-card-header {
+      border-bottom-color: #374151;
+
+      mat-card-title {
+        color: #f9fafb;
+      }
+    }
+
+    .workload-item {
+      .workload-info {
+        .staff-name {
+          color: #f9fafb;
+        }
+
+        .workload-stats {
+          color: #d1d5db;
+        }
+      }
+
+      .workload-bar {
+        .utilization-label {
+          color: #f9fafb;
+        }
+      }
+    }
+
+    .cases-table {
+      th {
+        color: #f9fafb;
+        background: #1f2937;
+      }
+
+      td {
+        border-bottom-color: #374151;
+      }
+
+      .case-row:hover {
+        background: #1f2937;
+      }
+
+      .client-info {
+        .client-name {
+          color: #f9fafb;
+        }
+
+        .client-email {
+          color: #d1d5db;
+        }
+      }
+    }
+  }
+
+  .quick-actions {
+    .action-card {
+      &:hover {
+        color: white;
+      }
+    }
+  }
+}

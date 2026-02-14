@@ -1,0 +1,125 @@
+// ============================================
+// Responsive Mixins - FULL FIXED VERSION
+// ============================================
+// Location: frontend/src/assets/styles/mixins/_responsive.scss
+
+// 1. Импортируем переменные для использования внутри миксинов
+@use '../variables' as vars;
+
+// 2. "Пробрасываем" переменные дальше. 
+// Теперь любой файл, сделавший @use 'responsive', автоматически получит доступ и к переменным.
+@forward '../variables';
+
+// ============================================
+// BREAKPOINT MIXINS
+// ============================================
+
+// Mobile only (< 768px)
+@mixin mobile {
+  @media (max-width: #{vars.$breakpoint-mobile - 1px}) {
+    @content;
+  }
+}
+
+// Tablet only (768px - 1023px)
+@mixin tablet {
+  @media (min-width: #{vars.$breakpoint-mobile}) and (max-width: #{vars.$breakpoint-tablet - 1px}) {
+    @content;
+  }
+}
+
+// Desktop and up (>= 1024px)
+@mixin desktop {
+  @media (min-width: #{vars.$breakpoint-tablet}) {
+    @content;
+  }
+}
+
+// Wide screens (>= 1536px)
+@mixin wide {
+  @media (min-width: #{vars.$breakpoint-wide}) {
+    @content;
+  }
+}
+
+// Mobile and Tablet combined (< 1024px)
+@mixin mobileAndTablet {
+  @media (max-width: #{vars.$breakpoint-tablet - 1px}) {
+    @content;
+  }
+}
+
+// Tablet and Desktop combined (>= 768px)
+@mixin tabletAndDesktop {
+  @media (min-width: #{vars.$breakpoint-mobile}) {
+    @content;
+  }
+}
+
+// ============================================
+// CUSTOM BREAKPOINT
+// ============================================
+
+@mixin respond-to($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+@mixin respond-to-max($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content;
+  }
+}
+
+// ============================================
+// REDUCED MOTION
+// ============================================
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+// ============================================
+// UTILITY MIXINS
+// ============================================
+
+// Скрытие на мобильных
+@mixin hide-mobile {
+  @include mobile {
+    display: none !important;
+  }
+}
+
+// Скрытие на десктопе
+@mixin hide-desktop {
+  @include desktop {
+    display: none !important;
+  }
+}
+
+// Показать ТОЛЬКО на мобильных
+@mixin mobile-only {
+  display: none;
+  
+  @include mobile {
+    display: block;
+  }
+}
+
+// ============================================
+// CONTAINER QUERIES (Modern)
+// ============================================
+
+@mixin container($name, $type: inline-size) {
+  container-name: $name;
+  container-type: $type;
+}
+
+@mixin container-query($name, $min-width) {
+  @container #{$name} (min-width: #{$min-width}) {
+    @content;
+  }
+}

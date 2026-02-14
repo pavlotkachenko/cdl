@@ -1,0 +1,99 @@
+// ============================================
+// Status Badge Component Styles - FIXED
+// ============================================
+// Color-coded status indicators
+// Location: frontend/src/app/shared/components/status-badge/status-badge.component.scss
+
+@use 'sass:color';
+// Используем 4 уровня вверх, чтобы выйти в папку assets
+@use '../../../../assets/styles/mixins/responsive' as resp;
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  // ФИКС: Добавляем префикс resp. ко всем переменным
+  border-radius: resp.$border-radius-xl; 
+  font-family: resp.$font-primary;
+  font-weight: resp.$font-medium;
+  white-space: nowrap;
+  transition: all resp.$transition-fast;
+  
+  // ============================================
+  // SIZES
+  // ============================================
+  
+  &--small {
+    padding: 4px 10px;
+    font-size: resp.$tiny-size;
+    
+    .badge-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+  
+  &--medium {
+    padding: 6px 12px;
+    font-size: resp.$small-size;
+    
+    .badge-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  &--large {
+    padding: 8px 16px;
+    font-size: resp.$body-size;
+    
+    .badge-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  // ============================================
+  // CLICKABLE VARIANT
+  // ============================================
+  
+  &--clickable {
+    cursor: pointer;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: resp.$shadow-sm;
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  // ============================================
+  // STATUS COLORS (Пример использования)
+  // ============================================
+  
+  &.status-new {
+    background-color: rgba(resp.$status-new, 0.1);
+    color: resp.$status-new;
+  }
+
+  &.status-completed {
+    background-color: rgba(resp.$status-completed, 0.1);
+    color: resp.$status-completed;
+  }
+}
+
+.badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-text {
+  line-height: 1;
+}

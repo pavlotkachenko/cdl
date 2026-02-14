@@ -1,0 +1,88 @@
+// Staff Management Styles
+.staff-management {
+  padding: 24px;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    .header-content {
+      h1 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+      }
+      
+      p {
+        margin: 0;
+        color: #6b7280;
+      }
+    }
+  }
+
+  .filters-card {
+    margin-bottom: 16px;
+
+    .filters-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+
+      .search-field {
+        flex: 1;
+        min-width: 300px;
+      }
+    }
+  }
+
+  .table-card {
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .staff-table {
+      width: 100%;
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #1dad8c;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+      }
+
+      .staff-info {
+        .staff-name {
+          font-weight: 600;
+        }
+
+        .staff-email {
+          font-size: 13px;
+          color: #6b7280;
+        }
+      }
+
+      .performance-info {
+        .resolution-time {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+
+  .results-footer {
+    text-align: center;
+    padding: 16px;
+    color: #6b7280;
+  }
+}

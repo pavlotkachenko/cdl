@@ -1,0 +1,277 @@
+<!-- Analytics Dashboard Template - FIXED -->
+<div class="analytics-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div>
+        <h1>Analytics Dashboard</h1>
+        <p>Track performance, trends, and insights</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="period-selector">
+        <mat-label>Time Period</mat-label>
+        <mat-select [formControl]="periodControl">
+          <mat-option value="week">Last 7 Days</mat-option>
+          <mat-option value="month">Last 30 Days</mat-option>
+          <mat-option value="quarter">Last 3 Months</mat-option>
+          <mat-option value="year">Last 12 Months</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-stroked-button (click)="refreshData()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-raised-button color="primary" (click)="generatePDFReport()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        Export Report
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading analytics...</p>
+  </div>
+
+  <div *ngIf="!loading && summary">
+
+    <!-- Summary Statistics Cards -->
+    <div class="stats-grid">
+      
+      <!-- Total Cases -->
+      <mat-card class="stat-card primary">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>gavel</mat-icon>
+          </div>
+          <div class="stat-content">
+            <h3>Total Cases</h3>
+            <div class="stat-value">{{ summary.totalCases }}</div>
+            <div class="stat-trend" *ngIf="trends">
+              <mat-icon [style.color]="getChangeColor(trends.caseVolume.change)">
+                {{ getChangeIcon(trends.caseVolume.change) }}
+              </mat-icon>
+              <span [style.color]="getChangeColor(trends.caseVolume.change)">
+                {{ trends.caseVolume.change > 0 ? '+' : '' }}{{ trends.caseVolume.change }}
+                ({{ formatPercentage(trends.caseVolume.changePercent) }})
+              </span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Win Rate -->
+      <mat-card class="stat-card success">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>emoji_events</mat-icon>
+          </div>
+          <div class="stat-content">
+            <h3>Win Rate</h3>
+            <div class="stat-value">{{ formatPercentage(summary.winRate) }}</div>
+            <div class="stat-trend" *ngIf="trends">
+              <mat-icon [style.color]="getChangeColor(trends.winRate.change)">
+                {{ getChangeIcon(trends.winRate.change) }}
+              </mat-icon>
+              <span [style.color]="getChangeColor(trends.winRate.change)">
+                {{ trends.winRate.change > 0 ? '+' : '' }}{{ trends.winRate.change.toFixed(1) }}%
+              </span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Active Cases -->
+      <mat-card class="stat-card warning">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>pending_actions</mat-icon>
+          </div>
+          <div class="stat-content">
+            <h3>Active Cases</h3>
+            <div class="stat-value">{{ summary.activeCases }}</div>
+            <div class="stat-meta">
+              <span>{{ summary.pendingCases }} pending review</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Avg Resolution Time -->
+      <mat-card class="stat-card info">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <div class="stat-content">
+            <h3>Avg Resolution Time</h3>
+            <div class="stat-value">{{ summary.avgResolutionDays }} days</div>
+            <div class="stat-trend" *ngIf="trends">
+              <mat-icon [style.color]="getChangeColor(trends.resolutionTime.change, true)">
+                {{ getChangeIcon(trends.resolutionTime.change) }}
+              </mat-icon>
+              <span [style.color]="getChangeColor(trends.resolutionTime.change, true)">
+                {{ trends.resolutionTime.change > 0 ? '+' : '' }}{{ trends.resolutionTime.change }} days
+              </span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+
+      <!-- Cases by Type -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>pie_chart</mat-icon>
+            Cases by Type
+          </mat-card-title>
+          <button mat-icon-button [matMenuTriggerFor]="typeMenu">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #typeMenu="matMenu">
+            <button mat-menu-item (click)="exportChart('typeChart')">
+              <mat-icon>download</mat-icon>
+              Export as Image
+            </button>
+          </mat-menu>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container">
+            <canvas id="typeChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Cases by Status -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>bar_chart</mat-icon>
+            Cases by Status
+          </mat-card-title>
+          <button mat-icon-button [matMenuTriggerFor]="statusMenu">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #statusMenu="matMenu">
+            <button mat-menu-item (click)="exportChart('statusChart')">
+              <mat-icon>download</mat-icon>
+              Export as Image
+            </button>
+          </mat-menu>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Timeline -->
+      <mat-card class="chart-card full-width">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>show_chart</mat-icon>
+            Case Timeline
+          </mat-card-title>
+          <button mat-icon-button [matMenuTriggerFor]="timelineMenu">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #timelineMenu="matMenu">
+            <button mat-menu-item (click)="exportChart('timelineChart')">
+              <mat-icon>download</mat-icon>
+              Export as Image
+            </button>
+          </mat-menu>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container timeline">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Location Analysis -->
+      <mat-card class="chart-card full-width">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>location_on</mat-icon>
+            Cases by Location
+          </mat-card-title>
+          <button mat-icon-button [matMenuTriggerFor]="locationMenu">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #locationMenu="matMenu">
+            <button mat-menu-item (click)="exportChart('locationChart')">
+              <mat-icon>download</mat-icon>
+              Export as Image
+            </button>
+          </mat-menu>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container">
+            <canvas id="locationChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- Insights Section -->
+    <div class="insights-section">
+      <h2>
+        <mat-icon>lightbulb</mat-icon>
+        Key Insights
+      </h2>
+      
+      <div class="insights-grid">
+        
+        <mat-card class="insight-card">
+          <mat-card-content>
+            <div class="insight-icon success">
+              <mat-icon>thumb_up</mat-icon>
+            </div>
+            <div class="insight-content">
+              <h4>Strong Performance</h4>
+              <p>Your win rate of {{ formatPercentage(summary.winRate) }} is above the industry average of 75%.</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="insight-card">
+          <mat-card-content>
+            <div class="insight-icon warning">
+              <mat-icon>trending_up</mat-icon>
+            </div>
+            <div class="insight-content">
+              <h4>Increasing Volume</h4>
+              <p>Case volume has increased by {{ trends?.caseVolume.changePercent.toFixed(0) }}% this month.</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="insight-card">
+          <mat-card-content>
+            <div class="insight-icon info">
+              <mat-icon>speed</mat-icon>
+            </div>
+            <div class="insight-content">
+              <h4>Faster Resolutions</h4>
+              <p>Average resolution time improved by {{ Math.abs(trends?.resolutionTime.change || 0) }} days.</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,25 @@
+<!-- ============================================ -->
+<!-- ADD THIS TO THE END OF case-detail.component.html -->
+<!-- BEFORE THE FINAL CLOSING </div> TAG -->
+<!-- ============================================ -->
+
+<!-- Document Viewer Modal -->
+<div class="modal-overlay" *ngIf="isDocumentViewerOpen" (click)="closeDocumentViewer()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <app-document-viewer
+      [document]="selectedDocument"
+      [showToolbar]="true"
+      (close)="closeDocumentViewer()"
+      (download)="downloadDocument($event)">
+    </app-document-viewer>
+  </div>
+</div>
+
+<!-- Image Lightbox -->
+<app-image-lightbox
+  *ngIf="isLightboxOpen"
+  [images]="lightboxImages"
+  [currentIndex]="currentLightboxIndex"
+  (close)="closeLightbox()"
+  (download)="downloadLightboxImage($event)">
+</app-image-lightbox>

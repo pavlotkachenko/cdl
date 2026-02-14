@@ -1,0 +1,168 @@
+<!-- Login Template -->
+<div class="auth-container">
+
+  <!-- Left Side - Branding -->
+  <div class="auth-branding">
+    <div class="branding-content">
+      <div class="logo">
+        <mat-icon>local_shipping</mat-icon>
+        <h1>CDL Ticket Management</h1>
+      </div>
+      <h2>Welcome Back!</h2>
+      <p>Manage your traffic violations with ease. Login to access your dashboard and track your cases.</p>
+      
+      <div class="features">
+        <div class="feature">
+          <mat-icon>check_circle</mat-icon>
+          <span>Track Cases in Real-Time</span>
+        </div>
+        <div class="feature">
+          <mat-icon>check_circle</mat-icon>
+          <span>Connect with Attorneys</span>
+        </div>
+        <div class="feature">
+          <mat-icon>check_circle</mat-icon>
+          <span>Secure Document Management</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side - Login Form -->
+  <div class="auth-form-container">
+    <div class="auth-form">
+      
+      <mat-card class="login-card">
+        <mat-card-header>
+          <mat-card-title>
+            <h2>Sign In</h2>
+          </mat-card-title>
+          <mat-card-subtitle>
+            Enter your credentials to access your account
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          
+          <!-- Social Login Buttons -->
+          <div class="social-login">
+            <button 
+              mat-stroked-button 
+              class="social-button google"
+              (click)="loginWithGoogle()"
+              type="button">
+              <mat-icon>
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+              </mat-icon>
+              Continue with Google
+            </button>
+            
+            <button 
+              mat-stroked-button 
+              class="social-button facebook"
+              (click)="loginWithFacebook()"
+              type="button">
+              <mat-icon svgIcon="facebook">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </mat-icon>
+              Continue with Facebook
+            </button>
+          </div>
+
+          <div class="divider-with-text">
+            <mat-divider></mat-divider>
+            <span>or sign in with email</span>
+            <mat-divider></mat-divider>
+          </div>
+
+          <!-- Login Form -->
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" *ngIf="loginForm">
+            
+            <!-- Email -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email Address</mat-label>
+              <input 
+                matInput 
+                type="email" 
+                formControlName="email"
+                placeholder="you@example.com"
+                autocomplete="email">
+              <mat-icon matPrefix>email</mat-icon>
+              <mat-error>{{ getErrorMessage('email') }}</mat-error>
+            </mat-form-field>
+
+            <!-- Password -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input 
+                matInput 
+                [type]="hidePassword ? 'password' : 'text'"
+                formControlName="password"
+                placeholder="Enter your password"
+                autocomplete="current-password">
+              <mat-icon matPrefix>lock</mat-icon>
+              <button 
+                mat-icon-button 
+                matSuffix 
+                (click)="hidePassword = !hidePassword"
+                type="button"
+                [attr.aria-label]="'Hide password'" 
+                [attr.aria-pressed]="hidePassword">
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error>{{ getErrorMessage('password') }}</mat-error>
+            </mat-form-field>
+
+            <!-- Remember Me & Forgot Password -->
+            <div class="form-options">
+              <mat-checkbox formControlName="rememberMe">
+                Remember me
+              </mat-checkbox>
+              <a routerLink="/forgot-password" class="forgot-link">
+                Forgot password?
+              </a>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit"
+              class="submit-button"
+              [disabled]="loading">
+              <span *ngIf="!loading">Sign In</span>
+              <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+            </button>
+
+          </form>
+
+          <!-- Sign Up Link -->
+          <div class="signup-link">
+            <p>Don't have an account? 
+              <a routerLink="/register">Sign up</a>
+            </p>
+          </div>
+
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Footer Links -->
+      <div class="auth-footer">
+        <a routerLink="/privacy">Privacy Policy</a>
+        <span>•</span>
+        <a routerLink="/terms">Terms of Service</a>
+        <span>•</span>
+        <a routerLink="/driver/help">Help</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>

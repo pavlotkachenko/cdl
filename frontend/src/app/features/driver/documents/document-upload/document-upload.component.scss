@@ -1,0 +1,397 @@
+// ============================================
+// Document Upload Styles
+// ============================================
+
+$primary-color: #1dad8c;
+$text-dark: #1f2937;
+$text-medium: #6b7280;
+$text-light: #9ca3af;
+$background: #f9fafb;
+$border-color: #e5e7eb;
+
+.upload-container {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+// ============================================
+// Header
+// ============================================
+
+.upload-header {
+  text-align: center;
+  margin-bottom: 32px;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 28px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 8px 0;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: $primary-color;
+    }
+  }
+
+  p {
+    font-size: 16px;
+    color: $text-medium;
+    margin: 0;
+  }
+}
+
+// ============================================
+// Drop Zone
+// ============================================
+
+.drop-zone {
+  border: 3px dashed $border-color;
+  border-radius: 16px;
+  padding: 60px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  position: relative;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+  }
+
+  &:hover {
+    border-color: $primary-color;
+    background: #f0fdfa;
+    transform: scale(1.01);
+  }
+
+  &.dragging {
+    border-color: $primary-color;
+    background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+    border-style: solid;
+    box-shadow: 0 8px 32px rgba(29, 173, 140, 0.2);
+
+    .drop-zone-content {
+      transform: scale(1.05);
+    }
+  }
+
+  &.has-files {
+    border-style: solid;
+    border-color: $primary-color;
+    background: #f0fdfa;
+  }
+
+  .drop-zone-content {
+    transition: transform 0.3s ease;
+
+    .upload-icon {
+      font-size: 80px;
+      width: 80px;
+      height: 80px;
+      color: $primary-color;
+      margin-bottom: 16px;
+      opacity: 0.8;
+    }
+
+    h3 {
+      font-size: 22px;
+      font-weight: 600;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      font-size: 16px;
+      color: $text-medium;
+      margin: 0 0 16px 0;
+    }
+
+    .file-info {
+      display: inline-block;
+      font-size: 13px;
+      color: $text-light;
+      background: $background;
+      padding: 6px 16px;
+      border-radius: 16px;
+    }
+  }
+}
+
+// ============================================
+// Selected Files
+// ============================================
+
+.selected-files {
+  margin: 32px 0;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid $border-color;
+
+  .files-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0;
+    }
+
+    button {
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+
+  .files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: $background;
+      border-radius: 8px;
+      border: 1px solid $border-color;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: $primary-color;
+        background: #f0fdfa;
+      }
+
+      .file-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: $primary-color;
+        flex-shrink: 0;
+      }
+
+      .file-details {
+        flex: 1;
+        min-width: 0;
+
+        .file-name {
+          font-size: 15px;
+          font-weight: 600;
+          color: $text-dark;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-bottom: 4px;
+        }
+
+        .file-size {
+          font-size: 13px;
+          color: $text-medium;
+          margin-bottom: 8px;
+        }
+
+        mat-progress-bar {
+          height: 4px;
+          border-radius: 2px;
+        }
+      }
+
+      .remove-button {
+        flex-shrink: 0;
+        mat-icon {
+          color: #ef4444;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// Upload Form
+// ============================================
+
+.upload-form {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid $border-color;
+  margin-bottom: 24px;
+
+  mat-form-field {
+    margin-bottom: 16px;
+
+    &.full-width {
+      width: 100%;
+    }
+
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+    }
+
+    button {
+      mat-icon {
+        margin-right: 8px;
+      }
+
+      @media (max-width: 768px) {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// ============================================
+// Upload Tips
+// ============================================
+
+.upload-tips {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  padding: 20px 24px;
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #92400e;
+    margin: 0 0 12px 0;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 24px;
+
+    li {
+      font-size: 14px;
+      color: #92400e;
+      margin-bottom: 6px;
+      line-height: 1.6;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// ============================================
+// Animations
+// ============================================
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.drop-zone.dragging {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+// ============================================
+// Snackbar Styles
+// ============================================
+
+::ng-deep {
+  .success-snackbar {
+    background: #10b981 !important;
+    color: white !important;
+
+    .mat-mdc-button {
+      color: white !important;
+    }
+  }
+
+  .error-snackbar {
+    background: #ef4444 !important;
+    color: white !important;
+
+    .mat-mdc-button {
+      color: white !important;
+    }
+  }
+}
+
+// ============================================
+// Dark Mode
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .upload-container {
+    .drop-zone {
+      background: #1f2937;
+      border-color: #374151;
+
+      &:hover {
+        background: #1f2937;
+        border-color: $primary-color;
+      }
+
+      &.dragging,
+      &.has-files {
+        background: #1f2937;
+      }
+    }
+
+    .selected-files,
+    .upload-form {
+      background: #1f2937;
+      border-color: #374151;
+
+      .files-header h3 {
+        color: #f9fafb;
+      }
+
+      .file-item {
+        background: #374151;
+        border-color: #4b5563;
+
+        .file-name {
+          color: #f9fafb;
+        }
+
+        .file-size {
+          color: #d1d5db;
+        }
+      }
+    }
+  }
+}

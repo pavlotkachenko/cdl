@@ -1,0 +1,5 @@
+// Set dimensions mixin
+@mixin set-dimensions($width, $height: $width) {
+  width: $width;
+  height: $height;
+}

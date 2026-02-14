@@ -1,0 +1,329 @@
+<!-- Notification Preferences Template -->
+<div class="preferences-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>Notification Preferences</h1>
+      <p>Manage how and when you receive notifications</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="testNotification()">
+        <mat-icon>notifications_active</mat-icon>
+        Test Notification
+      </button>
+      <button mat-stroked-button (click)="resetToDefaults()">
+        <mat-icon>restore</mat-icon>
+        Reset to Defaults
+      </button>
+      <button mat-raised-button color="primary" (click)="savePreferences()" [disabled]="saving">
+        <mat-icon>save</mat-icon>
+        {{ saving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+
+  <form [formGroup]="preferencesForm" class="preferences-form">
+
+    <!-- In-App Notifications -->
+    <mat-card class="preferences-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>notifications</mat-icon>
+          In-App Notifications
+        </mat-card-title>
+        <mat-card-subtitle>
+          Notifications you'll see in the app's notification bell
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div formGroupName="inApp" class="preferences-grid">
+          
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">update</mat-icon>
+              <div>
+                <h4>Case Updates</h4>
+                <p>When your case status changes</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="caseUpdates" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">chat</mat-icon>
+              <div>
+                <h4>Comments & Notes</h4>
+                <p>When someone comments on your case</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="comments" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">attach_file</mat-icon>
+              <div>
+                <h4>Documents</h4>
+                <p>When documents are uploaded or updated</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="documents" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">event</mat-icon>
+              <div>
+                <h4>Court Dates</h4>
+                <p>Reminders about upcoming court dates</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="courtDates" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">mail</mat-icon>
+              <div>
+                <h4>Attorney Messages</h4>
+                <p>When your attorney sends you a message</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="attorneyMessages" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">info</mat-icon>
+              <div>
+                <h4>System Notifications</h4>
+                <p>Important system updates and announcements</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="system" color="primary"></mat-slide-toggle>
+          </div>
+
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Email Notifications -->
+    <mat-card class="preferences-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>email</mat-icon>
+          Email Notifications
+        </mat-card-title>
+        <mat-card-subtitle>
+          Notifications sent to your email address
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div formGroupName="email" class="preferences-grid">
+          
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">update</mat-icon>
+              <div>
+                <h4>Case Updates</h4>
+                <p>Email when case status changes</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="caseUpdates" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">chat</mat-icon>
+              <div>
+                <h4>Comments & Notes</h4>
+                <p>Email for new comments</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="comments" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">attach_file</mat-icon>
+              <div>
+                <h4>Documents</h4>
+                <p>Email for document uploads</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="documents" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">event</mat-icon>
+              <div>
+                <h4>Court Dates</h4>
+                <p>Email reminders for court dates</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="courtDates" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">mail</mat-icon>
+              <div>
+                <h4>Attorney Messages</h4>
+                <p>Email for attorney messages</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="attorneyMessages" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">summarize</mat-icon>
+              <div>
+                <h4>Weekly Digest</h4>
+                <p>Weekly summary of all activity</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="weeklyDigest" color="primary"></mat-slide-toggle>
+          </div>
+
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- SMS Notifications -->
+    <mat-card class="preferences-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>sms</mat-icon>
+          SMS Text Notifications
+        </mat-card-title>
+        <mat-card-subtitle>
+          Critical notifications sent via text message
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div formGroupName="sms" class="preferences-grid">
+          
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">event</mat-icon>
+              <div>
+                <h4>Court Date Reminders</h4>
+                <p>SMS reminders for upcoming court dates</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="courtDateReminders" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">priority_high</mat-icon>
+              <div>
+                <h4>Urgent Updates</h4>
+                <p>Critical case updates via SMS</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="urgentUpdates" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item full-width">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">schedule</mat-icon>
+              <div>
+                <h4>Reminder Timing</h4>
+                <p>How many days before court date to send reminders</p>
+              </div>
+            </div>
+            <mat-form-field appearance="outline" class="days-field">
+              <mat-label>Days before</mat-label>
+              <input matInput type="number" formControlName="reminderDaysBefore" min="1" max="30">
+              <span matSuffix>days</span>
+            </mat-form-field>
+          </div>
+
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- General Settings -->
+    <mat-card class="preferences-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>settings</mat-icon>
+          General Settings
+        </mat-card-title>
+        <mat-card-subtitle>
+          Additional notification preferences
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="preferences-grid">
+          
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">volume_up</mat-icon>
+              <div>
+                <h4>Notification Sound</h4>
+                <p>Play sound for new notifications</p>
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="sound" color="primary"></mat-slide-toggle>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-info">
+              <mat-icon class="preference-icon">desktop_windows</mat-icon>
+              <div>
+                <h4>Browser Notifications</h4>
+                <p>Show desktop notifications even when app is in background</p>
+                <span class="status-badge" *ngIf="browserNotificationStatus === 'granted'">
+                  <mat-icon>check_circle</mat-icon>
+                  Enabled
+                </span>
+                <span class="status-badge denied" *ngIf="browserNotificationStatus === 'denied'">
+                  <mat-icon>block</mat-icon>
+                  Denied
+                </span>
+              </div>
+            </div>
+            <div class="browser-notification-actions">
+              <mat-slide-toggle formControlName="browserNotifications" color="primary"></mat-slide-toggle>
+              <button 
+                mat-button 
+                color="primary" 
+                type="button"
+                (click)="requestBrowserPermission()" 
+                *ngIf="canEnableBrowserNotifications">
+                Enable Permission
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Info Card -->
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="info-content">
+          <mat-icon>info</mat-icon>
+          <div>
+            <h4>About Notifications</h4>
+            <p>
+              You can customize which notifications you receive and how you receive them. 
+              In-app notifications always appear in your notification bell. 
+              Email and SMS notifications are sent based on your preferences above.
+              Changes are saved automatically when you click "Save Changes".
+            </p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  </form>
+
+</div>

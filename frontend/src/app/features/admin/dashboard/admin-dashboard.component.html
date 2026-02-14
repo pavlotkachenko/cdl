@@ -1,0 +1,316 @@
+<!-- Admin Dashboard Template -->
+<div class="admin-dashboard">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>dashboard</mat-icon>
+        Admin Dashboard
+      </h1>
+      <p>Law Firm Management Overview</p>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" [routerLink]="['/admin/cases/new']">
+        <mat-icon>add</mat-icon>
+        New Case
+      </button>
+      <button mat-button (click)="loadDashboardData()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading && stats" class="dashboard-content">
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+      
+      <!-- Total Cases -->
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon cases">
+            <mat-icon>gavel</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Total Cases</div>
+            <div class="metric-value">{{ formatNumber(stats.totalCases) }}</div>
+            <div class="metric-subtitle">
+              <span class="active">{{ stats.activeCases }} active</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Success Rate -->
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon success">
+            <mat-icon>trending_up</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Success Rate</div>
+            <div class="metric-value">{{ formatPercentage(stats.successRate) }}</div>
+            <div class="metric-subtitle">
+              {{ stats.resolvedCases }} cases resolved
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Avg Resolution Time -->
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon time">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Avg Resolution</div>
+            <div class="metric-value">{{ stats.avgResolutionTime.toFixed(1) }}</div>
+            <div class="metric-subtitle">days to resolve</div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Revenue This Month -->
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon revenue">
+            <mat-icon>attach_money</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Revenue (This Month)</div>
+            <div class="metric-value">{{ formatCurrency(stats.revenueThisMonth) }}</div>
+            <div class="metric-subtitle" [class.positive]="getRevenueChange() > 0" [class.negative]="getRevenueChange() < 0">
+              <mat-icon>{{ getRevenueChange() > 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+              {{ formatPercentage(Math.abs(getRevenueChange())) }} vs last month
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Total Clients -->
+      <mat-card class="metric-card clickable" (click)="viewClients()">
+        <mat-card-content>
+          <div class="metric-icon clients">
+            <mat-icon>people</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Total Clients</div>
+            <div class="metric-value">{{ formatNumber(stats.totalClients) }}</div>
+            <div class="metric-subtitle">View all clients →</div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Total Staff -->
+      <mat-card class="metric-card clickable" (click)="viewStaff()">
+        <mat-card-content>
+          <div class="metric-icon staff">
+            <mat-icon>badge</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Staff Members</div>
+            <div class="metric-value">{{ formatNumber(stats.totalStaff) }}</div>
+            <div class="metric-subtitle">View team →</div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Pending Cases -->
+      <mat-card class="metric-card warning">
+        <mat-card-content>
+          <div class="metric-icon pending">
+            <mat-icon>pending</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Pending Review</div>
+            <div class="metric-value">{{ formatNumber(stats.pendingCases) }}</div>
+            <div class="metric-subtitle">
+              {{ stats.pendingCases > 10 ? 'Needs attention' : 'On track' }}
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Cases This Week -->
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon weekly">
+            <mat-icon>calendar_today</mat-icon>
+          </div>
+          <div class="metric-details">
+            <div class="metric-label">Cases This Week</div>
+            <div class="metric-value">{{ formatNumber(stats.casesThisWeek) }}</div>
+            <div class="metric-subtitle" [class.positive]="getCaseChange() > 0">
+              <mat-icon>{{ getCaseChange() > 0 ? 'trending_up' : 'trending_flat' }}</mat-icon>
+              {{ formatPercentage(Math.abs(getCaseChange())) }} vs last week
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- Workload Distribution -->
+    <mat-card class="workload-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>bar_chart</mat-icon>
+          Staff Workload Distribution
+        </mat-card-title>
+        <button mat-button [routerLink]="['/admin/staff']">
+          View All Staff
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="workload-list">
+          <div *ngFor="let item of workload" class="workload-item">
+            <div class="workload-info">
+              <div class="staff-name">{{ item.staffName }}</div>
+              <div class="workload-stats">
+                {{ item.activeCases }} / {{ item.capacity }} cases
+              </div>
+            </div>
+            <div class="workload-bar">
+              <mat-progress-bar 
+                mode="determinate" 
+                [value]="item.utilization"
+                [color]="item.utilization > 80 ? 'warn' : item.utilization > 60 ? 'accent' : 'primary'">
+              </mat-progress-bar>
+              <span class="utilization-label">{{ item.utilization }}%</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Recent Cases -->
+    <mat-card class="recent-cases-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>history</mat-icon>
+          Recent Cases
+        </mat-card-title>
+        <button mat-button (click)="viewAllCases()">
+          View All Cases
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="table-container">
+          <table mat-table [dataSource]="recentCases" class="cases-table">
+
+            <!-- Case Number -->
+            <ng-container matColumnDef="caseNumber">
+              <th mat-header-cell *matHeaderCellDef>Case #</th>
+              <td mat-cell *matCellDef="let case">
+                <strong>{{ case.caseNumber }}</strong>
+              </td>
+            </ng-container>
+
+            <!-- Client -->
+            <ng-container matColumnDef="client">
+              <th mat-header-cell *matHeaderCellDef>Client</th>
+              <td mat-cell *matCellDef="let case">
+                <div class="client-info">
+                  <div class="client-name">{{ case.clientName }}</div>
+                  <div class="client-email">{{ case.clientEmail }}</div>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Type -->
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef>Violation</th>
+              <td mat-cell *matCellDef="let case">{{ case.violationType }}</td>
+            </ng-container>
+
+            <!-- Status -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let case">
+                <mat-chip [color]="getStatusColor(case.status)">
+                  {{ getStatusLabel(case.status) }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Assigned To -->
+            <ng-container matColumnDef="assigned">
+              <th mat-header-cell *matHeaderCellDef>Assigned To</th>
+              <td mat-cell *matCellDef="let case">
+                <span *ngIf="case.assignedToName">{{ case.assignedToName }}</span>
+                <span *ngIf="!case.assignedToName" class="unassigned">Unassigned</span>
+              </td>
+            </ng-container>
+
+            <!-- Priority -->
+            <ng-container matColumnDef="priority">
+              <th mat-header-cell *matHeaderCellDef>Priority</th>
+              <td mat-cell *matCellDef="let case">
+                <mat-chip [color]="getPriorityColor(case.priority)" class="priority-chip">
+                  {{ getPriorityLabel(case.priority) }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Actions -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let case">
+                <button mat-icon-button [matMenuTriggerFor]="menu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                  <button mat-menu-item (click)="viewCase(case)">
+                    <mat-icon>visibility</mat-icon>
+                    <span>View Details</span>
+                  </button>
+                  <button mat-menu-item (click)="assignCase(case)">
+                    <mat-icon>person_add</mat-icon>
+                    <span>Assign</span>
+                  </button>
+                </mat-menu>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="case-row"></tr>
+
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <mat-card class="action-card" (click)="viewAllCases()">
+        <mat-icon>gavel</mat-icon>
+        <span>Manage Cases</span>
+      </mat-card>
+      <mat-card class="action-card" (click)="viewStaff()">
+        <mat-icon>groups</mat-icon>
+        <span>Manage Staff</span>
+      </mat-card>
+      <mat-card class="action-card" (click)="viewClients()">
+        <mat-icon>people</mat-icon>
+        <span>Manage Clients</span>
+      </mat-card>
+      <mat-card class="action-card" (click)="viewReports()">
+        <mat-icon>assessment</mat-icon>
+        <span>View Reports</span>
+      </mat-card>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,137 @@
+<!-- Document Upload Template -->
+<div class="upload-container">
+
+  <!-- Header -->
+  <div class="upload-header">
+    <h2>
+      <mat-icon>cloud_upload</mat-icon>
+      Upload Documents
+    </h2>
+    <p>Drag and drop files or click to browse</p>
+  </div>
+
+  <!-- Drag and Drop Zone -->
+  <div 
+    class="drop-zone"
+    [class.dragging]="isDragging"
+    [class.has-files]="selectedFiles.length > 0"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    (click)="fileInput.click()">
+    
+    <div class="drop-zone-content">
+      <mat-icon class="upload-icon">cloud_upload</mat-icon>
+      <h3>Drag files here</h3>
+      <p>or click to browse</p>
+      <span class="file-info">Supports: Images, PDF, Word, Text (Max 10MB)</span>
+    </div>
+
+    <!-- Hidden File Input -->
+    <input 
+      #fileInput
+      type="file"
+      multiple
+      accept="image/*,.pdf,.doc,.docx,.txt"
+      (change)="onFileSelect($event)"
+      style="display: none;">
+  </div>
+
+  <!-- Selected Files List -->
+  <div class="selected-files" *ngIf="selectedFiles.length > 0">
+    <div class="files-header">
+      <h3>Selected Files ({{ selectedFiles.length }})</h3>
+      <button mat-button (click)="clearAll()" [disabled]="uploading">
+        <mat-icon>clear_all</mat-icon>
+        Clear All
+      </button>
+    </div>
+
+    <div class="files-list">
+      <div *ngFor="let file of selectedFiles; let i = index" class="file-item">
+        <mat-icon class="file-icon">{{ getFileIcon(file) }}</mat-icon>
+        
+        <div class="file-details">
+          <div class="file-name">{{ file.name }}</div>
+          <div class="file-size">{{ getFileSize(file) }}</div>
+          
+          <!-- Upload Progress -->
+          <mat-progress-bar 
+            *ngIf="uploading && uploadProgress[file.name]"
+            mode="determinate"
+            [value]="uploadProgress[file.name]">
+          </mat-progress-bar>
+        </div>
+
+        <button 
+          mat-icon-button 
+          (click)="removeFile(i)"
+          [disabled]="uploading"
+          class="remove-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Form -->
+  <form [formGroup]="uploadForm" (ngSubmit)="onUpload()" class="upload-form">
+    
+    <!-- Category Selection -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Document Category</mat-label>
+      <mat-select formControlName="category">
+        <mat-option *ngFor="let cat of categories" [value]="cat.value">
+          <mat-icon>{{ cat.icon }}</mat-icon>
+          {{ cat.label }}
+        </mat-option>
+      </mat-select>
+      <mat-hint>Select the type of document you're uploading</mat-hint>
+    </mat-form-field>
+
+    <!-- Description -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description (Optional)</mat-label>
+      <textarea 
+        matInput 
+        formControlName="description"
+        rows="3"
+        placeholder="Add notes about these documents..."></textarea>
+      <mat-hint>Provide context or notes about the uploaded files</mat-hint>
+    </mat-form-field>
+
+    <!-- Action Buttons -->
+    <div class="form-actions">
+      <button 
+        mat-raised-button 
+        color="primary"
+        type="submit"
+        [disabled]="uploading || selectedFiles.length === 0 || uploadForm.invalid">
+        <mat-icon>cloud_upload</mat-icon>
+        <span *ngIf="!uploading">Upload {{ selectedFiles.length }} File(s)</span>
+        <span *ngIf="uploading">Uploading...</span>
+      </button>
+
+      <button 
+        mat-button 
+        type="button"
+        (click)="clearAll()"
+        [disabled]="uploading || selectedFiles.length === 0">
+        Cancel
+      </button>
+    </div>
+
+  </form>
+
+  <!-- Upload Tips -->
+  <div class="upload-tips">
+    <h4><mat-icon>lightbulb</mat-icon> Tips for Better Results</h4>
+    <ul>
+      <li>Clear photos get better OCR results</li>
+      <li>PDFs preserve formatting and are easier to search</li>
+      <li>Group related documents in a single upload</li>
+      <li>Use descriptive names for your files</li>
+    </ul>
+  </div>
+
+</div>

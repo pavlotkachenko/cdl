@@ -1,0 +1,354 @@
+<!-- Case Detail Template - Professional & Feature-Rich WITH PDF VIEWER & LIGHTBOX -->
+<div class="case-detail-container">
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading case details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <h2>{{ error }}</h2>
+    <button mat-raised-button color="primary" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Cases
+    </button>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="case && !loading" class="case-content">
+
+    <!-- Header Section -->
+    <div class="case-header">
+      <button mat-icon-button (click)="goBack()" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+
+      <div class="header-info">
+        <div class="title-section">
+          <h1>{{ case.ticketNumber || case.id }}</h1>
+          <mat-chip [ngClass]="getStatusClass(case.status)">
+            <mat-icon>{{ getStatusIcon(case.status) }}</mat-icon>
+            {{ getStatusLabel(case.status) }}
+          </mat-chip>
+        </div>
+        <p class="case-type">{{ case.type || case.violation_type || 'Traffic Violation' }}</p>
+      </div>
+
+      <div class="header-actions">
+        <button mat-stroked-button (click)="exportToPDF()" [disabled]="exportingPdf" matTooltip="Export to PDF">
+          <mat-icon>picture_as_pdf</mat-icon>
+          {{ exportingPdf ? 'Generating...' : 'Export PDF' }}
+        </button>
+        <button mat-raised-button color="primary" (click)="toggleEdit()" *ngIf="!isEditing">
+          <mat-icon>edit</mat-icon>
+          Edit Case
+        </button>
+        <button mat-raised-button color="warn" (click)="toggleEdit()" *ngIf="isEditing">
+          <mat-icon>close</mat-icon>
+          Cancel
+        </button>
+        <button mat-raised-button color="primary" (click)="saveChanges()" *ngIf="isEditing">
+          <mat-icon>save</mat-icon>
+          Save Changes
+        </button>
+      </div>
+    </div>
+
+    <!-- Court Date Alert -->
+    <mat-card class="alert-card" *ngIf="case.courtDate && getDaysUntilCourt() && getDaysUntilCourt()! > 0">
+      <mat-card-content>
+        <div class="alert-content">
+          <mat-icon class="alert-icon">event</mat-icon>
+          <div>
+            <strong>Court Date Approaching</strong>
+            <p>{{ getDaysUntilCourt() }} days until your court date on {{ formatDate(case.courtDate) }}</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Main Grid Layout -->
+    <div class="main-grid">
+
+      <!-- Left Column - Case Details -->
+      <div class="left-column">
+
+        <!-- Case Information Card -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>info</mat-icon>
+              Case Information
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Citation Number</label>
+                <p>{{ case.citationNumber || 'N/A' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Violation Date</label>
+                <p>{{ formatDate(case.violationDate) }}</p>
+              </div>
+              <div class="info-item">
+                <label>Location</label>
+                <p>{{ case.location || 'N/A' }}</p>
+              </div>
+              <div class="info-item">
+                <label>State</label>
+                <p>{{ case.state || 'N/A' }}</p>
+              </div>
+              <div class="info-item" *ngIf="case.courtDate">
+                <label>Court Date</label>
+                <p>{{ formatDate(case.courtDate) }}</p>
+              </div>
+              <div class="info-item">
+                <label>Submitted</label>
+                <p>{{ formatDate(case.createdAt || case.created_at) }}</p>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="description-section">
+              <label>Description</label>
+              <p>{{ case.description || 'No description provided' }}</p>
+            </div>
+
+            <div class="resolution-section" *ngIf="case.resolution">
+              <label>Resolution</label>
+              <p class="resolution-text">{{ case.resolution }}</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Documents Card -->
+        <mat-card class="documents-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>attach_file</mat-icon>
+              Documents ({{ case.documents?.length || 0 }})
+            </mat-card-title>
+            <button mat-icon-button (click)="uploadDocument()" matTooltip="Upload Document">
+              <mat-icon>add</mat-icon>
+            </button>
+          </mat-card-header>
+          <mat-card-content>
+            <div *ngIf="!case.documents || case.documents.length === 0" class="no-documents">
+              <mat-icon>folder_open</mat-icon>
+              <p>No documents uploaded yet</p>
+              <button mat-raised-button color="primary" (click)="uploadDocument()">
+                <mat-icon>cloud_upload</mat-icon>
+                Upload Document
+              </button>
+            </div>
+
+            <div *ngIf="case.documents && case.documents.length > 0" class="documents-list">
+              <div *ngFor="let doc of case.documents" class="document-item" (click)="viewDocument(doc)">
+                <mat-icon class="doc-icon">{{ getFileIcon(doc.fileName) }}</mat-icon>
+                <div class="doc-info">
+                  <p class="doc-name">{{ doc.fileName }}</p>
+                  <p class="doc-meta">{{ formatFileSize(doc.fileSize) }} • {{ formatDate(doc.uploadedAt) }}</p>
+                </div>
+                <div class="doc-actions">
+                  <button mat-icon-button (click)="viewDocument(doc); $event.stopPropagation()" matTooltip="View">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="downloadDocument(doc); $event.stopPropagation()" matTooltip="Download">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Comments Section -->
+        <mat-card class="comments-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>chat</mat-icon>
+              Comments & Notes ({{ comments.length }})
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            
+            <!-- Comment List -->
+            <div class="comments-list">
+              <div *ngFor="let comment of comments" class="comment-item" [ngClass]="{'staff-comment': comment.isStaff}">
+                <div class="comment-header">
+                  <div class="comment-author">
+                    <mat-icon *ngIf="comment.isStaff">support_agent</mat-icon>
+                    <mat-icon *ngIf="!comment.isStaff">person</mat-icon>
+                    <strong>{{ comment.author }}</strong>
+                  </div>
+                  <span class="comment-time">{{ formatDateTime(comment.timestamp) }}</span>
+                </div>
+                <p class="comment-text">{{ comment.text }}</p>
+              </div>
+
+              <div *ngIf="comments.length === 0" class="no-comments">
+                <mat-icon>chat_bubble_outline</mat-icon>
+                <p>No comments yet. Start the conversation!</p>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Add Comment Form -->
+            <form [formGroup]="commentForm" (ngSubmit)="addComment()" class="comment-form">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Add a comment or note</mat-label>
+                <textarea 
+                  matInput 
+                  formControlName="comment" 
+                  rows="3" 
+                  placeholder="Share updates, ask questions, or add notes..."></textarea>
+                <mat-hint>Minimum 10 characters</mat-hint>
+                <mat-error *ngIf="commentForm.get('comment')?.hasError('required')">
+                  Comment is required
+                </mat-error>
+                <mat-error *ngIf="commentForm.get('comment')?.hasError('minlength')">
+                  Comment must be at least 10 characters
+                </mat-error>
+              </mat-form-field>
+              <button 
+                mat-raised-button 
+                color="primary" 
+                type="submit" 
+                [disabled]="commentForm.invalid || addingComment">
+                <mat-icon>send</mat-icon>
+                {{ addingComment ? 'Posting...' : 'Post Comment' }}
+              </button>
+            </form>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+
+      <!-- Right Column - Timeline & Attorney Info -->
+      <div class="right-column">
+
+        <!-- Attorney Info Card -->
+        <mat-card class="attorney-card" *ngIf="case.assignedAttorney">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>gavel</mat-icon>
+              Assigned Attorney
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="attorney-info">
+              <div class="attorney-avatar">
+                <mat-icon>account_circle</mat-icon>
+              </div>
+              <div class="attorney-details">
+                <h3>{{ case.assignedAttorney }}</h3>
+                <p>Licensed Attorney</p>
+                <div class="attorney-contact">
+                  <button mat-button color="primary">
+                    <mat-icon>email</mat-icon>
+                    Send Message
+                  </button>
+                  <button mat-button>
+                    <mat-icon>phone</mat-icon>
+                    Call
+                  </button>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Status Timeline Card -->
+        <mat-card class="timeline-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>timeline</mat-icon>
+              Status History
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="timeline" *ngIf="case.statusHistory && case.statusHistory.length > 0">
+              <div *ngFor="let history of case.statusHistory; let last = last" class="timeline-item">
+                <div class="timeline-marker" [ngClass]="getStatusClass(history.status)">
+                  <mat-icon>{{ getStatusIcon(history.status) }}</mat-icon>
+                </div>
+                <div class="timeline-content">
+                  <h4>{{ getStatusLabel(history.status) }}</h4>
+                  <p class="timeline-date">{{ formatDateTime(history.timestamp) }}</p>
+                  <p class="timeline-note" *ngIf="history.note">{{ history.note }}</p>
+                </div>
+                <div class="timeline-line" *ngIf="!last"></div>
+              </div>
+            </div>
+
+            <div *ngIf="!case.statusHistory || case.statusHistory.length === 0" class="no-timeline">
+              <mat-icon>history</mat-icon>
+              <p>No status history available</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Quick Actions Card -->
+        <mat-card class="actions-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>bolt</mat-icon>
+              Quick Actions
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="quick-actions">
+              <button mat-stroked-button class="action-button" (click)="uploadDocument()">
+                <mat-icon>file_upload</mat-icon>
+                Upload Document
+              </button>
+              <button mat-stroked-button class="action-button" (click)="commentForm.get('comment')?.setValue('')">
+                <mat-icon>edit_note</mat-icon>
+                Add Note
+              </button>
+              <button mat-stroked-button class="action-button" (click)="exportToPDF()">
+                <mat-icon>print</mat-icon>
+                Print Case
+              </button>
+              <button mat-stroked-button class="action-button">
+                <mat-icon>share</mat-icon>
+                Share Case
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Document Viewer Modal -->
+  <div class="modal-overlay" *ngIf="isDocumentViewerOpen" (click)="closeDocumentViewer()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <app-document-viewer
+        *ngIf="selectedDocument"
+        [document]="selectedDocument"
+        [showToolbar]="true"
+        (close)="closeDocumentViewer()"
+        (download)="downloadDocument($event)">
+      </app-document-viewer>
+    </div>
+  </div>
+
+  <!-- Image Lightbox -->
+  <app-image-lightbox
+    *ngIf="isLightboxOpen"
+    [images]="lightboxImages"
+    [currentIndex]="currentLightboxIndex"
+    (close)="closeLightbox()"
+    (download)="downloadLightboxImage($event)">
+  </app-image-lightbox>
+
+</div>

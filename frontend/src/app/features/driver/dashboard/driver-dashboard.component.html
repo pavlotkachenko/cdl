@@ -1,0 +1,210 @@
+<!-- Driver Dashboard Template - Uses ONLY Material Components -->
+<div class="dashboard-container">
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading your dashboard...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" (click)="loadDashboardData()">
+      Try Again
+    </button>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div *ngIf="!loading && !error">
+    
+    <!-- Header -->
+    <div class="dashboard-header">
+      <div>
+        <h1>{{ greeting }}, {{ firstName }}!</h1>
+        <p>Here's an overview of your cases</p>
+      </div>
+      <button mat-raised-button color="primary" (click)="submitNewCase()">
+        <mat-icon>add</mat-icon>
+        Submit New Case
+      </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon total">
+            <mat-icon>folder</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.total }}</h3>
+            <p>Total Cases</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon active">
+            <mat-icon>pending_actions</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.active }}</h3>
+            <p>Active</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon pending">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.pending }}</h3>
+            <p>Pending</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon resolved">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.resolved }}</h3>
+            <p>Resolved</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Recent Cases -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>receipt_long</mat-icon>
+          Recent Cases
+        </mat-card-title>
+        <button mat-button color="primary" (click)="viewAllCases()">
+          View All
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Empty State -->
+        <div *ngIf="recentCases.length === 0" class="empty-state">
+          <mat-icon>inbox</mat-icon>
+          <h3>No cases yet</h3>
+          <p>Submit your first case to get started</p>
+          <button mat-raised-button color="primary" (click)="submitNewCase()">
+            Submit Case
+          </button>
+        </div>
+
+        <!-- Cases List -->
+        <div *ngIf="recentCases.length > 0" class="cases-list">
+          <div *ngFor="let case of recentCases" class="case-item" (click)="viewCase(case)">
+            <div class="case-header">
+              <div>
+                <h4>{{ case.ticketNumber || case.id.substring(0, 8).toUpperCase() }}</h4>
+                <p class="case-type">{{ case.type || case.violation_type || 'Case' }}</p>
+              </div>
+              <span class="status-badge" [ngClass]="getStatusClass(case.status)">
+                {{ getStatusLabel(case.status) }}
+              </span>
+            </div>
+
+            <div class="case-details">
+              <div class="detail-item" *ngIf="case.createdAt || case.created_at">
+                <mat-icon>event</mat-icon>
+                <span>{{ formatDate(case.createdAt || case.created_at) }}</span>
+              </div>
+              <div class="detail-item" *ngIf="case.location">
+                <mat-icon>location_on</mat-icon>
+                <span>{{ case.location }}</span>
+              </div>
+              <div class="detail-item" *ngIf="case.citationNumber">
+                <mat-icon>description</mat-icon>
+                <span>{{ case.citationNumber }}</span>
+              </div>
+            </div>
+
+            <button mat-button color="primary" class="view-button">
+              View Details
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions-section">
+      <h2>
+        <mat-icon>bolt</mat-icon>
+        Quick Actions
+      </h2>
+      
+      <div class="actions-grid">
+        <mat-card class="action-card" (click)="submitNewCase()">
+          <mat-card-content>
+            <mat-icon>add_circle</mat-icon>
+            <h3>Submit New Case</h3>
+            <p>Get help with a new violation</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card" (click)="viewAllCases()">
+          <mat-card-content>
+            <mat-icon>list_alt</mat-icon>
+            <h3>View All Cases</h3>
+            <p>See your complete case history</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card" (click)="navigateToProfile()">
+          <mat-card-content>
+            <mat-icon>person</mat-icon>
+            <h3>My Profile</h3>
+            <p>Update your information</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card">
+          <mat-card-content>
+            <mat-icon>help_outline</mat-icon>
+            <h3>Help & Support</h3>
+            <p>Contact our support team</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <mat-card class="help-section">
+      <mat-card-content>
+        <div class="help-header">
+          <mat-icon>lightbulb</mat-icon>
+          <h3>Need Help?</h3>
+        </div>
+        <p>Our team is here to assist you with your cases</p>
+        <div class="contact-info">
+          <div class="contact-item">
+            <mat-icon>phone</mat-icon>
+            <span>(555) 123-4567</span>
+          </div>
+          <div class="contact-item">
+            <mat-icon>email</mat-icon>
+            <span>support@cdlhelp.com</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+</div>

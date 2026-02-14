@@ -1,0 +1,54 @@
+<!-- Documents Page Template -->
+<div class="documents-page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-title">
+        <mat-icon>folder</mat-icon>
+        <h1>Documents</h1>
+      </div>
+      <p>Upload and manage case documents, evidence, and correspondence</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="openUploadDialog()">
+      <mat-icon>cloud_upload</mat-icon>
+      Upload Documents
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <mat-tab-group [(selectedIndex)]="selectedTabIndex">
+    
+    <!-- Upload Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>cloud_upload</mat-icon>
+        Upload
+      </ng-template>
+      
+      <div class="tab-content">
+        <app-document-upload
+          [caseId]="caseId"
+          (uploaded)="onDocumentsUploaded($event)">
+        </app-document-upload>
+      </div>
+    </mat-tab>
+
+    <!-- Documents List Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>folder_open</mat-icon>
+        All Documents
+      </ng-template>
+      
+      <div class="tab-content">
+        <app-documents-list
+          [caseId]="caseId"
+          (documentSelected)="onDocumentSelected($event)">
+        </app-documents-list>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+</div>

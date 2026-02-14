@@ -1,0 +1,138 @@
+// Location: frontend/src/app/features/driver/dashboard/driver-dashboard.component.ts
+
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { User } from '../../../core/models';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { AuthService } from '../../../core/services/auth.service';
+import { CaseService } from '../../../core/services/case.service';
+import { Case, User, CaseStats } from '../../../core/models';
+
+@Component({
+  selector: 'app-driver-dashboard',
+  templateUrl: './driver-dashboard.component.html',
+  styleUrls: ['./driver-dashboard.component.scss']
+})
+export class DriverDashboardComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  
+  // User data
+  currentUser: AppUser | null = null;
+  
+  // Cases data
+  cases: Case[] = [];
+  stats = {
+    active: 0,
+    pending: 0,
+    total: 0
+  };
+  
+  // Loading states
+  loading = {
+    dashboard: true,
+    cases: true
+  };
+  
+  // Table configuration
+  displayedColumns: string[] = ['case_number', 'state', 'violation_type', 'status', 'created_at', 'actions'];
+  
+  constructor(
+    private authService: AuthService,
+    private caseService: CaseService,
+    private router: Router
+  ) {}
+  
+  ngOnInit(): void {
+    this.loadUserData();
+    this.loadCases();
+  }
+  
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+  
+  /**
+   * Load current user data
+   */
+  private loadUserData(): void {
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.currentUser = user;
+        this.loading.dashboard = false;
+      });
+  }
+  
+  /**
+   * Load user's cases
+   */
+  private loadCases(): void {
+    this.caseService.getMyCases()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.cases = response.cases;
+          this.calculateStats();
+          this.loading.cases = false;
+        },
+        error: (error) => {
+          console.error('Failed to load cases:', error);
+          this.loading.cases = false;
+        }
+      });
+  }
+  
+  /**
+   * Calculate dashboard statistics
+   */
+  private calculateStats(): void {
+    this.stats.total = this.cases.length;
+    this.stats.active = this.cases.filter(c => 
+      ['new', 'reviewed', 'assigned_to_attorney', 'send_info_to_attorney'].includes(c.status)
+    ).length;
+    this.stats.pending = this.cases.filter(c => 
+      c.status === 'waiting_for_driver'
+    ).length;
+  }
+  
+  /**
+   * Navigate to submit ticket page
+   */
+  submitNewTicket(): void {
+    this.router.navigate(['/driver/submit-ticket']);
+  }
+  
+  /**
+   * View case details
+   */
+  viewCase(caseItem: Case): void {
+    this.router.navigate(['/driver/cases', caseItem.id]);
+  }
+  
+  /**
+   * Refresh cases
+   */
+  refreshCases(): void {
+    this.loading.cases = true;
+    this.loadCases();
+  }
+  
+  /**
+   * Get greeting based on time
+   */
+  get greeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+  
+  /**
+   * Get first name from full name
+   */
+  get firstName(): string {
+    return this.currentUser?.full_name?.split(' ')[0] || 'Driver';
+  }
+}

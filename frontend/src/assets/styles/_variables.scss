@@ -1,0 +1,195 @@
+// ============================================
+// CDL Ticket Management - Design Variables
+// ============================================
+// Based on cdl-advisor.com design system
+// Location: frontend/src/assets/styles/_variables.scss
+
+// ============================================
+// COLOR PALETTE
+// ============================================
+
+// Primary Colors
+$primary-black: #090000;
+$accent-green: #1dad8c;
+$title-black: #020000;
+
+// Neutrals
+$light-grey: #eff3f6;
+$grey: #e5eaee;
+$dark-grey: #9c9c9c;
+$footer-grey: #98a8b4;
+$copyright-grey: #e7e7e7;
+
+// Semantic Colors
+$success: #1dad8c;
+$warning: #f59e0b;
+$error: #ef4444;
+$info: #3b82f6;
+
+// Status Colors (for case statuses)
+$status-new: #3b82f6;        // Blue
+$status-reviewed: #8b5cf6;   // Purple
+$status-assigned: #ec4899;   // Pink
+$status-waiting: #f59e0b;    // Amber
+$status-in-progress: #06b6d4; // Cyan
+$status-completed: #10b981;  // Green
+$status-closed: #6b7280;     // Gray
+
+// ============================================
+// TYPOGRAPHY
+// ============================================
+
+// Font Family
+$font-primary: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+// Font Weights
+$font-light: 300;
+$font-regular: 400;
+$font-medium: 500;
+$font-semibold: 600;
+$font-bold: 700;
+
+// Font Sizes - Desktop
+$h1-size-desktop: 60px;
+$h2-size-desktop: 50px;
+$h3-size-desktop: 40px;
+$h4-size-desktop: 25px;
+$body-size: 16px;
+$small-size: 14px;
+$tiny-size: 12px;
+
+// Font Sizes - Mobile
+$h1-size-mobile: 32px;
+$h2-size-mobile: 26px;
+$h3-size-mobile: 26px;
+$h4-size-mobile: 20px;
+
+// Font Sizes - Tablet
+$h2-size-tablet: 35px;
+$h3-size-tablet: 30px;
+
+// Line Heights
+$line-height-tight: 1.2;
+$line-height-normal: 1.375; // 22px / 16px
+$line-height-relaxed: 1.6;
+
+// ============================================
+// SPACING
+// ============================================
+
+$spacing-xs: 5px;
+$spacing-sm: 10px;
+$spacing-md: 15px;
+$spacing-lg: 20px;
+$spacing-xl: 30px;
+$spacing-2xl: 40px;
+$spacing-3xl: 60px;
+$spacing-4xl: 80px;
+
+// Container Padding
+$container-padding-desktop: 80px;
+$container-padding-mobile: 15px;
+
+// ============================================
+// BORDERS & RADII
+// ============================================
+
+$border-radius-sm: 3px;
+$border-radius-md: 4px;
+$border-radius-lg: 8px;
+$border-radius-xl: 12px;
+$border-radius-full: 31.5px; // For buttons
+
+$border-width: 1px;
+$border-color: $dark-grey;
+
+// ============================================
+// SHADOWS
+// ============================================
+
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+// ============================================
+// COMPONENT SIZES
+// ============================================
+
+// Buttons
+$button-height-desktop: 45px;
+$button-height-mobile: 40px;
+$button-width-desktop: 155px;
+$button-width-mobile: 140px;
+$button-font-size-desktop: 16px;
+$button-font-size-mobile: 14px;
+
+// Inputs
+$input-height: 45px;
+$input-padding: 12px;
+$input-border-radius: $border-radius-md;
+
+// Checkboxes
+$checkbox-size: 22px;
+
+// ============================================
+// BREAKPOINTS
+// ============================================
+
+$breakpoint-mobile: 768px;
+$breakpoint-tablet: 1024px;
+$breakpoint-desktop: 1280px;
+$breakpoint-wide: 1536px;
+
+// ============================================
+// Z-INDEX LAYERS
+// ============================================
+
+$z-dropdown: 1000;
+$z-sticky: 1020;
+$z-fixed: 1030;
+$z-modal-backdrop: 1040;
+$z-modal: 1050;
+$z-popover: 1060;
+$z-tooltip: 1070;
+
+// ============================================
+// TRANSITIONS
+// ============================================
+
+$transition-fast: 150ms ease-in-out;
+$transition-base: 200ms ease-in-out;
+$transition-slow: 300ms ease-in-out;
+
+// ============================================
+// GRID & LAYOUT
+// ============================================
+
+$grid-columns: 12;
+$grid-gap: 20px;
+
+// ============================================
+// TABLE
+// ============================================
+
+$table-border-color: $grey;
+$table-header-bg: $light-grey;
+$table-row-hover-bg: rgba($accent-green, 0.05);
+$table-padding: 12px;
+
+// ============================================
+// SIDEBAR
+// ============================================
+
+$sidebar-width: 260px;
+$sidebar-width-collapsed: 70px;
+$sidebar-bg: #ffffff;
+$sidebar-item-hover: $light-grey;
+$sidebar-item-active: $accent-green;
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+$notification-dot-size: 8px;
+$notification-badge-size: 20px;

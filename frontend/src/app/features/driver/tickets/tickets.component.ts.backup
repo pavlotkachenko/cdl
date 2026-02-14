@@ -1,0 +1,458 @@
+// ============================================
+// Enhanced Tickets Component - Advanced Search & Filters
+// Location: frontend/src/app/features/driver/tickets/tickets.component.ts
+// ============================================
+
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
+
+// Angular Material
+import { MatTableModule } from '@angular/material/table';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatBadgeModule } from '@angular/material/badge';
+
+// Services
+import { CaseService, Case } from '../../../core/services/case.service';
+
+interface FilterPreset {
+  id: string;
+  name: string;
+  filters: {
+    search?: string;
+    status?: string;
+    type?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    location?: string;
+    citationNumber?: string;
+  };
+  createdAt: Date;
+}
+
+@Component({
+  selector: 'app-tickets',
+  standalone: true,
+  templateUrl: './tickets.component.html',
+  styleUrls: ['./tickets.component.scss'],
+  imports: [
+    CommonModule,
+    RouterModule,
+    ReactiveFormsModule,
+    MatTableModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+    MatProgressSpinnerModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatExpansionModule,
+    MatTooltipModule,
+    MatSnackBarModule,
+    MatDialogModule,
+    MatMenuModule,
+    MatBadgeModule
+  ]
+})
+export class TicketsComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  // Data
+  cases: Case[] = [];
+  filteredCases: Case[] = [];
+  loading = true;
+  error = '';
+
+  // Basic Filters
+  searchControl = new FormControl('');
+  statusFilter = new FormControl('all');
+  typeFilter = new FormControl('all');
+
+  // Advanced Filters
+  dateFromControl = new FormControl<Date | null>(null);
+  dateToControl = new FormControl<Date | null>(null);
+  locationControl = new FormControl('');
+  citationControl = new FormControl('');
+  
+  // Advanced filter panel state
+  showAdvancedFilters = false;
+  activeFiltersCount = 0;
+
+  // Filter Presets
+  filterPresets: FilterPreset[] = [];
+  selectedPresetId: string | null = null;
+
+  // Options
+  statusOptions = [
+    { value: 'all', label: 'All Statuses' },
+    { value: 'new', label: 'New' },
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'under_review', label: 'Under Review' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'resolved', label: 'Resolved' },
+    { value: 'rejected', label: 'Rejected' }
+  ];
+
+  typeOptions = [
+    { value: 'all', label: 'All Types' },
+    { value: 'Speeding', label: 'Speeding' },
+    { value: 'CDL Violation', label: 'CDL Violation' },
+    { value: 'Traffic', label: 'Traffic' },
+    { value: 'Parking', label: 'Parking' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  // Table columns
+  displayedColumns: string[] = ['ticketNumber', 'type', 'status', 'date', 'location', 'actions'];
+
+  constructor(
+    private caseService: CaseService,
+    private router: Router,
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
+  ) {}
+
+  ngOnInit(): void {
+    this.loadCases();
+    this.loadFilterPresets();
+    this.setupFilterListeners();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private loadCases(): void {
+    this.loading = true;
+    this.error = '';
+
+    this.caseService.getMyCases()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          this.cases = response.data || response || [];
+          this.applyFilters();
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = 'Failed to load tickets';
+          this.loading = false;
+          console.error('Error loading tickets:', err);
+        }
+      });
+  }
+
+  private setupFilterListeners(): void {
+    // Debounce search input
+    this.searchControl.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+
+    // Immediate filter updates
+    this.statusFilter.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+
+    this.typeFilter.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+
+    // Advanced filters
+    this.dateFromControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+
+    this.dateToControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+
+    this.locationControl.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+
+    this.citationControl.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+        this.updateActiveFiltersCount();
+      });
+  }
+
+  private applyFilters(): void {
+    let filtered = [...this.cases];
+
+    // Search filter (global search across multiple fields)
+    const searchTerm = this.searchControl.value?.toLowerCase() || '';
+    if (searchTerm) {
+      filtered = filtered.filter(c => {
+        const searchableFields = [
+          c.ticketNumber,
+          c.id,
+          c.type,
+          c.violation_type,
+          c.location,
+          c.citationNumber,
+          c.description,
+          c.state
+        ];
+        return searchableFields.some(field => 
+          field?.toString().toLowerCase().includes(searchTerm)
+        );
+      });
+    }
+
+    // Status filter
+    const status = this.statusFilter.value;
+    if (status && status !== 'all') {
+      filtered = filtered.filter(c => c.status === status);
+    }
+
+    // Type filter
+    const type = this.typeFilter.value;
+    if (type && type !== 'all') {
+      filtered = filtered.filter(c => 
+        c.type === type || c.violation_type === type
+      );
+    }
+
+    // Date range filter
+    const dateFrom = this.dateFromControl.value;
+    const dateTo = this.dateToControl.value;
+    
+    if (dateFrom) {
+      filtered = filtered.filter(c => {
+        const caseDate = new Date(c.createdAt || c.created_at || c.violationDate || '');
+        return caseDate >= dateFrom;
+      });
+    }
+    
+    if (dateTo) {
+      filtered = filtered.filter(c => {
+        const caseDate = new Date(c.createdAt || c.created_at || c.violationDate || '');
+        return caseDate <= dateTo;
+      });
+    }
+
+    // Location filter
+    const location = this.locationControl.value?.toLowerCase() || '';
+    if (location) {
+      filtered = filtered.filter(c => 
+        c.location?.toLowerCase().includes(location) ||
+        c.state?.toLowerCase().includes(location)
+      );
+    }
+
+    // Citation number filter
+    const citation = this.citationControl.value?.toLowerCase() || '';
+    if (citation) {
+      filtered = filtered.filter(c => 
+        c.citationNumber?.toLowerCase().includes(citation)
+      );
+    }
+
+    this.filteredCases = filtered;
+  }
+
+  private updateActiveFiltersCount(): void {
+    let count = 0;
+    
+    if (this.searchControl.value) count++;
+    if (this.statusFilter.value && this.statusFilter.value !== 'all') count++;
+    if (this.typeFilter.value && this.typeFilter.value !== 'all') count++;
+    if (this.dateFromControl.value) count++;
+    if (this.dateToControl.value) count++;
+    if (this.locationControl.value) count++;
+    if (this.citationControl.value) count++;
+    
+    this.activeFiltersCount = count;
+  }
+
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  clearFilters(): void {
+    this.searchControl.setValue('');
+    this.statusFilter.setValue('all');
+    this.typeFilter.setValue('all');
+    this.dateFromControl.setValue(null);
+    this.dateToControl.setValue(null);
+    this.locationControl.setValue('');
+    this.citationControl.setValue('');
+    this.selectedPresetId = null;
+    this.updateActiveFiltersCount();
+  }
+
+  // Filter Presets
+  private loadFilterPresets(): void {
+    const stored = localStorage.getItem('ticketFilterPresets');
+    if (stored) {
+      try {
+        this.filterPresets = JSON.parse(stored);
+      } catch (e) {
+        console.error('Error loading filter presets:', e);
+        this.filterPresets = [];
+      }
+    }
+  }
+
+  private saveFilterPresetsToStorage(): void {
+    localStorage.setItem('ticketFilterPresets', JSON.stringify(this.filterPresets));
+  }
+
+  saveCurrentFiltersAsPreset(): void {
+    const presetName = prompt('Enter a name for this filter preset:');
+    
+    if (!presetName || !presetName.trim()) {
+      return;
+    }
+
+    const preset: FilterPreset = {
+      id: `preset-${Date.now()}`,
+      name: presetName.trim(),
+      filters: {
+        search: this.searchControl.value || undefined,
+        status: this.statusFilter.value !== 'all' ? this.statusFilter.value || undefined : undefined,
+        type: this.typeFilter.value !== 'all' ? this.typeFilter.value || undefined : undefined,
+        dateFrom: this.dateFromControl.value || undefined,
+        dateTo: this.dateToControl.value || undefined,
+        location: this.locationControl.value || undefined,
+        citationNumber: this.citationControl.value || undefined
+      },
+      createdAt: new Date()
+    };
+
+    this.filterPresets.push(preset);
+    this.saveFilterPresetsToStorage();
+    this.selectedPresetId = preset.id;
+
+    this.snackBar.open('Filter preset saved successfully', 'Close', {
+      duration: 3000
+    });
+  }
+
+  loadFilterPreset(preset: FilterPreset): void {
+    this.searchControl.setValue(preset.filters.search || '');
+    this.statusFilter.setValue(preset.filters.status || 'all');
+    this.typeFilter.setValue(preset.filters.type || 'all');
+    this.dateFromControl.setValue(preset.filters.dateFrom || null);
+    this.dateToControl.setValue(preset.filters.dateTo || null);
+    this.locationControl.setValue(preset.filters.location || '');
+    this.citationControl.setValue(preset.filters.citationNumber || '');
+    this.selectedPresetId = preset.id;
+
+    this.snackBar.open(`Loaded preset: ${preset.name}`, 'Close', {
+      duration: 2000
+    });
+  }
+
+  deleteFilterPreset(preset: FilterPreset, event: Event): void {
+    event.stopPropagation();
+    
+    if (confirm(`Delete filter preset "${preset.name}"?`)) {
+      this.filterPresets = this.filterPresets.filter(p => p.id !== preset.id);
+      this.saveFilterPresetsToStorage();
+      
+      if (this.selectedPresetId === preset.id) {
+        this.selectedPresetId = null;
+      }
+
+      this.snackBar.open('Filter preset deleted', 'Close', {
+        duration: 2000
+      });
+    }
+  }
+
+  // Navigation
+  viewCase(caseItem: Case): void {
+    this.router.navigate(['/driver/cases', caseItem.id]);
+  }
+
+  submitNewTicket(): void {
+    this.router.navigate(['/driver/submit-ticket']);
+  }
+
+  refresh(): void {
+    this.loadCases();
+  }
+
+  // Helper Methods
+  getStatusLabel(status: string): string {
+    const option = this.statusOptions.find(o => o.value === status);
+    return option ? option.label : status;
+  }
+
+  getStatusColor(status: string): 'primary' | 'accent' | 'warn' | undefined {
+    if (['resolved', 'closed'].includes(status)) return 'primary';
+    if (['rejected', 'denied'].includes(status)) return 'warn';
+    return 'accent';
+  }
+
+  formatDate(date: Date | string | undefined): string {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  exportToCSV(): void {
+    // TODO: Implement CSV export
+    this.snackBar.open('CSV export feature coming soon', 'Close', {
+      duration: 3000
+    });
+  }
+}

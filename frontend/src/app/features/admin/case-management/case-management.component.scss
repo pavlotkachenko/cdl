@@ -1,0 +1,95 @@
+// Case Management Styles
+.case-management {
+  padding: 24px;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    .header-content {
+      h1 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+      }
+      
+      p {
+        margin: 0;
+        color: #6b7280;
+      }
+    }
+  }
+
+  .filters-card {
+    margin-bottom: 16px;
+
+    .filters-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+
+      .search-field {
+        flex: 1;
+        min-width: 300px;
+      }
+    }
+  }
+
+  .bulk-actions-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    margin-bottom: 16px;
+
+    .selection-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+    }
+
+    .bulk-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .table-card {
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .cases-table {
+      width: 100%;
+
+      .client-info {
+        .client-name {
+          font-weight: 600;
+        }
+
+        .client-email {
+          font-size: 13px;
+          color: #6b7280;
+        }
+      }
+
+      .unassigned {
+        color: #9ca3af;
+        font-style: italic;
+      }
+    }
+  }
+
+  .results-footer {
+    text-align: center;
+    padding: 16px;
+    color: #6b7280;
+  }
+}

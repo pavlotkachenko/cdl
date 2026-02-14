@@ -1,0 +1,265 @@
+
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin will define CSS variables that are used for styling Angular Material
+// components according to the Material 3 design spec.
+// Learn more about theming and how to use it for your application's
+// custom components at https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+// Fonts
+@use 'assets/styles/fonts'; // Убрали ./
+// ============================================
+// Main Styles
+// ============================================
+// CDL Ticket Management - Integrated Design System
+// Location: frontend/src/styles.scss
+
+// ============================================
+// IMPORTS
+// ============================================
+
+// Sass Built-in Modules
+@use 'sass:color';
+
+// Variables & Mixins
+@use 'assets/styles/variables' as *;
+@use 'assets/styles/mixins/responsive' as *;
+
+// Angular Material Theme
+@use 'assets/styles/theme';
+
+// Base Styles - ИСПРАВЛЕННЫЙ ПУТЬ
+@use 'assets/styles/general'; 
+
+// Component Styles
+// @use 'assets/styles/components/input';
+// @use 'assets/styles/components/button';
+// @use 'assets/styles/components/card';
+//@use 'assets/styles/components/table';
+//@use 'assets/styles/components/link';
+
+html {
+  height: 100%;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+body {
+  // Default the application to a light color theme. This can be changed to
+  // `dark` to enable the dark color theme, or to `light dark` to defer to the
+  // user's system settings.
+  color-scheme: light;
+
+  // Set a default background, font and text colors for the application using
+  // Angular Material's system-level CSS variables. Learn more about these
+  // variables at https://material.angular.dev/guide/system-variables
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  // Reset the user agent margin.
+  margin: 0;
+  height: 100%;
+}
+
+
+// ============================================
+// GLOBAL RESETS
+// ============================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  
+  @include reduced-motion {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  font-family: $font-primary;
+  font-size: $body-size;
+  font-weight: $font-regular;
+  line-height: $line-height-normal;
+  color: $primary-black;
+  background-color: #ffffff;
+  overflow-x: hidden;
+  
+  &.no-scroll {
+    overflow: hidden;
+  }
+}
+
+// ============================================
+// UTILITY CLASSES
+// ============================================
+
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 $container-padding-desktop;
+  
+  @include mobileAndTablet {
+    padding: 0 $container-padding-mobile;
+  }
+}
+
+.container-fluid {
+  width: 100%;
+  padding: 0 $container-padding-desktop;
+  
+  @include mobileAndTablet {
+    padding: 0 $container-padding-mobile;
+  }
+}
+
+// Spacing Utilities
+.mt-auto { margin-top: auto !important; }
+.mb-auto { margin-bottom: auto !important; }
+.ml-auto { margin-left: auto !important; }
+.mr-auto { margin-right: auto !important; }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+// Display Utilities
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-flex { display: flex !important; }
+.d-grid { display: grid !important; }
+
+// Flex Utilities
+.flex-row { flex-direction: row; }
+.flex-column { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+.align-center { align-items: center; }
+.align-start { align-items: flex-start; }
+.align-end { align-items: flex-end; }
+
+// Gap Utilities
+.gap-sm { gap: $spacing-sm; }
+.gap-md { gap: $spacing-md; }
+.gap-lg { gap: $spacing-lg; }
+.gap-xl { gap: $spacing-xl; }
+
+// Visibility
+@include mobile {
+  .hide-mobile { display: none !important; }
+}
+
+@include desktop {
+  .hide-desktop { display: none !important; }
+}
+
+.show-mobile {
+  display: none;
+  @include mobile { display: block; }
+}
+
+.show-desktop {
+  display: none;
+  @include desktop { display: block; }
+}
+
+// ============================================
+// ACCESSIBILITY & UTILITIES
+// ============================================
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: $accent-green;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 0 0 $border-radius-md 0;
+  z-index: $z-tooltip;
+  
+  &:focus {
+    top: 0;
+  }
+}
+
+*:focus-visible {
+  outline: 2px solid $accent-green;
+  outline-offset: 2px;
+}
+
+// ============================================
+// ANIMATIONS
+// ============================================
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+// Reduce motion
+@include reduced-motion {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// ============================================
+// SCROLLBAR STYLING
+// ============================================
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $light-grey;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $dark-grey;
+  border-radius: $border-radius-full;
+  
+  &:hover {
+    // Используем современный метод настройки цвета
+    background: color.adjust($dark-grey, $lightness: -10%);
+  }
+}

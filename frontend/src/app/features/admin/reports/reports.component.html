@@ -1,0 +1,240 @@
+<!-- Reports & Analytics Template -->
+<div class="reports-page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>assessment</mat-icon>
+        Reports & Analytics
+      </h1>
+      <p>Performance metrics and insights</p>
+    </div>
+    <div class="header-actions">
+      <button mat-button (click)="printReport()">
+        <mat-icon>print</mat-icon>
+        Print
+      </button>
+      <button mat-raised-button color="primary" (click)="exportReport()">
+        <mat-icon>download</mat-icon>
+        Export
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Staff Member</mat-label>
+          <mat-select [(ngModel)]="selectedStaff" (selectionChange)="applyFilters()">
+            <mat-option value="all">All Staff</mat-option>
+            <mat-option *ngFor="let staff of staffMembers" [value]="staff.id">
+              {{ staff.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate">
+          <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>End Date</mat-label>
+          <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate">
+          <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+        </mat-form-field>
+
+        <button mat-raised-button color="accent" (click)="applyFilters()">
+          <mat-icon>filter_alt</mat-icon>
+          Apply Filters
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Report Tabs -->
+  <mat-tab-group [(selectedIndex)]="reportType" (selectedIndexChange)="loadData()">
+    
+    <!-- Overview Tab -->
+    <mat-tab label="Overview">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Firm Performance Overview</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Overall performance metrics and trends</p>
+            <div class="overview-grid">
+              <div class="metric-box">
+                <div class="metric-label">Total Cases</div>
+                <div class="metric-value">247</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Success Rate</div>
+                <div class="metric-value">87.3%</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Avg Resolution</div>
+                <div class="metric-value">18.5 days</div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Staff Performance Tab -->
+    <mat-tab label="Staff Performance">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Staff Performance Metrics</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div *ngIf="loading">
+              <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            </div>
+
+            <div *ngIf="!loading" class="table-container">
+              <table mat-table [dataSource]="performanceMetrics" class="performance-table">
+
+                <!-- Staff Name -->
+                <ng-container matColumnDef="staffName">
+                  <th mat-header-cell *matHeaderCellDef>Staff Member</th>
+                  <td mat-cell *matCellDef="let metric">
+                    <strong>{{ metric.staffName }}</strong>
+                  </td>
+                </ng-container>
+
+                <!-- Total Cases -->
+                <ng-container matColumnDef="totalCases">
+                  <th mat-header-cell *matHeaderCellDef>Total Cases</th>
+                  <td mat-cell *matCellDef="let metric">{{ metric.totalCases }}</td>
+                </ng-container>
+
+                <!-- Resolved Cases -->
+                <ng-container matColumnDef="resolvedCases">
+                  <th mat-header-cell *matHeaderCellDef>Resolved</th>
+                  <td mat-cell *matCellDef="let metric">{{ metric.resolvedCases }}</td>
+                </ng-container>
+
+                <!-- Success Rate -->
+                <ng-container matColumnDef="successRate">
+                  <th mat-header-cell *matHeaderCellDef>Success Rate</th>
+                  <td mat-cell *matCellDef="let metric">
+                    <mat-chip [color]="getSuccessRateColor(metric.successRate)">
+                      {{ metric.successRate }}%
+                    </mat-chip>
+                  </td>
+                </ng-container>
+
+                <!-- Avg Resolution Time -->
+                <ng-container matColumnDef="avgResolutionTime">
+                  <th mat-header-cell *matHeaderCellDef>Avg Resolution</th>
+                  <td mat-cell *matCellDef="let metric">
+                    {{ metric.avgResolutionTime }} days
+                  </td>
+                </ng-container>
+
+                <!-- Satisfaction -->
+                <ng-container matColumnDef="satisfaction">
+                  <th mat-header-cell *matHeaderCellDef>Satisfaction</th>
+                  <td mat-cell *matCellDef="let metric">
+                    <div class="satisfaction-rating">
+                      <mat-icon>star</mat-icon>
+                      {{ metric.clientSatisfaction }}/5
+                    </div>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+              </table>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Performance Details -->
+        <div *ngIf="performanceMetrics.length > 0" class="performance-details">
+          <mat-card *ngFor="let metric of performanceMetrics">
+            <mat-card-header>
+              <mat-card-title>{{ metric.staffName }} - Detailed Performance</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="charts-row">
+                <div class="chart-box">
+                  <h3>Cases by Month</h3>
+                  <div class="chart-placeholder">
+                    <div *ngFor="let month of metric.casesByMonth" class="month-bar">
+                      <span>{{ month.month }}</span>
+                      <div class="bar" [style.width.%]="(month.count / 20) * 100">
+                        {{ month.count }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="chart-box">
+                  <h3>Cases by Type</h3>
+                  <div class="chart-placeholder">
+                    <div *ngFor="let type of metric.casesByType" class="type-bar">
+                      <span>{{ type.type }}</span>
+                      <div class="bar" [style.width.%]="(type.count / 50) * 100">
+                        {{ type.count }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Case Analytics Tab -->
+    <mat-tab label="Case Analytics">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Case Analytics</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Detailed case statistics and trends</p>
+            <div class="coming-soon">
+              <mat-icon>construction</mat-icon>
+              <p>Case analytics coming soon</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Financial Tab -->
+    <mat-tab label="Financial">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Financial Reports</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Revenue and billing analytics</p>
+            <div class="coming-soon">
+              <mat-icon>construction</mat-icon>
+              <p>Financial reports coming soon</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+</div>

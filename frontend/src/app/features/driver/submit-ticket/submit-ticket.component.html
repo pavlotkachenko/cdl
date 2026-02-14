@@ -1,0 +1,269 @@
+<!-- Submit Ticket Component Template -->
+<div class="submit-ticket-container">
+  
+  <!-- Success State -->
+  <div *ngIf="submitted" class="success-container">
+    <mat-card class="success-card">
+      <mat-card-content>
+        <div class="success-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <h1>Ticket Submitted Successfully!</h1>
+        <p class="ticket-number">Ticket #{{ ticketId }}</p>
+        <p class="success-message">
+          Your ticket has been submitted and our team will review it within 1 hour.
+          You'll receive an SMS notification once we start working on your case.
+        </p>
+        
+        <div class="success-actions">
+          <button mat-raised-button color="primary" (click)="viewTicket()">
+            <mat-icon>visibility</mat-icon>
+            View Ticket
+          </button>
+          <button mat-stroked-button (click)="submitAnother()">
+            <mat-icon>add</mat-icon>
+            Submit Another
+          </button>
+          <button mat-button (click)="goToDashboard()">
+            Go to Dashboard
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Submission Form -->
+  <div *ngIf="!submitted" class="form-container">
+    <div class="page-header">
+      <button mat-icon-button routerLink="/driver/dashboard" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1>Submit New Ticket</h1>
+        <p>Get help with your citation or violation</p>
+      </div>
+    </div>
+
+    <mat-stepper [linear]="true" #stepper>
+      
+      <!-- Step 1: Ticket Type -->
+      <mat-step [stepControl]="ticketTypeForm">
+        <form [formGroup]="ticketTypeForm">
+          <ng-template matStepLabel>Select Ticket Type</ng-template>
+          
+          <mat-card>
+            <mat-card-content>
+              <h2>What type of ticket do you need help with?</h2>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Ticket Type</mat-label>
+                <mat-select formControlName="type" required>
+                  <mat-option *ngFor="let type of ticketTypes" [value]="type.value">
+                    {{ type.label }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="ticketTypeForm.get('type')?.hasError('required')">
+                  Please select a ticket type
+                </mat-error>
+              </mat-form-field>
+
+              <div class="step-actions">
+                <button mat-raised-button color="primary" matStepperNext 
+                        [disabled]="ticketTypeForm.invalid">
+                  Next Step
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </form>
+      </mat-step>
+
+      <!-- Step 2: Ticket Details -->
+      <mat-step [stepControl]="ticketDetailsForm">
+        <form [formGroup]="ticketDetailsForm">
+          <ng-template matStepLabel>Ticket Details</ng-template>
+          
+          <mat-card>
+            <mat-card-content>
+              <h2>Tell us about the violation</h2>
+              
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Citation Number (Optional)</mat-label>
+                  <input matInput formControlName="citationNumber" placeholder="e.g., CA-SPD-123456">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Violation Date</mat-label>
+                  <input matInput [matDatepicker]="picker" formControlName="violationDate" required>
+                  <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                  <mat-error *ngIf="ticketDetailsForm.get('violationDate')?.hasError('required')">
+                    Violation date is required
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>State</mat-label>
+                  <mat-select formControlName="state" required>
+                    <mat-option *ngFor="let state of states" [value]="state">
+                      {{ state }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="ticketDetailsForm.get('state')?.hasError('required')">
+                    State is required
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Location/City</mat-label>
+                  <input matInput formControlName="location" placeholder="e.g., Los Angeles" required>
+                  <mat-error *ngIf="ticketDetailsForm.get('location')?.hasError('required')">
+                    Location is required
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Description</mat-label>
+                <textarea matInput formControlName="description" rows="5" 
+                          placeholder="Describe what happened in detail..." required></textarea>
+                <mat-hint>Minimum 10 characters</mat-hint>
+                <mat-error *ngIf="ticketDetailsForm.get('description')?.hasError('required')">
+                  Description is required
+                </mat-error>
+                <mat-error *ngIf="ticketDetailsForm.get('description')?.hasError('minlength')">
+                  Please provide more details (at least 10 characters)
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Court Date (if applicable)</mat-label>
+                <input matInput [matDatepicker]="courtPicker" formControlName="courtDate">
+                <mat-datepicker-toggle matIconSuffix [for]="courtPicker"></mat-datepicker-toggle>
+                <mat-datepicker #courtPicker></mat-datepicker>
+              </mat-form-field>
+
+              <div class="step-actions">
+                <button mat-button matStepperPrevious>
+                  <mat-icon>arrow_back</mat-icon>
+                  Back
+                </button>
+                <button mat-raised-button color="primary" matStepperNext
+                        [disabled]="ticketDetailsForm.invalid">
+                  Next Step
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </form>
+      </mat-step>
+
+      <!-- Step 3: Upload Documents -->
+      <mat-step [stepControl]="documentsForm">
+        <form [formGroup]="documentsForm">
+          <ng-template matStepLabel>Upload Documents</ng-template>
+          
+          <mat-card>
+            <mat-card-content>
+              <h2>Upload supporting documents (optional)</h2>
+              <p class="upload-info">
+                Upload your citation copy and any supporting documents that might help your case.
+              </p>
+
+              <div class="upload-zone">
+                 <input type="file" (change)="onFileSelected($event)" multiple>
+                       accept=".pdf,.jpg,.jpeg,.png"
+                       hidden>
+                
+                <div class="upload-area" (click)="fileInput.nativeElement.click()">
+                  <mat-icon>cloud_upload</mat-icon>
+                  <h3>Click to upload or drag and drop</h3>
+                  <p>PDF, JPG, PNG up to 10MB each</p>
+                </div>
+              </div>
+
+              <div *ngIf="uploadedFiles.length > 0" class="uploaded-files">
+                <h3>Uploaded Files ({{ uploadedFiles.length }})</h3>
+                <div *ngFor="let file of uploadedFiles; let i = index" class="file-item">
+                  <mat-icon>description</mat-icon>
+                  <div class="file-info">
+                    <p class="file-name">{{ file.name }}</p>
+                    <p class="file-size">{{ getFileSize(file.size) }}</p>
+                  </div>
+                  <button mat-icon-button (click)="removeFile(i)" color="warn">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button mat-button matStepperPrevious>
+                  <mat-icon>arrow_back</mat-icon>
+                  Back
+                </button>
+                <button mat-raised-button color="primary" matStepperNext>
+                  Review & Submit
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </form>
+      </mat-step>
+
+      <!-- Step 4: Review & Submit -->
+      <mat-step>
+        <ng-template matStepLabel>Review & Submit</ng-template>
+        
+        <mat-card>
+          <mat-card-content>
+            <h2>Review your ticket submission</h2>
+
+            <div class="review-section">
+              <h3>Ticket Type</h3>
+              <p>{{ ticketTypeForm.value.type | titlecase }}</p>
+            </div>
+
+            <div class="review-section">
+              <h3>Details</h3>
+              <p><strong>Citation Number:</strong> {{ ticketDetailsForm.value.citationNumber || 'N/A' }}</p>
+              <p><strong>Violation Date:</strong> {{ ticketDetailsForm.value.violationDate | date:'MM/dd/yyyy' }}</p>
+              <p><strong>Location:</strong> {{ ticketDetailsForm.value.location }}, {{ ticketDetailsForm.value.state }}</p>
+              <p><strong>Description:</strong> {{ ticketDetailsForm.value.description }}</p>
+              <p *ngIf="ticketDetailsForm.value.courtDate">
+                <strong>Court Date:</strong> {{ ticketDetailsForm.value.courtDate | date:'MM/dd/yyyy' }}
+              </p>
+            </div>
+
+            <div class="review-section" *ngIf="uploadedFiles.length > 0">
+              <h3>Documents</h3>
+              <p>{{ uploadedFiles.length }} file(s) attached</p>
+            </div>
+
+            <div *ngIf="error" class="error-message">
+              <mat-icon>error</mat-icon>
+              {{ error }}
+            </div>
+
+            <div class="step-actions">
+              <button mat-button matStepperPrevious [disabled]="submitting">
+                <mat-icon>arrow_back</mat-icon>
+                Back
+              </button>
+              <button mat-raised-button color="primary" 
+                      (click)="submitTicket()" 
+                      [disabled]="submitting">
+                <mat-icon *ngIf="!submitting">send</mat-icon>
+                <mat-icon *ngIf="submitting" class="spinning">sync</mat-icon>
+                {{ submitting ? 'Submitting...' : 'Submit Ticket' }}
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-step>
+    </mat-stepper>
+  </div>
+</div>

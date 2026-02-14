@@ -1,0 +1,175 @@
+// ============================================
+// Button Component Styles - FIXED
+// ============================================
+// Matching cdl-advisor.com button design
+// Location: frontend/src/app/shared/components/button/button.component.scss
+
+@use 'sass:color';
+// Импортируем миксины. Переменные уже внутри них через @use 'variables' as *
+@use '../../../../assets/styles/mixins/responsive' as resp;
+
+.cdl-button {
+  // Base styles
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  
+  // ФИКС: Добавляем resp. ко всем переменным
+  font-family: resp.$font-primary;
+  font-weight: resp.$font-medium;
+  border-radius: resp.$border-radius-full;
+  border: none;
+  cursor: pointer;
+  transition: all resp.$transition-base;
+  white-space: nowrap;
+  
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  
+  &:focus-visible {
+    outline: 2px solid resp.$accent-green;
+    outline-offset: 2px;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  
+  // ============================================
+  // VARIANTS
+  // ============================================
+  
+  &--primary {
+    background-color: resp.$accent-green;
+    color: #ffffff;
+    
+    &:hover:not(:disabled) {
+      // ФИКС: Заменяем darken на color.adjust
+      background-color: color.adjust(resp.$accent-green, $lightness: -8%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(resp.$accent-green, 0.3);
+    }
+  }
+  
+  &--secondary {
+    background-color: resp.$grey;
+    color: resp.$primary-black;
+    
+    &:hover:not(:disabled) {
+      background-color: color.adjust(resp.$grey, $lightness: -5%);
+      transform: translateY(-1px);
+      box-shadow: resp.$shadow-md;
+    }
+  }
+  
+  &--outline {
+    background-color: transparent;
+    border: 1px solid resp.$accent-green;
+    color: resp.$accent-green;
+    
+    &:hover:not(:disabled) {
+      background-color: rgba(resp.$accent-green, 0.1);
+      border-color: color.adjust(resp.$accent-green, $lightness: -10%);
+      transform: translateY(-1px);
+    }
+  }
+  
+  &--danger {
+    background-color: resp.$error;
+    color: #ffffff;
+    
+    &:hover:not(:disabled) {
+      background-color: color.adjust(resp.$error, $lightness: -8%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(resp.$error, 0.3);
+    }
+  }
+
+  &--text {
+    background-color: transparent;
+    color: resp.$accent-green;
+    padding: 0 15px;
+    
+    &:hover:not(:disabled) {
+      background-color: rgba(resp.$accent-green, 0.05);
+    }
+  }
+  
+  // ============================================
+  // SIZES
+  // ============================================
+  
+  &--small {
+    height: 35px;
+    padding: 0 20px;
+    font-size: 14px;
+    
+    @include resp.mobile { // ФИКС: Используем префикс resp.
+      height: 32px;
+      padding: 0 16px;
+      font-size: 13px;
+    }
+  }
+  
+  &--medium {
+    height: resp.$button-height-desktop;
+    padding: 0 30px;
+    font-size: resp.$button-font-size-desktop;
+    min-width: resp.$button-width-desktop;
+    
+    @include resp.mobileAndTablet {
+      height: resp.$button-height-mobile;
+      font-size: resp.$button-font-size-mobile;
+      min-width: resp.$button-width-mobile;
+    }
+  }
+  
+  &--large {
+    height: 55px;
+    padding: 0 40px;
+    font-size: 18px;
+    min-width: 180px;
+    
+    @include resp.mobile {
+      height: 50px;
+      padding: 0 35px;
+      font-size: 16px;
+      min-width: 160px;
+    }
+  }
+
+  &--icon-only {
+    min-width: auto;
+    padding: 0;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    
+    &.cdl-button--medium {
+      width: resp.$button-height-desktop;
+      height: resp.$button-height-desktop;
+      
+      @include resp.mobileAndTablet {
+        width: resp.$button-height-mobile;
+        height: resp.$button-height-mobile;
+      }
+    }
+  }
+}
+
+// ... ОСТАЛЬНЫЕ КЛАССЫ (.button-icon, .button-spinner и т.д.) 
+// требуют добавления resp.$ перед всеми переменными.
+
+// ============================================
+// ACCESSIBILITY
+// ============================================
+
+@include resp.reduced-motion { // ФИКС
+  .cdl-button {
+    transition: none;
+    &:hover:not(:disabled) { transform: none; }
+  }
+}
