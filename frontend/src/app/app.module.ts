@@ -16,6 +16,8 @@ import { SharedModule } from './shared/shared.module';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { routes } from './app.routes';
+import { LandingFooterComponent } from './features/landing/components/landing-footer/landing-footer.component';
+import { LandingHeaderComponent } from './features/landing/components/landing-header/landing-header.component';
 
 
 @NgModule({
@@ -27,6 +29,8 @@ import { routes } from './app.routes';
     BrowserAnimationsModule,
     HttpClientModule,
     SharedModule,
+    LandingFooterComponent,
+    LandingHeaderComponent,
     // Настраиваем маршрутизацию напрямую через константу routes
     RouterModule.forRoot(routes, { 
       // useHash помогает избежать проблем с 404 при перезагрузке страницы на dev-сервере

@@ -20,6 +20,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 
 // Services
 import { CaseService } from '../../../core/services/case.service';
@@ -42,7 +48,13 @@ import { Case } from '../../../core/models';
     MatIconModule,
     MatCardModule,
     MatChipsModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatBadgeModule,
+    MatExpansionModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatTooltipModule,
+    MatMenuModule
   ]
 })
 export class TicketsComponent implements OnInit, OnDestroy {
@@ -57,6 +69,10 @@ export class TicketsComponent implements OnInit, OnDestroy {
   searchControl = new FormControl('');
   statusFilter = new FormControl('all');
   typeFilter = new FormControl('all');
+  dateFromControl = new FormControl(null);
+  dateToControl = new FormControl(null);
+  locationControl = new FormControl('');
+  citationControl = new FormControl('');
 
   // Table columns
   displayedColumns: string[] = ['ticketNumber', 'type', 'status', 'date', 'location', 'actions'];
@@ -81,6 +97,16 @@ export class TicketsComponent implements OnInit, OnDestroy {
     { value: 'weight_station', label: 'Weight Station' },
     { value: 'other', label: 'Other' }
   ];
+
+  // UI State
+  showTemplates = false;
+  showHistory = false;
+  showAdvancedFilters = false;
+  selectedPresetId: string | null = null;
+  
+  filterTemplates: any[] = [];
+  filterHistory: any[] = [];
+  filterPresets: any[] = [];
 
   constructor(
     private caseService: CaseService,
@@ -163,6 +189,18 @@ export class TicketsComponent implements OnInit, OnDestroy {
     this.filteredCases = filtered;
   }
 
+  get activeFiltersCount(): number {
+    let count = 0;
+    if (this.statusFilter.value !== 'all') count++;
+    if (this.typeFilter.value !== 'all') count++;
+    if (this.searchControl.value) count++;
+    if (this.dateFromControl.value) count++;
+    if (this.dateToControl.value) count++;
+    if (this.locationControl.value) count++;
+    if (this.citationControl.value) count++;
+    return count;
+  }
+
   viewCase(caseItem: Case): void {
     this.router.navigate(['/driver/cases', caseItem.id]);
   }
@@ -215,6 +253,11 @@ formatDate(date: Date | string | undefined): string {
   });
 }
 
+  formatDateTime(date: Date | string | undefined): string {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString();
+  }
+
   clearFilters(): void {
     this.searchControl.setValue('');
     this.statusFilter.setValue('all');
@@ -225,4 +268,23 @@ formatDate(date: Date | string | undefined): string {
     this.loadCases();
   }
 
+  toggleTemplates(): void { this.showTemplates = !this.showTemplates; }
+  toggleHistory(): void { this.showHistory = !this.showHistory; }
+  toggleAdvancedFilters(): void { this.showAdvancedFilters = !this.showAdvancedFilters; }
+  
+  // Auto refresh stub
+  toggleAutoRefresh(): void {}
+  shouldAutoRefresh(): boolean { return false; }
+
+  shareCurrentFilters(): void {}
+  exportToCSV(): void {}
+  
+  applyTemplate(template: any): void {}
+  clearHistory(): void { this.filterHistory = []; }
+  loadFromHistory(entry: any): void {}
+  getFilterSummary(filters: any): string { return ''; }
+  
+  loadFilterPreset(preset: any): void {}
+  deleteFilterPreset(preset: any, event: Event): void { event.stopPropagation(); }
+  saveCurrentFiltersAsPreset(): void {}
 }

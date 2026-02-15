@@ -28,8 +28,10 @@ import { MatDialogModule } from '@angular/material/dialog';
 // Services
 //import { MockMessagingService } from '../services/messaging.service.mock';
 import { MockMessagingService } from '../services/messaging.service.mock';
+import { AuthService } from '../../../core/services/auth.service';
 
 import { 
+  MessagingService,
   Conversation, 
   Message, 
   QuickQuestion,
@@ -111,6 +113,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     // No AuthService dependency - using hardcoded user ID
     // To use real auth, inject AuthService and get user ID from there
   }
+
 
   ngOnInit(): void {
     this.initializeForms();

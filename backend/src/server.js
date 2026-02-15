@@ -16,6 +16,7 @@ const caseRoutes = require('./routes/case.routes');
 const userRoutes = require('./routes/user.routes');
 const fileRoutes = require('./routes/file.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 // Create the app (your office building)
 const app = express();
@@ -62,6 +63,7 @@ app.use('/api/cases', caseRoutes);          // Case management
 app.use('/api/users', userRoutes);          // User management
 app.use('/api/files', fileRoutes);          // File uploads
 app.use('/api/notifications', notificationRoutes); // Notifications
+app.use('/api/admin', adminRoutes);         // Admin-only routes
 
 // ============================================
 // ERROR HANDLING (When something goes wrong)
