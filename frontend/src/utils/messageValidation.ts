@@ -50,7 +50,7 @@ export function validateAttachment(
   }
 
   // Check file type
-  if (!MESSAGE_CONSTRAINTS.ALLOWED_FILE_TYPES.includes(file.type)) {
+  if (!MESSAGE_CONSTRAINTS.ALLOWED_FILE_TYPES.includes(file.type as any)) {
     errors.push(
       `File type "${file.type}" is not allowed. Allowed types: ${MESSAGE_CONSTRAINTS.ALLOWED_FILE_TYPES.join(', ')}`
     );

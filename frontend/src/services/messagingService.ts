@@ -340,7 +340,7 @@ export class MessagingService {
               recipient:users!messages_recipient_id_fkey(id, email, full_name),
               attachments:message_attachments(*)
             `)
-            .eq('id', payload.new.id)
+           .eq('id', (payload.new as any).id)
             .single();
 
           if (!error && data) {
@@ -379,7 +379,7 @@ export class MessagingService {
               driver:users!conversations_driver_id_fkey(id, email, full_name),
               attorney:users!conversations_attorney_id_fkey(id, email, full_name)
             `)
-            .eq('id', payload.new.id)
+           .eq('id', (payload.new as any).id)
             .single();
 
           if (!error && data) {
