@@ -6,8 +6,12 @@
 export const environment = {
   production: false,
   
-  // API Endpoints
+  // Backend API Configuration
   apiUrl: 'http://localhost:3000/api',
+  wsUrl: 'http://localhost:3000',
+  
+  // Feature Flags
+  useMockData: false, // Set to false to use real backend APIs
   
   // Supabase Configuration
   supabase: {
@@ -34,4 +38,5 @@ export const environment = {
  * 1. Copy this file to src/environments/environment.ts
  * 2. Replace Supabase URL and key with your actual values
  * 3. Never commit the file with real credentials to Git!
+ * 4. For production, use environment.prod.ts with production URLs
  */

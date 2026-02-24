@@ -1,116 +1,216 @@
 // ============================================
-// Main Server File
+// CDL DRIVER-ATTORNEY MESSAGING SYSTEM
+// Main Server Entry Point
 // ============================================
-// This is like the front desk of your office - 
-// it welcomes requests and directs them to the right place
 
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
-// Import routes (different sections of your office)
+// Import Socket.io setup
+const { initializeSocket } = require('./socket/socket');
+
+// Import routes
 const authRoutes = require('./routes/auth.routes');
+const messagesRoutes = require('./routes/messages.routes');
+const conversationRoutes = require('./routes/conversation.routes');
+const quickQuestionsRoutes = require('./routes/quick-questions.routes');
 const caseRoutes = require('./routes/case.routes');
 const userRoutes = require('./routes/user.routes');
 const fileRoutes = require('./routes/file.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
 
-// Create the app (your office building)
+// Import error handler
+const { errorHandler } = require('./middleware/error.middleware');
+
+// Create Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = initializeSocket(server);
+
+// Make io accessible to routes
+app.set('io', io);
+
 // ============================================
-// MIDDLEWARE (Security guards and helpers)
+// MIDDLEWARE
 // ============================================
 
-// Security protection
-app.use(helmet());
-
-// Allow requests from your Angular app
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
-  credentials: true
+// Security
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 
-// Parse JSON data
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-// Log all requests (like a visitor log book)
-if (process.env.NODE_ENV === 'development') {
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Logging
+if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
 }
 
+// Request ID middleware
+app.use((req, res, next) => {
+  req.id = require('uuid').v4();
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
+
 // ============================================
-// ROUTES (Different departments in your office)
+// HEALTH CHECK
 // ============================================
 
-// Health check (is the server running?)
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'CDL Ticket Management API is running',
+  res.json({
+    status: 'ok',
+    service: 'CDL Ticket Management API',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'CDL Ticket Management API',
     timestamp: new Date().toISOString()
   });
 });
 
-// Mount routes
-app.use('/api/auth', authRoutes);           // Login, register
-app.use('/api/cases', caseRoutes);          // Case management
-app.use('/api/users', userRoutes);          // User management
-app.use('/api/files', fileRoutes);          // File uploads
-app.use('/api/notifications', notificationRoutes); // Notifications
-app.use('/api/admin', adminRoutes);         // Admin-only routes
-
 // ============================================
-// ERROR HANDLING (When something goes wrong)
+// API ROUTES
 // ============================================
 
-// 404 - Route not found
+// Authentication
+app.use('/api/auth', authRoutes);
+
+// Messaging
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/messages', messagesRoutes);
+app.use('/api/quick-questions', quickQuestionsRoutes);
+
+// Case Management
+app.use('/api/cases', caseRoutes);
+
+// User Management
+app.use('/api/users', userRoutes);
+
+// File Management
+app.use('/api/files', fileRoutes);
+
+// Notifications
+app.use('/api/notifications', notificationRoutes);
+
+// Admin
+app.use('/api/admin', adminRoutes);
+
+// ============================================
+// ERROR HANDLING
+// ============================================
+
+// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ 
-    error: 'Route not found',
-    path: req.path
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.path} not found`,
+    timestamp: new Date().toISOString()
   });
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+app.use(errorHandler);
 
 // ============================================
 // START SERVER
 // ============================================
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`
-  ╔════════════════════════════════════════╗
-  ║  CDL Ticket Management API Server     ║
-  ║  Running on http://localhost:${PORT}     ║
-  ║  Environment: ${process.env.NODE_ENV}           ║
-  ╚════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════╗
+║                                                        ║
+║   CDL DRIVER-ATTORNEY MESSAGING SYSTEM API            ║
+║                                                        ║
+║   🚀 Server running on: http://localhost:${PORT}        ║
+║   🌍 Environment: ${process.env.NODE_ENV || 'development'}                      ║
+║   📡 Socket.io: Enabled                                ║
+║   🗄️  Database: Supabase                               ║
+║                                                        ║
+╚════════════════════════════════════════════════════════╝
   `);
-  
-  // Check Supabase connection
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.warn('⚠️  WARNING: Supabase credentials not configured!');
-    console.warn('   Please set SUPABASE_URL and SUPABASE_ANON_KEY in .env file');
+
+  // Verify environment variables
+  const requiredEnvVars = [
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
+    'JWT_SECRET'
+  ];
+
+  const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+  if (missingEnvVars.length > 0) {
+    console.warn('\n⚠️  WARNING: Missing environment variables:');
+    missingEnvVars.forEach(varName => {
+      console.warn(`   - ${varName}`);
+    });
+    console.warn('   Please configure these in your .env file\n');
+  } else {
+    console.log('✅ All required environment variables configured\n');
   }
 });
 
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  process.exit(0);
+// Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  
+  server.close(() => {
+    console.log('HTTP server closed');
+    
+    // Close Socket.io connections
+    io.close(() => {
+      console.log('Socket.io server closed');
+      process.exit(0);
+    });
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
-module.exports = app;
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+module.exports = { app, server, io };

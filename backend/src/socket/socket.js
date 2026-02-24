@@ -1,155 +1,203 @@
 // ============================================
-// Socket.io Server Setup
-// Location: backend/src/socket/index.js
+// SOCKET.IO SERVER
+// Real-time messaging with WebSocket
 // ============================================
 
-const socketIO = require('socket.io');
+const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
 
-let io;
+// Store active users
+const activeUsers = new Map();
 
-// ============================================
-// Initialize Socket.io
-// ============================================
-const initSocket = (server) => {
-  io = socketIO(server, {
+/**
+ * Initialize Socket.io server
+ */
+const initializeSocket = (server) => {
+  const io = new Server(server, {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:4200',
-      methods: ['GET', 'POST'],
-      credentials: true
-    }
+      credentials: true,
+      methods: ['GET', 'POST']
+    },
+    transports: ['websocket', 'polling']
   });
 
   // Authentication middleware
-  io.use(async (socket, next) => {
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      return next(new Error('Authentication error: No token provided'));
+    }
+
     try {
-      const token = socket.handshake.auth.token;
-      
-      if (!token) {
-        return next(new Error('Authentication error'));
-      }
-
-      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findByPk(decoded.id);
-
-      if (!user) {
-        return next(new Error('User not found'));
-      }
-
-      socket.userId = user.id;
-      socket.userRole = user.role;
-      socket.userName = user.name;
-      
+      socket.userId = decoded.id || decoded.sub;
+      socket.userRole = decoded.role;
+      socket.userEmail = decoded.email;
       next();
     } catch (error) {
-      next(new Error('Authentication error'));
+      next(new Error('Authentication error: Invalid token'));
     }
   });
 
   // Connection handler
   io.on('connection', (socket) => {
-    console.log(`✅ User connected: ${socket.userId} (${socket.userName})`);
+    console.log(`✅ User connected: ${socket.userId} (${socket.userEmail})`);
 
-    // Join user to their personal room
-    socket.join(`user_${socket.userId}`);
-
-    // Broadcast online status
-    io.emit('user_online', {
+    // Add user to active users
+    activeUsers.set(socket.userId, {
+      socketId: socket.id,
       userId: socket.userId,
-      userName: socket.userName
+      email: socket.userEmail,
+      role: socket.userRole,
+      connectedAt: new Date()
+    });
+
+    // Join user-specific room
+    socket.join(`user:${socket.userId}`);
+
+    // Broadcast user online status
+    io.emit('user-online', {
+      userId: socket.userId,
+      timestamp: new Date()
     });
 
     // ============================================
-    // Join Conversation
+    // JOIN CONVERSATION
     // ============================================
-    socket.on('join_conversation', (data) => {
-      const { conversationId } = data;
-      socket.join(`conversation_${conversationId}`);
-      console.log(`User ${socket.userId} joined conversation ${conversationId}`);
+    socket.on('join-conversation', async (data) => {
+      try {
+        const { conversationId } = data;
+        
+        if (!conversationId) {
+          socket.emit('error', { message: 'Conversation ID required' });
+          return;
+        }
 
-      // Notify others in conversation
-      socket.to(`conversation_${conversationId}`).emit('user_joined', {
+        socket.join(`conversation:${conversationId}`);
+        console.log(`User ${socket.userId} joined conversation ${conversationId}`);
+
+        // Notify other participants
+        socket.to(`conversation:${conversationId}`).emit('user-joined-conversation', {
+          userId: socket.userId,
+          conversationId,
+          timestamp: new Date()
+        });
+
+        socket.emit('conversation-joined', { conversationId });
+      } catch (error) {
+        console.error('Error joining conversation:', error);
+        socket.emit('error', { message: 'Failed to join conversation' });
+      }
+    });
+
+    // ============================================
+    // LEAVE CONVERSATION
+    // ============================================
+    socket.on('leave-conversation', async (data) => {
+      try {
+        const { conversationId } = data;
+
+        if (!conversationId) {
+          return;
+        }
+
+        socket.leave(`conversation:${conversationId}`);
+        console.log(`User ${socket.userId} left conversation ${conversationId}`);
+
+        // Notify other participants
+        socket.to(`conversation:${conversationId}`).emit('user-left-conversation', {
+          userId: socket.userId,
+          conversationId,
+          timestamp: new Date()
+        });
+      } catch (error) {
+        console.error('Error leaving conversation:', error);
+      }
+    });
+
+    // ============================================
+    // TYPING INDICATORS
+    // ============================================
+    socket.on('typing-start', (data) => {
+      try {
+        const { conversationId } = data;
+
+        if (!conversationId) {
+          return;
+        }
+
+        socket.to(`conversation:${conversationId}`).emit('user-typing', {
+          userId: socket.userId,
+          conversationId,
+          timestamp: new Date()
+        });
+      } catch (error) {
+        console.error('Error in typing-start:', error);
+      }
+    });
+
+    socket.on('typing-stop', (data) => {
+      try {
+        const { conversationId } = data;
+
+        if (!conversationId) {
+          return;
+        }
+
+        socket.to(`conversation:${conversationId}`).emit('user-stopped-typing', {
+          userId: socket.userId,
+          conversationId,
+          timestamp: new Date()
+        });
+      } catch (error) {
+        console.error('Error in typing-stop:', error);
+      }
+    });
+
+    // ============================================
+    // MESSAGE EVENTS (triggered from controllers)
+    // ============================================
+    // These are emitted from the API controllers:
+    // - new-message: When a message is sent
+    // - message-read: When a message is marked as read
+    // - message-deleted: When a message is deleted
+    // - video-link-generated: When video link is created
+
+    // ============================================
+    // GET ONLINE USERS
+    // ============================================
+    socket.on('get-online-users', () => {
+      try {
+        const onlineUserIds = Array.from(activeUsers.keys());
+        socket.emit('online-users', {
+          users: onlineUserIds,
+          count: onlineUserIds.length
+        });
+      } catch (error) {
+        console.error('Error getting online users:', error);
+      }
+    });
+
+    // ============================================
+    // DISCONNECT
+    // ============================================
+    socket.on('disconnect', () => {
+      console.log(`❌ User disconnected: ${socket.userId} (${socket.userEmail})`);
+
+      // Remove from active users
+      activeUsers.delete(socket.userId);
+
+      // Broadcast user offline status
+      io.emit('user-offline', {
         userId: socket.userId,
-        userName: socket.userName
-      });
-    });
-
-    // ============================================
-    // Leave Conversation
-    // ============================================
-    socket.on('leave_conversation', (data) => {
-      const { conversationId } = data;
-      socket.leave(`conversation_${conversationId}`);
-      console.log(`User ${socket.userId} left conversation ${conversationId}`);
-
-      // Notify others
-      socket.to(`conversation_${conversationId}`).emit('user_left', {
-        userId: socket.userId
-      });
-    });
-
-    // ============================================
-    // Typing Indicators
-    // ============================================
-    socket.on('typing_start', (data) => {
-      const { conversationId } = data;
-      socket.to(`conversation_${conversationId}`).emit('user_typing', {
-        userId: socket.userId,
-        userName: socket.userName,
-        conversationId
-      });
-    });
-
-    socket.on('typing_stop', (data) => {
-      const { conversationId } = data;
-      socket.to(`conversation_${conversationId}`).emit('user_stopped_typing', {
-        userId: socket.userId,
-        conversationId
-      });
-    });
-
-    // ============================================
-    // Message Delivered (client acknowledges receipt)
-    // ============================================
-    socket.on('message_delivered', (data) => {
-      const { messageId, conversationId } = data;
-      socket.to(`conversation_${conversationId}`).emit('message_delivered', {
-        messageId,
-        deliveredAt: new Date(),
-        deliveredBy: socket.userId
-      });
-    });
-
-    // ============================================
-    // Direct Message to User
-    // ============================================
-    socket.on('send_direct_message', (data) => {
-      const { recipientId, message } = data;
-      io.to(`user_${recipientId}`).emit('new_direct_message', {
-        from: socket.userId,
-        fromName: socket.userName,
-        message,
         timestamp: new Date()
       });
     });
 
     // ============================================
-    // Disconnect
-    // ============================================
-    socket.on('disconnect', () => {
-      console.log(`❌ User disconnected: ${socket.userId}`);
-      
-      // Broadcast offline status
-      io.emit('user_offline', {
-        userId: socket.userId,
-        userName: socket.userName
-      });
-    });
-
-    // ============================================
-    // Error Handling
+    // ERROR HANDLER
     // ============================================
     socket.on('error', (error) => {
       console.error('Socket error:', error);
@@ -159,54 +207,30 @@ const initSocket = (server) => {
   return io;
 };
 
-// ============================================
-// Get IO Instance
-// ============================================
-const getIO = () => {
-  if (!io) {
-    throw new Error('Socket.io not initialized');
-  }
-  return io;
+/**
+ * Get active users count
+ */
+const getActiveUsersCount = () => {
+  return activeUsers.size;
 };
 
-// ============================================
-// Helper Functions
-// ============================================
-
-// Send notification to specific user
-const sendNotificationToUser = (userId, event, data) => {
-  if (io) {
-    io.to(`user_${userId}`).emit(event, data);
-  }
+/**
+ * Get active user by ID
+ */
+const getActiveUser = (userId) => {
+  return activeUsers.get(userId);
 };
 
-// Send notification to conversation
-const sendNotificationToConversation = (conversationId, event, data) => {
-  if (io) {
-    io.to(`conversation_${conversationId}`).emit(event, data);
-  }
-};
-
-// Broadcast to all connected users
-const broadcastToAll = (event, data) => {
-  if (io) {
-    io.emit(event, data);
-  }
-};
-
-// Get online users count
-const getOnlineUsersCount = () => {
-  if (io) {
-    return io.engine.clientsCount;
-  }
-  return 0;
+/**
+ * Check if user is online
+ */
+const isUserOnline = (userId) => {
+  return activeUsers.has(userId);
 };
 
 module.exports = {
-  initSocket,
-  getIO,
-  sendNotificationToUser,
-  sendNotificationToConversation,
-  broadcastToAll,
-  getOnlineUsersCount
+  initializeSocket,
+  getActiveUsersCount,
+  getActiveUser,
+  isUserOnline
 };
