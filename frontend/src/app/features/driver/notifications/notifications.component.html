@@ -105,8 +105,8 @@
               <div class="notification-message">{{ notification.message }}</div>
               <div class="notification-meta">
                 <mat-icon>schedule</mat-icon>
-                <span>{{ formatFullDate(notification.timestamp) }}</span>
-                <span class="time-ago">• {{ formatTime(notification.timestamp) }}</span>
+                <span>{{ formatFullDate(notification.timestamp || notification.createdAt) }}</span>
+                <span class="time-ago">• {{ formatTime(notification.timestamp || notification.createdAt) }}</span>
               </div>
             </div>
 

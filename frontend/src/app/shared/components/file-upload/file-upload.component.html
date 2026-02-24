@@ -1,0 +1,135 @@
+<!-- ============================================ -->
+<!-- FILE UPLOAD COMPONENT TEMPLATE -->
+<!-- Location: frontend/src/app/shared/components/file-upload/file-upload.component.html -->
+<!-- ============================================ -->
+
+<div class="file-upload-container">
+  <!-- Drop Zone -->
+  <div
+    class="drop-zone"
+    [class.drag-over]="dragOver"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    (click)="triggerFileInput()"
+  >
+    <mat-icon class="upload-icon">cloud_upload</mat-icon>
+    <h3>Drag & Drop files here</h3>
+    <p>or click to browse</p>
+    <p class="file-info">
+      Maximum {{ maxFiles }} files. Supports images and documents (PDF, Word, Excel).
+    </p>
+    
+    <!-- Hidden File Input -->
+    <input
+      type="file"
+      id="file-input"
+      [multiple]="multiple"
+      [accept]="fileService.getAllowedFileTypesString()"
+      (change)="onFileSelected($event)"
+      style="display: none;"
+    />
+  </div>
+
+  <!-- File List -->
+  <div class="file-list" *ngIf="files.length > 0">
+    <div class="file-list-header">
+      <h4>Files ({{ files.length }}/{{ maxFiles }})</h4>
+      <button
+        mat-button
+        color="warn"
+        (click)="clearFiles()"
+        [disabled]="uploading"
+      >
+        <mat-icon>delete</mat-icon>
+        Clear All
+      </button>
+    </div>
+
+    <mat-list>
+      <mat-list-item *ngFor="let fileProgress of files; let i = index" class="file-item">
+        <div class="file-item-content">
+          <!-- File Icon -->
+          <div class="file-icon">
+            <mat-icon [class]="fileProgress.status">
+              {{ getFileIcon(fileProgress.file) }}
+            </mat-icon>
+          </div>
+
+          <!-- File Info -->
+          <div class="file-info-section">
+            <div class="file-name">{{ fileProgress.file.name }}</div>
+            <div class="file-size">{{ formatFileSize(fileProgress.file.size) }}</div>
+            
+            <!-- Progress Bar -->
+            <mat-progress-bar
+              *ngIf="fileProgress.status === 'uploading' || fileProgress.status === 'complete'"
+              [mode]="fileProgress.status === 'uploading' ? 'determinate' : 'determinate'"
+              [value]="fileProgress.progress"
+              [color]="getProgressColor(fileProgress.status)"
+            ></mat-progress-bar>
+
+            <!-- Error Message -->
+            <div class="error-message" *ngIf="fileProgress.status === 'error'">
+              <mat-icon>error</mat-icon>
+              {{ fileProgress.error }}
+            </div>
+          </div>
+
+          <!-- Status & Actions -->
+          <div class="file-actions">
+            <!-- Pending Status -->
+            <mat-icon
+              *ngIf="fileProgress.status === 'pending'"
+              class="status-icon pending"
+              matTooltip="Waiting to upload"
+            >
+              schedule
+            </mat-icon>
+
+            <!-- Uploading Status -->
+            <div *ngIf="fileProgress.status === 'uploading'" class="uploading-status">
+              <span class="progress-text">{{ fileProgress.progress }}%</span>
+            </div>
+
+            <!-- Complete Status -->
+            <mat-icon
+              *ngIf="fileProgress.status === 'complete'"
+              class="status-icon complete"
+              matTooltip="Upload complete"
+            >
+              check_circle
+            </mat-icon>
+
+            <!-- Error Status with Retry -->
+            <button
+              *ngIf="fileProgress.status === 'error'"
+              mat-icon-button
+              color="warn"
+              (click)="retryUpload(i)"
+              matTooltip="Retry upload"
+            >
+              <mat-icon>refresh</mat-icon>
+            </button>
+
+            <!-- Remove Button -->
+            <button
+              mat-icon-button
+              (click)="removeFile(i)"
+              [disabled]="fileProgress.status === 'uploading'"
+              matTooltip="Remove file"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+      </mat-list-item>
+    </mat-list>
+  </div>
+
+  <!-- Overall Upload Status -->
+  <div class="upload-status" *ngIf="uploading">
+    <mat-icon class="spin">sync</mat-icon>
+    <span>Uploading files...</span>
+  </div>
+</div>

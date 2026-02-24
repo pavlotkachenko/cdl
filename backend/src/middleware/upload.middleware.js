@@ -6,74 +6,141 @@
 const multer = require('multer');
 const path = require('path');
 
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
+// Allowed file types
+const ALLOWED_FILE_TYPES = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/gif': ['.gif'],
+  'application/pdf': ['.pdf'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.ms-excel': ['.xls'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'text/plain': ['.txt'],
+  'text/csv': ['.csv']
+};
 
-// File filter
+// Maximum file size (10MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/**
+ * File filter function
+ */
 const fileFilter = (req, file, cb) => {
-  // Allowed file types
-  const allowedTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain'
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
+  // Check if file type is allowed
+  if (ALLOWED_FILE_TYPES[file.mimetype]) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images, PDFs, and Office documents are allowed.'), false);
+    cb(new Error(`File type not allowed. Allowed types: ${Object.keys(ALLOWED_FILE_TYPES).join(', ')}`), false);
   }
 };
 
-// Configure multer
+/**
+ * Multer configuration with memory storage
+ */
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 1 // Single file upload
+    fileSize: MAX_FILE_SIZE,
+    files: 5 // Maximum 5 files per request
   },
   fileFilter: fileFilter
 });
 
-// Error handler for multer
-const handleMulterError = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
+/**
+ * Single file upload middleware
+ */
+const uploadSingle = upload.single('file');
+
+/**
+ * Multiple files upload middleware (max 5)
+ */
+const uploadMultiple = upload.array('files', 5);
+
+/**
+ * Error handler for multer errors
+ */
+const handleUploadError = (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         error: 'File Too Large',
-        message: 'File size cannot exceed 10MB'
+        message: `File size cannot exceed ${MAX_FILE_SIZE / (1024 * 1024)}MB`
       });
     }
-    if (err.code === 'LIMIT_FILE_COUNT') {
+    if (error.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({
         error: 'Too Many Files',
-        message: 'Only one file can be uploaded at a time'
+        message: 'Maximum 5 files allowed per upload'
       });
     }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        error: 'Unexpected Field',
+        message: 'Unexpected file field in request'
+      });
+    }
+    
     return res.status(400).json({
       error: 'Upload Error',
-      message: err.message
+      message: error.message
     });
   }
-  
-  if (err) {
+
+  if (error) {
     return res.status(400).json({
       error: 'Upload Error',
-      message: err.message
+      message: error.message
     });
   }
-  
+
   next();
 };
 
+/**
+ * Validate file metadata
+ */
+const validateFile = (req, res, next) => {
+  if (!req.file && !req.files) {
+    return res.status(400).json({
+      error: 'No File',
+      message: 'No file uploaded'
+    });
+  }
+
+  // Additional validation can be added here
+  // e.g., checking file content, scanning for viruses, etc.
+
+  next();
+};
+
+/**
+ * Get file extension from mimetype
+ */
+const getFileExtension = (mimetype) => {
+  const extensions = ALLOWED_FILE_TYPES[mimetype];
+  return extensions ? extensions[0] : '';
+};
+
+/**
+ * Generate unique filename
+ */
+const generateFileName = (originalName, userId) => {
+  const timestamp = Date.now();
+  const ext = path.extname(originalName);
+  const nameWithoutExt = path.basename(originalName, ext);
+  const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+  
+  return `${userId}_${timestamp}_${sanitizedName}${ext}`;
+};
+
 module.exports = {
-  upload,
-  handleMulterError
+  uploadSingle,
+  uploadMultiple,
+  handleUploadError,
+  validateFile,
+  getFileExtension,
+  generateFileName,
+  ALLOWED_FILE_TYPES,
+  MAX_FILE_SIZE
 };

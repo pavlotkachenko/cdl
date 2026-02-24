@@ -1,12 +1,12 @@
 // ============================================
-// Register Component (COMPLETE - All methods)
+// REGISTER COMPONENT - Complete Implementation
 // Location: frontend/src/app/features/auth/register/register.component.ts
 // ============================================
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 
 // Angular Material
 import { MatCardModule } from '@angular/material/card';
@@ -15,12 +15,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatSelectModule } from '@angular/material/select';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 // Services
-import { AuthService, User } from '../../../core/services/auth.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -37,9 +38,10 @@ import { AuthService, User } from '../../../core/services/auth.service';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatProgressBarModule,
     MatCheckboxModule,
-    MatDividerModule
+    MatSelectModule,
+    MatProgressBarModule,
+    MatSnackBarModule
   ]
 })
 export class RegisterComponent implements OnInit {
@@ -48,158 +50,213 @@ export class RegisterComponent implements OnInit {
   hidePassword = true;
   hideConfirmPassword = true;
   errorMessage = '';
-  
-  // Password strength
-  passwordStrength = 0;
-  passwordStrengthLabel = '';
-  passwordStrengthColor: 'primary' | 'accent' | 'warn' = 'primary';
+  passwordStrength: number = 0;
+  passwordStrengthLabel: string = '';
 
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
     // Redirect if already authenticated
     if (this.authService.isAuthenticated()) {
-      this.redirectBasedOnRole();
+      this.router.navigate(['/driver/dashboard']);
       return;
     }
 
-    // Initialize form
+    // Initialize reactive form with validators
     this.registerForm = this.formBuilder.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
-      cdlNumber: ['', [Validators.required, Validators.pattern(/^[A-Z0-9]{8,}$/)]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      phone: ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
+      cdlNumber: [''],
+      password: ['', [
+        Validators.required,
+        Validators.minLength(8),
+        this.passwordStrengthValidator
+      ]],
       confirmPassword: ['', [Validators.required]],
-      agreeToTerms: [false, [Validators.requiredTrue]]
-    }, { validators: this.passwordMatchValidator });
+      acceptTerms: [false, [Validators.requiredTrue]]
+    }, {
+      validators: this.passwordMatchValidator
+    });
 
-    // Subscribe to password changes for strength indicator
+    // Watch password field for strength calculation
     this.registerForm.get('password')?.valueChanges.subscribe(password => {
-      this.calculatePasswordStrength(password || '');
+      this.calculatePasswordStrength(password);
     });
   }
 
-  passwordMatchValidator(form: FormGroup): { [key: string]: boolean } | null {
-    const password = form.get('password');
-    const confirmPassword = form.get('confirmPassword');
-    
-    if (password && confirmPassword && password.value !== confirmPassword.value) {
-      return { passwordMismatch: true };
-    }
-    return null;
-  }
-
+  // ============================================
+  // Submit registration form
+  // ============================================
   onSubmit(): void {
+    // Mark all fields as touched to show validation errors
     if (this.registerForm.invalid) {
+      Object.keys(this.registerForm.controls).forEach(key => {
+        this.registerForm.get(key)?.markAsTouched();
+      });
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
 
-    const { name, email, password, phone, cdlNumber } = this.registerForm.value;
+    const { name, email, phone, cdlNumber, password } = this.registerForm.value;
 
-    // Use mock register for development
-    this.authService.mockRegister({
+    // Call auth service register
+    this.authService.register({
       name,
       email,
-      password,
-      phone,
-      cdlNumber
+      phone: phone || undefined,
+      cdlNumber: cdlNumber || undefined,
+      password
     }).subscribe({
-      next: (user: User) => {
+      next: (user) => {
         console.log('✅ Registration successful:', user);
         this.loading = false;
-        
-        // Redirect based on role
-        this.redirectBasedOnRole();
+
+        // Show success message
+        this.snackBar.open('Registration successful! Welcome to CDL Ticket Management.', 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+
+        // Redirect to dashboard
+        this.router.navigate(['/driver/dashboard']);
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('❌ Registration error:', error);
-        this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
         this.loading = false;
+
+        // Handle different error scenarios
+        if (error.status === 409) {
+          this.errorMessage = 'Email already exists. Please use a different email.';
+        } else if (error.status === 400) {
+          this.errorMessage = error.error?.message || 'Invalid registration data. Please check your inputs.';
+        } else if (error.status === 0) {
+          this.errorMessage = 'Cannot connect to server. Please try again later.';
+        } else {
+          this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
+        }
+
+        // Show error snackbar
+        this.snackBar.open(this.errorMessage, 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
 
-  private redirectBasedOnRole(): void {
-    const user = this.authService.currentUserValue;
+  // ============================================
+  // Password strength validator
+  // ============================================
+  private passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
+    const password = control.value;
     
-    if (!user) {
-      console.log('No user found, staying on register');
+    if (!password) {
+      return null;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumeric = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    const passwordValid = hasUpperCase && hasLowerCase && hasNumeric && hasSpecialChar;
+
+    return passwordValid ? null : { passwordStrength: true };
+  }
+
+  // ============================================
+  // Password match validator
+  // ============================================
+  private passwordMatchValidator(form: AbstractControl): ValidationErrors | null {
+    const password = form.get('password')?.value;
+    const confirmPassword = form.get('confirmPassword')?.value;
+
+    if (!password || !confirmPassword) {
+      return null;
+    }
+
+    return password === confirmPassword ? null : { passwordMismatch: true };
+  }
+
+  // ============================================
+  // Calculate password strength (0-100)
+  // ============================================
+  private calculatePasswordStrength(password: string): void {
+    if (!password) {
+      this.passwordStrength = 0;
+      this.passwordStrengthLabel = '';
       return;
     }
 
-    console.log('🔄 Redirecting based on role:', user.role);
-
-    // Redirect based on role
-    switch (user.role) {
-      case 'admin':
-        console.log('→ Redirecting to /admin/dashboard');
-        this.router.navigate(['/admin/dashboard']);
-        break;
-      case 'attorney':
-        console.log('→ Redirecting to /attorney/dashboard');
-        this.router.navigate(['/attorney/dashboard']);
-        break;
-      case 'paralegal':
-        console.log('→ Redirecting to /attorney/dashboard');
-        this.router.navigate(['/attorney/dashboard']);
-        break;
-      case 'driver':
-      default:
-        console.log('→ Redirecting to /driver/dashboard');
-        this.router.navigate(['/driver/dashboard']);
-        break;
-    }
-  }
-
-  // Social registration methods
-  registerWithGoogle(): void {
-    console.log('Google registration not implemented yet');
-    // TODO: Implement Google OAuth
-  }
-
-  registerWithFacebook(): void {
-    console.log('Facebook registration not implemented yet');
-    // TODO: Implement Facebook OAuth
-  }
-
-  // Password strength calculator
-  private calculatePasswordStrength(password: string): void {
     let strength = 0;
-    
-    if (password.length >= 8) strength += 25;
-    if (password.length >= 12) strength += 25;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
-    if (/[0-9]/.test(password)) strength += 12.5;
-    if (/[^a-zA-Z0-9]/.test(password)) strength += 12.5;
+    const checks = {
+      length: password.length >= 8,
+      lowercase: /[a-z]/.test(password),
+      uppercase: /[A-Z]/.test(password),
+      numeric: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      longLength: password.length >= 12
+    };
+
+    // Calculate strength
+    if (checks.length) strength += 20;
+    if (checks.lowercase) strength += 15;
+    if (checks.uppercase) strength += 15;
+    if (checks.numeric) strength += 15;
+    if (checks.special) strength += 20;
+    if (checks.longLength) strength += 15;
 
     this.passwordStrength = Math.min(strength, 100);
 
-    // Set label and color
-    if (this.passwordStrength < 30) {
+    // Set label
+    if (this.passwordStrength < 40) {
       this.passwordStrengthLabel = 'Weak';
-      this.passwordStrengthColor = 'warn';
     } else if (this.passwordStrength < 70) {
       this.passwordStrengthLabel = 'Medium';
-      this.passwordStrengthColor = 'primary';
     } else {
       this.passwordStrengthLabel = 'Strong';
-      this.passwordStrengthColor = 'accent';
     }
   }
 
+  // ============================================
+  // Get password strength color
+  // ============================================
+  getPasswordStrengthColor(): string {
+    if (this.passwordStrength < 40) return 'warn';
+    if (this.passwordStrength < 70) return 'accent';
+    return 'primary';
+  }
+
+  // ============================================
+  // Toggle password visibility
+  // ============================================
+  togglePasswordVisibility(field: 'password' | 'confirmPassword'): void {
+    if (field === 'password') {
+      this.hidePassword = !this.hidePassword;
+    } else {
+      this.hideConfirmPassword = !this.hideConfirmPassword;
+    }
+  }
+
+  // ============================================
   // Form validation helpers
+  // ============================================
   getErrorMessage(field: string): string {
     const control = this.registerForm.get(field);
     
-    if (!control) {
+    if (!control || !control.touched) {
       return '';
     }
 
@@ -218,11 +275,12 @@ export class RegisterComponent implements OnInit {
 
     if (control.hasError('pattern')) {
       if (field === 'phone') {
-        return 'Please enter a valid 10-digit phone number';
+        return 'Please enter a valid phone number';
       }
-      if (field === 'cdlNumber') {
-        return 'Please enter a valid CDL number';
-      }
+    }
+
+    if (control.hasError('passwordStrength')) {
+      return 'Password must contain uppercase, lowercase, number, and special character';
     }
 
     if (field === 'confirmPassword' && this.registerForm.hasError('passwordMismatch')) {
@@ -239,16 +297,17 @@ export class RegisterComponent implements OnInit {
       phone: 'Phone',
       cdlNumber: 'CDL Number',
       password: 'Password',
-      confirmPassword: 'Confirm Password'
+      confirmPassword: 'Confirm Password',
+      acceptTerms: 'Terms and Conditions'
     };
     return fieldNames[field] || field;
   }
 
-  togglePasswordVisibility(): void {
-    this.hidePassword = !this.hidePassword;
-  }
-
-  toggleConfirmPasswordVisibility(): void {
-    this.hideConfirmPassword = !this.hideConfirmPassword;
+  // ============================================
+  // Check if field has error
+  // ============================================
+  hasError(field: string, error: string): boolean {
+    const control = this.registerForm.get(field);
+    return !!(control && control.hasError(error) && control.touched);
   }
 }

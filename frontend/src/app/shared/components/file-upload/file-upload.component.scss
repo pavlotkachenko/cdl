@@ -1,0 +1,325 @@
+// ============================================
+// FILE UPLOAD COMPONENT STYLES
+// Location: frontend/src/app/shared/components/file-upload/file-upload.component.scss
+// ============================================
+
+.file-upload-container {
+  width: 100%;
+
+  .drop-zone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background-color: #fafafa;
+
+    &:hover {
+      border-color: #667eea;
+      background-color: #f5f5ff;
+    }
+
+    &.drag-over {
+      border-color: #667eea;
+      background-color: #e3f2fd;
+      transform: scale(1.02);
+    }
+
+    .upload-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: #667eea;
+      margin: 0 auto 16px;
+    }
+
+    h3 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    p {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #666;
+
+      &.file-info {
+        font-size: 12px;
+        color: #999;
+        margin-top: 16px;
+      }
+    }
+  }
+
+  .file-list {
+    margin-top: 24px;
+
+    .file-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+
+      h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      button {
+        mat-icon {
+          margin-right: 4px;
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    mat-list {
+      padding: 0;
+
+      .file-item {
+        height: auto;
+        padding: 12px;
+        margin-bottom: 12px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background-color: #fff;
+        transition: box-shadow 0.3s;
+
+        &:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-item-content {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          width: 100%;
+
+          .file-icon {
+            flex-shrink: 0;
+
+            mat-icon {
+              font-size: 40px;
+              width: 40px;
+              height: 40px;
+              color: #666;
+
+              &.pending {
+                color: #999;
+              }
+
+              &.uploading {
+                color: #2196f3;
+              }
+
+              &.complete {
+                color: #4caf50;
+              }
+
+              &.error {
+                color: #f44336;
+              }
+            }
+          }
+
+          .file-info-section {
+            flex: 1;
+            min-width: 0;
+
+            .file-name {
+              font-size: 14px;
+              font-weight: 500;
+              color: #333;
+              margin-bottom: 4px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .file-size {
+              font-size: 12px;
+              color: #999;
+              margin-bottom: 8px;
+            }
+
+            mat-progress-bar {
+              height: 6px;
+              border-radius: 3px;
+            }
+
+            .error-message {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-top: 8px;
+              padding: 8px;
+              background-color: #ffebee;
+              border-radius: 4px;
+              color: #c62828;
+              font-size: 12px;
+
+              mat-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+              }
+            }
+          }
+
+          .file-actions {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .status-icon {
+              font-size: 24px;
+              width: 24px;
+              height: 24px;
+
+              &.pending {
+                color: #ff9800;
+              }
+
+              &.complete {
+                color: #4caf50;
+              }
+            }
+
+            .uploading-status {
+              .progress-text {
+                font-size: 14px;
+                font-weight: 600;
+                color: #2196f3;
+              }
+            }
+
+            button {
+              mat-icon {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .upload-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px;
+    background-color: #e3f2fd;
+    border-radius: 4px;
+    color: #1565c0;
+    font-size: 14px;
+    font-weight: 500;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+
+      &.spin {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive Design
+@media (max-width: 600px) {
+  .file-upload-container {
+    .drop-zone {
+      padding: 30px 15px;
+
+      .upload-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      p {
+        font-size: 13px;
+
+        &.file-info {
+          font-size: 11px;
+        }
+      }
+    }
+
+    .file-list {
+      .file-list-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+
+        h4 {
+          font-size: 14px;
+        }
+      }
+
+      mat-list {
+        .file-item {
+          padding: 10px;
+
+          .file-item-content {
+            gap: 12px;
+
+            .file-icon mat-icon {
+              font-size: 32px;
+              width: 32px;
+              height: 32px;
+            }
+
+            .file-info-section {
+              .file-name {
+                font-size: 13px;
+              }
+
+              .file-size {
+                font-size: 11px;
+              }
+            }
+
+            .file-actions {
+              flex-direction: column;
+              gap: 4px;
+
+              button mat-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

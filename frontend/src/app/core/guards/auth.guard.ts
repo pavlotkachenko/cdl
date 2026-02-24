@@ -1,24 +1,57 @@
 // ============================================
-// Authentication Guard (DISABLED FOR DEVELOPMENT)
+// AUTH GUARD - Route Protection
 // Location: frontend/src/app/core/guards/auth.guard.ts
 // ============================================
 
-import { Injectable } from '@angular/core';
-import { 
-  Router, 
-  CanActivate, 
-  ActivatedRouteSnapshot, 
+import { Injectable, inject } from '@angular/core';
+import {
+  ActivatedRouteSnapshot,
+  CanActivate,
+  CanActivateFn,
+  Router,
   RouterStateSnapshot,
   UrlTree
 } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
+// ============================================
+// Functional Guard (Angular 16+)
+// ============================================
+export const authGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  // Check if user is authenticated
+  if (authService.isAuthenticated()) {
+    // Check role-based access if required
+    const requiredRoles = route.data['roles'] as string[];
+    if (requiredRoles && requiredRoles.length > 0) {
+      const userRole = authService.getUserRole();
+      if (!requiredRoles.includes(userRole)) {
+        console.warn('❌ Access denied: User role', userRole, 'not in', requiredRoles);
+        router.navigate(['/unauthorized']);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Not authenticated, redirect to login with return URL
+  console.log('❌ Not authenticated, redirecting to login');
+  router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+  return false;
+};
+
+// ============================================
+// Class-based Guard (Alternative)
+// Use this if functional guard doesn't work
+// ============================================
 @Injectable({
   providedIn: 'root'
 })
 export class AuthGuard implements CanActivate {
-  
   constructor(
     private authService: AuthService,
     private router: Router
@@ -29,35 +62,14 @@ export class AuthGuard implements CanActivate {
     state: RouterStateSnapshot
   ): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
     
-    // ============================================
-    // TEMPORARY: ALWAYS ALLOW ACCESS (NO AUTH CHECK)
-    // ============================================
-    console.log('⚠️ AuthGuard is DISABLED - Allowing access without authentication');
-    return true;
-    
-    /* ============================================
-       ORIGINAL CODE - COMMENTED OUT FOR DEVELOPMENT
-       Uncomment this when you want to enable authentication
-       ============================================
-    
-    const isAuthenticated = this.authService.isAuthenticated;
-    
-    if (isAuthenticated) {
-      // Check if token is expired
-      if (this.authService.isTokenExpired()) {
-        console.log('Token expired, logging out');
-        this.authService.logout();
-        return this.router.createUrlTree(['/login'], {
-          queryParams: { returnUrl: state.url }
-        });
-      }
-
-      // Check role-based access (if route data specifies required role)
-      const requiredRole = route.data['role'];
-      if (requiredRole) {
+    // Check if user is authenticated
+    if (this.authService.isAuthenticated()) {
+      // Check role-based access if required
+      const requiredRoles = route.data['roles'] as string[];
+      if (requiredRoles && requiredRoles.length > 0) {
         const userRole = this.authService.getUserRole();
-        if (userRole !== requiredRole) {
-          console.log('Insufficient permissions');
+        if (!requiredRoles.includes(userRole)) {
+          console.warn('❌ Access denied: User role', userRole, 'not in', requiredRoles);
           return this.router.createUrlTree(['/unauthorized']);
         }
       }
@@ -65,12 +77,49 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    // Not authenticated - redirect to login
-    console.log('Not authenticated, redirecting to login');
-    return this.router.createUrlTree(['/login'], {
-      queryParams: { returnUrl: state.url }
+    // Not authenticated, redirect to login with return URL
+    console.log('❌ Not authenticated, redirecting to login');
+    return this.router.createUrlTree(['/login'], { 
+      queryParams: { returnUrl: state.url } 
     });
-    
-    ============================================ */
   }
 }
+
+// ============================================
+// Role Guard - Check specific roles
+// ============================================
+export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
+  return (route, state) => {
+    const authService = inject(AuthService);
+    const router = inject(Router);
+
+    if (!authService.isAuthenticated()) {
+      router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+      return false;
+    }
+
+    const userRole = authService.getUserRole();
+    if (allowedRoles.includes(userRole)) {
+      return true;
+    }
+
+    console.warn('❌ Access denied: User role', userRole, 'not in', allowedRoles);
+    router.navigate(['/unauthorized']);
+    return false;
+  };
+};
+
+// ============================================
+// Admin Guard - Only admins can access
+// ============================================
+export const adminGuard: CanActivateFn = roleGuard(['admin']);
+
+// ============================================
+// Driver Guard - Only drivers can access
+// ============================================
+export const driverGuard: CanActivateFn = roleGuard(['driver']);
+
+// ============================================
+// Attorney Guard - Attorneys and paralegals can access
+// ============================================
+export const attorneyGuard: CanActivateFn = roleGuard(['attorney', 'paralegal']);

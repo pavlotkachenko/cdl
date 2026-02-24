@@ -1,0 +1,112 @@
+.file-gallery-container {
+  padding: 16px;
+}
+
+.filter-section {
+  margin-bottom: 16px;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 0;
+  color: rgba(0, 0, 0, 0.54);
+
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 0;
+  color: rgba(0, 0, 0, 0.54);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+}
+
+.file-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  background: #f5f5f5;
+  min-height: 140px;
+
+  .preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .preview-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: rgba(0, 0, 0, 0.54);
+    }
+
+    .file-extension {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: rgba(0, 0, 0, 0.54);
+    }
+  }
+}
+
+.file-info {
+  padding: 8px 16px;
+
+  .file-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .file-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.54);
+    margin-top: 4px;
+  }
+}
+
+.file-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0 8px 8px;
+}
+
+.delete-option {
+  color: #f44336;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

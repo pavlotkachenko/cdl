@@ -8,7 +8,7 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const messageController = require('../controllers/message.controller');
 const { validateMessage } = require('../middleware/validation.middleware');
-const { upload } = require('../middleware/upload.middleware');
+const { uploadSingle } = require('../middleware/upload.middleware');
 
 /**
  * @route POST /api/messages
@@ -22,7 +22,7 @@ router.post('/', authenticate, validateMessage, messageController.sendMessage);
  * @desc Send a message with file attachment
  * @access Private
  */
-router.post('/file', authenticate, upload.single('file'), messageController.sendMessageWithFile);
+router.post('/file', authenticate, uploadSingle, messageController.sendMessageWithFile);
 
 /**
  * @route POST /api/messages/:id/read
