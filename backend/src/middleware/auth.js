@@ -1,154 +1,200 @@
 // ============================================
-// Authentication Middleware
+// AUTHENTICATION MIDDLEWARE
+// JWT token verification for protected routes
 // ============================================
-// This is like a security guard checking IDs
-// before letting people into different rooms
 
+const jwt = require('jsonwebtoken');
 const { supabase } = require('../config/supabase');
 
 /**
- * Verify JWT token from request
- * Checks if the user is logged in
+ * Authenticate JWT token
+ * Verifies token and attaches user to request
  */
-async function authenticate(req, res, next) {
+const authenticate = async (req, res, next) => {
   try {
-    // Get token from Authorization header
-    // Format: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    // Extract token from Authorization header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'No token provided. Please log in.' 
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'No token provided'
       });
     }
-    
-    // Extract token (remove "Bearer " prefix)
-    const token = authHeader.substring(7);
-    
-    // Verify token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      return res.status(401).json({ 
-        error: 'Invalid or expired token. Please log in again.' 
+
+    const token = authHeader.split(' ')[1];
+
+    // Verify token with JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Token expired'
+        });
+      }
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token'
       });
     }
-    
-    // Get full user details from database
-    const { data: userData, error: userError } = await supabase
+
+    // Get user from Supabase
+    const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('auth_user_id', user.id)
+      .eq('id', decoded.id || decoded.sub)
       .single();
-    
-    if (userError || !userData) {
-      return res.status(404).json({ 
-        error: 'User not found in database' 
+
+    if (error || !user) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'User not found'
       });
     }
-    
-    // Attach user to request object
-    // Now other functions can access req.user
-    req.user = userData;
-    req.token = token;
-    
-    next(); // Continue to next function
-    
+
+    // Check if user is active
+    if (!user.is_active) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'User account is inactive'
+      });
+    }
+
+    // Attach user to request
+    req.user = user;
+    next();
   } catch (error) {
     console.error('Authentication error:', error);
-    return res.status(500).json({ 
-      error: 'Authentication failed' 
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Authentication failed'
     });
   }
-}
+};
 
 /**
- * Check if user has required role
- * Usage: authorize(['admin', 'operator'])
+ * Authorize specific roles
+ * Use after authenticate middleware
  */
-function authorize(allowedRoles) {
+const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        error: 'Not authenticated' 
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required'
       });
     }
-    
+
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        error: `Access denied. Required role: ${allowedRoles.join(' or ')}` 
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Access denied. Required roles: ${allowedRoles.join(', ')}`
       });
     }
-    
+
     next();
   };
-}
+};
 
 /**
- * Check if user can access specific case
- * Drivers can only see their own cases
- * Operators can see cases assigned to them
- * Attorneys can see cases assigned to them
- * Admins can see everything
+ * Optional authentication
+ * Attaches user if token is valid, but doesn't require it
  */
-async function canAccessCase(req, res, next) {
+const optionalAuth = async (req, res, next) => {
   try {
-    const caseId = req.params.caseId || req.params.id;
-    const user = req.user;
-    
-    // Admin can access everything
-    if (user.role === 'admin') {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return next();
     }
-    
-    // Get the case
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', decoded.id || decoded.sub)
+        .single();
+
+      if (user && user.is_active) {
+        req.user = user;
+      }
+    } catch (error) {
+      // Invalid token, but that's ok for optional auth
+    }
+
+    next();
+  } catch (error) {
+    console.error('Optional auth error:', error);
+    next();
+  }
+};
+
+/**
+ * Check if user can access a specific case
+ * Allows access if user is admin, the case creator, assigned operator, or assigned attorney
+ */
+const canAccessCase = async (req, res, next) => {
+  try {
+    const caseId = req.params.id;
+
+    if (!caseId) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Case ID is required'
+      });
+    }
+
+    // Admins can access any case
+    if (req.user.role === 'admin') {
+      return next();
+    }
+
     const { data: caseData, error } = await supabase
       .from('cases')
-      .select('driver_id, assigned_operator_id, assigned_attorney_id')
+      .select('created_by, operator_id, attorney_id')
       .eq('id', caseId)
       .single();
-    
+
     if (error || !caseData) {
-      return res.status(404).json({ 
-        error: 'Case not found' 
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'Case not found'
       });
     }
-    
-    // Check access based on role
-    let hasAccess = false;
-    
-    switch (user.role) {
-      case 'driver':
-        hasAccess = caseData.driver_id === user.id;
-        break;
-      case 'operator':
-        hasAccess = caseData.assigned_operator_id === user.id;
-        break;
-      case 'attorney':
-        hasAccess = caseData.assigned_attorney_id === user.id;
-        break;
-    }
-    
+
+    const userId = req.user.id;
+    const hasAccess =
+      caseData.created_by === userId ||
+      caseData.operator_id === userId ||
+      caseData.attorney_id === userId;
+
     if (!hasAccess) {
-      return res.status(403).json({ 
-        error: 'You do not have permission to access this case' 
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have access to this case'
       });
     }
-    
-    // Attach case data to request
-    req.caseData = caseData;
+
     next();
-    
   } catch (error) {
-    console.error('Case access check error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to verify case access' 
+    console.error('canAccessCase error:', error);
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Access check failed'
     });
   }
-}
+};
 
 module.exports = {
   authenticate,
   authorize,
-  canAccessCase
+  canAccessCase,
+  optionalAuth
 };

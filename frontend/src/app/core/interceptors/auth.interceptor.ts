@@ -1,5 +1,5 @@
 // ============================================
-// Auth Interceptor (FIXED)
+// HTTP Interceptor - JWT Authentication
 // Location: frontend/src/app/core/interceptors/auth.interceptor.ts
 // ============================================
 
@@ -11,69 +11,76 @@ import {
   HttpInterceptor,
   HttpErrorResponse
 } from '@angular/common/http';
-import { Observable, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, filter, take, switchMap } from 'rxjs/operators';
-import { AuthService } from '../services/auth.service';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
-
-  constructor(private authService: AuthService) {}
+  constructor(private router: Router) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Get token from AuthService
-    const token = this.authService.token;
+    // Get the auth token from localStorage
+    const token = this.getAuthToken();
 
+    // Clone the request and add authorization header if token exists
     if (token) {
-      request = this.addToken(request, token);
+      request = request.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`
+        }
+      });
     }
 
+    // Add common headers
+    request = request.clone({
+      setHeaders: {
+        'Content-Type': request.headers.get('Content-Type') || 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    // Handle the request and catch errors
     return next.handle(request).pipe(
-      catchError(error => {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          return this.handle401Error(request, next);
-        } else {
-          return throwError(() => error);
+      catchError((error: HttpErrorResponse) => {
+        console.error('HTTP Error:', error);
+
+        // Handle specific error cases
+        if (error.status === 401) {
+          // Unauthorized - redirect to login
+          console.warn('Unauthorized request - redirecting to login');
+          this.handleUnauthorized();
+        } else if (error.status === 403) {
+          // Forbidden - user doesn't have permission
+          console.error('Access forbidden');
+        } else if (error.status === 0) {
+          // Network error
+          console.error('Network error - cannot reach server');
         }
+
+        return throwError(() => error);
       })
     );
   }
 
-  private addToken(request: HttpRequest<any>, token: string): HttpRequest<any> {
-    return request.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+  private getAuthToken(): string | null {
+    // Try multiple token storage keys for compatibility
+    return localStorage.getItem('token') || 
+           localStorage.getItem('access_token') || 
+           localStorage.getItem('authToken') ||
+           sessionStorage.getItem('token');
   }
 
-  private handle401Error(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    if (!this.isRefreshing) {
-      this.isRefreshing = true;
-      this.refreshTokenSubject.next(null);
+  private handleUnauthorized(): void {
+    // Clear stored tokens
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('token');
 
-      return this.authService.refreshToken().pipe(
-        switchMap((response: { token: string }) => {
-          this.isRefreshing = false;
-          this.refreshTokenSubject.next(response.token);
-          return next.handle(this.addToken(request, response.token));
-        }),
-        catchError((err) => {
-          this.isRefreshing = false;
-          this.authService.logout();
-          return throwError(() => err);
-        })
-      );
-    } else {
-      return this.refreshTokenSubject.pipe(
-        filter(token => token != null),
-        take(1),
-        switchMap(token => {
-          return next.handle(this.addToken(request, token));
-        })
-      );
-    }
+    // Redirect to login page
+    this.router.navigate(['/auth/login'], {
+      queryParams: { returnUrl: this.router.url }
+    });
   }
 }
