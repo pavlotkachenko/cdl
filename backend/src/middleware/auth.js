@@ -136,8 +136,65 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+/**
+ * Check if user can access a specific case
+ * Allows access if user is admin, the case creator, assigned operator, or assigned attorney
+ */
+const canAccessCase = async (req, res, next) => {
+  try {
+    const caseId = req.params.id;
+
+    if (!caseId) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Case ID is required'
+      });
+    }
+
+    // Admins can access any case
+    if (req.user.role === 'admin') {
+      return next();
+    }
+
+    const { data: caseData, error } = await supabase
+      .from('cases')
+      .select('created_by, operator_id, attorney_id')
+      .eq('id', caseId)
+      .single();
+
+    if (error || !caseData) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'Case not found'
+      });
+    }
+
+    const userId = req.user.id;
+    const hasAccess =
+      caseData.created_by === userId ||
+      caseData.operator_id === userId ||
+      caseData.attorney_id === userId;
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have access to this case'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('canAccessCase error:', error);
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Access check failed'
+    });
+  }
+};
+
 module.exports = {
   authenticate,
   authorize,
+  canAccessCase,
   optionalAuth
 };

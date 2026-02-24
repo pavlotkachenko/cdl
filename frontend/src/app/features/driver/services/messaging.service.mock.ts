@@ -201,7 +201,7 @@ export class MockMessagingService {
   getConversations(): Observable<ConversationsResponse> {
     return of({
       success: true,
-      conversations: this.mockConversations,
+      data: this.mockConversations,
       message: 'Conversations loaded successfully'
     }).pipe(delay(500)); // Simulate network delay
   }
@@ -210,7 +210,7 @@ export class MockMessagingService {
     const messages = this.mockMessages[conversationId] || [];
     return of({
       success: true,
-      messages: messages,
+      data: messages,
       message: 'Messages loaded successfully'
     }).pipe(delay(300));
   }
@@ -249,8 +249,8 @@ export class MockMessagingService {
 
     return of({
       success: true,
-      message: newMessage,
-      messageText: 'Message sent successfully'
+      data: newMessage,
+      message: 'Message sent successfully'
     }).pipe(delay(200));
   }
 
@@ -285,8 +285,8 @@ export class MockMessagingService {
 
     return of({
       success: true,
-      message: newMessage,
-      messageText: 'Message with file sent successfully'
+      data: newMessage,
+      message: 'Message with file sent successfully'
     }).pipe(delay(500));
   }
 
@@ -312,7 +312,7 @@ export class MockMessagingService {
   getQuickQuestions(): Observable<QuickQuestionsResponse> {
     return of({
       success: true,
-      quickQuestions: this.mockQuickQuestions,
+      data: this.mockQuickQuestions,
       message: 'Quick questions loaded'
     }).pipe(delay(200));
   }
@@ -324,7 +324,7 @@ export class MockMessagingService {
 
     return of({
       success: true,
-      videoLink: {
+      data: {
         id: `video-${Date.now()}`,
         conversationId: conversationId,
         platform: platform,
