@@ -1,0 +1,131 @@
+<div class="revenue-dashboard-container">
+  <div class="dashboard-header">
+    <h1>Revenue Dashboard</h1>
+    
+    <div class="header-actions">
+      <!-- Date Range Picker -->
+      <form [formGroup]="dateRangeForm" class="date-range-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startPicker" formControlName="startDate" (dateChange)="onDateRangeChange()">
+          <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>End Date</mat-label>
+          <input matInput [matDatepicker]="endPicker" formControlName="endDate" (dateChange)="onDateRangeChange()">
+          <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+        </mat-form-field>
+      </form>
+
+      <!-- Export Button -->
+      <button mat-raised-button color="primary" (click)="exportToCsv()" [disabled]="loading">
+        <mat-icon>download</mat-icon>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading">
+    <!-- Metrics Cards -->
+    <div class="metrics-grid" *ngIf="metrics">
+      <mat-card class="metric-card total-revenue">
+        <mat-card-content>
+          <div class="metric-icon">
+            <mat-icon>attach_money</mat-icon>
+          </div>
+          <div class="metric-details">
+            <span class="metric-label">Total Revenue</span>
+            <span class="metric-value">{{ formatCurrency(metrics.total_revenue) }}</span>
+            <span class="metric-subtitle">{{ metrics.total_transactions }} transactions</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="metric-card mrr">
+        <mat-card-content>
+          <div class="metric-icon">
+            <mat-icon>repeat</mat-icon>
+          </div>
+          <div class="metric-details">
+            <span class="metric-label">Monthly Recurring Revenue</span>
+            <span class="metric-value">{{ formatCurrency(metrics.monthly_recurring_revenue) }}</span>
+            <span class="metric-subtitle">MRR</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="metric-card success-rate">
+        <mat-card-content>
+          <div class="metric-icon">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div class="metric-details">
+            <span class="metric-label">Success Rate</span>
+            <span class="metric-value">{{ formatPercentage(metrics.success_rate) }}</span>
+            <span class="metric-subtitle">{{ metrics.failed_transactions }} failed</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="metric-card average">
+        <mat-card-content>
+          <div class="metric-icon">
+            <mat-icon>calculate</mat-icon>
+          </div>
+          <div class="metric-details">
+            <span class="metric-label">Average Transaction</span>
+            <span class="metric-value">{{ formatCurrency(metrics.average_transaction) }}</span>
+            <span class="metric-subtitle">Per transaction</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+      <!-- Revenue Over Time Chart -->
+      <mat-card class="chart-card full-width">
+        <mat-card-header>
+          <mat-card-title>Revenue Over Time</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Revenue by Method Chart -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Revenue by Payment Method</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container">
+            <canvas id="methodChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Revenue by Attorney Chart -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Top 10 Attorneys by Revenue</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container">
+            <canvas id="attorneyChart"></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

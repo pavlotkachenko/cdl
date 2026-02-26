@@ -1,0 +1,177 @@
+<div class="subscription-management-container">
+  <h1>Subscription Management</h1>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading">
+    <!-- Current Subscription Card -->
+    <mat-card class="current-subscription-card" *ngIf="currentSubscription">
+      <mat-card-header>
+        <mat-card-title>Current Plan</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="subscription-details">
+          <div class="detail-row">
+            <span class="label">Plan:</span>
+            <span class="value">{{ getCurrentPlan()?.name || 'N/A' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Status:</span>
+            <mat-chip [color]="getStatusColor(currentSubscription.status)" selected>
+              {{ currentSubscription.status | uppercase }}
+            </mat-chip>
+          </div>
+          <div class="detail-row" *ngIf="isTrialing()">
+            <span class="label">Trial Days Remaining:</span>
+            <span class="value trial-days">{{ getTrialDaysRemaining() }} days</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Current Period:</span>
+            <span class="value">
+              {{ formatDate(currentSubscription.current_period_start) }} - 
+              {{ formatDate(currentSubscription.current_period_end) }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Price:</span>
+            <span class="value price">
+              {{ formatCurrency(getCurrentPlan()?.price || 0, getCurrentPlan()?.currency) }}
+              / {{ getCurrentPlan()?.interval }}
+            </span>
+          </div>
+          <div class="detail-row" *ngIf="currentSubscription.cancel_at_period_end">
+            <mat-icon color="warn">warning</mat-icon>
+            <span class="warning-text">Subscription will cancel on {{ formatDate(currentSubscription.current_period_end) }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+      <mat-card-actions>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          *ngIf="currentSubscription.cancel_at_period_end"
+          (click)="reactivateSubscription()">
+          Reactivate Subscription
+        </button>
+        <button 
+          mat-stroked-button 
+          color="warn" 
+          *ngIf="!currentSubscription.cancel_at_period_end && currentSubscription.status !== 'canceled'"
+          (click)="openCancelDialog()">
+          Cancel Subscription
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- No Subscription Message -->
+    <mat-card *ngIf="!currentSubscription" class="no-subscription-card">
+      <mat-card-content>
+        <mat-icon>info</mat-icon>
+        <h2>No Active Subscription</h2>
+        <p>Choose a plan below to get started.</p>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Available Plans -->
+    <div class="plans-section">
+      <h2>Available Plans</h2>
+      <div class="plans-grid">
+        <mat-card *ngFor="let plan of availablePlans" 
+                  class="plan-card"
+                  [class.current-plan]="isPlanCurrent(plan)"
+                  [class.recommended]="plan.recommended">
+          <mat-card-header>
+            <mat-card-title>
+              {{ plan.name }}
+              <mat-chip *ngIf="plan.recommended" color="accent" selected>Recommended</mat-chip>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="plan-price">
+              <span class="amount">{{ formatCurrency(plan.price, plan.currency) }}</span>
+              <span class="interval">/ {{ plan.interval }}</span>
+            </div>
+            <mat-divider></mat-divider>
+            <ul class="features-list">
+              <li *ngFor="let feature of plan.features">
+                <mat-icon>check_circle</mat-icon>
+                {{ feature }}
+              </li>
+            </ul>
+          </mat-card-content>
+          <mat-card-actions>
+            <button 
+              mat-raised-button 
+              [color]="isPlanCurrent(plan) ? 'accent' : 'primary'"
+              [disabled]="isPlanCurrent(plan)"
+              (click)="changePlan(plan)">
+              <span *ngIf="isPlanCurrent(plan)">Current Plan</span>
+              <span *ngIf="!isPlanCurrent(plan) && canUpgrade(plan)">Upgrade</span>
+              <span *ngIf="!isPlanCurrent(plan) && canDowngrade(plan)">Downgrade</span>
+              <span *ngIf="!isPlanCurrent(plan) && !currentSubscription">Select Plan</span>
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    </div>
+
+    <!-- Billing History -->
+    <div class="billing-history-section">
+      <h2>Billing History</h2>
+      <mat-card>
+        <mat-card-content>
+          <table mat-table [dataSource]="billingHistory" class="billing-table">
+            <!-- Date Column -->
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let item">{{ formatDate(item.created_at) }}</td>
+            </ng-container>
+
+            <!-- Amount Column -->
+            <ng-container matColumnDef="amount">
+              <th mat-header-cell *matHeaderCellDef>Amount</th>
+              <td mat-cell *matCellDef="let item">{{ formatCurrency(item.amount, item.currency) }}</td>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let item">
+                <mat-chip [color]="item.status === 'paid' ? 'primary' : 'warn'" selected>
+                  {{ item.status | uppercase }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let item">
+                <button 
+                  mat-icon-button 
+                  *ngIf="item.invoice_url"
+                  (click)="downloadInvoice(item.id)"
+                  matTooltip="Download Invoice">
+                  <mat-icon>download</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="billingHistoryColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: billingHistoryColumns;"></tr>
+
+            <!-- No Data Row -->
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell" [attr.colspan]="billingHistoryColumns.length">
+                No billing history available
+              </td>
+            </tr>
+          </table>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
