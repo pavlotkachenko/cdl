@@ -3,10 +3,15 @@
  * Location: frontend/src/app/features/driver/ticket-upload-wizard/ticket-upload-wizard.component.ts
  */
 
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatStepper } from '@angular/material/stepper';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { MatStepper, MatStepperModule } from '@angular/material/stepper';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 
 import { OcrService, OCRResult, OCRValidationError } from '../../../core/services/ocr.service';
@@ -23,10 +28,21 @@ interface DocumentChecklistItem {
 
 @Component({
   selector: 'app-ticket-upload-wizard',
+  standalone: true,
   templateUrl: './ticket-upload-wizard.component.html',
-  styleUrls: ['./ticket-upload-wizard.component.scss']
+  styleUrls: ['./ticket-upload-wizard.component.scss'],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatStepperModule,
+    MatSnackBarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+  ]
 })
-export class TicketUploadWizardComponent implements OnInit {
+export class TicketUploadWizardComponent implements OnInit, OnDestroy {
   @ViewChild('stepper') stepper!: MatStepper;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
@@ -317,7 +333,7 @@ export class TicketUploadWizardComponent implements OnInit {
     const currentUser = this.authService.currentUserValue;
 
     const caseData = {
-      driverId: currentUser?.userId,
+      driverId: currentUser?.id,
       ...this.ocrReviewForm.value,
       ...this.detailsForm.value,
       status: 'new',
@@ -354,8 +370,8 @@ export class TicketUploadWizardComponent implements OnInit {
   /**
    * Upload document for case
    */
-  private uploadDocument(caseId: string, file: File, documentType: string): Promise<any> {
-    return this.caseService.uploadDocument(caseId, file, documentType).toPromise();
+  private uploadDocument(caseId: string, file: File, _documentType: string): Promise<any> {
+    return this.caseService.uploadDocument(caseId, file).toPromise();
   }
 
   /**

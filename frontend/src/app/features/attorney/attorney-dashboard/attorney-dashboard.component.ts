@@ -4,8 +4,15 @@
  */
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { MatDialog } from '@angular/material/dialog';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Chart } from 'chart.js/auto';
@@ -49,8 +56,21 @@ export interface CaseTemplate {
 
 @Component({
   selector: 'app-attorney-dashboard',
+  standalone: true,
   templateUrl: './attorney-dashboard.component.html',
-  styleUrls: ['./attorney-dashboard.component.scss']
+  styleUrls: ['./attorney-dashboard.component.scss'],
+  imports: [
+    CommonModule,
+    DecimalPipe,
+    DatePipe,
+    DragDropModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatMenuModule,
+    MatDividerModule,
+    MatProgressSpinnerModule,
+  ]
 })
 export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   // Kanban Board
@@ -160,15 +180,13 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.currentUserValue;
 
     // Load cases for kanban board
-    this.caseService.getCases({
-      attorneyId: currentUser?.userId,
-      status: ['new', 'assigned', 'in_progress', 'pending_response', 'completed']
-    }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (cases) => {
+    this.caseService.getMyCases().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response: any) => {
+        const cases = response?.data || response || [];
         this.populateKanbanBoard(cases);
         this.loading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading cases:', error);
         this.loading = false;
       }
