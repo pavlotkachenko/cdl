@@ -1,0 +1,237 @@
+<!--
+  Attorney Dashboard Component Template
+  Location: frontend/src/app/features/attorney/attorney-dashboard/attorney-dashboard.component.html
+-->
+
+<div class="attorney-dashboard">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>Attorney Dashboard</h1>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" (click)="createNewCase()">
+        <mat-icon>add</mat-icon>
+        New Case
+      </button>
+      <button mat-icon-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-icon-button [matMenuTriggerFor]="quickActions">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Performance Metrics Cards -->
+  <div class="metrics-grid">
+    <mat-card class="metric-card">
+      <mat-card-content>
+        <div class="metric-icon" style="background-color: #3f51b5;">
+          <mat-icon>folder</mat-icon>
+        </div>
+        <div class="metric-info">
+          <h3>Total Cases</h3>
+          <p class="metric-value">{{ metrics.totalCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-card-content>
+        <div class="metric-icon" style="background-color: #009688;">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+        <div class="metric-info">
+          <h3>Active Cases</h3>
+          <p class="metric-value">{{ metrics.activeCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-card-content>
+        <div class="metric-icon" style="background-color: #4caf50;">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="metric-info">
+          <h3>Completed This Month</h3>
+          <p class="metric-value">{{ metrics.completedThisMonth }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-card-content>
+        <div class="metric-icon" style="background-color: #ff9800;">
+          <mat-icon>star</mat-icon>
+        </div>
+        <div class="metric-info">
+          <h3>Success Rate</h3>
+          <p class="metric-value">{{ metrics.successRate }}%</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-card-content>
+        <div class="metric-icon" style="background-color: #e91e63;">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="metric-info">
+          <h3>Avg Resolution</h3>
+          <p class="metric-value">{{ metrics.averageResolutionDays | number:'1.0-1' }} days</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-card-content>
+        <div class="metric-icon" style="background-color: #f44336;">
+          <mat-icon>alarm</mat-icon>
+        </div>
+        <div class="metric-info">
+          <h3>Upcoming Deadlines</h3>
+          <p class="metric-value">{{ metrics.upcomingDeadlines }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Main Content: Kanban Board + Sidebar -->
+  <div class="dashboard-content">
+    <!-- Kanban Board -->
+    <div class="kanban-section" [class.with-sidebar]="showTemplatesSidebar">
+      <div class="kanban-header">
+        <h2>
+          <mat-icon>view_column</mat-icon>
+          Case Board
+        </h2>
+        <button mat-button (click)="toggleTemplatesSidebar()">
+          <mat-icon>{{ showTemplatesSidebar ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+          {{ showTemplatesSidebar ? 'Hide' : 'Show' }} Templates
+        </button>
+      </div>
+
+      <div class="kanban-board" cdkDropListGroup>
+        <div class="kanban-column" *ngFor="let column of kanbanColumns">
+          <div class="column-header" [style.border-top-color]="column.color">
+            <h3>{{ column.title }}</h3>
+            <span class="case-count">{{ column.cases.length }}</span>
+          </div>
+
+          <div class="column-content"
+               cdkDropList
+               [cdkDropListData]="column.cases"
+               (cdkDropListDropped)="onDrop($event)">
+            <div class="kanban-card"
+                 *ngFor="let case of column.cases"
+                 cdkDrag
+                 (click)="openCaseDetails(case)">
+              <div class="card-header">
+                <span class="case-id">{{ case.caseId.substring(0, 8) }}</span>
+                <span class="priority-indicator" 
+                      [style.background-color]="getPriorityColor(case.priority)"
+                      [title]="case.priority + ' priority'">
+                </span>
+              </div>
+
+              <div class="card-body">
+                <h4>{{ case.driverName }}</h4>
+                <p class="violation-type">
+                  <mat-icon>warning</mat-icon>
+                  {{ case.violationType }}
+                </p>
+                <p class="violation-date">
+                  <mat-icon>event</mat-icon>
+                  {{ case.violationDate | date:'shortDate' }}
+                </p>
+                <p class="due-date" *ngIf="case.dueDate">
+                  <mat-icon>alarm</mat-icon>
+                  Due: {{ case.dueDate | date:'shortDate' }}
+                </p>
+              </div>
+
+              <div class="card-actions">
+                <button mat-icon-button (click)="openCaseDetails(case); $event.stopPropagation()">
+                  <mat-icon>open_in_new</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div class="empty-column" *ngIf="column.cases.length === 0">
+              <mat-icon>inbox</mat-icon>
+              <p>No cases</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates Sidebar -->
+    <div class="templates-sidebar" *ngIf="showTemplatesSidebar">
+      <div class="sidebar-header">
+        <h3>
+          <mat-icon>description</mat-icon>
+          Case Templates
+        </h3>
+      </div>
+
+      <div class="sidebar-content">
+        <div class="template-card" *ngFor="let template of templates" (click)="applyTemplate(template)">
+          <div class="template-icon">
+            <mat-icon>file_copy</mat-icon>
+          </div>
+          <div class="template-info">
+            <h4>{{ template.name }}</h4>
+            <p class="template-description">{{ template.description }}</p>
+            <div class="template-actions">
+              <span class="violation-type-badge">{{ template.violationType }}</span>
+              <span class="action-count">{{ template.defaultActions.length }} actions</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Section in Sidebar -->
+        <div class="sidebar-charts">
+          <mat-card>
+            <mat-card-content>
+              <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-content>
+              <div class="chart-container">
+                <canvas id="caseTypeChart"></canvas>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions Menu -->
+<mat-menu #quickActions="matMenu">
+  <button mat-menu-item (click)="viewDeadlines()">
+    <mat-icon>alarm</mat-icon>
+    <span>View Deadlines</span>
+  </button>
+  <button mat-menu-item (click)="generateReport()">
+    <mat-icon>assessment</mat-icon>
+    <span>Generate Report</span>
+  </button>
+  <mat-divider></mat-divider>
+  <button mat-menu-item>
+    <mat-icon>settings</mat-icon>
+    <span>Dashboard Settings</span>
+  </button>
+</mat-menu>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" *ngIf="loading">
+  <mat-spinner></mat-spinner>
+</div>
