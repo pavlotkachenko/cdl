@@ -4,10 +4,23 @@
  */
 
 import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatSort } from '@angular/material/sort';
-import { MatPaginator } from '@angular/material/paginator';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatDialog } from '@angular/material/dialog';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SelectionModel } from '@angular/cdk/collections';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -18,8 +31,27 @@ import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-operator-dashboard',
+  standalone: true,
   templateUrl: './operator-dashboard.component.html',
-  styleUrls: ['./operator-dashboard.component.scss']
+  styleUrls: ['./operator-dashboard.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatMenuModule,
+    MatCheckboxModule,
+    MatChipsModule,
+    MatDividerModule,
+    MatProgressSpinnerModule,
+  ]
 })
 export class OperatorDashboardComponent implements OnInit, OnDestroy {
   @ViewChild(MatSort) sort!: MatSort;
@@ -106,7 +138,7 @@ export class OperatorDashboardComponent implements OnInit, OnDestroy {
     this.loading = true;
     const currentUser = this.authService.currentUserValue;
     
-    this.dashboardService.getWorkloadStats(currentUser?.userId).subscribe({
+    this.dashboardService.getWorkloadStats(currentUser?.id).subscribe({
       next: (stats) => {
         this.workloadStats = stats;
         this.updateCharts();
