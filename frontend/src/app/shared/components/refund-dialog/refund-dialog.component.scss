@@ -1,0 +1,161 @@
+mat-dialog-content {
+  min-width: 500px;
+  padding: 24px;
+}
+
+.refund-info {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .label {
+      font-weight: 500;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .value {
+      color: #333;
+      font-weight: 500;
+
+      &.amount {
+        color: #4caf50;
+        font-size: 18px;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+mat-divider {
+  margin: 24px 0;
+}
+
+.refund-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .full-width {
+    width: 100%;
+  }
+
+  mat-form-field {
+    ::ng-deep .mat-form-field-suffix {
+      button {
+        mat-icon {
+          color: #4caf50;
+        }
+      }
+    }
+  }
+
+  .partial-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #ff9800;
+    font-weight: 500;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+}
+
+.warning-box {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background-color: #fff3e0;
+  border-left: 4px solid #ff9800;
+  border-radius: 4px;
+  margin-top: 24px;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .warning-text {
+    flex: 1;
+
+    strong {
+      display: block;
+      color: #e65100;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  gap: 12px;
+  margin-top: 24px;
+
+  button {
+    min-width: 120px;
+
+    .button-spinner {
+      display: inline-block;
+      margin-right: 8px;
+
+      ::ng-deep circle {
+        stroke: white;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 600px) {
+  mat-dialog-content {
+    min-width: unset;
+    width: 100%;
+    padding: 16px;
+  }
+
+  .refund-info {
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+  }
+
+  mat-dialog-actions {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
+  }
+}

@@ -1,0 +1,236 @@
+.revenue-dashboard-container {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  h1 {
+    margin: 0;
+    color: #333;
+    font-size: 28px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .date-range-form {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+
+      mat-form-field {
+        width: 180px;
+      }
+    }
+
+    button {
+      height: 48px;
+
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.metric-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+  }
+
+  .metric-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: white;
+    }
+  }
+
+  .metric-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .metric-label {
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .metric-subtitle {
+      font-size: 12px;
+      color: #999;
+    }
+  }
+
+  &.total-revenue {
+    .metric-icon {
+      background: linear-gradient(135deg, #2196f3, #1976d2);
+    }
+  }
+
+  &.mrr {
+    .metric-icon {
+      background: linear-gradient(135deg, #4caf50, #388e3c);
+    }
+  }
+
+  &.success-rate {
+    .metric-icon {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+    }
+  }
+
+  &.average {
+    .metric-icon {
+      background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    }
+  }
+}
+
+.charts-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+
+  .chart-card {
+    &.full-width {
+      grid-column: 1 / -1;
+    }
+
+    mat-card-header {
+      padding: 16px 16px 0;
+
+      mat-card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+      }
+    }
+
+    mat-card-content {
+      padding: 16px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+
+      canvas {
+        max-width: 100%;
+        max-height: 100%;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 1200px) {
+  .charts-section {
+    grid-template-columns: 1fr;
+
+    .chart-card {
+      &.full-width {
+        grid-column: 1;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .revenue-dashboard-container {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .header-actions {
+      width: 100%;
+      flex-direction: column;
+
+      .date-range-form {
+        width: 100%;
+        flex-direction: column;
+
+        mat-form-field {
+          width: 100%;
+        }
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card {
+    .chart-container {
+      height: 300px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .metric-card {
+    mat-card-content {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+}
