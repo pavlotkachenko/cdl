@@ -1,0 +1,337 @@
+<!--
+  Operator Dashboard Component Template
+  Location: frontend/src/app/features/admin/operator-dashboard/operator-dashboard.component.html
+-->
+
+<div class="operator-dashboard">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>Operator Dashboard</h1>
+    <button mat-raised-button color="primary" (click)="refresh()">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Workload Stats Cards -->
+  <div class="stats-grid" *ngIf="workloadStats">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background-color: #4CAF50;">
+          <mat-icon>inbox</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>Total Cases</h3>
+          <p class="stat-value">{{ workloadStats.totalCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background-color: #2196F3;">
+          <mat-icon>fiber_new</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>New Cases</h3>
+          <p class="stat-value">{{ workloadStats.newCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background-color: #FF9800;">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>In Progress</h3>
+          <p class="stat-value">{{ workloadStats.inProgressCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background-color: #9C27B0;">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>Resolved</h3>
+          <p class="stat-value">{{ workloadStats.resolvedCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background-color: #00BCD4;">
+          <mat-icon>today</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>Today's Cases</h3>
+          <p class="stat-value">{{ workloadStats.todaysCases }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background-color: #FF5722;">
+          <mat-icon>timer</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>Avg Resolution Time</h3>
+          <p class="stat-value">{{ workloadStats.averageResolutionTime | number:'1.0-0' }}h</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="charts-grid">
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>Case Status Distribution</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-container">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>Violation Types</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-container">
+          <canvas id="violationChart"></canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="chart-card full-width">
+      <mat-card-header>
+        <mat-card-title>Attorney Workload Distribution</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-container">
+          <canvas id="workloadChart"></canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Case Queue Section -->
+  <mat-card class="queue-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>queue</mat-icon>
+        New Cases Queue
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Filters and Actions -->
+      <div class="queue-toolbar">
+        <div class="filters">
+          <mat-form-field appearance="outline">
+            <mat-label>Search</mat-label>
+            <input matInput [(ngModel)]="searchText" (keyup.enter)="applyFilters()" placeholder="Search cases...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Status</mat-label>
+            <mat-select [(ngModel)]="filterStatus" (selectionChange)="applyFilters()">
+              <mat-option value="">All</mat-option>
+              <mat-option value="new">New</mat-option>
+              <mat-option value="assigned">Assigned</mat-option>
+              <mat-option value="in_progress">In Progress</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Priority</mat-label>
+            <mat-select [(ngModel)]="filterPriority" (selectionChange)="applyFilters()">
+              <mat-option value="">All</mat-option>
+              <mat-option value="high">High</mat-option>
+              <mat-option value="medium">Medium</mat-option>
+              <mat-option value="low">Low</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>State</mat-label>
+            <mat-select [(ngModel)]="filterState" (selectionChange)="applyFilters()">
+              <mat-option value="">All</mat-option>
+              <mat-option value="CA">California</mat-option>
+              <mat-option value="TX">Texas</mat-option>
+              <mat-option value="FL">Florida</mat-option>
+              <mat-option value="NY">New York</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-button (click)="clearFilters()">
+            <mat-icon>clear</mat-icon>
+            Clear
+          </button>
+        </div>
+
+        <div class="bulk-actions" *ngIf="selection.selected.length > 0">
+          <span class="selection-count">{{ selection.selected.length }} selected</span>
+          <button mat-raised-button color="primary" (click)="bulkAssignCases()" [disabled]="bulkAssigning">
+            <mat-icon>auto_awesome</mat-icon>
+            Auto-Assign Selected
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table mat-table [dataSource]="dataSource" matSort class="case-queue-table">
+          <!-- Checkbox Column -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox (change)="$event ? masterToggle() : null"
+                            [checked]="selection.hasValue() && isAllSelected()"
+                            [indeterminate]="selection.hasValue() && !isAllSelected()">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-checkbox (click)="$event.stopPropagation()"
+                            (change)="$event ? selection.toggle(row) : null"
+                            [checked]="selection.isSelected(row)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- Case ID Column -->
+          <ng-container matColumnDef="caseId">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Case ID</th>
+            <td mat-cell *matCellDef="let case">
+              <span class="case-id">{{ case.caseId.substring(0, 8) }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Driver Name Column -->
+          <ng-container matColumnDef="driverName">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Driver</th>
+            <td mat-cell *matCellDef="let case">{{ case.driverName }}</td>
+          </ng-container>
+
+          <!-- Violation Type Column -->
+          <ng-container matColumnDef="violationType">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Violation</th>
+            <td mat-cell *matCellDef="let case">
+              <span class="violation-badge">{{ case.violationType }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Violation Date Column -->
+          <ng-container matColumnDef="violationDate">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Violation Date</th>
+            <td mat-cell *matCellDef="let case">{{ case.violationDate | date:'shortDate' }}</td>
+          </ng-container>
+
+          <!-- State Column -->
+          <ng-container matColumnDef="violationState">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>State</th>
+            <td mat-cell *matCellDef="let case">
+              <span class="state-badge">{{ case.violationState }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Priority Column -->
+          <ng-container matColumnDef="priority">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Priority</th>
+            <td mat-cell *matCellDef="let case">
+              <mat-chip [color]="getPriorityColor(case.priority)" selected>
+                {{ case.priority | uppercase }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Status Column -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+            <td mat-cell *matCellDef="let case">
+              <span class="status-badge status-{{ case.status }}">{{ case.status }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Created At Column -->
+          <ng-container matColumnDef="createdAt">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Created</th>
+            <td mat-cell *matCellDef="let case">{{ case.createdAt | date:'short' }}</td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let case">
+              <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{case: case}">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+              [class.selected-row]="selection.isSelected(row)"></tr>
+
+          <!-- No Data Row -->
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+              <div class="no-data">
+                <mat-icon>inbox</mat-icon>
+                <p>No cases in queue</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons></mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- Action Menu Template -->
+<mat-menu #actionMenu="matMenu">
+  <ng-template matMenuContent let-case="case">
+    <button mat-menu-item (click)="autoAssignCase(case)">
+      <mat-icon>auto_awesome</mat-icon>
+      <span>Auto-Assign</span>
+    </button>
+    <button mat-menu-item [matMenuTriggerFor]="assignMenu" [matMenuTriggerData]="{case: case}">
+      <mat-icon>person_add</mat-icon>
+      <span>Assign to Attorney</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item>
+      <mat-icon>visibility</mat-icon>
+      <span>View Details</span>
+    </button>
+    <button mat-menu-item>
+      <mat-icon>edit</mat-icon>
+      <span>Edit Case</span>
+    </button>
+  </ng-template>
+</mat-menu>
+
+<!-- Assign Menu Template (populated dynamically) -->
+<mat-menu #assignMenu="matMenu">
+  <ng-template matMenuContent let-case="case">
+    <button mat-menu-item disabled>
+      <em>Loading attorneys...</em>
+    </button>
+  </ng-template>
+</mat-menu>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" *ngIf="loading">
+  <mat-spinner></mat-spinner>
+</div>

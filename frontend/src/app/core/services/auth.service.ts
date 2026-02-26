@@ -1,5 +1,5 @@
 // ============================================
-// Auth Service (COMPLETE - Compatible with all components)
+// AUTH SERVICE - Complete Implementation
 // Location: frontend/src/app/core/services/auth.service.ts
 // ============================================
 
@@ -16,6 +16,7 @@ export interface User {
   name: string;
   role: 'driver' | 'admin' | 'attorney' | 'paralegal';
   token?: string;
+  refreshToken?: string;
 }
 
 export interface LoginRequest {
@@ -29,6 +30,18 @@ export interface RegisterRequest {
   password: string;
   phone?: string;
   cdlNumber?: string;
+  role?: string;
+}
+
+export interface AuthResponse {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  };
+  accessToken: string;
+  refreshToken: string;
 }
 
 @Injectable({
@@ -85,7 +98,14 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return localStorage.getItem('token') || localStorage.getItem('accessToken');
+  }
+
+  // ============================================
+  // Get refresh token
+  // ============================================
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
   }
 
   // ============================================
@@ -97,53 +117,178 @@ export class AuthService {
   }
 
   // ============================================
-  // Check if user is authenticated (callable method)
+  // Check if user is authenticated
   // ============================================
   isAuthenticated(): boolean {
-    return !!this.currentUserValue;
+    return !!this.currentUserValue && !!this.getToken();
   }
 
   // ============================================
-  // Login
+  // LOGIN - Call backend API
   // ============================================
   login(credentials: LoginRequest): Observable<User> {
-    return this.http.post<any>(`${this.apiUrl}/auth/login`, credentials).pipe(
+    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, credentials).pipe(
       map(response => {
-        const user: User = {
-          id: response.user.id,
-          email: response.user.email,
-          name: response.user.name,
-          role: response.user.role,
-          token: response.token
-        };
-
-        // Store user in localStorage
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        if (response.token) {
-          localStorage.setItem('token', response.token);
-        }
-
-        // Update BehaviorSubject
-        this.currentUserSubject.next(user);
-
-        return user;
+        return this.handleAuthResponse(response);
       }),
       catchError(error => {
-        console.error('Login error:', error);
-        // Fall back to mock login
-        return this.performMockLogin(credentials.email, credentials.password);
+        console.error('❌ Login error:', error);
+        throw error;
       })
     );
   }
 
   // ============================================
-  // Mock login (public for compatibility)
+  // REGISTER - Call backend API
   // ============================================
-  mockLogin(email: string, password: string): Observable<User> {
-    return this.performMockLogin(email, password);
+  register(userData: RegisterRequest): Observable<User> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, userData).pipe(
+      map(response => {
+        return this.handleAuthResponse(response);
+      }),
+      catchError(error => {
+        console.error('❌ Registration error:', error);
+        throw error;
+      })
+    );
   }
 
-  private performMockLogin(email: string, password: string): Observable<User> {
+  // ============================================
+  // LOGOUT - Clear tokens and call backend
+  // ============================================
+  logout(): Observable<any> {
+    const refreshToken = this.getRefreshToken();
+    
+    // Clear local storage first
+    this.clearAuthData();
+
+    // Call backend logout endpoint if we have a refresh token
+    if (refreshToken) {
+      return this.http.post(`${this.apiUrl}/auth/logout`, { refreshToken }).pipe(
+        tap(() => {
+          console.log('✅ Logged out from backend');
+        }),
+        catchError(error => {
+          console.error('❌ Logout error:', error);
+          return of(null); // Continue even if backend call fails
+        })
+      );
+    }
+
+    return of(null);
+  }
+
+  // ============================================
+  // REFRESH TOKEN - Get new access token
+  // ============================================
+  refreshToken(): Observable<{ accessToken: string }> {
+    const refreshToken = this.getRefreshToken();
+    
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token available'));
+    }
+
+    return this.http.post<{ accessToken: string }>(`${this.apiUrl}/auth/refresh`, { refreshToken }).pipe(
+      tap(response => {
+        // Update access token
+        localStorage.setItem('token', response.accessToken);
+        localStorage.setItem('accessToken', response.accessToken);
+        
+        console.log('✅ Token refreshed successfully');
+      }),
+      catchError(error => {
+        console.error('❌ Token refresh failed:', error);
+        // If refresh fails, logout user
+        this.clearAuthData();
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // FORGOT PASSWORD - Send reset email
+  // ============================================
+  forgotPassword(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/forgot-password`, { email }).pipe(
+      tap(response => {
+        console.log('✅ Password reset email sent:', response.message);
+      }),
+      catchError(error => {
+        console.error('❌ Forgot password error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // RESET PASSWORD - Set new password with token
+  // ============================================
+  resetPassword(token: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/reset-password`, { 
+      token, 
+      newPassword 
+    }).pipe(
+      tap(response => {
+        console.log('✅ Password reset successful:', response.message);
+      }),
+      catchError(error => {
+        console.error('❌ Reset password error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Handle auth response (login/register)
+  // ============================================
+  private handleAuthResponse(response: AuthResponse): User {
+    const user: User = {
+      id: response.user.id,
+      email: response.user.email,
+      name: response.user.name,
+      role: response.user.role as User['role'],
+      token: response.accessToken,
+      refreshToken: response.refreshToken
+    };
+
+    // Store user and tokens in localStorage
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    localStorage.setItem('token', response.accessToken);
+    localStorage.setItem('accessToken', response.accessToken);
+    localStorage.setItem('refreshToken', response.refreshToken);
+
+    // Update BehaviorSubject
+    this.currentUserSubject.next(user);
+
+    console.log('✅ User authenticated:', user);
+    return user;
+  }
+
+  // ============================================
+  // Clear authentication data
+  // ============================================
+  private clearAuthData(): void {
+    // Clear localStorage
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+
+    // Clear BehaviorSubject
+    this.currentUserSubject.next(null);
+
+    // Navigate to login
+    this.router.navigate(['/login']);
+
+    console.log('✅ Auth data cleared');
+  }
+
+  // ============================================
+  // Mock login (for development/testing)
+  // ============================================
+  mockLogin(email: string, password: string): Observable<User> {
+    console.log('🔧 Using mock login for development');
+    
     // Simulate different roles based on email
     let role: User['role'] = 'driver';
     
@@ -160,12 +305,15 @@ export class AuthService {
       email: email,
       name: email.split('@')[0],
       role: role,
-      token: 'mock-jwt-token'
+      token: 'mock-jwt-token-' + Date.now(),
+      refreshToken: 'mock-refresh-token-' + Date.now()
     };
 
     // Store in localStorage
     localStorage.setItem('currentUser', JSON.stringify(user));
     localStorage.setItem('token', user.token || '');
+    localStorage.setItem('accessToken', user.token || '');
+    localStorage.setItem('refreshToken', user.refreshToken || '');
 
     // Update BehaviorSubject
     this.currentUserSubject.next(user);
@@ -174,89 +322,30 @@ export class AuthService {
   }
 
   // ============================================
-  // Register
-  // ============================================
-  register(userData: RegisterRequest): Observable<User> {
-    return this.http.post<any>(`${this.apiUrl}/auth/register`, userData).pipe(
-      map(response => {
-        const user: User = {
-          id: response.user.id,
-          email: response.user.email,
-          name: response.user.name,
-          role: response.user.role || 'driver',
-          token: response.token
-        };
-
-        // Store user in localStorage
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        if (response.token) {
-          localStorage.setItem('token', response.token);
-        }
-
-        // Update BehaviorSubject
-        this.currentUserSubject.next(user);
-
-        return user;
-      }),
-      catchError(error => {
-        console.error('Registration error:', error);
-        // Fall back to mock register
-        return this.performMockRegister(userData);
-      })
-    );
-  }
-
-  // ============================================
-  // Mock register (for compatibility)
+  // Mock register (for development/testing)
   // ============================================
   mockRegister(userData: RegisterRequest): Observable<User> {
-    return this.performMockRegister(userData);
-  }
-
-  private performMockRegister(userData: RegisterRequest): Observable<User> {
+    console.log('🔧 Using mock register for development');
+    
     const user: User = {
       id: Date.now().toString(),
       email: userData.email,
       name: userData.name,
-      role: 'driver',
-      token: 'mock-jwt-token'
+      role: (userData.role as User['role']) || 'driver',
+      token: 'mock-jwt-token-' + Date.now(),
+      refreshToken: 'mock-refresh-token-' + Date.now()
     };
 
     // Store in localStorage
     localStorage.setItem('currentUser', JSON.stringify(user));
     localStorage.setItem('token', user.token || '');
+    localStorage.setItem('accessToken', user.token || '');
+    localStorage.setItem('refreshToken', user.refreshToken || '');
 
     // Update BehaviorSubject
     this.currentUserSubject.next(user);
 
     return of(user);
-  }
-
-  // ============================================
-  // Refresh token (for interceptor compatibility)
-  // ============================================
-  refreshToken(): Observable<{ token: string }> {
-    // Mock token refresh - return current token
-    const currentToken = this.getToken();
-    if (currentToken) {
-      return of({ token: currentToken });
-    }
-    return throwError(() => new Error('No token to refresh'));
-  }
-
-  // ============================================
-  // Logout
-  // ============================================
-  logout(): void {
-    // Clear localStorage
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('token');
-
-    // Clear BehaviorSubject
-    this.currentUserSubject.next(null);
-
-    // Navigate to login
-    this.router.navigate(['/login']);
   }
 
   // ============================================
@@ -266,5 +355,35 @@ export class AuthService {
     const user = this.getUserFromStorage();
     console.log('🔄 Refreshing user from localStorage:', user);
     this.currentUserSubject.next(user);
+  }
+
+  // ============================================
+  // Verify email (optional feature)
+  // ============================================
+  verifyEmail(token: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/verify-email`, { token }).pipe(
+      tap(response => {
+        console.log('✅ Email verified:', response.message);
+      }),
+      catchError(error => {
+        console.error('❌ Email verification error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Resend verification email
+  // ============================================
+  resendVerificationEmail(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/resend-verification`, { email }).pipe(
+      tap(response => {
+        console.log('✅ Verification email resent:', response.message);
+      }),
+      catchError(error => {
+        console.error('❌ Resend verification error:', error);
+        throw error;
+      })
+    );
   }
 }

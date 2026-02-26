@@ -1,0 +1,547 @@
+// ============================================
+// Case Routes
+// ============================================
+// These are like different service windows
+// Each handles a specific type of request
+
+const express = require('express');
+const router = express.Router();
+const { authenticate, authorize, canAccessCase } = require('../middleware/auth');
+const caseController = require('../controllers/case.controller');
+const { body, param, query } = require('express-validator');
+
+// ============================================
+// VALIDATION RULES
+// ============================================
+// Check that incoming data is correct
+
+const createCaseValidation = [
+  body('customer_name').notEmpty().withMessage('Customer name is required'),
+  body('driver_phone').optional().isMobilePhone(),
+  body('customer_type').isIn([
+    'subscriber_driver', 
+    'subscriber_carrier', 
+    'one_time_driver', 
+    'one_time_carrier'
+  ]),
+  body('state').isLength({ min: 2, max: 2 }).withMessage('State must be 2 letters'),
+  body('violation_date').isISO8601().withMessage('Valid date required'),
+  body('violation_type').isIn([
+    'speeding', 
+    'parking', 
+    'traffic_signal', 
+    'reckless_driving', 
+    'dui', 
+    'other'
+  ])
+];
+
+const updateCaseValidation = [
+  body('status').optional().isString(),
+  body('court_date').optional().isISO8601(),
+  body('attorney_price').optional().isFloat({ min: 0 })
+];
+
+// ============================================
+// ROUTES
+// ============================================
+
+/**
+ * POST /api/cases
+ * Submit a new ticket (violation)
+ * Access: All authenticated users
+ */
+router.post(
+  '/',
+  authenticate,
+  createCaseValidation,
+  caseController.createCase
+);
+
+/**
+ * GET /api/cases
+ * Get list of cases with filters
+ * Access: Based on role
+ * Query params: status, state, customer_type, page, limit
+ */
+router.get(
+  '/',
+  authenticate,
+  caseController.getCases
+);
+
+/**
+ * GET /api/cases/my-cases
+ * Get cases for current user
+ * Drivers: their cases
+ * Operators: assigned cases
+ * Attorneys: assigned cases
+ */
+router.get(
+  '/my-cases',
+  authenticate,
+  caseController.getMyCases
+);
+
+/**
+ * GET /api/cases/new-cases
+ * Get cases in "New Cases" pool
+ * Access: Operators, Admins
+ */
+router.get(
+  '/new-cases',
+  authenticate,
+  authorize(['operator', 'admin']),
+  caseController.getNewCases
+);
+
+/**
+ * GET /api/cases/stats
+ * Get statistics dashboard data
+ * Access: Operators, Admins
+ */
+router.get(
+  '/stats',
+  authenticate,
+  authorize(['operator', 'admin']),
+  caseController.getCaseStats
+);
+
+/**
+ * GET /api/cases/:id
+ * Get single case details
+ * Access: Owner or assigned users
+ */
+router.get(
+  '/:id',
+  authenticate,
+  canAccessCase,
+  caseController.getCaseById
+);
+
+/**
+ * PATCH /api/cases/:id
+ * Update case details
+ * Access: Operators, Attorneys, Admins
+ */
+router.patch(
+  '/:id',
+  authenticate,
+  canAccessCase,
+  authorize(['operator', 'attorney', 'admin']),
+  updateCaseValidation,
+  caseController.updateCase
+);
+
+/**
+ * POST /api/cases/:id/assign-operator
+ * Assign case to operator (manual override)
+ * Access: Admins
+ */
+router.post(
+  '/:id/assign-operator',
+  authenticate,
+  authorize(['admin']),
+  body('operator_id').isUUID(),
+  caseController.assignToOperator
+);
+
+/**
+ * POST /api/cases/:id/assign-attorney
+ * Assign case to attorney
+ * Access: Operators, Admins
+ */
+router.post(
+  '/:id/assign-attorney',
+  authenticate,
+  authorize(['operator', 'admin']),
+  body('attorney_id').isUUID(),
+  body('attorney_price').isFloat({ min: 0 }),
+  caseController.assignToAttorney
+);
+
+/**
+ * POST /api/cases/:id/status
+ * Change case status
+ * Access: Operators, Attorneys, Admins
+ */
+router.post(
+  '/:id/status',
+  authenticate,
+  canAccessCase,
+  authorize(['operator', 'attorney', 'admin']),
+  body('status').notEmpty(),
+  body('comment').optional().isString(),
+  caseController.changeStatus
+);
+
+/**
+ * GET /api/cases/:id/activity
+ * Get activity log for case
+ * Access: Anyone who can access the case
+ */
+router.get(
+  '/:id/activity',
+  authenticate,
+  canAccessCase,
+  caseController.getCaseActivity
+);
+
+/**
+ * DELETE /api/cases/:id
+ * Delete case (soft delete)
+ * Access: Admins only
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  authorize(['admin']),
+  caseController.deleteCase
+);
+
+module.exports = router;
+// ============================================
+// Authentication Routes
+// ============================================
+// Handles login, register, and user auth
+
+const express = require('express');
+const router = express.Router();
+const { body } = require('express-validator');
+
+/**
+ * POST /api/auth/register
+ * Register new user
+ */
+router.post('/register',
+  [
+    body('email').isEmail().withMessage('Valid email required'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('full_name').notEmpty().withMessage('Full name required'),
+    body('role').optional().isIn(['driver', 'operator', 'attorney', 'admin'])
+  ],
+  async (req, res) => {
+    try {
+      // For now, return a placeholder
+      // Full implementation coming in next files
+      res.json({ 
+        message: 'Registration endpoint ready',
+        note: 'Full auth controller coming next'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/auth/login
+ * Login user
+ */
+router.post('/login',
+  [
+    body('email').isEmail(),
+    body('password').notEmpty()
+  ],
+  async (req, res) => {
+    try {
+      res.json({ 
+        message: 'Login endpoint ready',
+        note: 'Full auth controller coming next'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/auth/logout
+ * Logout user
+ */
+router.post('/logout', async (req, res) => {
+  res.json({ message: 'Logout successful' });
+});
+
+module.exports = router;
+// ============================================
+// Notification Routes
+// ============================================
+// User notification endpoints
+
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+
+/**
+ * GET /api/notifications
+ * Get user's notifications
+ */
+router.get('/',
+  authenticate,
+  async (req, res) => {
+    try {
+      res.json({ 
+        notifications: [],
+        unread_count: 0
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * PATCH /api/notifications/:id/read
+ * Mark notification as read
+ */
+router.patch('/:id/read',
+  authenticate,
+  async (req, res) => {
+    try {
+      res.json({ message: 'Notification marked as read' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+module.exports = router;
+// ============================================
+// MESSAGE ROUTES
+// REST API endpoints for message management
+// ============================================
+
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+const messageController = require('../controllers/message.controller');
+const { validateMessage } = require('../middleware/validation.middleware');
+const { upload } = require('../middleware/upload.middleware');
+
+/**
+ * @route POST /api/messages
+ * @desc Send a new message
+ * @access Private
+ */
+router.post('/', authenticate, validateMessage, messageController.sendMessage);
+
+/**
+ * @route POST /api/messages/file
+ * @desc Send a message with file attachment
+ * @access Private
+ */
+router.post('/file', authenticate, upload.single('file'), messageController.sendMessageWithFile);
+
+/**
+ * @route POST /api/messages/:id/read
+ * @desc Mark message as read
+ * @access Private
+ */
+router.post('/:id/read', authenticate, messageController.markMessageAsRead);
+
+/**
+ * @route DELETE /api/messages/:id
+ * @desc Delete message
+ * @access Private (Sender only)
+ */
+router.delete('/:id', authenticate, messageController.deleteMessage);
+
+/**
+ * @route GET /api/messages/:id
+ * @desc Get single message by ID
+ * @access Private
+ */
+router.get('/:id', authenticate, messageController.getMessageById);
+
+module.exports = router;
+// ============================================
+// User Routes
+// ============================================
+// User management endpoints
+
+const express = require('express');
+const router = express.Router();
+const { authenticate, authorize } = require('../middleware/auth');
+
+/**
+ * GET /api/users
+ * Get all users (admin only)
+ */
+router.get('/',
+  authenticate,
+  authorize(['admin']),
+  async (req, res) => {
+    try {
+      res.json({ 
+        message: 'User list endpoint ready',
+        users: []
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/users/me
+ * Get current user profile
+ */
+router.get('/me',
+  authenticate,
+  async (req, res) => {
+    try {
+      res.json({ user: req.user });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+module.exports = router;
+// ============================================
+// CONVERSATION ROUTES
+// REST API endpoints for conversation management
+// ============================================
+
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+const conversationController = require('../controllers/conversation.controller');
+const { validateConversation } = require('../middleware/validation.middleware');
+
+/**
+ * @route GET /api/conversations
+ * @desc Get all conversations for authenticated user (with pagination)
+ * @access Private
+ */
+router.get('/', authenticate, conversationController.getConversations);
+
+/**
+ * @route GET /api/conversations/:id
+ * @desc Get single conversation by ID
+ * @access Private
+ */
+router.get('/:id', authenticate, conversationController.getConversationById);
+
+/**
+ * @route POST /api/conversations
+ * @desc Create new conversation
+ * @access Private
+ */
+router.post('/', authenticate, validateConversation, conversationController.createConversation);
+
+/**
+ * @route DELETE /api/conversations/:id
+ * @desc Delete conversation
+ * @access Private (Driver or Attorney only)
+ */
+router.delete('/:id', authenticate, conversationController.deleteConversation);
+
+/**
+ * @route POST /api/conversations/:id/video-link
+ * @desc Generate video call link for conversation
+ * @access Private (Attorney only)
+ */
+router.post('/:id/video-link', authenticate, conversationController.generateVideoLink);
+
+/**
+ * @route GET /api/conversations/:id/messages
+ * @desc Get all messages for a conversation
+ * @access Private
+ */
+router.get('/:id/messages', authenticate, conversationController.getConversationMessages);
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+
+// Placeholder for admin routes
+router.get('/', (req, res) => {
+  res.json({ message: 'Admin routes module is ready' });
+});
+
+module.exports = router;// ============================================
+// File Routes
+// ============================================
+// File upload and download endpoints
+
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+
+/**
+ * POST /api/files/upload
+ * Upload file to case
+ */
+router.post('/upload',
+  authenticate,
+  async (req, res) => {
+    try {
+      res.json({ 
+        message: 'File upload endpoint ready',
+        note: 'Multer integration coming next'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/files/:id
+ * Download file
+ */
+router.get('/:id',
+  authenticate,
+  async (req, res) => {
+    try {
+      res.json({ 
+        message: 'File download endpoint ready'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+module.exports = router;
+// ============================================
+// QUICK QUESTIONS ROUTES
+// REST API endpoints for predefined quick questions
+// ============================================
+
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+const quickQuestionController = require('../controllers/quick-question.controller');
+
+/**
+ * @route GET /api/quick-questions
+ * @desc Get all active quick questions
+ * @access Private
+ */
+router.get('/', authenticate, quickQuestionController.getQuickQuestions);
+
+/**
+ * @route POST /api/quick-questions
+ * @desc Create new quick question (Admin only)
+ * @access Private (Admin)
+ */
+router.post('/', authenticate, quickQuestionController.createQuickQuestion);
+
+/**
+ * @route PUT /api/quick-questions/:id
+ * @desc Update quick question (Admin only)
+ * @access Private (Admin)
+ */
+router.put('/:id', authenticate, quickQuestionController.updateQuickQuestion);
+
+/**
+ * @route DELETE /api/quick-questions/:id
+ * @desc Delete quick question (Admin only)
+ * @access Private (Admin)
+ */
+router.delete('/:id', authenticate, quickQuestionController.deleteQuickQuestion);
+
+module.exports = router;

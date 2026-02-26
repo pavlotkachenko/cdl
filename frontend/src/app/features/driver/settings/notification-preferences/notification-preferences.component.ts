@@ -88,8 +88,14 @@ export class NotificationPreferencesComponent implements OnInit {
   }
 
   private loadPreferences(): void {
-    const preferences = this.notificationService.getPreferences();
-    this.preferencesForm.patchValue(preferences);
+    this.notificationService.getPreferences().subscribe({
+      next: (preferences) => {
+        this.preferencesForm.patchValue(preferences);
+      },
+      error: (error) => {
+        console.error('Failed to load preferences:', error);
+      }
+    });
   }
 
   savePreferences(): void {
@@ -98,24 +104,33 @@ export class NotificationPreferencesComponent implements OnInit {
     this.saving = true;
     const preferences: NotificationPreferences = this.preferencesForm.value;
 
-    // Simulate API call
-    setTimeout(() => {
-      this.notificationService.savePreferences(preferences);
-      this.saving = false;
-      
-      this.snackBar.open('Notification preferences saved successfully!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'end',
-        verticalPosition: 'top'
-      });
-    }, 500);
+    this.notificationService.savePreferences(preferences).subscribe({
+      next: () => {
+        this.saving = false;
+        this.snackBar.open('Notification preferences saved successfully!', 'Close', {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top'
+        });
+      },
+      error: (error) => {
+        this.saving = false;
+        console.error('Failed to save preferences:', error);
+        this.snackBar.open('Failed to save preferences', 'Close', {
+          duration: 3000
+        });
+      }
+    });
   }
 
   resetToDefaults(): void {
     if (confirm('Reset all notification preferences to defaults?')) {
-      const defaults = this.notificationService.getPreferences();
-      this.preferencesForm.patchValue(defaults);
-      this.savePreferences();
+      this.notificationService.getPreferences().subscribe({
+        next: (defaults) => {
+          this.preferencesForm.patchValue(defaults);
+          this.savePreferences();
+        }
+      });
     }
   }
 

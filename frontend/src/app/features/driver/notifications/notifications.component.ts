@@ -158,7 +158,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   clearAll(): void {
     if (confirm('Clear all notifications? This cannot be undone.')) {
-      this.notificationService.clearAll();
+      this.notificationService.clearAll().subscribe();
     }
   }
 
@@ -178,11 +178,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     return this.notificationService.getNotificationColor(type);
   }
 
-  formatTime(timestamp: Date): string {
+  formatTime(timestamp: Date | string): string {
     return this.notificationService.formatTimestamp(timestamp);
   }
 
-  formatFullDate(timestamp: Date): string {
+  formatFullDate(timestamp: Date | string): string {
     return new Date(timestamp).toLocaleString('en-US', {
       month: 'long',
       day: 'numeric',
@@ -196,7 +196,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const groups = new Map<string, Notification[]>();
     
     this.filteredNotifications.forEach(notification => {
-      const date = new Date(notification.timestamp);
+      const date = new Date(notification.timestamp || notification.createdAt);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);

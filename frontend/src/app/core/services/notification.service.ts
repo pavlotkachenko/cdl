@@ -1,40 +1,35 @@
 // ============================================
-// Notification Service (COMPLETE - Matches Components)
+// NOTIFICATION SERVICE - Complete Implementation
 // Location: frontend/src/app/core/services/notification.service.ts
 // ============================================
 
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, interval, of } from 'rxjs';
-import { switchMap, catchError, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface Notification {
   id: string;
+  type: 'case' | 'message' | 'court' | 'payment' | 'system' | 'case_update' | 'attorney_message' | 'comment' | 'document' | 'court_date';
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'success' | 'error' | 'case_update' | 'attorney_message' | 'comment' | 'document' | 'court_date' | 'system';
   read: boolean;
-  timestamp: Date;  // Components use 'timestamp' not 'createdAt'
-  link?: string;
-  actionUrl?: string;  // Components expect this
-  metadata?: {
-    priority?: 'high' | 'medium' | 'low';
-    caseId?: string;
-    [key: string]: any;
-  };
+  createdAt: string;
+  timestamp?: string;
+  data?: any;
+  metadata?: { priority?: string; [key: string]: any };
+  actionUrl?: string;
 }
 
 export interface NotificationPreferences {
-  email: boolean;
-  push: boolean;
-  sms: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  pushNotifications: boolean;
   caseUpdates: boolean;
-  attorneyMessages: boolean;
-  courtDates: boolean;
-  documents: boolean;
-  comments: boolean;
-  systemAlerts: boolean;
+  messageAlerts: boolean;
+  courtReminders: boolean;
+  paymentReminders: boolean;
 }
 
 @Injectable({
@@ -42,267 +37,390 @@ export interface NotificationPreferences {
 })
 export class NotificationService {
   private apiUrl = environment.apiUrl || 'http://localhost:3000/api';
+  private wsUrl = environment.wsUrl || 'ws://localhost:3000';
   
+  // WebSocket connection
+  private socket: WebSocket | null = null;
+  private reconnectInterval: any = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+
+  // Observables
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   public notifications$ = this.notificationsSubject.asObservable();
-  
+
   private unreadCountSubject = new BehaviorSubject<number>(0);
   public unreadCount$ = this.unreadCountSubject.asObservable();
 
-  // ============================================
-  // API POLLING DISABLED FOR DEVELOPMENT
-  // ============================================
-  private pollingEnabled = false;
-  private pollingInterval = 30000;
+  private newNotificationSubject = new Subject<Notification>();
+  public newNotification$ = this.newNotificationSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    this.loadMockNotifications();
+    console.log('✅ NotificationService initialized');
   }
 
   // ============================================
-  // Mock Data
+  // Get all notifications
   // ============================================
-  
-  private loadMockNotifications(): void {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        title: 'Case Update',
-        message: 'Your case #12345 has been assigned to an attorney',
-        type: 'case_update',
-        read: false,
-        timestamp: new Date(),
-        link: '/driver/tickets/12345',
-        actionUrl: '/driver/tickets/12345',
-        metadata: {
-          priority: 'high',
-          caseId: '12345'
-        }
-      },
-      {
-        id: '2',
-        title: 'New Document',
-        message: 'Attorney uploaded citation_response.pdf',
-        type: 'document',
-        read: false,
-        timestamp: new Date(Date.now() - 3600000),
-        link: '/driver/documents',
-        actionUrl: '/driver/documents',
-        metadata: {
-          priority: 'medium'
-        }
-      },
-      {
-        id: '3',
-        title: 'Court Date Scheduled',
-        message: 'Your court hearing is scheduled for March 15, 2024',
-        type: 'court_date',
-        read: false,
-        timestamp: new Date(Date.now() - 7200000),
-        link: '/driver/tickets/12345',
-        actionUrl: '/driver/tickets/12345',
-        metadata: {
-          priority: 'high',
-          caseId: '12345'
-        }
-      },
-      {
-        id: '4',
-        title: 'Attorney Message',
-        message: 'John Smith sent you a message regarding your case',
-        type: 'attorney_message',
-        read: true,
-        timestamp: new Date(Date.now() - 86400000),
-        link: '/driver/tickets/12345',
-        actionUrl: '/driver/tickets/12345'
-      },
-      {
-        id: '5',
-        title: 'Payment Reminder',
-        message: 'Payment due in 3 days for case #12345',
-        type: 'warning',
-        read: true,
-        timestamp: new Date(Date.now() - 172800000),
-        link: '/driver/tickets/12345',
-        actionUrl: '/driver/tickets/12345'
-      }
-    ];
+  getNotifications(params?: {
+    type?: string;
+    read?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Observable<{ notifications: Notification[]; total: number }> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.read !== undefined) queryParams.append('read', params.read.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
 
-    this.notificationsSubject.next(mockNotifications);
-    this.updateUnreadCount();
+    const url = `${this.apiUrl}/notifications?${queryParams.toString()}`;
+
+    return this.http.get<{ notifications: Notification[]; total: number }>(url).pipe(
+      tap(response => {
+        this.notificationsSubject.next(response.notifications);
+        this.updateUnreadCount(response.notifications);
+      }),
+      catchError(error => {
+        console.error('❌ Get notifications error:', error);
+        throw error;
+      })
+    );
   }
 
   // ============================================
-  // Polling Methods
+  // Get unread notifications count
   // ============================================
+  getUnreadCount(): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`${this.apiUrl}/notifications/unread-count`).pipe(
+      tap(response => {
+        this.unreadCountSubject.next(response.count);
+      }),
+      catchError(error => {
+        console.error('❌ Get unread count error:', error);
+        throw error;
+      })
+    );
+  }
 
-  startPolling(): void {
-    if (!this.pollingEnabled) {
-      console.log('📭 Notification polling is DISABLED - Using mock data');
+  // ============================================
+  // Mark notification as read
+  // ============================================
+  markAsRead(notificationId: string): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(
+      `${this.apiUrl}/notifications/${notificationId}/read`,
+      {}
+    ).pipe(
+      tap(() => {
+        this.updateNotificationReadStatus(notificationId, true);
+      }),
+      catchError(error => {
+        console.error('❌ Mark as read error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Mark all notifications as read
+  // ============================================
+  markAllAsRead(): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(
+      `${this.apiUrl}/notifications/mark-all-read`,
+      {}
+    ).pipe(
+      tap(() => {
+        const notifications = this.notificationsSubject.value.map(n => ({
+          ...n,
+          read: true
+        }));
+        this.notificationsSubject.next(notifications);
+        this.unreadCountSubject.next(0);
+      }),
+      catchError(error => {
+        console.error('❌ Mark all as read error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Delete notification
+  // ============================================
+  deleteNotification(notificationId: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.apiUrl}/notifications/${notificationId}`
+    ).pipe(
+      tap(() => {
+        const notifications = this.notificationsSubject.value.filter(
+          n => n.id !== notificationId
+        );
+        this.notificationsSubject.next(notifications);
+        this.updateUnreadCount(notifications);
+      }),
+      catchError(error => {
+        console.error('❌ Delete notification error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Get notification preferences
+  // ============================================
+  getPreferences(): Observable<NotificationPreferences> {
+    return this.http.get<NotificationPreferences>(
+      `${this.apiUrl}/notifications/preferences`
+    ).pipe(
+      catchError(error => {
+        console.error('❌ Get preferences error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Update notification preferences
+  // ============================================
+  updatePreferences(preferences: Partial<NotificationPreferences>): Observable<{
+    message: string;
+    preferences: NotificationPreferences;
+  }> {
+    return this.http.post<{
+      message: string;
+      preferences: NotificationPreferences;
+    }>(`${this.apiUrl}/notifications/preferences`, preferences).pipe(
+      tap(response => {
+        console.log('✅ Preferences updated:', response.preferences);
+      }),
+      catchError(error => {
+        console.error('❌ Update preferences error:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================
+  // Connect to WebSocket for real-time notifications
+  // ============================================
+  connectWebSocket(token: string): void {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      console.log('WebSocket already connected');
       return;
+    }
+
+    try {
+      this.socket = new WebSocket(`${this.wsUrl}?token=${token}`);
+
+      this.socket.onopen = () => {
+        console.log('✅ WebSocket connected');
+        this.reconnectAttempts = 0;
+        
+        // Clear reconnect interval if exists
+        if (this.reconnectInterval) {
+          clearInterval(this.reconnectInterval);
+          this.reconnectInterval = null;
+        }
+      };
+
+      this.socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handleWebSocketMessage(data);
+        } catch (error) {
+          console.error('❌ WebSocket message parse error:', error);
+        }
+      };
+
+      this.socket.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+      };
+
+      this.socket.onclose = () => {
+        console.log('WebSocket disconnected');
+        this.attemptReconnect(token);
+      };
+
+    } catch (error) {
+      console.error('❌ WebSocket connection error:', error);
     }
   }
 
-  stopPolling(): void {
-    // No-op
+  // ============================================
+  // Disconnect WebSocket
+  // ============================================
+  disconnectWebSocket(): void {
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      this.reconnectInterval = null;
+    }
+
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+
+    console.log('WebSocket disconnected');
   }
 
   // ============================================
-  // API Methods
+  // Attempt to reconnect WebSocket
   // ============================================
+  private attemptReconnect(token: string): void {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('Max reconnection attempts reached');
+      return;
+    }
 
-  fetchNotifications(): Observable<Notification[]> {
-    return of(this.notificationsSubject.value);
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+
+    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
+
+    this.reconnectInterval = setTimeout(() => {
+      this.connectWebSocket(token);
+    }, delay);
   }
 
-  markAsRead(notificationId: string): Observable<void> {
+  // ============================================
+  // Handle WebSocket messages
+  // ============================================
+  private handleWebSocketMessage(data: any): void {
+    if (data.type === 'notification') {
+      const notification: Notification = data.notification;
+      
+      // Add to notifications list
+      const currentNotifications = this.notificationsSubject.value;
+      this.notificationsSubject.next([notification, ...currentNotifications]);
+
+      // Update unread count
+      if (!notification.read) {
+        const currentCount = this.unreadCountSubject.value;
+        this.unreadCountSubject.next(currentCount + 1);
+      }
+
+      // Emit new notification event
+      this.newNotificationSubject.next(notification);
+
+      console.log('📬 New notification received:', notification);
+    }
+  }
+
+  // ============================================
+  // Update notification read status locally
+  // ============================================
+  private updateNotificationReadStatus(notificationId: string, read: boolean): void {
     const notifications = this.notificationsSubject.value.map(n =>
-      n.id === notificationId ? { ...n, read: true } : n
+      n.id === notificationId ? { ...n, read } : n
     );
-    
     this.notificationsSubject.next(notifications);
-    this.updateUnreadCount();
-    
-    return of(void 0);
-  }
-
-  markAllAsRead(): Observable<void> {
-    const notifications = this.notificationsSubject.value.map(n => ({
-      ...n,
-      read: true
-    }));
-    
-    this.notificationsSubject.next(notifications);
-    this.updateUnreadCount();
-    
-    return of(void 0);
-  }
-
-  deleteNotification(notificationId: string): Observable<void> {
-    const notifications = this.notificationsSubject.value.filter(
-      n => n.id !== notificationId
-    );
-    
-    this.notificationsSubject.next(notifications);
-    this.updateUnreadCount();
-    
-    return of(void 0);
-  }
-
-  clearAll(): void {
-    this.notificationsSubject.next([]);
-    this.updateUnreadCount();
+    this.updateUnreadCount(notifications);
   }
 
   // ============================================
-  // Helper Methods
+  // Update unread count
   // ============================================
-
-  private updateUnreadCount(): void {
-    const unreadCount = this.notificationsSubject.value.filter(n => !n.read).length;
+  private updateUnreadCount(notifications: Notification[]): void {
+    const unreadCount = notifications.filter(n => !n.read).length;
     this.unreadCountSubject.next(unreadCount);
   }
 
-  getUnreadCount(): number {
-    return this.unreadCountSubject.value;
-  }
-
-  getNotifications(): Notification[] {
-    return this.notificationsSubject.value;
-  }
-
-  addNotification(notification: Notification): void {
-    const notifications = [notification, ...this.notificationsSubject.value];
-    this.notificationsSubject.next(notifications);
-    this.updateUnreadCount();
+  // ============================================
+  // Clear all notifications
+  // ============================================
+  clearAll(): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.apiUrl}/notifications`
+    ).pipe(
+      tap(() => {
+        this.notificationsSubject.next([]);
+        this.unreadCountSubject.next(0);
+      }),
+      catchError(error => {
+        console.error('❌ Clear all notifications error:', error);
+        throw error;
+      })
+    );
   }
 
   // ============================================
-  // Icon & Color Methods (Required by Components)
+  // Save notification preferences
   // ============================================
+  savePreferences(preferences: NotificationPreferences): Observable<{
+    message: string;
+    preferences: NotificationPreferences;
+  }> {
+    return this.updatePreferences(preferences);
+  }
 
+  // ============================================
+  // Get notification icon by type
+  // ============================================
   getNotificationIcon(type: Notification['type']): string {
-    const icons: Record<Notification['type'], string> = {
-      info: 'info',
-      warning: 'warning',
-      success: 'check_circle',
-      error: 'error',
+    const icons: Record<string, string> = {
+      case: 'folder',
       case_update: 'update',
+      message: 'mail',
       attorney_message: 'mail',
+      court: 'gavel',
+      court_date: 'event',
+      payment: 'payment',
       comment: 'chat',
       document: 'attach_file',
-      court_date: 'event',
-      system: 'settings'
+      system: 'info'
     };
     return icons[type] || 'notifications';
   }
 
+  // ============================================
+  // Get notification color by type
+  // ============================================
   getNotificationColor(type: Notification['type']): string {
-    const colors: Record<Notification['type'], string> = {
-      info: 'primary',
-      warning: 'warn',
-      success: 'accent',
-      error: 'warn',
-      case_update: 'primary',
-      attorney_message: 'primary',
-      comment: 'primary',
-      document: 'accent',
-      court_date: 'warn',
-      system: 'primary'
+    const colors: Record<string, string> = {
+      case: '#1976d2',
+      case_update: '#1976d2',
+      message: '#388e3c',
+      attorney_message: '#388e3c',
+      court: '#f57c00',
+      court_date: '#f57c00',
+      payment: '#7b1fa2',
+      comment: '#0097a7',
+      document: '#455a64',
+      system: '#616161'
     };
-    return colors[type] || 'primary';
+    return colors[type] || '#616161';
   }
 
-  formatTimestamp(timestamp: Date): string {
+  // ============================================
+  // Format timestamp to relative time
+  // ============================================
+  formatTimestamp(timestamp: Date | string): string {
+    const date = new Date(timestamp);
     const now = new Date();
-    const diff = now.getTime() - new Date(timestamp).getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (days > 7) {
-      return new Date(timestamp).toLocaleDateString();
-    } else if (days > 0) {
-      return `${days}d ago`;
-    } else if (hours > 0) {
-      return `${hours}h ago`;
-    } else if (minutes > 0) {
-      return `${minutes}m ago`;
-    } else {
-      return 'Just now';
-    }
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   }
 
   // ============================================
-  // Preferences Methods
+  // Get current notifications value
   // ============================================
-
-  getPreferences(): NotificationPreferences {
-    const stored = localStorage.getItem('notificationPreferences');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error('Error parsing preferences:', e);
-      }
-    }
-    
-    // Default preferences
-    return {
-      email: true,
-      push: true,
-      sms: false,
-      caseUpdates: true,
-      attorneyMessages: true,
-      courtDates: true,
-      documents: true,
-      comments: true,
-      systemAlerts: true
-    };
+  get currentNotifications(): Notification[] {
+    return this.notificationsSubject.value;
   }
 
-  savePreferences(preferences: NotificationPreferences): void {
-    localStorage.setItem('notificationPreferences', JSON.stringify(preferences));
+  // ============================================
+  // Get current unread count value
+  // ============================================
+  get currentUnreadCount(): number {
+    return this.unreadCountSubject.value;
   }
 }

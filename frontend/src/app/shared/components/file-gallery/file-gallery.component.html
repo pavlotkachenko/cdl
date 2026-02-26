@@ -1,0 +1,115 @@
+<!-- ============================================ -->
+<!-- FILE GALLERY COMPONENT TEMPLATE -->
+<!-- Location: frontend/src/app/shared/components/file-gallery/file-gallery.component.html -->
+<!-- ============================================ -->
+
+<div class="file-gallery-container">
+  <!-- Filter Chips -->
+  <div class="filter-section">
+    <mat-chip-listbox [value]="selectedFilter" (change)="applyFilter($event.value)">
+      <mat-chip-option
+        *ngFor="let option of filterOptions"
+        [value]="option.value"
+      >
+        <mat-icon>{{ option.icon }}</mat-icon>
+        {{ option.label }}
+      </mat-chip-option>
+    </mat-chip-listbox>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-icon class="spin">refresh</mat-icon>
+    <p>Loading files...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && filteredFiles.length === 0" class="empty-state">
+    <mat-icon>folder_open</mat-icon>
+    <h3>No files found</h3>
+    <p>{{ selectedFilter === 'all' ? 'Upload files to get started' : 'No ' + selectedFilter + ' available' }}</p>
+  </div>
+
+  <!-- File Grid -->
+  <mat-grid-list
+    *ngIf="!loading && filteredFiles.length > 0"
+    [cols]="getGridCols()"
+    rowHeight="280px"
+    gutterSize="16px"
+  >
+    <mat-grid-tile *ngFor="let file of filteredFiles">
+      <mat-card class="file-card">
+        <!-- File Preview/Icon -->
+        <div class="file-preview" (click)="viewFile(file)">
+          <!-- Image Preview -->
+          <img
+            *ngIf="isImage(file.fileType)"
+            [src]="file.fileUrl"
+            [alt]="file.fileName"
+            class="preview-image"
+          />
+
+          <!-- Document Icon -->
+          <div *ngIf="!isImage(file.fileType)" class="preview-icon">
+            <mat-icon>{{ getFileIcon(file.fileType) }}</mat-icon>
+            <span class="file-extension">{{ getFileExtension(file.fileName) }}</span>
+          </div>
+        </div>
+
+        <!-- File Info -->
+        <mat-card-content class="file-info">
+          <div class="file-name" [matTooltip]="file.fileName">
+            {{ file.fileName }}
+          </div>
+          <div class="file-meta">
+            <span class="file-size">{{ formatFileSize(file.fileSize) }}</span>
+            <span class="file-date">{{ formatDate(file.uploadedAt) }}</span>
+          </div>
+        </mat-card-content>
+
+        <!-- Actions -->
+        <mat-card-actions class="file-actions">
+          <button
+            mat-icon-button
+            (click)="viewFile(file)"
+            matTooltip="View"
+          >
+            <mat-icon>visibility</mat-icon>
+          </button>
+
+          <button
+            mat-icon-button
+            (click)="downloadFile(file)"
+            matTooltip="Download"
+          >
+            <mat-icon>download</mat-icon>
+          </button>
+
+          <button
+            mat-icon-button
+            [matMenuTriggerFor]="fileMenu"
+            matTooltip="More options"
+          >
+            <mat-icon>more_vert</mat-icon>
+          </button>
+
+          <mat-menu #fileMenu="matMenu">
+            <button mat-menu-item (click)="viewFile(file)">
+              <mat-icon>open_in_new</mat-icon>
+              <span>Open in new tab</span>
+            </button>
+            <button mat-menu-item (click)="downloadFile(file)">
+              <mat-icon>download</mat-icon>
+              <span>Download</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="deleteFile(file)" class="delete-option">
+              <mat-icon color="warn">delete</mat-icon>
+              <span>Delete</span>
+            </button>
+          </mat-menu>
+        </mat-card-actions>
+      </mat-card>
+    </mat-grid-tile>
+  </mat-grid-list>
+</div>

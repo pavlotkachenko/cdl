@@ -1,5 +1,5 @@
 // ============================================
-// HTTP Interceptor - JWT Authentication
+// AUTH INTERCEPTOR - JWT Token Management
 // Location: frontend/src/app/core/interceptors/auth.interceptor.ts
 // ============================================
 
@@ -9,78 +9,189 @@ import {
   HttpHandler,
   HttpEvent,
   HttpInterceptor,
-  HttpErrorResponse
+  HttpErrorResponse,
+  HttpInterceptorFn
 } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import { catchError, filter, take, switchMap } from 'rxjs/operators';
+import { AuthService } from '../services/auth.service';
+import { inject } from '@angular/core';
 
+// ============================================
+// Functional Interceptor (Angular 16+)
+// ============================================
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);
+
+  // Skip auth header for login/register/public endpoints
+  if (isPublicEndpoint(req.url)) {
+    return next(req);
+  }
+
+  // Add authorization header with JWT token
+  const token = authService.getToken();
+  if (token) {
+    req = addTokenToRequest(req, token);
+  }
+
+  // Handle the request and catch 401 errors
+  return next(req).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        // Try to refresh token
+        return handle401Error(req, next, authService);
+      }
+      return throwError(() => error);
+    })
+  );
+};
+
+// ============================================
+// Helper: Check if endpoint is public
+// ============================================
+function isPublicEndpoint(url: string): boolean {
+  const publicEndpoints = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/refresh',
+    '/auth/verify-email',
+    '/public/'
+  ];
+
+  return publicEndpoints.some(endpoint => url.includes(endpoint));
+}
+
+// ============================================
+// Helper: Add token to request
+// ============================================
+function addTokenToRequest(request: HttpRequest<any>, token: string): HttpRequest<any> {
+  return request.clone({
+    setHeaders: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+}
+
+// ============================================
+// Helper: Handle 401 error by refreshing token
+// ============================================
+let isRefreshing = false;
+let refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+
+function handle401Error(
+  request: HttpRequest<any>,
+  next: (req: HttpRequest<any>) => Observable<HttpEvent<any>>,
+  authService: AuthService
+): Observable<HttpEvent<any>> {
+
+  if (!isRefreshing) {
+    isRefreshing = true;
+    refreshTokenSubject.next(null);
+
+    const refreshToken = authService.getRefreshToken();
+
+    if (refreshToken) {
+      return authService.refreshToken().pipe(
+        switchMap((response: { accessToken: string }): Observable<HttpEvent<any>> => {
+          isRefreshing = false;
+          refreshTokenSubject.next(response.accessToken);
+
+          // Retry original request with new token
+          return next(addTokenToRequest(request, response.accessToken));
+        }),
+        catchError((error) => {
+          isRefreshing = false;
+
+          // Refresh failed, logout user
+          authService.logout().subscribe();
+
+          return throwError(() => error);
+        })
+      );
+    }
+  }
+
+  // Wait for token refresh to complete
+  return refreshTokenSubject.pipe(
+    filter((token): token is string => token !== null),
+    take(1),
+    switchMap((token): Observable<HttpEvent<any>> => {
+      return next(addTokenToRequest(request, token));
+    })
+  );
+}
+
+// ============================================
+// Class-based Interceptor (Alternative)
+// Use this if functional interceptor doesn't work
+// ============================================
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private router: Router) {}
+  private isRefreshing = false;
+  private refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
 
-  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Get the auth token from localStorage
-    const token = this.getAuthToken();
+  constructor(private authService: AuthService) {}
 
-    // Clone the request and add authorization header if token exists
-    if (token) {
-      request = request.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    // Skip auth header for public endpoints
+    if (isPublicEndpoint(request.url)) {
+      return next.handle(request);
     }
 
-    // Add common headers
-    request = request.clone({
-      setHeaders: {
-        'Content-Type': request.headers.get('Content-Type') || 'application/json',
-        'Accept': 'application/json'
-      }
-    });
+    // Add authorization header with JWT token
+    const token = this.authService.getToken();
+    if (token) {
+      request = addTokenToRequest(request, token);
+    }
 
-    // Handle the request and catch errors
+    // Handle the request and catch 401 errors
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        console.error('HTTP Error:', error);
-
-        // Handle specific error cases
         if (error.status === 401) {
-          // Unauthorized - redirect to login
-          console.warn('Unauthorized request - redirecting to login');
-          this.handleUnauthorized();
-        } else if (error.status === 403) {
-          // Forbidden - user doesn't have permission
-          console.error('Access forbidden');
-        } else if (error.status === 0) {
-          // Network error
-          console.error('Network error - cannot reach server');
+          return this.handle401ErrorClass(request, next);
         }
-
         return throwError(() => error);
       })
     );
   }
 
-  private getAuthToken(): string | null {
-    // Try multiple token storage keys for compatibility
-    return localStorage.getItem('token') || 
-           localStorage.getItem('access_token') || 
-           localStorage.getItem('authToken') ||
-           sessionStorage.getItem('token');
-  }
+  private handle401ErrorClass(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    if (!this.isRefreshing) {
+      this.isRefreshing = true;
+      this.refreshTokenSubject.next(null);
 
-  private handleUnauthorized(): void {
-    // Clear stored tokens
-    localStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('authToken');
-    sessionStorage.removeItem('token');
+      const refreshToken = this.authService.getRefreshToken();
 
-    // Redirect to login page
-    this.router.navigate(['/auth/login'], {
-      queryParams: { returnUrl: this.router.url }
-    });
+      if (refreshToken) {
+        return this.authService.refreshToken().pipe(
+          switchMap((response: { accessToken: string }) => {
+            this.isRefreshing = false;
+            this.refreshTokenSubject.next(response.accessToken);
+            
+            // Retry original request with new token
+            return next.handle(addTokenToRequest(request, response.accessToken));
+          }),
+          catchError((error) => {
+            this.isRefreshing = false;
+            
+            // Refresh failed, logout user
+            this.authService.logout().subscribe();
+            
+            return throwError(() => error);
+          })
+        );
+      }
+    }
+
+    // Wait for token refresh to complete
+    return this.refreshTokenSubject.pipe(
+      filter(token => token !== null),
+      take(1),
+      switchMap(token => {
+        return next.handle(addTokenToRequest(request, token!));
+      })
+    );
   }
 }
