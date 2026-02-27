@@ -1,17 +1,17 @@
 // ============================================
-// Angular Environment - Development
+// Angular Environment - Production
 // ============================================
-// Configuration for local development
+// Configuration for production deployment
 
 export const environment = {
-  production: false,
+  production: true,
   
   // Backend API Configuration
-  apiUrl: 'http://localhost:3000/api',
-  wsUrl: 'http://localhost:3000',
+  apiUrl: 'https://api.cdlticket.com/api',
+  wsUrl: 'wss://api.cdlticket.com',
   
   // Feature Flags
-  useMockData: false, // Set to false to use real backend APIs
+  useMockData: false,
   
   // Supabase Configuration
   supabase: {
@@ -19,7 +19,7 @@ export const environment = {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZWNydWZteHRyaXlpdmFhZW5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NjY1NzgsImV4cCI6MjA4NTE0MjU3OH0.UevqwXpq3LZ23IxHbKWiDTPQlS0axHsiooGUNb2Jg_s'
   },
   
-  // VAPID Public Key for Push Notifications
+  // VAPID Public Key for Push Notifications (use production key in real deployment)
   vapidPublicKey: 'BCEfkgIFSR4CVy9YxQ_xapLVJaBL7opN6Pw8lQJIKuASAYAMyDj60IVvuMtAcigABNLYaSNinhQT86AHJfwE9JY',
   
   // Feature Flags
@@ -37,9 +37,10 @@ export const environment = {
 };
 
 /*
- * INSTRUCTIONS:
- * 1. Copy this file to src/environments/environment.ts
- * 2. Replace Supabase URL and key with your actual values
- * 3. Never commit the file with real credentials to Git!
- * 4. For production, use environment.prod.ts with production URLs
+ * PRODUCTION NOTES:
+ * 1. Update apiUrl with your production backend URL
+ * 2. Use production Supabase credentials
+ * 3. Generate separate production VAPID keys
+ * 4. Enable SSL/TLS for all endpoints
+ * 5. Configure proper CORS settings
  */
