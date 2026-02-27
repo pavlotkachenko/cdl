@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS messages (
   audit_accessed_by UUID REFERENCES users(id)
 );
 
+-- Fix
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('normal', 'urgent', 'critical'));
+
 -- Message attachments table
 CREATE TABLE IF NOT EXISTS message_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

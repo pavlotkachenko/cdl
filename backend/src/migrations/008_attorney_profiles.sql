@@ -27,10 +27,10 @@ CHECK (success_rate >= 0.0 AND success_rate <= 1.0);
 
 -- Create case_assignments table for tracking assignment history
 CREATE TABLE IF NOT EXISTS case_assignments (
-    assignment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    case_id UUID NOT NULL REFERENCES cases(case_id) ON DELETE CASCADE,
-    attorney_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    assigned_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+    attorney_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
     assignment_method VARCHAR(20) NOT NULL DEFAULT 'manual',
     assignment_score DECIMAL(5,2),
     score_breakdown JSONB,
@@ -59,7 +59,7 @@ RETURNS VOID AS $$
 BEGIN
     UPDATE users
     SET current_cases_count = COALESCE(current_cases_count, 0) + 1
-    WHERE user_id = attorney_id;
+    WHERE id = attorney_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -69,7 +69,7 @@ RETURNS VOID AS $$
 BEGIN
     UPDATE users
     SET current_cases_count = GREATEST(COALESCE(current_cases_count, 0) - 1, 0)
-    WHERE user_id = attorney_id;
+    WHERE id = attorney_id;
 END;
 $$ LANGUAGE plpgsql;
 

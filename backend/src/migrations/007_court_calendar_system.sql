@@ -1,30 +1,35 @@
 -- Migration 007: Court Calendar System
 -- Court date tracking with automated reminders and Google Calendar sync
 
--- Update court_dates table with enhanced fields
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS case_id UUID REFERENCES cases(id) ON DELETE CASCADE;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS court_name VARCHAR(255);
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS court_address TEXT;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS court_room VARCHAR(100);
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS hearing_type VARCHAR(100); -- 'arraignment', 'trial', 'pretrial', 'sentencing'
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS judge_name VARCHAR(255);
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS all_day BOOLEAN DEFAULT FALSE;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS notes TEXT;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS google_calendar_event_id VARCHAR(255);
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'scheduled'; -- 'scheduled', 'rescheduled', 'cancelled', 'completed'
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN DEFAULT FALSE;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS attended BOOLEAN;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS outcome TEXT;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES users(id);
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE court_dates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+-- Create court_dates table
+CREATE TABLE IF NOT EXISTS court_dates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID REFERENCES cases(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    date TIMESTAMP NOT NULL,
+    location VARCHAR(255),
+    court_name VARCHAR(255),
+    court_address TEXT,
+    court_room VARCHAR(100),
+    hearing_type VARCHAR(100), -- 'arraignment', 'trial', 'pretrial', 'sentencing'
+    judge_name VARCHAR(255),
+    duration_minutes INTEGER DEFAULT 60,
+    all_day BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    google_calendar_event_id VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'scheduled', -- 'scheduled', 'rescheduled', 'cancelled', 'completed'
+    reminder_sent BOOLEAN DEFAULT FALSE,
+    attended BOOLEAN,
+    outcome TEXT,
+    created_by UUID REFERENCES users(id),
+    updated_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create court date reminders table
 CREATE TABLE IF NOT EXISTS court_date_reminders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     court_date_id UUID NOT NULL REFERENCES court_dates(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reminder_type VARCHAR(50) NOT NULL, -- 'email', 'sms', 'in_app', 'push'
@@ -38,7 +43,7 @@ CREATE TABLE IF NOT EXISTS court_date_reminders (
 
 -- Create court date attendees table (for multiple people per court date)
 CREATE TABLE IF NOT EXISTS court_date_attendees (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     court_date_id UUID NOT NULL REFERENCES court_dates(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL, -- 'driver', 'attorney', 'witness', 'interpreter'
@@ -54,7 +59,7 @@ CREATE TABLE IF NOT EXISTS court_date_attendees (
 
 -- Create court locations table for frequently used courts
 CREATE TABLE IF NOT EXISTS court_locations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     address TEXT NOT NULL,
     city VARCHAR(100),
@@ -74,7 +79,7 @@ CREATE TABLE IF NOT EXISTS court_locations (
 
 -- Create court calendar sync settings
 CREATE TABLE IF NOT EXISTS calendar_sync_settings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
     google_calendar_enabled BOOLEAN DEFAULT FALSE,
     google_refresh_token TEXT,
@@ -92,7 +97,7 @@ CREATE TABLE IF NOT EXISTS calendar_sync_settings (
 
 -- Create court date history for tracking changes
 CREATE TABLE IF NOT EXISTS court_date_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     court_date_id UUID NOT NULL REFERENCES court_dates(id) ON DELETE CASCADE,
     changed_by UUID NOT NULL REFERENCES users(id),
     action VARCHAR(50) NOT NULL, -- 'created', 'updated', 'rescheduled', 'cancelled'
@@ -135,48 +140,56 @@ ALTER TABLE calendar_sync_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE court_date_history ENABLE ROW LEVEL SECURITY;
 
 -- Users can view reminders for their court dates
+DROP POLICY IF EXISTS court_date_reminders_select_policy ON court_date_reminders;
 CREATE POLICY court_date_reminders_select_policy ON court_date_reminders
     FOR SELECT
     USING (user_id = auth.uid());
 
 -- Users can view attendees for their court dates
+DROP POLICY IF EXISTS court_date_attendees_select_policy ON court_date_attendees;
 CREATE POLICY court_date_attendees_select_policy ON court_date_attendees
     FOR SELECT
     USING (
         user_id = auth.uid() OR
         court_date_id IN (
-            SELECT id FROM court_dates 
-            WHERE user_id = auth.uid() OR 
-            case_id IN (SELECT id FROM cases WHERE driver_id = auth.uid() OR attorney_id = auth.uid())
+            SELECT id FROM court_dates
+            WHERE user_id = auth.uid() OR
+            case_id IN (SELECT id FROM cases WHERE driver_id = auth.uid() OR assigned_attorney_id = auth.uid())
         )
     );
 
 -- Users can update their own attendance
+DROP POLICY IF EXISTS court_date_attendees_update_policy ON court_date_attendees;
 CREATE POLICY court_date_attendees_update_policy ON court_date_attendees
     FOR UPDATE
     USING (user_id = auth.uid())
     WITH CHECK (user_id = auth.uid());
 
 -- Everyone can view court locations
+DROP POLICY IF EXISTS court_locations_select_policy ON court_locations;
 CREATE POLICY court_locations_select_policy ON court_locations
     FOR SELECT
     USING (is_active = TRUE);
 
 -- Users can view and update their own calendar sync settings
+DROP POLICY IF EXISTS calendar_sync_settings_select_policy ON calendar_sync_settings;
 CREATE POLICY calendar_sync_settings_select_policy ON calendar_sync_settings
     FOR SELECT
     USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS calendar_sync_settings_update_policy ON calendar_sync_settings;
 CREATE POLICY calendar_sync_settings_update_policy ON calendar_sync_settings
     FOR UPDATE
     USING (user_id = auth.uid())
     WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS calendar_sync_settings_insert_policy ON calendar_sync_settings;
 CREATE POLICY calendar_sync_settings_insert_policy ON calendar_sync_settings
     FOR INSERT
     WITH CHECK (user_id = auth.uid());
 
 -- Users can view history for their court dates
+DROP POLICY IF EXISTS court_date_history_select_policy ON court_date_history;
 CREATE POLICY court_date_history_select_policy ON court_date_history
     FOR SELECT
     USING (
@@ -197,14 +210,14 @@ BEGIN
     SELECT additional_reminders INTO v_reminder_hours
     FROM calendar_sync_settings
     WHERE user_id = NEW.user_id;
-    
+
     -- Use default if no settings
     IF v_reminder_hours IS NULL THEN
         v_reminder_hours := ARRAY[168, 24, 1]; -- 1 week, 1 day, 1 hour
     END IF;
-    
+
     -- Create reminders for each attendee
-    FOR v_user_id IN 
+    FOR v_user_id IN
         SELECT user_id FROM court_date_attendees WHERE court_date_id = NEW.id
     LOOP
         FOREACH v_hour IN ARRAY v_reminder_hours
@@ -216,7 +229,7 @@ BEGIN
                 'email',
                 NEW.date - INTERVAL '1 hour' * v_hour
             );
-            
+
             -- Also create SMS reminder for 1 day before
             IF v_hour = 24 THEN
                 INSERT INTO court_date_reminders (court_date_id, user_id, reminder_type, remind_at)
@@ -229,12 +242,13 @@ BEGIN
             END IF;
         END LOOP;
     END LOOP;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to create reminders
+DROP TRIGGER IF EXISTS create_court_date_reminders_trigger ON court_dates;
 CREATE TRIGGER create_court_date_reminders_trigger
     AFTER INSERT ON court_dates
     FOR EACH ROW
@@ -257,7 +271,7 @@ BEGIN
         ) VALUES (
             NEW.id,
             NEW.updated_by,
-            CASE 
+            CASE
                 WHEN OLD.date != NEW.date THEN 'rescheduled'
                 WHEN OLD.status != NEW.status AND NEW.status = 'cancelled' THEN 'cancelled'
                 ELSE 'updated'
@@ -286,12 +300,13 @@ BEGIN
             NEW.location
         );
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to log changes
+DROP TRIGGER IF EXISTS log_court_date_change_trigger ON court_dates;
 CREATE TRIGGER log_court_date_change_trigger
     AFTER INSERT OR UPDATE ON court_dates
     FOR EACH ROW
@@ -310,7 +325,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         cd.id,
         cd.date,
         cd.location,
@@ -348,10 +363,10 @@ BEGIN
         UPDATE court_date_reminders
         SET sent = TRUE, sent_at = NOW()
         WHERE id = v_reminder.id;
-        
+
         v_processed_count := v_processed_count + 1;
     END LOOP;
-    
+
     RETURN v_processed_count;
 END;
 $$ LANGUAGE plpgsql;

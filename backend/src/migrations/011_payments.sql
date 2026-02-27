@@ -6,7 +6,7 @@
 -- Create payments table
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Stripe integration
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS payment_refunds (
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_payments_ticket_id ON payments(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_payments_case_id ON payments(case_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
 CREATE INDEX IF NOT EXISTS idx_payments_stripe_payment_intent ON payments(stripe_payment_intent_id);
@@ -92,24 +92,24 @@ CREATE TRIGGER update_payment_refunds_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Add payment_status to tickets table if not exists
+-- Add payment_status to cases table if not exists
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                   WHERE table_name = 'tickets' AND column_name = 'payment_status') THEN
-        ALTER TABLE tickets ADD COLUMN payment_status VARCHAR(50) DEFAULT 'unpaid';
-        ALTER TABLE tickets ADD CONSTRAINT valid_payment_status 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'cases' AND column_name = 'payment_status') THEN
+        ALTER TABLE cases ADD COLUMN payment_status VARCHAR(50) DEFAULT 'unpaid';
+        ALTER TABLE cases ADD CONSTRAINT valid_payment_status
             CHECK (payment_status IN ('unpaid', 'pending', 'paid', 'refunded', 'partial_refund'));
-        CREATE INDEX idx_tickets_payment_status ON tickets(payment_status);
+        CREATE INDEX idx_cases_payment_status ON cases(payment_status);
     END IF;
 END $$;
 
--- Add payment_amount to tickets table if not exists
+-- Add payment_amount to cases table if not exists
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                   WHERE table_name = 'tickets' AND column_name = 'payment_amount') THEN
-        ALTER TABLE tickets ADD COLUMN payment_amount DECIMAL(10, 2);
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'cases' AND column_name = 'payment_amount') THEN
+        ALTER TABLE cases ADD COLUMN payment_amount DECIMAL(10, 2);
     END IF;
 END $$;
 
@@ -117,4 +117,4 @@ COMMENT ON TABLE payments IS 'Core payment transactions table';
 COMMENT ON TABLE payment_refunds IS 'Payment refunds and chargebacks';
 COMMENT ON COLUMN payments.stripe_payment_intent_id IS 'Stripe PaymentIntent ID for tracking';
 COMMENT ON COLUMN payments.status IS 'Payment status: pending, processing, succeeded, failed, refunded, cancelled';
-COMMENT ON COLUMN tickets.payment_status IS 'Ticket payment status: unpaid, pending, paid, refunded, partial_refund';
+COMMENT ON COLUMN cases.payment_status IS 'Case payment status: unpaid, pending, paid, refunded, partial_refund';

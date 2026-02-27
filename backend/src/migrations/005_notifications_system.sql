@@ -3,7 +3,7 @@
 
 -- Create notifications table
 CREATE TABLE IF NOT EXISTS notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL, -- 'case_update', 'message_received', 'payment_received', 'court_reminder', etc.
     channel VARCHAR(20) NOT NULL, -- 'email', 'sms', 'in_app', 'push'
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Create notification preferences table
 CREATE TABLE IF NOT EXISTS notification_preferences (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     notification_type VARCHAR(50) NOT NULL, -- 'case_update', 'message_received', etc.
     email_enabled BOOLEAN DEFAULT TRUE,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 
 -- Create notification templates table
 CREATE TABLE IF NOT EXISTS notification_templates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL UNIQUE,
     type VARCHAR(50) NOT NULL, -- 'case_update', 'message_received', etc.
     channel VARCHAR(20) NOT NULL, -- 'email', 'sms', 'in_app', 'push'
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS notification_templates (
 
 -- Create notification queue for batch processing
 CREATE TABLE IF NOT EXISTS notification_queue (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
     scheduled_for TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     processing BOOLEAN DEFAULT FALSE,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS notification_queue (
 
 -- Create notification logs for audit trail
 CREATE TABLE IF NOT EXISTS notification_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
     action VARCHAR(50) NOT NULL, -- 'created', 'sent', 'delivered', 'failed', 'read'
     details JSONB,
@@ -79,6 +79,26 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS push_notification_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications_enabled BOOLEAN DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS sms_notifications_enabled BOOLEAN DEFAULT FALSE;
+
+-- Ensure columns exist if table was created in a prior partial run
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS channel VARCHAR(20);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS title VARCHAR(255);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message TEXT;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS data JSONB;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read BOOLEAN DEFAULT FALSE;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS failed_at TIMESTAMP;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS error_message TEXT;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS max_retries INTEGER DEFAULT 3;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'normal';
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS related_case_id UUID;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS related_message_id UUID;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
@@ -107,31 +127,37 @@ ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_templates ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own notifications
+DROP POLICY IF EXISTS notifications_select_policy ON notifications;
 CREATE POLICY notifications_select_policy ON notifications
     FOR SELECT
     USING (user_id = auth.uid());
 
 -- Users can update their own notifications (mark as read)
+DROP POLICY IF EXISTS notifications_update_policy ON notifications;
 CREATE POLICY notifications_update_policy ON notifications
     FOR UPDATE
     USING (user_id = auth.uid())
     WITH CHECK (user_id = auth.uid());
 
 -- Users can view and update their own preferences
+DROP POLICY IF EXISTS notification_preferences_select_policy ON notification_preferences;
 CREATE POLICY notification_preferences_select_policy ON notification_preferences
     FOR SELECT
     USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS notification_preferences_update_policy ON notification_preferences;
 CREATE POLICY notification_preferences_update_policy ON notification_preferences
     FOR UPDATE
     USING (user_id = auth.uid())
     WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS notification_preferences_insert_policy ON notification_preferences;
 CREATE POLICY notification_preferences_insert_policy ON notification_preferences
     FOR INSERT
     WITH CHECK (user_id = auth.uid());
 
 -- Everyone can view active templates (for frontend display)
+DROP POLICY IF EXISTS notification_templates_select_policy ON notification_templates;
 CREATE POLICY notification_templates_select_policy ON notification_templates
     FOR SELECT
     USING (is_active = TRUE);
@@ -192,6 +218,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to create default preferences for new users
+DROP TRIGGER IF EXISTS create_notification_preferences_trigger ON users;
 CREATE TRIGGER create_notification_preferences_trigger
     AFTER INSERT ON users
     FOR EACH ROW
