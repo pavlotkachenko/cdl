@@ -37,7 +37,14 @@ const routes: Routes = [
       {
         path: 'reports',
         loadComponent: () => import('../admin/reports/reports.component').then(m => m.ReportsComponent)
-        
+      },
+      {
+        path: 'operator-dashboard',
+        loadComponent: () => import('../admin/operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
+      },
+      {
+        path: 'revenue',
+        loadComponent: () => import('../admin/revenue-dashboard/revenue-dashboard.component').then(m => m.RevenueDashboardComponent)
       }
     ]
   }

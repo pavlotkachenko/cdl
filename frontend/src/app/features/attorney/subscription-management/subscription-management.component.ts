@@ -1,13 +1,33 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule, UpperCasePipe } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTableModule } from '@angular/material/table';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SubscriptionService, Subscription, SubscriptionPlan, BillingHistory } from '../../../services/subscription.service';
 import { CancelSubscriptionDialogComponent } from './cancel-subscription-dialog/cancel-subscription-dialog.component';
 
 @Component({
   selector: 'app-subscription-management',
+  standalone: true,
   templateUrl: './subscription-management.component.html',
-  styleUrls: ['./subscription-management.component.scss']
+  styleUrls: ['./subscription-management.component.scss'],
+  imports: [
+    CommonModule,
+    UpperCasePipe,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatChipsModule,
+    MatDividerModule,
+    MatTableModule,
+    MatProgressSpinnerModule,
+  ],
 })
 export class SubscriptionManagementComponent implements OnInit {
   currentSubscription: Subscription | null = null;

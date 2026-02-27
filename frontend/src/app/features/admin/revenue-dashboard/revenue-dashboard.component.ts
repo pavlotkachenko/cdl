@@ -1,13 +1,21 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormControl, FormGroup } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { 
-  RevenueService, 
-  RevenueMetrics, 
-  RevenueByDate, 
-  RevenueByMethod, 
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import {
+  RevenueService,
+  RevenueMetrics,
+  RevenueByDate,
+  RevenueByMethod,
   RevenueByAttorney,
-  DateRange 
+  DateRange
 } from '../../../services/revenue.service';
 import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
 
@@ -15,8 +23,20 @@ Chart.register(...registerables);
 
 @Component({
   selector: 'app-revenue-dashboard',
+  standalone: true,
   templateUrl: './revenue-dashboard.component.html',
-  styleUrls: ['./revenue-dashboard.component.scss']
+  styleUrls: ['./revenue-dashboard.component.scss'],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatProgressSpinnerModule,
+  ],
 })
 export class RevenueDashboardComponent implements OnInit {
   metrics: RevenueMetrics | null = null;
@@ -73,7 +93,7 @@ export class RevenueDashboardComponent implements OnInit {
 
   private async loadMetrics(dateRange: DateRange): Promise<void> {
     try {
-      this.metrics = await this.revenueService.getRevenueMetrics(dateRange).toPromise();
+      this.metrics = await this.revenueService.getRevenueMetrics(dateRange).toPromise() ?? null;
     } catch (error) {
       console.error('Error loading metrics:', error);
       throw error;
@@ -142,7 +162,7 @@ export class RevenueDashboardComponent implements OnInit {
           tooltip: {
             callbacks: {
               label: (context) => {
-                return `Revenue: $${context.parsed.y.toFixed(2)}`;
+                return `Revenue: $${(context.parsed.y ?? 0).toFixed(2)}`;
               }
             }
           }
@@ -246,7 +266,7 @@ export class RevenueDashboardComponent implements OnInit {
               label: (context) => {
                 const attorney = sortedData[context.dataIndex];
                 return [
-                  `Revenue: $${context.parsed.x.toFixed(2)}`,
+                  `Revenue: $${(context.parsed.x ?? 0).toFixed(2)}`,
                   `Transactions: ${attorney.transactions}`
                 ];
               }

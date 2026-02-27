@@ -16,12 +16,12 @@
     background-color: #fafafa;
 
     &:hover {
-      border-color: #667eea;
-      background-color: #f5f5ff;
+      border-color: #1dad8c;
+      background-color: #f0faf7;
     }
 
     &.drag-over {
-      border-color: #667eea;
+      border-color: #1dad8c;
       background-color: #e3f2fd;
       transform: scale(1.02);
     }
@@ -30,7 +30,7 @@
       font-size: 64px;
       width: 64px;
       height: 64px;
-      color: #667eea;
+      color: #1dad8c;
       margin: 0 auto 16px;
     }
 
