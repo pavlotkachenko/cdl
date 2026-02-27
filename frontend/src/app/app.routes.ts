@@ -45,11 +45,12 @@ export const routes: Routes = [
     // canActivate: [AuthGuard]  // ← Commented out for development
   },
 
-  // Attorney routes (placeholder for future)
-  // {
-  //   path: 'attorney',
-  //   loadChildren: () => import('./features/attorney/attorney.module').then(m => m.AttorneyModule)
-  // },
+  // Attorney routes (AuthGuard disabled for development)
+  {
+    path: 'attorney',
+    loadChildren: () => import('./features/attorney/attorney.module').then(m => m.AttorneyModule)
+    // canActivate: [AuthGuard]  // ← Commented out for development
+  },
 
   // Catch-all redirect
   {

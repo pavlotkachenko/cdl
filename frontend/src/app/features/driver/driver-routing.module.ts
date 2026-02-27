@@ -88,6 +88,10 @@ const routes: Routes = [
         component: ContactComponent
       },
       {
+        path: 'payments',
+        loadComponent: () => import('../shared/payment/payment-history/payment-history.component').then(m => m.PaymentHistoryComponent)
+      },
+      {
         path: 'settings',
         redirectTo: 'settings/notifications'
       }

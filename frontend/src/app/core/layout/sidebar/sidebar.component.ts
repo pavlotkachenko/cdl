@@ -55,6 +55,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'Submit Ticket', icon: 'add_circle', link: '/driver/submit-ticket' },
     { name: 'Documents', icon: 'folder', link: '/driver/documents' },
     { name: 'Analytics', icon: 'bar_chart', link: '/driver/analytics' },
+    { name: 'Payments', icon: 'payment', link: '/driver/payments' },
     { name: 'Notifications', icon: 'notifications', link: '/driver/notifications', badge: 0 },
     { name: 'Profile', icon: 'person', link: '/driver/profile' },
     { name: 'Help', icon: 'help', link: '/driver/help' }
@@ -67,6 +68,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'Staff Management', icon: 'groups', link: '/admin/staff' },
     { name: 'Client Management', icon: 'people', link: '/admin/clients' },
     { name: 'Reports & Analytics', icon: 'assessment', link: '/admin/reports' },
+    { name: 'Operator Dashboard', icon: 'support_agent', link: '/admin/operator-dashboard' },
+    { name: 'Revenue', icon: 'attach_money', link: '/admin/revenue' },
     { name: 'Documents', icon: 'folder', link: '/admin/documents' },
     { name: 'Notifications', icon: 'notifications', link: '/admin/notifications', badge: 0 },
     { name: 'Settings', icon: 'settings', link: '/admin/settings' }
@@ -81,7 +84,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'Documents', icon: 'folder', link: '/attorney/documents' },
     { name: 'Reports', icon: 'assessment', link: '/attorney/reports' },
     { name: 'Notifications', icon: 'notifications', link: '/attorney/notifications', badge: 0 },
-    { name: 'Profile', icon: 'person', link: '/attorney/profile' }
+    { name: 'Profile', icon: 'person', link: '/attorney/profile' },
+    { name: 'Subscription', icon: 'credit_card', link: '/attorney/subscription' }
   ];
 
   constructor(

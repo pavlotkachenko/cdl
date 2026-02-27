@@ -8,7 +8,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1dad8c 0%, #0f8a6f 100%);
   padding: 20px;
 
   .register-card {
@@ -122,7 +122,7 @@
             color: #666;
 
             a {
-              color: #667eea;
+              color: #1dad8c;
               text-decoration: none;
               margin: 0 4px;
 
@@ -175,14 +175,14 @@
           color: #666;
 
           a {
-            color: #667eea;
+            color: #1dad8c;
             text-decoration: none;
             font-weight: 500;
             margin-left: 4px;
             transition: color 0.3s;
 
             &:hover {
-              color: #764ba2;
+              color: #0f8a6f;
               text-decoration: underline;
             }
           }
