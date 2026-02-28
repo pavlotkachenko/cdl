@@ -1,0 +1,197 @@
+@import '../../styles/variables';
+
+.how-we-work-section {
+  padding: 5rem 0;
+  background-color: $light-grey;
+
+  @media (max-width: 768px) {
+    padding: 3rem 0;
+  }
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+
+  @media (max-width: 768px) {
+    padding: 0 1.5rem;
+  }
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 4rem;
+
+  @media (max-width: 768px) {
+    margin-bottom: 3rem;
+  }
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: $primary-color;
+  margin: 0 0 1rem 0;
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 1.75rem;
+  }
+}
+
+.section-subtitle {
+  font-size: 1.125rem;
+  color: #666;
+  margin: 0;
+
+  @media (max-width: 480px) {
+    font-size: 1rem;
+  }
+}
+
+.process-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  position: relative;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3rem 2rem;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+}
+
+.step-item {
+  position: relative;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 24px rgba(29, 173, 140, 0.15);
+
+    .step-icon img {
+      transform: scale(1.1);
+    }
+
+    .step-number {
+      background-color: $accent-color;
+      color: white;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.step-number {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 50px;
+  background-color: white;
+  border: 3px solid $accent-color;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $accent-color;
+  transition: all 0.3s ease;
+  z-index: 2;
+
+  @media (max-width: 768px) {
+    width: 45px;
+    height: 45px;
+    font-size: 1.25rem;
+  }
+}
+
+.step-icon {
+  width: 80px;
+  height: 80px;
+  margin: 2rem auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(29, 173, 140, 0.1);
+  border-radius: 50%;
+
+  img {
+    width: 48px;
+    height: 48px;
+    transition: transform 0.3s ease;
+
+    @media (max-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 70px;
+    height: 70px;
+    margin: 1.5rem auto 1.25rem;
+  }
+}
+
+.step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $primary-color;
+  margin: 0 0 1rem 0;
+
+  @media (max-width: 768px) {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.step-description {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #666;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 0.875rem;
+  }
+}
+
+.step-connector {
+  display: none;
+
+  @media (min-width: 641px) {
+    display: block;
+    position: absolute;
+    top: 50%;
+    right: -2rem;
+    width: 2rem;
+    height: 2px;
+    background: linear-gradient(to right, $accent-color 0%, transparent 100%);
+    transform: translateY(-50%);
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    &:nth-child(10) {
+      display: none;
+    }
+  }
+}

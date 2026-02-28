@@ -1,0 +1,20 @@
+<section class="how-we-work-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">How We Work</h2>
+      <p class="section-subtitle">Simple and transparent process to get you back on the road</p>
+    </div>
+
+    <div class="process-steps">
+      <div class="step-item" *ngFor="let step of processSteps; let i = index">
+        <div class="step-number">{{ step.stepNumber }}</div>
+        <div class="step-icon">
+          <img [src]="step.icon" [alt]="step.title + ' icon'" />
+        </div>
+        <h3 class="step-title">{{ step.title }}</h3>
+        <p class="step-description">{{ step.description }}</p>
+        <div class="step-connector" *ngIf="i < processSteps.length - 1"></div>
+      </div>
+    </div>
+  </div>
+</section>

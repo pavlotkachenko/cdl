@@ -1,0 +1,16 @@
+<section class="services-section">
+  <h2>Services for {{ currentView === 'drivers' ? 'Drivers' : 'Carriers' }}</h2>
+  <mat-button-toggle-group [(value)]="currentView">
+    <mat-button-toggle value="drivers">Drivers</mat-button-toggle>
+    <mat-button-toggle value="carriers">Carriers</mat-button-toggle>
+  </mat-button-toggle-group>
+  <div class="services-grid">
+    <mat-card *ngFor="let service of services" class="service-card">
+      <mat-card-header>
+        <mat-icon [svgIcon]="service.icon"></mat-icon>
+      </mat-card-header>
+      <mat-card-title>{{ service.title }}</mat-card-title>
+      <mat-card-content>{{ service.content }}</mat-card-content>
+    </mat-card>
+  </div>
+</section>

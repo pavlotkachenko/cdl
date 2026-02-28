@@ -1,0 +1,32 @@
+<section class="personal-expert-section">
+  <div class="container">
+    <div class="expert-content">
+      <div class="expert-text">
+        <h2 class="section-title">Your Personal Safety Expert</h2>
+        <p class="section-description">
+          Get dedicated support from certified safety professionals who understand the trucking industry. 
+          Our experts work one-on-one with you to resolve tickets, maintain compliance, and protect your CDL.
+        </p>
+        <div class="features-grid">
+          <div class="feature-item" *ngFor="let feature of features">
+            <div class="feature-icon">
+              <img [src]="feature.icon" [alt]="feature.title" />
+            </div>
+            <div class="feature-content">
+              <h3 class="feature-title">{{ feature.title }}</h3>
+              <p class="feature-description">{{ feature.description }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="expert-cta">
+          <button mat-raised-button color="accent" class="cta-button">
+            Get Your Expert
+          </button>
+        </div>
+      </div>
+      <div class="expert-image">
+        <img src="assets/images/expert-consultation.jpg" alt="Safety expert consultation" />
+      </div>
+    </div>
+  </div>
+</section>

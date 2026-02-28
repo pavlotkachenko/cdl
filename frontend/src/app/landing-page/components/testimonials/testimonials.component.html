@@ -1,0 +1,53 @@
+<section class="testimonials-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">What Our Clients Say</h2>
+      <p class="section-subtitle">Real reviews from real clients</p>
+    </div>
+
+    <div class="testimonial-carousel">
+      <div class="testimonial-card">
+        <div class="testimonial-photo">
+          <img [src]="currentTestimonial.photo" [alt]="currentTestimonial.name" />
+        </div>
+        
+        <div class="testimonial-content">
+          <div class="testimonial-rating">
+            <mat-icon *ngFor="let star of getStarArray(currentTestimonial.rating)" class="star-icon">
+              star
+            </mat-icon>
+          </div>
+          
+          <p class="testimonial-review">"{{ currentTestimonial.review }}"</p>
+          
+          <div class="testimonial-author">
+            <h4 class="author-name">{{ currentTestimonial.name }}</h4>
+            <p class="author-position" *ngIf="currentTestimonial.position">
+              {{ currentTestimonial.position }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="carousel-controls">
+        <button class="carousel-btn prev" (click)="previousTestimonial()" aria-label="Previous testimonial">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        
+        <div class="carousel-indicators">
+          <button 
+            *ngFor="let testimonial of testimonials; let i = index" 
+            class="indicator" 
+            [class.active]="i === currentIndex"
+            (click)="goToTestimonial(i)"
+            [attr.aria-label]="'Go to testimonial ' + (i + 1)">
+          </button>
+        </div>
+        
+        <button class="carousel-btn next" (click)="nextTestimonial()" aria-label="Next testimonial">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
