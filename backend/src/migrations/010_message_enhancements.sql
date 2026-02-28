@@ -3,14 +3,14 @@
 
 -- Create message_templates table
 CREATE TABLE IF NOT EXISTS message_templates (
-    template_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     category VARCHAR(100) NOT NULL,
     subject VARCHAR(500),
     body TEXT NOT NULL,
     variables TEXT[] DEFAULT '{}',
     is_active BOOLEAN DEFAULT true,
-    created_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -22,9 +22,9 @@ CREATE INDEX IF NOT EXISTS idx_message_templates_created_by ON message_templates
 
 -- Create message_reactions table
 CREATE TABLE IF NOT EXISTS message_reactions (
-    reaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    reaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reaction_type VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(message_id, user_id, reaction_type)
@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_message_reactions_user_id ON message_reactions(us
 
 -- Add threading support to messages table
 ALTER TABLE messages
-ADD COLUMN IF NOT EXISTS parent_message_id UUID REFERENCES messages(message_id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS parent_message_id UUID REFERENCES messages(id) ON DELETE SET NULL,
 ADD COLUMN IF NOT EXISTS thread_id UUID,
 ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP WITH TIME ZONE;
@@ -51,12 +51,12 @@ RETURNS TRIGGER AS $$
 BEGIN
     -- If this is a reply, use parent's thread_id or parent's message_id as thread_id
     IF NEW.parent_message_id IS NOT NULL THEN
-        SELECT COALESCE(thread_id, message_id) INTO NEW.thread_id
+        SELECT COALESCE(thread_id, id) INTO NEW.thread_id
         FROM messages
-        WHERE message_id = NEW.parent_message_id;
+        WHERE id = NEW.parent_message_id;
     ELSE
-        -- If this is a root message, use its own message_id as thread_id
-        NEW.thread_id := NEW.message_id;
+        -- If this is a root message, use its own id as thread_id
+        NEW.thread_id := NEW.id;
     END IF;
     
     RETURN NEW;
@@ -83,20 +83,20 @@ SELECT
         )
     ) FILTER (WHERE mr.reaction_id IS NOT NULL) AS reactions
 FROM messages m
-LEFT JOIN message_reactions mr ON m.message_id = mr.message_id
-GROUP BY m.message_id;
+LEFT JOIN message_reactions mr ON m.id = mr.message_id
+GROUP BY m.id;
 
 -- Create view for message threads
 CREATE OR REPLACE VIEW message_threads AS
-SELECT 
+SELECT
     m.thread_id,
-    m.case_id,
+    c.case_id,
     COUNT(*) AS message_count,
     MIN(m.created_at) AS thread_started_at,
     MAX(m.created_at) AS last_message_at,
     json_agg(
         json_build_object(
-            'message_id', m.message_id,
+            'message_id', m.id,
             'sender_id', m.sender_id,
             'content', m.content,
             'parent_message_id', m.parent_message_id,
@@ -104,8 +104,9 @@ SELECT
         ) ORDER BY m.created_at
     ) AS messages
 FROM messages m
+LEFT JOIN conversations c ON m.conversation_id = c.id
 WHERE m.thread_id IS NOT NULL
-GROUP BY m.thread_id, m.case_id;
+GROUP BY m.thread_id, c.case_id;
 
 -- Add check constraint for reaction_type
 ALTER TABLE message_reactions

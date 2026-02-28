@@ -11,7 +11,7 @@
 
 -- Create push_subscriptions table
 CREATE TABLE IF NOT EXISTS push_subscriptions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL UNIQUE,
   keys JSONB NOT NULL,
@@ -42,6 +42,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_push_subscriptions_updated_at ON push_subscriptions;
 CREATE TRIGGER trigger_update_push_subscriptions_updated_at
   BEFORE UPDATE ON push_subscriptions
   FOR EACH ROW

@@ -3,7 +3,7 @@
 
 -- Add password reset tokens table
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 
 -- Add refresh tokens table for JWT rotation
 CREATE TABLE IF NOT EXISTS refresh_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(500) NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
 -- Add user sessions table for tracking active sessions
 CREATE TABLE IF NOT EXISTS user_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     refresh_token_id UUID REFERENCES refresh_tokens(id) ON DELETE CASCADE,
     ip_address VARCHAR(45),
@@ -64,29 +64,35 @@ ALTER TABLE refresh_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Users can only view their own password reset tokens
+DROP POLICY IF EXISTS password_reset_tokens_select_policy ON password_reset_tokens;
 CREATE POLICY password_reset_tokens_select_policy ON password_reset_tokens
     FOR SELECT
     USING (user_id = auth.uid());
 
 -- Users can only view their own refresh tokens
+DROP POLICY IF EXISTS refresh_tokens_select_policy ON refresh_tokens;
 CREATE POLICY refresh_tokens_select_policy ON refresh_tokens
     FOR SELECT
     USING (user_id = auth.uid());
 
 -- Users can only view their own sessions
+DROP POLICY IF EXISTS user_sessions_select_policy ON user_sessions;
 CREATE POLICY user_sessions_select_policy ON user_sessions
     FOR SELECT
     USING (user_id = auth.uid());
 
 -- Only system can insert/update these tables (handled by backend)
+DROP POLICY IF EXISTS password_reset_tokens_insert_policy ON password_reset_tokens;
 CREATE POLICY password_reset_tokens_insert_policy ON password_reset_tokens
     FOR INSERT
     WITH CHECK (false);
 
+DROP POLICY IF EXISTS refresh_tokens_insert_policy ON refresh_tokens;
 CREATE POLICY refresh_tokens_insert_policy ON refresh_tokens
     FOR INSERT
     WITH CHECK (false);
 
+DROP POLICY IF EXISTS user_sessions_insert_policy ON user_sessions;
 CREATE POLICY user_sessions_insert_policy ON user_sessions
     FOR INSERT
     WITH CHECK (false);

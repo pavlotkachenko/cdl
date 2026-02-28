@@ -264,10 +264,6 @@ CREATE POLICY recipients_mark_messages_read
     recipient_id IN (
       SELECT id FROM users WHERE auth_user_id = auth.uid()
     )
-    -- Only allow updating read status fields
-    AND (OLD.content = NEW.content)
-    AND (OLD.sender_id = NEW.sender_id)
-    AND (OLD.recipient_id = NEW.recipient_id)
   );
 
 -- ============================================

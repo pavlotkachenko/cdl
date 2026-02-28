@@ -1,0 +1,87 @@
+@import '../../styles/variables';
+
+.service-card {
+  height: 100%;
+  padding: 2rem 1.5rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 24px rgba(29, 173, 140, 0.2);
+    border-color: $accent-color;
+
+    .card-icon img {
+      transform: scale(1.1);
+    }
+
+    .card-title {
+      color: $accent-color;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  background-color: rgba(29, 173, 140, 0.1);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+
+  img {
+    width: 48px;
+    height: 48px;
+    transition: transform 0.3s ease;
+
+    @media (max-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 1.25rem;
+  }
+}
+
+::ng-deep .service-card .mat-card-content {
+  text-align: center;
+  padding: 0;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $primary-color;
+  margin: 0 0 1rem 0;
+  transition: color 0.3s ease;
+
+  @media (max-width: 768px) {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.card-description {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #666;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 0.875rem;
+  }
+}

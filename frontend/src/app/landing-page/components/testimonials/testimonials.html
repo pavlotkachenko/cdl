@@ -1,0 +1,35 @@
+<section class="testimonials">
+  <h2>What Our Clients Say</h2>
+  
+  <div class="carousel">
+    <button class="carousel-btn prev" (click)="previousTestimonial()" aria-label="Previous testimonial">
+      ‹
+    </button>
+
+    <div class="testimonial-card">
+      <div class="quote-icon">"</div>
+      <p class="testimonial-text">{{ testimonials[currentIndex].text }}</p>
+      <div class="rating">
+        <span *ngFor="let star of [1,2,3,4,5]" class="star">★</span>
+      </div>
+      <div class="client-info">
+        <h3>{{ testimonials[currentIndex].name }}</h3>
+        <p class="role">{{ testimonials[currentIndex].role }}</p>
+        <p class="company">{{ testimonials[currentIndex].company }}</p>
+      </div>
+    </div>
+
+    <button class="carousel-btn next" (click)="nextTestimonial()" aria-label="Next testimonial">
+      ›
+    </button>
+  </div>
+
+  <div class="carousel-indicators">
+    <button
+      *ngFor="let testimonial of testimonials; let i = index"
+      [class.active]="i === currentIndex"
+      (click)="goToTestimonial(i)"
+      [attr.aria-label]="'Go to testimonial ' + (i + 1)">
+    </button>
+  </div>
+</section>

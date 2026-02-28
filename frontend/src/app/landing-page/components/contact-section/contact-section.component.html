@@ -1,0 +1,115 @@
+<section class="contact-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Get In Touch</h2>
+      <p class="section-subtitle">Have questions? We're here to help!</p>
+    </div>
+
+    <div class="contact-content">
+      <div class="contact-form-wrapper">
+        <form [formGroup]="contactForm" (ngSubmit)="onSubmit()" class="contact-form">
+          <!-- Name Field -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Full Name</mat-label>
+            <input matInput formControlName="name" placeholder="Enter your full name" />
+            <mat-icon matPrefix>person</mat-icon>
+            <mat-error *ngIf="hasError('name')">
+              {{ getErrorMessage('name') }}
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Email Field -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Email Address</mat-label>
+            <input matInput type="email" formControlName="email" placeholder="your.email@example.com" />
+            <mat-icon matPrefix>email</mat-icon>
+            <mat-error *ngIf="hasError('email')">
+              {{ getErrorMessage('email') }}
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Phone Field -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Phone Number</mat-label>
+            <input matInput type="tel" formControlName="phone" placeholder="(555) 123-4567" />
+            <mat-icon matPrefix>phone</mat-icon>
+            <mat-error *ngIf="hasError('phone')">
+              {{ getErrorMessage('phone') }}
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Message Field -->
+          <mat-form-field appearance="outline" class="form-field full-width">
+            <mat-label>Message</mat-label>
+            <textarea 
+              matInput 
+              formControlName="message" 
+              rows="5" 
+              placeholder="Tell us how we can help you...">
+            </textarea>
+            <mat-icon matPrefix>message</mat-icon>
+            <mat-error *ngIf="hasError('message')">
+              {{ getErrorMessage('message') }}
+            </mat-error>
+          </mat-form-field>
+
+          <!-- reCAPTCHA Placeholder -->
+          <div class="recaptcha-wrapper">
+            <div class="recaptcha-placeholder" (click)="onCaptchaResolved('mock-token')">
+              <mat-icon>check_box_outline_blank</mat-icon>
+              <span>I'm not a robot</span>
+            </div>
+            <mat-error *ngIf="hasError('recaptcha')" class="recaptcha-error">
+              Please verify that you are not a robot
+            </mat-error>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <button 
+              mat-raised-button 
+              color="accent" 
+              type="submit" 
+              class="submit-button"
+              [disabled]="isSubmitting">
+              <span *ngIf="!isSubmitting">Send Message</span>
+              <mat-spinner *ngIf="isSubmitting" diameter="24"></mat-spinner>
+            </button>
+          </div>
+
+          <!-- Success Message -->
+          <div class="alert alert-success" *ngIf="submitSuccess">
+            <mat-icon>check_circle</mat-icon>
+            <span>Thank you! Your message has been sent successfully.</span>
+          </div>
+
+          <!-- Error Message -->
+          <div class="alert alert-error" *ngIf="submitError">
+            <mat-icon>error</mat-icon>
+            <span>Sorry, there was an error sending your message. Please try again.</span>
+          </div>
+        </form>
+      </div>
+
+      <div class="contact-info">
+        <div class="info-card">
+          <mat-icon class="info-icon">location_on</mat-icon>
+          <h3>Address</h3>
+          <p>123 Trucking Way<br>Suite 100<br>Transportation City, TC 12345</p>
+        </div>
+
+        <div class="info-card">
+          <mat-icon class="info-icon">phone</mat-icon>
+          <h3>Phone</h3>
+          <p>+1 (555) 123-4567<br>Mon-Fri: 8AM - 6PM</p>
+        </div>
+
+        <div class="info-card">
+          <mat-icon class="info-icon">email</mat-icon>
+          <h3>Email</h3>
+          <p>info@cdlticket.com<br>support@cdlticket.com</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

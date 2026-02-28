@@ -3,11 +3,11 @@
 
 -- Create case_status_history table
 CREATE TABLE IF NOT EXISTS case_status_history (
-    history_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    case_id UUID NOT NULL REFERENCES cases(case_id) ON DELETE CASCADE,
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
     status VARCHAR(50) NOT NULL,
     previous_status VARCHAR(50),
-    changed_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    changed_by UUID REFERENCES users(id) ON DELETE SET NULL,
     notes TEXT,
     changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -19,8 +19,8 @@ CREATE INDEX IF NOT EXISTS idx_case_status_history_status ON case_status_history
 
 -- Create case_sla_tracking table
 CREATE TABLE IF NOT EXISTS case_sla_tracking (
-    sla_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    case_id UUID NOT NULL REFERENCES cases(case_id) ON DELETE CASCADE,
+    sla_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
     status VARCHAR(50) NOT NULL,
     status_changed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     sla_threshold_hours INTEGER NOT NULL,
@@ -52,7 +52,7 @@ BEGIN
     -- Only log if status actually changed
     IF OLD.status IS DISTINCT FROM NEW.status THEN
         INSERT INTO case_status_history (case_id, status, previous_status, changed_at)
-        VALUES (NEW.case_id, NEW.status, OLD.status, CURRENT_TIMESTAMP);
+        VALUES (NEW.id, NEW.status, OLD.status, CURRENT_TIMESTAMP);
     END IF;
     
     RETURN NEW;
@@ -126,23 +126,20 @@ SELECT
     sla.remaining_hours,
     sla.sla_threshold_hours
 FROM cases c
-LEFT JOIN case_sla_tracking sla ON c.case_id = sla.case_id AND c.status = sla.status
-WHERE c.status NOT IN ('closed', 'withdrawn', 'dismissed');
+LEFT JOIN case_sla_tracking sla ON c.id = sla.case_id AND c.status::text = sla.status
+WHERE c.status::text NOT IN ('closed', 'withdrawn', 'dismissed');
 
 -- Create view for escalated cases
 CREATE OR REPLACE VIEW escalated_cases AS
 SELECT 
     c.*,
-    u_driver.first_name AS driver_first_name,
-    u_driver.last_name AS driver_last_name,
-    u_attorney.first_name AS attorney_first_name,
-    u_attorney.last_name AS attorney_last_name,
-    u_operator.first_name AS operator_first_name,
-    u_operator.last_name AS operator_last_name
+    u_driver.full_name AS driver_name,
+    u_attorney.full_name AS attorney_name,
+    u_operator.full_name AS operator_name
 FROM cases c
-LEFT JOIN users u_driver ON c.driver_id = u_driver.user_id
-LEFT JOIN users u_attorney ON c.assigned_attorney_id = u_attorney.user_id
-LEFT JOIN users u_operator ON c.assigned_operator_id = u_operator.user_id
+LEFT JOIN users u_driver ON c.driver_id = u_driver.id
+LEFT JOIN users u_attorney ON c.assigned_attorney_id = u_attorney.id
+LEFT JOIN users u_operator ON c.assigned_operator_id = u_operator.id
 WHERE c.is_escalated = true
 ORDER BY c.escalated_at DESC;
 

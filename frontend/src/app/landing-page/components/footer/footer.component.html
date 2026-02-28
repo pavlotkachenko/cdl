@@ -1,0 +1,77 @@
+<footer class="footer">
+  <div class="footer-container">
+    <div class="footer-content">
+      <!-- Company Info -->
+      <div class="footer-section company-section">
+        <div class="logo-section">
+          <img src="assets/icons/logo.svg" alt="TruckSafe Logo" class="logo">
+          <span class="brand-name">TruckSafe</span>
+        </div>
+        <p class="company-description">
+          Expert guidance for CDL compliance and safety. Your trusted partner in trucking industry compliance.
+        </p>
+        <div class="social-links">
+          <a 
+            *ngFor="let social of socialLinks"
+            [href]="social.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            [attr.aria-label]="social.label"
+            class="social-link">
+            <mat-icon>{{ social.icon }}</mat-icon>
+          </a>
+        </div>
+      </div>
+
+      <!-- Company Links -->
+      <div class="footer-section">
+        <h3 class="section-title">Company</h3>
+        <ul class="footer-links">
+          <li *ngFor="let link of companyLinks">
+            <a (click)="scrollToSection(link.url)" class="footer-link">
+              {{ link.label }}
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Legal Links -->
+      <div class="footer-section">
+        <h3 class="section-title">Legal</h3>
+        <ul class="footer-links">
+          <li *ngFor="let link of legalLinks">
+            <a [href]="link.url" class="footer-link">
+              {{ link.label }}
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Contact Info -->
+      <div class="footer-section">
+        <h3 class="section-title">Contact</h3>
+        <ul class="contact-info">
+          <li class="contact-item">
+            <mat-icon>email</mat-icon>
+            <span>info@trucksafe.com</span>
+          </li>
+          <li class="contact-item">
+            <mat-icon>phone</mat-icon>
+            <span>1-800-TRUCK-SAFE</span>
+          </li>
+          <li class="contact-item">
+            <mat-icon>location_on</mat-icon>
+            <span>123 Transport Ave, Suite 100<br>Dallas, TX 75201</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Copyright Bar -->
+    <div class="footer-bottom">
+      <p class="copyright">
+        © {{ currentYear }} TruckSafe. All rights reserved.
+      </p>
+    </div>
+  </div>
+</footer>
