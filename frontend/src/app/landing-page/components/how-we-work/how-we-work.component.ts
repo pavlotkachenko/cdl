@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 interface ProcessStep {
   stepNumber: number;
@@ -9,6 +10,8 @@ interface ProcessStep {
 
 @Component({
   selector: 'app-how-we-work',
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './how-we-work.component.html',
   styleUrls: ['./how-we-work.component.scss']
 })

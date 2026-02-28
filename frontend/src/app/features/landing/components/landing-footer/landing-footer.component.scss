@@ -1,85 +1,90 @@
-$border-radius: 12px;
-
 .landing-footer {
   background: #090000;
   color: white;
-  padding: 48px 0 32px;
-  
+  padding: 48px 0 0;
+
   .footer-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 24px;
-    text-align: center;
   }
-  
-  .footer-nav ul {
-    list-style: none;
+
+  .footer-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 600px;
+    padding-bottom: 48px;
+  }
+
+  .footer-column {
     display: flex;
-    gap: 32px;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
+    flex-direction: column;
+    gap: 20px;
   }
-  
+
   .footer-link {
-    color: white;
-    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
     text-decoration: none;
-    &:hover { color: #1dad8c; }
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: white;
+    }
   }
-  
+
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
   .copyright {
-    margin-top: 24px;
-    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    color: rgba(255, 255, 255, 0.5);
     font-size: 0.875rem;
   }
 
-  .carousel-slide {
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  
-  // Overlay for text readability
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4); // Dark overlay
+  .footer-bottom-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
-  
-  &.card-panel-1 {
-    background-image: url('/assets/images/hero/hero-1.jpg');
+
+  .bottom-link {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: white;
+    }
   }
-  
-  &.card-panel-2 {
-    background-image: url('/assets/images/hero/hero-2.jpg');
-  }
-  
-  &.card-panel-3 {
-    background-image: url('/assets/images/hero/hero-3.jpg');
-  }
-  
-  &.card-panel-4 {
-    background-image: url('/assets/images/hero/hero-4.jpg');
-  }
-  
-  &.card-panel-5 {
-    background-image: url('/assets/images/hero/hero-5.jpg');
+
+  .dot-separator {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
   }
 }
 
-.benefits-image {
-  height: 600px;
-  border-radius: $border-radius;
-  background-image: url('/assets/images/benefits/benefits-expert.jpg');
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 8px 32px rgba(29, 173, 140, 0.2);
-  
-  // Fallback gradient if no image
-  background-color: linear-gradient(135deg, #1dad8c 0%, #16926f 100%);
-}
+@media (max-width: 768px) {
+  .landing-footer {
+    .footer-links {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-bottom {
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+    }
+  }
 }

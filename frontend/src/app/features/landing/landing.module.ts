@@ -11,8 +11,18 @@ import { MatInputModule } from '@angular/material/input';
 import { LandingComponent } from './landing.component';
 import { LandingHeaderComponent } from './components/landing-header/landing-header.component';
 import { LandingFooterComponent } from './components/landing-footer/landing-footer.component';
+import { PlansComponent } from './components/plans/plans.component';
+import { AboutUsComponent } from './components/about-us/about-us.component';
+import { ContactUsPageComponent } from './components/contact-us/contact-us.component';
+import { SignInPageComponent } from './components/sign-in/sign-in.component';
 
-const routes: Routes = [{ path: '', component: LandingComponent }];
+const routes: Routes = [
+  { path: '', component: LandingComponent },
+  { path: 'plans', component: PlansComponent },
+  { path: 'about-us', component: AboutUsComponent },
+  { path: 'contact-us', component: ContactUsPageComponent },
+  { path: 'sign-in', component: SignInPageComponent },
+];
 
 @NgModule({
   declarations: [],

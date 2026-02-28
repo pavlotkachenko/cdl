@@ -1,0 +1,107 @@
+<div class="signup-container">
+  <div class="signup-card">
+    <h1 class="signup-title">Sign up</h1>
+
+    <!-- User Type Toggle -->
+    <mat-button-toggle-group 
+      [value]="userType" 
+      (change)="onUserTypeChange($event.value)"
+      class="user-type-toggle">
+      <mat-button-toggle value="driver">Drivers</mat-button-toggle>
+      <mat-button-toggle value="carrier">Carriers</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <!-- Signup Form -->
+    <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="signup-form">
+      
+      <!-- Company Name -->
+      <mat-form-field appearance="outline">
+        <mat-label>Company Name</mat-label>
+        <input matInput formControlName="company_name" placeholder="Enter company name">
+        <mat-error>{{ getErrorMessage('company_name') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Phone Number -->
+      <mat-form-field appearance="outline">
+        <mat-label>Phone Number</mat-label>
+        <input matInput formControlName="phone_number" placeholder="Enter phone number">
+        <mat-error>{{ getErrorMessage('phone_number') }}</mat-error>
+      </mat-form-field>
+
+      <!-- USDOT Number -->
+      <mat-form-field appearance="outline">
+        <mat-label>USDOT Number</mat-label>
+        <input matInput formControlName="usdot_number" placeholder="Enter 6-8 digit USDOT number">
+        <mat-error>{{ getErrorMessage('usdot_number') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Carrier Size -->
+      <mat-form-field appearance="outline">
+        <mat-label>Carrier Size</mat-label>
+        <mat-select formControlName="carrier_size">
+          <mat-option *ngFor="let size of carrierSizes" [value]="size.value">
+            {{ size.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error>{{ getErrorMessage('carrier_size') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Email -->
+      <mat-form-field appearance="outline">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" formControlName="email" placeholder="Enter email">
+        <mat-error>{{ getErrorMessage('email') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Password -->
+      <mat-form-field appearance="outline">
+        <mat-label>Password</mat-label>
+        <input matInput 
+               [type]="hidePassword ? 'password' : 'text'" 
+               formControlName="password" 
+               placeholder="Enter password (min 8 characters)">
+        <button mat-icon-button 
+                matSuffix 
+                type="button"
+                (click)="hidePassword = !hidePassword">
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error>{{ getErrorMessage('password') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Confirm Password -->
+      <mat-form-field appearance="outline">
+        <mat-label>Confirm Password</mat-label>
+        <input matInput 
+               [type]="hideConfirmPassword ? 'password' : 'text'" 
+               formControlName="confirm_password" 
+               placeholder="Re-enter password">
+        <button mat-icon-button 
+                matSuffix 
+                type="button"
+                (click)="hideConfirmPassword = !hideConfirmPassword">
+          <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error>{{ getErrorMessage('confirm_password') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Privacy Policy Checkbox -->
+      <div class="privacy-policy">
+        <mat-checkbox formControlName="privacy_policy">
+          I agree to the Terms of Service and Privacy Policy
+        </mat-checkbox>
+        <mat-error *ngIf="signupForm.get('privacy_policy')?.touched && signupForm.get('privacy_policy')?.invalid">
+          You must accept the privacy policy
+        </mat-error>
+      </div>
+
+      <!-- Submit Button -->
+      <button mat-raised-button 
+              type="submit" 
+              class="submit-button"
+              [disabled]="signupForm.invalid">
+        Submit
+      </button>
+    </form>
+  </div>
+</div>

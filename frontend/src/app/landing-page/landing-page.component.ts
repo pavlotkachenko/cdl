@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
 import { HeaderComponent } from './components/header/header.component';
-import { HeroComponent } from './components/hero/hero.component';
-import { ServicesComponent } from './components/services/services.component';
+import { HeroSectionComponent } from './components/hero-section/hero-section.component';
+import { ServicesSectionComponent } from './components/services-section/services-section.component';
 import { HowWeWorkComponent } from './components/how-we-work/how-we-work.component';
 import { TestimonialsComponent } from './components/testimonials/testimonials.component';
-import { ContactComponent } from './components/contact/contact.component';
+import { ContactSectionComponent } from './components/contact-section/contact-section.component';
 import { FooterComponent } from './components/footer/footer.component';
 
 @Component({
@@ -12,11 +12,11 @@ import { FooterComponent } from './components/footer/footer.component';
   standalone: true,
   imports: [
     HeaderComponent,
-    HeroComponent,
-    ServicesComponent,
+    HeroSectionComponent,
+    ServicesSectionComponent,
     HowWeWorkComponent,
     TestimonialsComponent,
-    ContactComponent,
+    ContactSectionComponent,
     FooterComponent
   ],
   templateUrl: './landing-page.component.html',

@@ -1,4 +1,4 @@
-@import './landing-page.theme.scss';
+@use './landing-page.theme.scss' as *;
 
 .landing-page {
   min-height: 100vh;

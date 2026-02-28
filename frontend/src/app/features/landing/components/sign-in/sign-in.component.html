@@ -1,0 +1,201 @@
+<app-landing-header></app-landing-header>
+
+<div class="sign-in-page">
+  <!-- Log In Side -->
+  <div class="login-side">
+    <div class="login-content">
+      <h2>Log in</h2>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+        <div class="form-group">
+          <label for="login-email">Username or Email Address *</label>
+          <input
+            type="text"
+            id="login-email"
+            placeholder="Input field"
+            formControlName="email"
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Password *</label>
+          <div class="password-field">
+            <input
+              [type]="hideLoginPassword ? 'password' : 'text'"
+              id="login-password"
+              placeholder="Input field"
+              formControlName="password"
+              autocomplete="current-password"
+            >
+            <span class="material-icons password-toggle" (click)="hideLoginPassword = !hideLoginPassword">
+              {{ hideLoginPassword ? 'visibility' : 'visibility_off' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="remember-lost">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="rememberMe">
+            <span>Remember Me</span>
+          </label>
+          <a routerLink="/forgot-password" class="lost-password">Lost your password?</a>
+        </div>
+
+        <button type="submit" mat-flat-button class="login-button" [disabled]="loading">
+          {{ loading ? 'Logging in...' : 'Login' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sign Up Side -->
+  <div class="signup-side">
+    <div class="signup-content">
+      <div class="signup-header">
+        <h2>Sign up</h2>
+        <div class="role-toggle">
+          <button
+            [class.active]="signupRole === 'drivers'"
+            (click)="setSignupRole('drivers')">Drivers</button>
+          <button
+            [class.active]="signupRole === 'carriers'"
+            (click)="setSignupRole('carriers')">Carriers</button>
+        </div>
+      </div>
+
+      <!-- Drivers Form -->
+      <form *ngIf="isDrivers" [formGroup]="driversForm" (ngSubmit)="onSignup()">
+        <div class="form-group">
+          <label for="first-name">First Name</label>
+          <input type="text" id="first-name" placeholder="Input field" formControlName="firstName">
+        </div>
+
+        <div class="form-group">
+          <label for="last-name">Last Name</label>
+          <input type="text" id="last-name" placeholder="Input field" formControlName="lastName">
+        </div>
+
+        <div class="form-group">
+          <label for="signup-email">User Email *</label>
+          <input type="email" id="signup-email" placeholder="Input field" formControlName="email" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="signup-password">User Password *</label>
+          <div class="password-field">
+            <input
+              [type]="hideSignupPassword ? 'password' : 'text'"
+              id="signup-password"
+              placeholder="Input field"
+              formControlName="password"
+              autocomplete="new-password"
+            >
+            <span class="material-icons password-toggle" (click)="hideSignupPassword = !hideSignupPassword">
+              {{ hideSignupPassword ? 'visibility' : 'visibility_off' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="signup-password-confirm">Confirm Password *</label>
+          <div class="password-field">
+            <input
+              [type]="hideSignupConfirmPassword ? 'password' : 'text'"
+              id="signup-password-confirm"
+              placeholder="Input field"
+              formControlName="passwordConfirm"
+              autocomplete="new-password"
+            >
+            <span class="material-icons password-toggle" (click)="hideSignupConfirmPassword = !hideSignupConfirmPassword">
+              {{ hideSignupConfirmPassword ? 'visibility' : 'visibility_off' }}
+            </span>
+          </div>
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="privacyPolicy">
+          <span>Privacy Policy *</span>
+        </label>
+
+        <div class="submit-row">
+          <button type="submit" mat-flat-button class="submit-button">Submit</button>
+        </div>
+      </form>
+
+      <!-- Carriers Form -->
+      <form *ngIf="!isDrivers" [formGroup]="carriesForm" (ngSubmit)="onSignup()">
+        <div class="form-group">
+          <label for="company">Company name *</label>
+          <input type="text" id="company" placeholder="Input field" formControlName="company">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone number *</label>
+          <input type="tel" id="phone" placeholder="Input field" formControlName="phone">
+        </div>
+
+        <div class="form-group">
+          <label for="usdot">USDOT Number *</label>
+          <input type="text" id="usdot" placeholder="Input field" formControlName="usdot">
+        </div>
+
+        <div class="form-group">
+          <label>Carrier size *</label>
+          <select formControlName="carrierSize">
+            <option value="" disabled selected>Select size</option>
+            <option *ngFor="let size of carrierSizes" [value]="size">{{ size }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="carrier-email">Email *</label>
+          <input type="email" id="carrier-email" placeholder="Input field" formControlName="email" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="carrier-password">User Password *</label>
+          <div class="password-field">
+            <input
+              [type]="hideSignupPassword ? 'password' : 'text'"
+              id="carrier-password"
+              placeholder="Input field"
+              formControlName="password"
+              autocomplete="new-password"
+            >
+            <span class="material-icons password-toggle" (click)="hideSignupPassword = !hideSignupPassword">
+              {{ hideSignupPassword ? 'visibility' : 'visibility_off' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="carrier-password-confirm">Confirm Password *</label>
+          <div class="password-field">
+            <input
+              [type]="hideSignupConfirmPassword ? 'password' : 'text'"
+              id="carrier-password-confirm"
+              placeholder="Input field"
+              formControlName="passwordConfirm"
+              autocomplete="new-password"
+            >
+            <span class="material-icons password-toggle" (click)="hideSignupConfirmPassword = !hideSignupConfirmPassword">
+              {{ hideSignupConfirmPassword ? 'visibility' : 'visibility_off' }}
+            </span>
+          </div>
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="privacyPolicy">
+          <span>Privacy Policy *</span>
+        </label>
+
+        <div class="submit-row">
+          <button type="submit" mat-flat-button class="submit-button">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<app-landing-footer></app-landing-footer>
