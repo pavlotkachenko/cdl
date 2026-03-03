@@ -86,7 +86,7 @@ export class ForgotPasswordComponent implements OnInit {
 
     // Call auth service forgot password
     this.authService.forgotPassword(email).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         console.log('✅ Password reset email sent:', response);
         this.loading = false;
         this.emailSent = true;
@@ -107,7 +107,7 @@ export class ForgotPasswordComponent implements OnInit {
         // Reset form
         this.forgotPasswordForm.reset();
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Forgot password error:', error);
         this.loading = false;
 

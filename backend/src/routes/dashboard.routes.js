@@ -1,58 +1,12 @@
-/**
- * Dashboard Routes - Role-specific dashboard routes
- * Location: backend/src/routes/dashboard.routes.js
- */
-
 const express = require('express');
 const router = express.Router();
 const dashboardController = require('../controllers/dashboard.controller');
-const { authenticate, authorize } = require('../middleware/auth.middleware');
+const auth = require('../middleware/auth');
 
 /**
- * @route   GET /api/dashboard/operator
- * @desc    Get operator dashboard data
- * @access  Private (Operator, Admin)
+ * Driver Dashboard Routes
+ * GET /api/drivers/:id/dashboard - Get driver dashboard with color-coded status
  */
-router.get(
-  '/operator',
-  authenticate,
-  authorize(['operator', 'admin']),
-  dashboardController.getOperatorDashboard
-);
-
-/**
- * @route   GET /api/dashboard/attorney
- * @desc    Get attorney dashboard data
- * @access  Private (Attorney)
- */
-router.get(
-  '/attorney',
-  authenticate,
-  authorize(['attorney']),
-  dashboardController.getAttorneyDashboard
-);
-
-/**
- * @route   GET /api/dashboard/driver
- * @desc    Get driver dashboard data
- * @access  Private (Driver)
- */
-router.get(
-  '/driver',
-  authenticate,
-  authorize(['driver']),
-  dashboardController.getDriverDashboard
-);
-
-/**
- * @route   GET /api/dashboard/metrics
- * @desc    Get dashboard metrics summary
- * @access  Private (All authenticated users)
- */
-router.get(
-  '/metrics',
-  authenticate,
-  dashboardController.getDashboardMetrics
-);
+router.get('/drivers/:id/dashboard', auth.authenticateDriver, dashboardController.getDriverDashboard);
 
 module.exports = router;

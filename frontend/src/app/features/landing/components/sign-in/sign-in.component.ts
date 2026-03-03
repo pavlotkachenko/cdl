@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LandingHeaderComponent } from '../landing-header/landing-header.component';
 import { LandingFooterComponent } from '../landing-footer/landing-footer.component';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -27,6 +28,7 @@ import { AuthService } from '../../../../core/services/auth.service';
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
+    MatProgressSpinnerModule,
     LandingHeaderComponent,
     LandingFooterComponent
   ]
@@ -40,6 +42,7 @@ export class SignInPageComponent implements OnInit {
   hideSignupPassword = true;
   hideSignupConfirmPassword = true;
   loading = false;
+  errorMessage = '';
   signupRole: 'drivers' | 'carriers' = 'drivers';
   carrierSizes = ['1 - 49', '50 - 99', '100 - 249', '250+'];
 
@@ -52,8 +55,8 @@ export class SignInPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required]],
-      password: ['', [Validators.required]],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       rememberMe: [false]
     });
 
@@ -95,30 +98,29 @@ export class SignInPageComponent implements OnInit {
     }
 
     this.loading = true;
+    this.errorMessage = '';
+
     const { email, password } = this.loginForm.value;
 
-    this.authService.login({ email, password }).subscribe({
-      next: (user) => {
+    this.authService.signIn(email, password).subscribe({
+      next: () => {
+        // Navigation handled by AuthService
         this.loading = false;
         this.snackBar.open('Login successful!', 'Close', { duration: 3000 });
-        switch (user.role) {
-          case 'admin':
-            this.router.navigate(['/admin/dashboard']);
-            break;
-          case 'attorney':
-          case 'paralegal':
-            this.router.navigate(['/attorney/dashboard']);
-            break;
-          default:
-            this.router.navigate(['/driver/dashboard']);
-        }
       },
       error: (error) => {
         this.loading = false;
-        const msg = error.status === 401
-          ? 'Invalid email or password'
-          : 'Login failed. Please try again.';
-        this.snackBar.open(msg, 'Close', { duration: 5000 });
+        // Handle different error types
+        if (error.status === 401) {
+          this.errorMessage = 'Invalid email or password';
+        } else if (error.status === 400) {
+          this.errorMessage = error.error?.error || 'Please provide email and password';
+        } else if (error.status === 0) {
+          this.errorMessage = 'Unable to connect to server. Please try again later.';
+        } else {
+          this.errorMessage = error.error?.error || 'Login failed. Please try again.';
+        }
+        this.snackBar.open(this.errorMessage, 'Close', { duration: 5000 });
       }
     });
   }

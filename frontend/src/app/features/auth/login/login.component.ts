@@ -101,8 +101,8 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     // Call auth service login
     this.authService.login({ email, password }).subscribe({
-      next: (user) => {
-        console.log('✅ Login successful:', user);
+      next: (response: any) => {
+        console.log('✅ Login successful:', response);
         this.loading = false;
         
         // Show success message
@@ -120,7 +120,7 @@ export class LoginComponent implements OnInit, OnDestroy {
           this.redirectBasedOnRole();
         }
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Login error:', error);
         this.loading = false;
         

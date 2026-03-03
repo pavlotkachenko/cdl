@@ -52,6 +52,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 function isPublicEndpoint(url: string): boolean {
   const publicEndpoints = [
     '/auth/login',
+    '/auth/signin',
     '/auth/register',
     '/auth/forgot-password',
     '/auth/reset-password',

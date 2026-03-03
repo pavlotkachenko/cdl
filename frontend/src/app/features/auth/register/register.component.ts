@@ -115,8 +115,8 @@ export class RegisterComponent implements OnInit {
       cdlNumber: cdlNumber || undefined,
       password
     }).subscribe({
-      next: (user) => {
-        console.log('✅ Registration successful:', user);
+      next: (response: any) => {
+        console.log('✅ Registration successful:', response);
         this.loading = false;
 
         // Show success message
@@ -130,7 +130,7 @@ export class RegisterComponent implements OnInit {
         // Redirect to dashboard
         this.router.navigate(['/driver/dashboard']);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Registration error:', error);
         this.loading = false;
 
