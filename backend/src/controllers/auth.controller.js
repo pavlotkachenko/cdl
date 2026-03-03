@@ -1,509 +1,224 @@
-// ============================================
-// AUTHENTICATION CONTROLLER
-// Handles user registration, login, logout, password reset
-// ============================================
+const jwt = require('jsonwebtoken');
+const { supabase, supabaseAnon } = require('../config/supabase');
 
-const { validationResult } = require('express-validator');
-const { supabase } = require('../config/supabase');
-const authService = require('../services/auth.service');
+// Use supabaseAnon for signInWithPassword so it doesn't pollute the admin
+// client's auth state (which would cause RLS to kick in on subsequent DB queries).
+const authClient = supabaseAnon;
 
-/**
- * Register new user
- * POST /api/auth/register
- */
+// Valid DB enum values for user_role
+const VALID_DB_ROLES = ['driver', 'attorney', 'admin', 'operator'];
+
+// Map a requested role to a valid DB role; keep the original in user_metadata
+function dbRole(role) {
+  if (VALID_DB_ROLES.includes(role)) return role;
+  // carrier → driver in the DB (they share the same dashboard)
+  if (role === 'carrier') return 'driver';
+  // paralegal → operator in the DB
+  if (role === 'paralegal') return 'operator';
+  return 'driver';
+}
+
+// POST /api/auth/signin
+exports.signIn = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const emailLower = email.toLowerCase();
+
+    // 1. Authenticate via Supabase Auth (use separate client to avoid polluting admin session)
+    const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
+      email: emailLower,
+      password: password,
+    });
+
+    if (authError || !authData.user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // 2. Fetch profile from users table (use db to bypass RLS)
+    let userProfile = null;
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', emailLower)
+      .maybeSingle();
+    userProfile = profile;
+
+    if (!userProfile) {
+      const { data: profileById } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authData.user.id)
+        .maybeSingle();
+      userProfile = profileById;
+    }
+
+    // The real role comes from user_metadata (carrier, paralegal etc.) or the DB
+    const role = authData.user.user_metadata?.role || userProfile?.role || 'driver';
+
+    // 3. Generate JWT
+    const token = jwt.sign(
+      {
+        userId: userProfile?.id || authData.user.id,
+        email: emailLower,
+        role: role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const userResponse = {
+      id: userProfile?.id || authData.user.id,
+      email: emailLower,
+      role: role,
+      name: userProfile?.full_name || authData.user.user_metadata?.full_name || '',
+      phone: userProfile?.phone || '',
+    };
+
+    res.json({ token, user: userResponse });
+  } catch (error) {
+    console.error('Sign-in error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+};
+
+// POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    // Validate input
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        errors: errors.array()
-      });
+    const { name, email, phone, cdlNumber, password, role } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    const { email, password, full_name, phone, role = 'driver' } = req.body;
+    const emailLower = email.toLowerCase();
+    const requestedRole = role === 'carrier' ? 'carrier' : 'driver';
+    const profileRole = dbRole(requestedRole); // safe for the DB enum
 
-    // Validate password strength
-    const passwordValidation = authService.validatePasswordStrength(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'Weak Password',
-        errors: passwordValidation.errors
-      });
-    }
-
-    // Check if user already exists
+    // 1. Check if email already exists in users table
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
-
+      .eq('email', emailLower)
+      .maybeSingle();
     if (existingUser) {
-      return res.status(409).json({
-        error: 'User Exists',
-        message: 'User with this email already exists'
-      });
+      return res.status(409).json({ error: 'Email already exists' });
     }
 
-    // Hash password
-    const hashedPassword = await authService.hashPassword(password);
+    // 2. Create Supabase Auth user
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: emailLower,
+      password: password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: name,
+        role: requestedRole, // keep the real role (carrier, driver, etc.)
+      },
+    });
 
-    // Create user
-    const { data: newUser, error: createError } = await supabase
+    if (authError) {
+      if (authError.message?.includes('already been registered') || authError.status === 422) {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
+      console.error('Supabase Auth error:', authError);
+      return res.status(500).json({ error: 'Registration failed' });
+    }
+
+    // 3. Create profile row (use db to bypass RLS)
+    const { data: newProfile, error: profileError } = await supabase
       .from('users')
       .insert({
-        email: email.toLowerCase(),
-        password_hash: hashedPassword,
-        full_name,
-        phone,
-        role,
-        is_active: true,
-        email_verified: false
+        email: emailLower,
+        full_name: name,
+        phone: phone || null,
+        role: profileRole,
+        auth_user_id: authData.user.id,
       })
       .select()
       .single();
 
-    if (createError) {
-      console.error('User creation error:', createError);
-      return res.status(500).json({
-        error: 'Registration Failed',
-        message: 'Failed to create user account'
-      });
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return res.status(500).json({ error: 'Registration failed' });
     }
 
-    // Generate email verification token
-    const verificationToken = authService.generateEmailVerificationToken();
-    await authService.storeEmailVerificationToken(newUser.id, verificationToken);
-
-    // TODO: Send verification email
-    // await emailService.sendVerificationEmail(email, verificationToken);
-
-    // Generate tokens
-    const accessToken = authService.generateAccessToken(newUser.id, newUser.role, newUser.email);
-    const { token: refreshToken, tokenId } = authService.generateRefreshToken(newUser.id);
-
-    // Store refresh token
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    await authService.storeRefreshToken(newUser.id, tokenId, expiresAt);
-
-    // Remove sensitive data
-    delete newUser.password_hash;
+    // 4. Generate JWT — use the *requested* role, not the DB role
+    const token = jwt.sign(
+      { userId: newProfile.id, email: emailLower, role: requestedRole },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     res.status(201).json({
-      message: 'User registered successfully. Please verify your email.',
-      user: newUser,
-      tokens: {
-        accessToken,
-        refreshToken
-      }
+      token,
+      user: {
+        id: newProfile.id,
+        email: emailLower,
+        role: requestedRole,
+        name: newProfile.full_name,
+        phone: newProfile.phone || '',
+      },
     });
-
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Registration failed'
-    });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
   }
 };
 
-/**
- * Login user
- * POST /api/auth/login
- */
-exports.login = async (req, res) => {
-  try {
-    // Validate input
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        errors: errors.array()
-      });
-    }
-
-    const { email, password } = req.body;
-
-    // Get user from database
-    const { data: user, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    if (fetchError || !user) {
-      return res.status(401).json({
-        error: 'Invalid Credentials',
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Check if user is active
-    if (!user.is_active) {
-      return res.status(403).json({
-        error: 'Account Inactive',
-        message: 'Your account has been deactivated. Please contact support.'
-      });
-    }
-
-    // Verify password
-    const isPasswordValid = await authService.comparePassword(password, user.password_hash);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Invalid Credentials',
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Update last login
-    await supabase
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', user.id);
-
-    // Generate tokens
-    const accessToken = authService.generateAccessToken(user.id, user.role, user.email);
-    const { token: refreshToken, tokenId } = authService.generateRefreshToken(user.id);
-
-    // Store refresh token
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    await authService.storeRefreshToken(user.id, tokenId, expiresAt);
-
-    // Remove sensitive data
-    delete user.password_hash;
-
-    res.json({
-      message: 'Login successful',
-      user,
-      tokens: {
-        accessToken,
-        refreshToken
-      }
-    });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Login failed'
-    });
-  }
-};
-
-/**
- * Logout user
- * POST /api/auth/logout
- */
-exports.logout = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Refresh token required'
-      });
-    }
-
-    // Verify and decode refresh token
-    try {
-      const decoded = authService.verifyRefreshToken(refreshToken);
-      await authService.invalidateRefreshToken(decoded.id, decoded.tokenId);
-    } catch (error) {
-      // Token might be invalid, but we still return success
-      console.warn('Logout with invalid token:', error.message);
-    }
-
-    res.json({
-      message: 'Logout successful'
-    });
-
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Logout failed'
-    });
-  }
-};
-
-/**
- * Refresh access token
- * POST /api/auth/refresh-token
- */
-exports.refreshToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Refresh token required'
-      });
-    }
-
-    // Verify refresh token
-    let decoded;
-    try {
-      decoded = authService.verifyRefreshToken(refreshToken);
-    } catch (error) {
-      return res.status(401).json({
-        error: 'Invalid Token',
-        message: 'Invalid or expired refresh token'
-      });
-    }
-
-    // Verify token exists in database
-    const isValid = await authService.verifyRefreshTokenInDb(decoded.id, decoded.tokenId);
-    if (!isValid) {
-      return res.status(401).json({
-        error: 'Invalid Token',
-        message: 'Refresh token not found or expired'
-      });
-    }
-
-    // Get user
-    const { data: user, error: fetchError } = await supabase
-      .from('users')
-      .select('id, email, role, is_active')
-      .eq('id', decoded.id)
-      .single();
-
-    if (fetchError || !user || !user.is_active) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'User not found or inactive'
-      });
-    }
-
-    // Generate new access token
-    const newAccessToken = authService.generateAccessToken(user.id, user.role, user.email);
-
-    res.json({
-      message: 'Token refreshed successfully',
-      accessToken: newAccessToken
-    });
-
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Token refresh failed'
-    });
-  }
-};
-
-/**
- * Forgot password - Send reset email
- * POST /api/auth/forgot-password
- */
+// POST /api/auth/forgot-password
 exports.forgotPassword = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        errors: errors.array()
-      });
-    }
-
     const { email } = req.body;
-
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, email, full_name')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    // Always return success even if user not found (security best practice)
-    if (!user) {
-      return res.json({
-        message: 'If an account with that email exists, a password reset link has been sent.'
-      });
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
     }
 
-    // Generate reset token
-    const resetToken = authService.generateResetToken();
-    await authService.storeResetToken(user.id, resetToken);
-
-    // TODO: Send reset email
-    // await emailService.sendPasswordResetEmail(user.email, user.full_name, resetToken);
-
-    console.log(`Password reset token for ${email}: ${resetToken}`); // For development
-
-    res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.'
+    await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
+      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:4200'}/reset-password`,
     });
 
+    res.json({ message: 'If an account exists with that email, password reset instructions have been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Password reset request failed'
-    });
+    res.status(500).json({ error: 'Failed to process password reset request' });
   }
 };
 
-/**
- * Reset password with token
- * POST /api/auth/reset-password
- */
-exports.resetPassword = async (req, res) => {
+// POST /api/auth/refresh
+exports.refresh = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        errors: errors.array()
-      });
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' });
     }
 
-    const { token, newPassword } = req.body;
-
-    // Validate password strength
-    const passwordValidation = authService.validatePasswordStrength(newPassword);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'Weak Password',
-        errors: passwordValidation.errors
-      });
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (error || !data.session) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    // Verify reset token
-    let userId;
-    try {
-      userId = await authService.verifyResetToken(token);
-    } catch (error) {
-      return res.status(400).json({
-        error: 'Invalid Token',
-        message: error.message
-      });
-    }
-
-    // Hash new password
-    const hashedPassword = await authService.hashPassword(newPassword);
-
-    // Update password
-    const { error: updateError } = await supabase
+    const { data: profile } = await supabase
       .from('users')
-      .update({ password_hash: hashedPassword })
-      .eq('id', userId);
+      .select('id, role')
+      .eq('auth_user_id', data.user.id)
+      .maybeSingle();
 
-    if (updateError) {
-      console.error('Password update error:', updateError);
-      return res.status(500).json({
-        error: 'Update Failed',
-        message: 'Failed to update password'
-      });
-    }
+    const role = data.user.user_metadata?.role || profile?.role || 'driver';
 
-    // Mark token as used
-    await authService.markResetTokenAsUsed(token);
+    const accessToken = jwt.sign(
+      { userId: profile?.id || data.user.id, email: data.user.email, role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    // Invalidate all refresh tokens (logout from all devices)
-    await authService.invalidateAllRefreshTokens(userId);
-
-    res.json({
-      message: 'Password reset successful. Please login with your new password.'
-    });
-
+    res.json({ accessToken });
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Password reset failed'
-    });
+    console.error('Token refresh error:', error);
+    res.status(401).json({ error: 'Invalid or expired refresh token' });
   }
 };
-
-/**
- * Verify email with token
- * POST /api/auth/verify-email
- */
-exports.verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Verification token required'
-      });
-    }
-
-    // Verify token
-    let userId;
-    try {
-      userId = await authService.verifyEmailToken(token);
-    } catch (error) {
-      return res.status(400).json({
-        error: 'Invalid Token',
-        message: error.message
-      });
-    }
-
-    // Update user email_verified status
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ email_verified: true })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Email verification update error:', updateError);
-      return res.status(500).json({
-        error: 'Verification Failed',
-        message: 'Failed to verify email'
-      });
-    }
-
-    res.json({
-      message: 'Email verified successfully'
-    });
-
-  } catch (error) {
-    console.error('Verify email error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Email verification failed'
-    });
-  }
-};
-
-/**
- * Get current user profile
- * GET /api/auth/me
- */
-exports.getCurrentUser = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, full_name, phone, role, is_active, email_verified, created_at, last_login')
-      .eq('id', userId)
-      .single();
-
-    if (error || !user) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      user
-    });
-
-  } catch (error) {
-    console.error('Get current user error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to get user profile'
-    });
-  }
-};
-
-module.exports = exports;

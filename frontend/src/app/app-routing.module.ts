@@ -12,8 +12,11 @@ import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-
 
 // ← EXPORT the routes constant
 export const routes: Routes = [
-    // Public routes
-
+  // Public routes
+  {
+    path: '',
+    loadComponent: () => import('./landing-page/landing-page.component').then(m => m.LandingPageComponent)
+  },
   {
     path: 'login',
     component: LoginComponent
@@ -26,19 +29,23 @@ export const routes: Routes = [
     path: 'forgot-password',
     component: ForgotPasswordComponent
   },
+  {
+    path: 'signup/carrier',
+    loadComponent: () => import('./auth/carrier-signup/carrier-signup.component').then(m => m.CarrierSignupComponent)
+  },
+  {
+    path: 'signup/driver',
+    component: RegisterComponent
+  },
 
   // Protected routes
-  {
-    path: '',
-    loadChildren: () => import('./features/landing/landing.module').then(m => m.LandingModule)
-  },
   {
     path: 'driver',
     loadChildren: () => import('./features/driver/driver.module').then(m => m.DriverModule),
     //canActivate: [AuthGuard]
   },
   {
-    path: 'admin',  // ← ADD THIS
+    path: 'admin',
     loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule)
   },
   {
@@ -69,7 +76,7 @@ export const routes: Routes = [
     path: 'accessibility',
     redirectTo: 'driver/help', pathMatch: 'full'
   },
-    {
+  {
     path: '**',
     redirectTo: ''
   }

@@ -9,12 +9,10 @@ import { RegisterComponent } from './features/auth/register/register.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 
 export const routes: Routes = [
-  // Default redirect
+  // Landing page (public - no auth required)
   {
     path: '',
-    redirectTo: './features/admin/dashboard',
-    //redirectTo: '/login',
-    pathMatch: 'full'
+    loadChildren: () => import('./features/landing/landing.module').then(m => m.LandingModule)
   },
 
   // Auth routes (no guard)

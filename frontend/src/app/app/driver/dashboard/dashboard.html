@@ -1,0 +1,107 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>My Tickets</h1>
+    <button mat-icon-button class="notification-btn" aria-label="Notifications">
+      <mat-icon>notifications</mat-icon>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    <mat-spinner></mat-spinner>
+    <p>Loading your tickets...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>Unable to load tickets</p>
+    <button mat-raised-button color="primary" (click)="loadDashboard()">
+      Try Again
+    </button>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading && !error && dashboardData" class="dashboard-content">
+    
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-number">{{ dashboardData.summary.active }}</div>
+        <div class="summary-label">Active Tickets</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-number">{{ dashboardData.summary.upcomingCourts }}</div>
+        <div class="summary-label">Upcoming Courts</div>
+      </div>
+    </div>
+
+    <!-- Active Tickets -->
+    <div class="section">
+      <h2>Active Tickets</h2>
+      
+      <div *ngIf="dashboardData.activeTickets.length === 0" class="empty-state">
+        <mat-icon>check_circle</mat-icon>
+        <p>No active tickets. You're all clear!</p>
+      </div>
+
+      <div class="ticket-card" 
+           *ngFor="let ticket of dashboardData.activeTickets"
+           [class]="getColorClass(ticket.statusColor)"
+           [routerLink]="['/app/driver/ticket', ticket.id]"
+           role="button"
+           tabindex="0">
+        
+        <!-- Status Indicator -->
+        <div class="status-indicator" [class]="'indicator-' + ticket.statusColor"></div>
+        
+        <!-- Ticket Content -->
+        <div class="ticket-content">
+          <h3>{{ ticket.violation_type }}</h3>
+          <p class="status-text">{{ ticket.statusText }}</p>
+          
+          <div class="ticket-meta" *ngIf="ticket.court_date">
+            <mat-icon>event</mat-icon>
+            <span>Court: {{ formatDate(ticket.court_date) }}</span>
+          </div>
+          
+          <div class="ticket-meta" *ngIf="ticket.Attorney">
+            <mat-icon>person</mat-icon>
+            <span>Attorney: {{ getAttorneyName(ticket.Attorney) }}</span>
+          </div>
+        </div>
+        
+        <!-- Chevron -->
+        <mat-icon class="chevron">chevron_right</mat-icon>
+      </div>
+    </div>
+
+    <!-- Recently Resolved -->
+    <div class="section" *ngIf="dashboardData.resolvedTickets.length > 0">
+      <h2>Recently Resolved</h2>
+      
+      <div class="ticket-card resolved" 
+           *ngFor="let ticket of dashboardData.resolvedTickets"
+           [routerLink]="['/app/driver/ticket', ticket.id]"
+           role="button"
+           tabindex="0">
+        <div class="status-indicator indicator-green"></div>
+        <div class="ticket-content">
+          <h3>{{ ticket.violation_type }}</h3>
+          <p class="status-text">{{ ticket.statusText }} ✓</p>
+        </div>
+        <mat-icon class="chevron">chevron_right</mat-icon>
+      </div>
+    </div>
+
+    <!-- Submit New Ticket Button -->
+    <button mat-fab 
+            class="fab-button" 
+            [routerLink]="['/app/driver/submit-ticket']"
+            color="accent"
+            aria-label="Submit new ticket">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+</div>

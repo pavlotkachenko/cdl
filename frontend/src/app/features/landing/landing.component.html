@@ -18,22 +18,20 @@
       </div>
     </div>
 
-    <!-- Carousel Controls -->
-    <div class="carousel-controls">
-      <button mat-icon-button class="carousel-arrow carousel-arrow-prev" (click)="prevSlide()">
+    <!-- Carousel Navigation -->
+    <div class="carousel-nav">
+      <button class="carousel-arrow" (click)="prevSlide()">
         <mat-icon>chevron_left</mat-icon>
       </button>
-      <button mat-icon-button class="carousel-arrow carousel-arrow-next" (click)="nextSlide()">
+      <div class="carousel-pagination">
+        <span *ngFor="let slide of heroSlides; let i = index"
+              class="pagination-dot"
+              [class.active]="i === currentSlideIndex"
+              (click)="currentSlideIndex = i"></span>
+      </div>
+      <button class="carousel-arrow" (click)="nextSlide()">
         <mat-icon>chevron_right</mat-icon>
       </button>
-    </div>
-
-    <!-- Pagination Dots -->
-    <div class="carousel-pagination">
-      <span *ngFor="let slide of heroSlides; let i = index" 
-            class="pagination-dot"
-            [class.active]="i === currentSlideIndex"
-            (click)="currentSlideIndex = i"></span>
     </div>
 
     <!-- Fixed Content Overlay -->
@@ -56,49 +54,54 @@
 </section>
 
 <!-- Services Section -->
-<section id="services" class="services-section container">
-  <h2 class="section-title">Services for Drivers</h2>
-  
-  <div class="services-grid">
-    <mat-card *ngFor="let service of driverServices" class="service-card">
-      <mat-card-header>
-        <mat-icon mat-card-avatar class="service-icon">{{ service.icon }}</mat-icon>
-        <mat-card-title>{{ service.title }}</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <p>{{ service.description }}</p>
-      </mat-card-content>
-    </mat-card>
+<section id="services" class="services-section">
+  <div class="container">
+    <h2 class="section-title services-title">Services for {{ currentServiceView === 'drivers' ? 'Drivers' : 'Carriers' }}</h2>
+
+    <div class="service-switcher">
+      <button class="switcher-option" [class.active]="currentServiceView === 'drivers'" (click)="currentServiceView = 'drivers'">Drivers</button>
+      <button class="switcher-option" [class.active]="currentServiceView === 'carriers'" (click)="currentServiceView = 'carriers'">Carriers</button>
+    </div>
+
+    <div class="services-grid">
+      <div *ngFor="let service of activeServices" class="service-card">
+        <img [src]="'assets/icons/' + service.icon + '.svg'" [alt]="service.title" class="service-icon">
+        <h3 class="service-title">{{ service.title }}</h3>
+        <p class="service-description">{{ service.description }}</p>
+      </div>
+    </div>
   </div>
 </section>
 
 <!-- How We Work Section -->
 <section class="how-we-work-section">
-  <div class="container">
-    <div class="work-grid">
-      <!-- Left Side - Process Steps -->
-      <div class="work-steps">
-        <h2 class="section-title">How we work</h2>
+  <div class="work-grid">
+    <!-- Left Side - Process Steps -->
+    <div class="work-steps">
+      <div class="work-steps-inner">
+        <h2 class="section-title work-title">How we work</h2>
         <div class="steps-container">
-          <div *ngFor="let step of workSteps; let i = index; let last = last" 
+          <div *ngFor="let step of activeWorkSteps; let i = index; let last = last"
                class="step-item">
             <div class="step-indicator">
               <div class="step-circle"></div>
               <div *ngIf="!last" class="step-line"></div>
             </div>
             <div class="step-content">
-              <mat-icon class="step-icon">{{ step.icon }}</mat-icon>
-              <div class="step-card">
+              <div class="step-header">
+                <img [src]="'assets/icons/' + step.svgIcon + '.svg'" [alt]="step.title" class="step-icon">
                 <h3>{{ step.title }}</h3>
-                <p>{{ step.description }}</p>
               </div>
+              <p>{{ step.description }}</p>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Right Side - CTA -->
-      <div class="work-cta">
+    <!-- Right Side - CTA with photo -->
+    <div class="work-cta">
+      <div class="work-cta-content">
         <h3>Submit your first request now</h3>
         <p class="cta-text">
           It's 100% free. No credit card<br>
@@ -108,6 +111,7 @@
           Submit
         </button>
       </div>
+      <img src="assets/images/girl-1.png" alt="Safety Expert" class="cta-image">
     </div>
   </div>
 </section>
@@ -115,27 +119,27 @@
 <!-- Personal Safety Expert / Benefits Section -->
 <section class="benefits-section">
   <div class="container">
-    <h2 class="section-title">Personal Safety Expert</h2>
-    
+    <h2 class="section-title benefits-title">Personal Safety Expert</h2>
+
     <div class="benefits-grid">
-      <!-- Left Side - Image (background via CSS or <img>) -->
+      <!-- Left Side - Image -->
       <div class="benefits-image">
-        <!-- If you have a specific image, use: <img src="assets/images/benefits/benefits-expert.jpg" alt="Expert"> -->
+        <img src="assets/images/benefits/benefits-expert.jpg" alt="Safety Expert">
       </div>
 
       <!-- Right Side - Benefits List -->
       <div class="benefits-content">
         <h3>Anywhere in US and Canada</h3>
         <p class="benefits-intro">
-          We work with professional lawyers in all 50 states and have over 20 years 
+          We work with professional lawyers in all 50 states and have over 20 years
           experience in trucking business working and consulting safety
         </p>
-        
+
         <h4>Other benefits in working with us:</h4>
-        
+
         <div class="benefits-cards">
           <div *ngFor="let benefit of benefits" class="benefit-card">
-            <mat-icon>{{ benefit.icon }}</mat-icon>
+            <img [src]="'assets/icons/' + benefit.svgIcon + '.svg'" [alt]="benefit.title" class="benefit-icon">
             <p>{{ benefit.title }}</p>
           </div>
         </div>
@@ -147,55 +151,39 @@
 <!-- Testimonials Section -->
 <section class="testimonials-section">
   <div class="container">
-    <h2 class="section-title">Satisfied Clients</h2>
-    
-    <div class="testimonials-carousel">
-      <button mat-icon-button class="testimonial-arrow testimonial-arrow-prev" 
-              (click)="prevTestimonial()">
-        <mat-icon>chevron_left</mat-icon>
-      </button>
+    <h2 class="section-title testimonials-title">Satisfied Clients</h2>
 
-      <div class="testimonials-container">
-        <div class="testimonials-track" 
-             [style.transform]="'translateX(-' + (currentTestimonialIndex * 100) + '%)'">
-          <div *ngFor="let testimonial of testimonials" class="testimonial-card">
-            <mat-card>
-              <mat-card-content>
-                <p class="testimonial-text">"{{ testimonial.text }}"</p>
-              </mat-card-content>
-              <mat-card-footer class="testimonial-author">
-                <div class="author-avatar">
-                  @if (testimonial.image) {
-                    <img 
-                      [src]="testimonial.image" 
-                      alt="{{ testimonial.name }}" 
-                      (error)="onImageError($event)"
-                    />
-                  } @else {
-                    <span class="initials">{{ getInitials(testimonial.name) }}</span>
-                  }
-                </div>
-                <div class="author-info">
-                  <p class="author-name">{{ testimonial.name }}</p>
-                </div>
-              </mat-card-footer>
-            </mat-card>
+    <div class="testimonials-grid">
+      <div *ngFor="let testimonial of visibleTestimonials" class="testimonial-card">
+        <div class="testimonial-bubble">
+          <p>{{ testimonial.text }}</p>
+        </div>
+        <div class="testimonial-author">
+          <div class="author-avatar">
+            @if (testimonial.image) {
+              <img [src]="testimonial.image" [alt]="testimonial.name" (error)="onImageError($event)">
+            } @else {
+              <span class="initials">{{ getInitials(testimonial.name) }}</span>
+            }
           </div>
+          <p class="author-name">{{ testimonial.name }}</p>
         </div>
       </div>
-
-      <button mat-icon-button class="testimonial-arrow testimonial-arrow-next" 
-              (click)="nextTestimonial()">
-        <mat-icon>chevron_right</mat-icon>
-      </button>
     </div>
 
-    <!-- Testimonial Pagination -->
-    <div class="testimonial-pagination">
-      <span *ngFor="let testimonial of testimonials; let i = index" 
-            class="pagination-dot"
-            [class.active]="i === currentTestimonialIndex"
-            (click)="currentTestimonialIndex = i"></span>
+    <div class="testimonials-nav">
+      <button class="testimonial-arrow" (click)="prevTestimonial()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <div class="testimonial-pagination">
+        <span *ngFor="let page of [].constructor(testimonialPageCount); let i = index"
+              class="pagination-dot"
+              [class.active]="i === currentTestimonialIndex"
+              (click)="currentTestimonialIndex = i"></span>
+      </div>
+      <button class="testimonial-arrow" (click)="nextTestimonial()">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
     </div>
   </div>
 </section>

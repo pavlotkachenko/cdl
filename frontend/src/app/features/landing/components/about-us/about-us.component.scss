@@ -1,0 +1,291 @@
+$primary-color: #1dad8c;
+$text-dark: #090000;
+$text-gray: #4d4949;
+$bg-light: #f5f5f5;
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+// Hero Section
+.about-hero {
+  background-image: linear-gradient(94deg, rgba(0, 0, 0, 0.4) 0%, rgba(2, 0, 0, 0) 100%),
+    url('/assets/images/about-us/hero.jpg');
+  background-size: cover;
+  background-position: center;
+  padding: 32px 0 200px;
+  color: #fff;
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 12px;
+
+    a {
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    span {
+      color: #fff;
+    }
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 20px 0 72px 0;
+  }
+
+  .hero-stat {
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0;
+    color: #fff;
+  }
+
+  .hero-text {
+    font-size: 1.35rem;
+    font-weight: 400;
+    margin-top: 10px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+// Vision Section
+.vision-section {
+  padding: 80px 0;
+
+  .vision-grid {
+    display: flex;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .vision-item {
+    flex: 1;
+
+    &:first-child {
+      border-right: 1px solid #ccc;
+      padding-right: 60px;
+    }
+
+    &:last-child {
+      padding-left: 60px;
+    }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 20px 0;
+    }
+
+    p {
+      max-width: 505px;
+      color: $text-gray;
+      line-height: 1.7;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+  }
+}
+
+// Pillars Section
+.pillars-section {
+  background: $bg-light;
+  padding: 60px 0 0;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 48px 0;
+  }
+
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    align-items: stretch;
+  }
+
+  .pillar-card {
+    background: transparent;
+    border-radius: 12px;
+    padding: 22px 24px;
+
+    .pillar-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      color: $text-gray;
+      line-height: 1.5;
+      font-size: 0.825rem;
+      margin: 0;
+    }
+  }
+}
+
+// About Detail Section
+.about-detail-section {
+  background: $bg-light;
+
+  .about-detail-grid {
+    display: flex;
+    margin-top: 80px;
+  }
+
+  .about-text {
+    flex: 1;
+    padding: 0 0 100px 80px;
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: $text-dark;
+      margin: 0 0 28px 0;
+    }
+
+    p {
+      color: $text-gray;
+      line-height: 1.7;
+      font-size: 0.95rem;
+      margin: 0 0 20px 0;
+      width: 80%;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .about-image {
+    flex: 1;
+    background-image: url('/assets/images/about-us/about.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    min-height: 500px;
+  }
+}
+
+// Partners Section
+.partners-section {
+  padding: 80px 0;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 40px 0;
+  }
+
+  .partners-grid {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    align-items: center;
+
+    img {
+      height: 100px;
+      width: auto;
+      object-fit: contain;
+      filter: grayscale(30%);
+      transition: filter 0.3s ease;
+
+      &:hover {
+        filter: grayscale(0%);
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 1024px) {
+  .about-hero {
+    padding-bottom: 160px;
+
+    .hero-title {
+      margin: 25px 0 40px 0;
+    }
+  }
+
+  .vision-section .vision-grid {
+    flex-direction: column;
+    gap: 40px;
+
+    .vision-item:first-child {
+      border-right: none;
+      border-bottom: 1px solid #ccc;
+      padding-right: 0;
+      padding-bottom: 40px;
+    }
+
+    .vision-item:last-child {
+      padding-left: 0;
+    }
+  }
+
+  .pillars-section .pillars-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-detail-section {
+    .about-detail-grid {
+      flex-direction: column;
+    }
+
+    .about-text {
+      padding: 0 24px 40px;
+
+      p {
+        width: 100%;
+      }
+    }
+
+    .about-image {
+      min-height: 400px;
+    }
+  }
+
+  .partners-section .partners-grid {
+    flex-wrap: wrap;
+    gap: 24px;
+
+    img {
+      height: 80px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .about-hero {
+    .hero-stat {
+      font-size: 2.5rem;
+    }
+
+    .hero-text {
+      font-size: 1rem;
+    }
+  }
+}

@@ -1,11 +1,30 @@
 <footer class="landing-footer">
   <div class="footer-container">
-    <nav class="footer-nav">
-      <ul>
-        <li><a (click)="scrollToSection('services')" class="footer-link">Services</a></li>
-        <li><a (click)="scrollToSection('contact')" class="footer-link">Contact us</a></li>
-      </ul>
-    </nav>
-    <p class="copyright">Copyright {{ currentYear }} CDL Ticket Management. All rights reserved</p>
+    <div class="footer-links">
+      <div class="footer-column">
+        <a class="footer-link" (click)="scrollToSection('contact')">Help Center</a>
+        <a class="footer-link" (click)="scrollToSection('contact')">Contact Us</a>
+        <a class="footer-link" href="tel:1-800-CDL-HELP">1-800-CDL-HELP</a>
+        <a class="footer-link" (click)="scrollToSection('contact')">Email Support</a>
+      </div>
+      <div class="footer-column">
+        <a class="footer-link" href="javascript:void(0)">Privacy Policy</a>
+        <a class="footer-link" href="javascript:void(0)">Terms of Service</a>
+        <a class="footer-link" href="javascript:void(0)">Cookie Policy</a>
+        <a class="footer-link" href="javascript:void(0)">Accessibility</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">&copy; {{ currentYear }} CDL Ticket Management. All rights reserved.</p>
+      <nav class="footer-bottom-nav">
+        <a class="bottom-link" href="javascript:void(0)">Privacy</a>
+        <span class="dot-separator"></span>
+        <a class="bottom-link" href="javascript:void(0)">Terms</a>
+        <span class="dot-separator"></span>
+        <a class="bottom-link" (click)="scrollToSection('contact')">Contact</a>
+        <span class="dot-separator"></span>
+        <a class="bottom-link" (click)="scrollToSection('contact')">Help</a>
+      </nav>
+    </div>
   </div>
 </footer>

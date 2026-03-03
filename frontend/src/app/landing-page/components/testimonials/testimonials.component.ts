@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 
 interface Testimonial {
   name: string;
@@ -10,6 +12,8 @@ interface Testimonial {
 
 @Component({
   selector: 'app-testimonials',
+  standalone: true,
+  imports: [CommonModule, MatIconModule],
   templateUrl: './testimonials.component.html',
   styleUrls: ['./testimonials.component.scss']
 })

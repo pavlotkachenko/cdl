@@ -1,17 +1,17 @@
 <header class="landing-header">
   <div class="header-container">
     <div class="logo" routerLink="/">
-      <span class="logo-text">CDL Ticket Management</span>
+      <img src="assets/icons/logo.svg" alt="CDL Advisor" class="logo-img">
     </div>
     <nav class="main-nav">
       <ul>
         <li><a (click)="scrollToSection('services')" class="nav-link">Services</a></li>
-        <li><a (click)="scrollToSection('contact')" class="nav-link contact-link">Contact us</a></li>
-          <app-notification-bell></app-notification-bell>
+        <li><a routerLink="/plans" routerLinkActive="active" class="nav-link">Plans</a></li>
+        <li><a routerLink="/about-us" routerLinkActive="active" class="nav-link">About us</a></li>
+        <li><a routerLink="/contact-us" routerLinkActive="active" class="nav-link">Contact us</a></li>
         <li>
-        
           <button mat-stroked-button class="sign-in-button" (click)="navigateToSignIn()">
-            <mat-icon>person</mat-icon>
+            <mat-icon>person_outline</mat-icon>
             <span>Sign in</span>
           </button>
         </li>

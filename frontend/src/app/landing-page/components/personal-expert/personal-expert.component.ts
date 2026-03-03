@@ -1,7 +1,10 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-personal-expert',
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './personal-expert.component.html',
   styleUrls: ['./personal-expert.component.scss']
 })

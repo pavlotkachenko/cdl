@@ -1,0 +1,86 @@
+<app-landing-header></app-landing-header>
+
+<!-- Hero Section -->
+<section class="about-hero">
+  <div class="container">
+    <div class="breadcrumb">
+      <a routerLink="/">Main</a> / <span>About us</span>
+    </div>
+    <h1 class="hero-title">About us</h1>
+    <h2 class="hero-stat">
+      100% <br>
+      success rate
+    </h2>
+    <p class="hero-text">is what makes us different</p>
+  </div>
+</section>
+
+<!-- Mission & Vision -->
+<section class="vision-section">
+  <div class="container">
+    <div class="vision-grid">
+      <div class="vision-item">
+        <h2>Our mission</h2>
+        <p>
+          Excellence is the key word that defines our company. Our customers deserve the support and understanding. Our
+          mission is to be the right support in taking the right decisions toward success.
+        </p>
+      </div>
+      <div class="vision-item">
+        <h2>Our vision</h2>
+        <p>
+          Become one of the most reliant consulting companies in the trucking industry being defined by excellence and
+          customer satisfaction.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pillars Section -->
+<section class="pillars-section">
+  <div class="container">
+    <h2>3 pillars of our success</h2>
+    <div class="pillars-grid">
+      <div *ngFor="let pillar of pillars" class="pillar-card">
+        <img [src]="'assets/icons/' + pillar.icon + '.svg'" [alt]="pillar.title" class="pillar-icon">
+        <h3>{{ pillar.title }}</h3>
+        <p>{{ pillar.content }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- About Section -->
+<section class="about-detail-section">
+  <div class="about-detail-grid">
+    <div class="about-text">
+      <h2>About</h2>
+      <p>
+        CDL Advisor was established in 1992. There are many years of persistent work and satisfied customers at the
+        foundation of our company.
+      </p>
+      <p>
+        Our love and dedication to our clients helped us to achieve the greatest results. Our dream was to be an
+        industry expertise in traffic law and safety consulting.
+      </p>
+      <p>
+        The constant growth of network of lawyers, safety specialists and trucking business experts made our company
+        successful. Our customers satisfaction remains the main motivational force for our company.
+      </p>
+    </div>
+    <div class="about-image"></div>
+  </div>
+</section>
+
+<!-- Partners Section -->
+<section class="partners-section">
+  <div class="container">
+    <h2>Our partners</h2>
+    <div class="partners-grid">
+      <img *ngFor="let partner of partners" [src]="'assets/images/partners/' + partner + '.png'" [alt]="partner">
+    </div>
+  </div>
+</section>
+
+<app-landing-footer></app-landing-footer>
