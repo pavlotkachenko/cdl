@@ -197,45 +197,73 @@
     <div class="contact-grid">
       <!-- Left Side - Form -->
       <div class="contact-form">
-        <p class="form-info">
-          Fields marked with star (*) are required. The more descriptive you'll be the faster 
-          and more accurate answer you will get. Attach all the documents you think might be useful.
-        </p>
-        
-        <form class="submit-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Name *</mat-label>
-            <input matInput placeholder="Your name" required>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>E-mail *</mat-label>
-            <input matInput type="email" placeholder="info@gmail.com" required>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Phone *</mat-label>
-            <input matInput type="tel" placeholder="+1 (000) 000-00-00" required>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Message *</mat-label>
-            <textarea matInput rows="5" placeholder="Describe your request..." required></textarea>
-          </mat-form-field>
-
-          <div class="file-upload">
-            <label>Upload File *</label>
-            <div class="upload-zone">
-              <mat-icon>cloud_upload</mat-icon>
-              <p>Drag and Drop or <span class="upload-link">Choose file</span> to upload</p>
-              <input type="file" multiple hidden #fileInput>
-            </div>
-          </div>
-
-          <button mat-flat-button color="accent" type="submit" class="submit-form-button">
-            Submit
+        <!-- Success State -->
+        <div *ngIf="submitSuccess" class="submit-success">
+          <mat-icon class="success-icon">check_circle</mat-icon>
+          <h3>Request Submitted!</h3>
+          <p>We will review your request and contact you within 1 hour.</p>
+          <button mat-flat-button color="accent" (click)="submitSuccess = false">
+            Submit Another Request
           </button>
-        </form>
+        </div>
+
+        <!-- Form -->
+        <div *ngIf="!submitSuccess">
+          <p class="form-info">
+            Fields marked with star (*) are required. The more descriptive you'll be the faster
+            and more accurate answer you will get. Attach all the documents you think might be useful.
+          </p>
+
+          <form class="submit-form" [formGroup]="submitForm" (ngSubmit)="onSubmitRequest()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Name *</mat-label>
+              <input matInput placeholder="Your name" formControlName="customer_name">
+              <mat-error *ngIf="submitForm.get('customer_name')?.hasError('required')">Name is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>E-mail *</mat-label>
+              <input matInput type="email" placeholder="info&#64;gmail.com" formControlName="email">
+              <mat-error *ngIf="submitForm.get('email')?.hasError('required')">Email is required</mat-error>
+              <mat-error *ngIf="submitForm.get('email')?.hasError('email')">Enter a valid email</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Phone *</mat-label>
+              <input matInput type="tel" placeholder="+1 (000) 000-00-00" formControlName="driver_phone">
+              <mat-error *ngIf="submitForm.get('driver_phone')?.hasError('required')">Phone is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Describe your request *</mat-label>
+              <textarea matInput rows="5" placeholder="Describe your request..." formControlName="violation_details"></textarea>
+              <mat-error *ngIf="submitForm.get('violation_details')?.hasError('required')">Description is required</mat-error>
+            </mat-form-field>
+
+            <div class="file-upload">
+              <label>Upload File</label>
+              <div class="upload-zone" (click)="triggerFileInput()">
+                <mat-icon>cloud_upload</mat-icon>
+                <p>Drag and Drop or <span class="upload-link">Choose file</span> to upload</p>
+                <input type="file" multiple hidden #fileInput (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
+              </div>
+              <div *ngIf="uploadedFiles.length > 0" class="uploaded-files">
+                <div *ngFor="let file of uploadedFiles; let i = index" class="uploaded-file">
+                  <mat-icon>insert_drive_file</mat-icon>
+                  <span>{{ file.name }} ({{ getFileSize(file.size) }})</span>
+                  <button mat-icon-button type="button" (click)="removeFile(i)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button mat-flat-button color="accent" type="submit" class="submit-form-button" [disabled]="submitting">
+              <span *ngIf="!submitting">Submit</span>
+              <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
+            </button>
+          </form>
+        </div>
       </div>
 
       <!-- Right Side - Contact Info -->
@@ -272,4 +300,4 @@
 </section>
 
 <!-- Footer (now imported as standalone component) -->
-<app-landing-footer></app-landing-footer>s
+<app-landing-footer></app-landing-footer>

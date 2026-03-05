@@ -6,7 +6,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate, authorize, canAccessCase } = require('../middleware/auth');
+const { authenticate, authorize, canAccessCase, optionalAuth } = require('../middleware/auth');
 const caseController = require('../controllers/case.controller');
 const { body, param, query } = require('express-validator');
 
@@ -19,21 +19,28 @@ const createCaseValidation = [
   body('customer_name').notEmpty().withMessage('Customer name is required'),
   body('driver_phone').optional().isMobilePhone(),
   body('customer_type').isIn([
-    'subscriber_driver', 
-    'subscriber_carrier', 
-    'one_time_driver', 
+    'subscriber_driver',
+    'subscriber_carrier',
+    'one_time_driver',
     'one_time_carrier'
   ]),
-  body('state').isLength({ min: 2, max: 2 }).withMessage('State must be 2 letters'),
-  body('violation_date').isISO8601().withMessage('Valid date required'),
-  body('violation_type').isIn([
-    'speeding', 
-    'parking', 
-    'traffic_signal', 
-    'reckless_driving', 
-    'dui', 
+  body('state').optional().isLength({ min: 2, max: 2 }).withMessage('State must be 2 letters'),
+  body('violation_date').optional().isISO8601().withMessage('Valid date required'),
+  body('violation_type').optional().isIn([
+    'speeding',
+    'parking',
+    'traffic_signal',
+    'reckless_driving',
+    'dui',
     'other'
   ])
+];
+
+const publicSubmitValidation = [
+  body('customer_name').notEmpty().withMessage('Customer name is required'),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('driver_phone').notEmpty().withMessage('Phone is required'),
+  body('violation_details').notEmpty().withMessage('Description is required')
 ];
 
 const updateCaseValidation = [
@@ -45,6 +52,16 @@ const updateCaseValidation = [
 // ============================================
 // ROUTES
 // ============================================
+
+/**
+ * POST /api/cases/public-submit
+ * Submit a request from the landing page (no login required)
+ */
+router.post(
+  '/public-submit',
+  publicSubmitValidation,
+  caseController.publicSubmit
+);
 
 /**
  * POST /api/cases

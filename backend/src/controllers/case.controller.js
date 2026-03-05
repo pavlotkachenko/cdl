@@ -8,6 +8,47 @@ const { supabase, supabaseAdmin, executeQuery } = require('../config/supabase');
 const { validationResult } = require('express-validator');
 
 /**
+ * PUBLIC SUBMIT
+ * Landing page submission - no authentication required
+ */
+exports.publicSubmit = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { customer_name, email, driver_phone, violation_details } = req.body;
+
+    // Use the default supabase client (service role if available)
+    const db = supabaseAdmin || supabase;
+
+    const { data: newCase, error } = await db
+      .from('cases')
+      .insert([{
+        customer_name,
+        driver_phone,
+        customer_type: 'one_time_driver',
+        violation_details: `${violation_details}\n\nContact email: ${email}`,
+        who_sent: 'website',
+        status: 'new'
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      message: 'Request submitted successfully',
+      case: { id: newCase.id }
+    });
+  } catch (error) {
+    console.error('Public submit error:', error);
+    res.status(500).json({ error: 'Failed to submit request' });
+  }
+};
+
+/**
  * CREATE NEW CASE
  * When a driver submits a ticket
  */

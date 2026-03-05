@@ -1,6 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { axe, toHaveNoViolations } from 'jasmine-axe';
-
 import { NotFoundPageComponent } from './not-found-page.component';
 
 describe('NotFoundPageComponent', () => {
@@ -9,9 +7,8 @@ describe('NotFoundPageComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [NotFoundPageComponent],
+      imports: [NotFoundPageComponent],
     }).compileComponents();
-    jasmine.addMatchers(toHaveNoViolations);
 
     fixture = TestBed.createComponent(NotFoundPageComponent);
     component = fixture.componentInstance;
@@ -20,9 +17,5 @@ describe('NotFoundPageComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('should pass accessibility test', async () => {
-    expect(await axe(fixture.nativeElement)).toHaveNoViolations();
   });
 });

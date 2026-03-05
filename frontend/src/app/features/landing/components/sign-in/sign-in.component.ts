@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -50,7 +50,8 @@ export class SignInPageComponent implements OnInit {
     private fb: FormBuilder,
     private router: Router,
     private authService: AuthService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -110,7 +111,6 @@ export class SignInPageComponent implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        // Handle different error types
         if (error.status === 401) {
           this.errorMessage = 'Invalid email or password';
         } else if (error.status === 400) {
@@ -120,6 +120,7 @@ export class SignInPageComponent implements OnInit {
         } else {
           this.errorMessage = error.error?.error || 'Login failed. Please try again.';
         }
+        this.cdr.detectChanges();
         this.snackBar.open(this.errorMessage, 'Close', { duration: 5000 });
       }
     });
@@ -133,6 +134,71 @@ export class SignInPageComponent implements OnInit {
       });
       return;
     }
-    this.snackBar.open('Registration coming soon!', 'Close', { duration: 3000 });
+
+    // Check passwords match
+    const values = form.value;
+    if (values.password !== values.passwordConfirm) {
+      this.snackBar.open('Passwords do not match', 'Close', { duration: 5000 });
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    if (this.isDrivers) {
+      const name = [values.firstName, values.lastName].filter(Boolean).join(' ') || values.email;
+      this.authService.register({
+        name,
+        email: values.email,
+        password: values.password,
+        role: 'driver'
+      }).subscribe({
+        next: () => {
+          this.loading = false;
+          this.snackBar.open('Registration successful! Welcome to CDL Ticket Management.', 'Close', { duration: 5000 });
+          this.router.navigate(['/driver/dashboard']);
+        },
+        error: (error) => {
+          this.loading = false;
+          if (error.status === 409) {
+            this.errorMessage = 'Email already exists. Please use a different email.';
+          } else if (error.status === 400) {
+            this.errorMessage = error.error?.message || 'Invalid registration data.';
+          } else if (error.status === 0) {
+            this.errorMessage = 'Unable to connect to server. Please try again later.';
+          } else {
+            this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
+          }
+          this.snackBar.open(this.errorMessage, 'Close', { duration: 5000 });
+        }
+      });
+    } else {
+      this.authService.register({
+        name: values.company,
+        email: values.email,
+        phone: values.phone || undefined,
+        password: values.password,
+        role: 'carrier'
+      }).subscribe({
+        next: () => {
+          this.loading = false;
+          this.snackBar.open('Registration successful!', 'Close', { duration: 5000 });
+          this.router.navigate(['/driver/dashboard']);
+        },
+        error: (error) => {
+          this.loading = false;
+          if (error.status === 409) {
+            this.errorMessage = 'Email already exists. Please use a different email.';
+          } else if (error.status === 400) {
+            this.errorMessage = error.error?.message || 'Invalid registration data.';
+          } else if (error.status === 0) {
+            this.errorMessage = 'Unable to connect to server. Please try again later.';
+          } else {
+            this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
+          }
+          this.snackBar.open(this.errorMessage, 'Close', { duration: 5000 });
+        }
+      });
+    }
   }
 }

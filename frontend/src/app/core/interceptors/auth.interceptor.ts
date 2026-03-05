@@ -58,7 +58,8 @@ function isPublicEndpoint(url: string): boolean {
     '/auth/reset-password',
     '/auth/refresh',
     '/auth/verify-email',
-    '/public/'
+    '/public/',
+    '/cases/public-submit'
   ];
 
   return publicEndpoints.some(endpoint => url.includes(endpoint));

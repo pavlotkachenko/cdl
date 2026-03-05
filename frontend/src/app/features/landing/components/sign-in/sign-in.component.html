@@ -79,6 +79,12 @@
         </div>
       </div>
 
+      <!-- Signup Error Message -->
+      <div *ngIf="errorMessage && !loginForm.dirty" class="error-message">
+        <span class="material-icons">error</span>
+        <span>{{ errorMessage }}</span>
+      </div>
+
       <!-- Drivers Form -->
       <form *ngIf="isDrivers" [formGroup]="driversForm" (ngSubmit)="onSignup()">
         <div class="form-group">
@@ -134,7 +140,10 @@
         </label>
 
         <div class="submit-row">
-          <button type="submit" mat-flat-button class="submit-button">Submit</button>
+          <button type="submit" mat-flat-button class="submit-button" [disabled]="loading || driversForm.invalid">
+            <span *ngIf="!loading">Submit</span>
+            <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+          </button>
         </div>
       </form>
 
@@ -206,7 +215,10 @@
         </label>
 
         <div class="submit-row">
-          <button type="submit" mat-flat-button class="submit-button">Submit</button>
+          <button type="submit" mat-flat-button class="submit-button" [disabled]="loading || carriesForm.invalid">
+            <span *ngIf="!loading">Submit</span>
+            <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+          </button>
         </div>
       </form>
     </div>

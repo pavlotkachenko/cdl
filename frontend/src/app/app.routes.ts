@@ -7,6 +7,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 
 export const routes: Routes = [
   // Landing page (public - no auth required)
@@ -28,6 +29,10 @@ export const routes: Routes = [
     path: 'forgot-password',
     component: ForgotPasswordComponent
   },
+  {
+    path: 'reset-password',
+    component: ResetPasswordComponent
+  },
 
   // Driver routes (AuthGuard disabled for development)
   {
@@ -48,6 +53,20 @@ export const routes: Routes = [
     path: 'attorney',
     loadChildren: () => import('./features/attorney/attorney.module').then(m => m.AttorneyModule)
     // canActivate: [AuthGuard]  // ← Commented out for development
+  },
+
+  // Carrier routes (AuthGuard disabled for development)
+  {
+    path: 'carrier',
+    loadChildren: () => import('./features/carrier/carrier.module').then(m => m.CarrierModule)
+    // canActivate: [AuthGuard]
+  },
+
+  // Paralegal routes (AuthGuard disabled for development)
+  {
+    path: 'paralegal',
+    loadChildren: () => import('./features/paralegal/paralegal.module').then(m => m.ParalegalModule)
+    // canActivate: [AuthGuard]
   },
 
   // Catch-all redirect
