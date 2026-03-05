@@ -1,8 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const carrierController = require('../controllers/carrier.controller');
+const { authenticate } = require('../middleware/auth');
 
-// POST /api/carriers/register
+// Public
 router.post('/register', carrierController.register);
+
+// Protected — carrier profile & fleet management
+router.get('/me', authenticate, carrierController.getProfile);
+router.put('/me', authenticate, carrierController.updateProfile);
+router.get('/me/stats', authenticate, carrierController.getStats);
+router.get('/me/drivers', authenticate, carrierController.getDrivers);
+router.post('/me/drivers', authenticate, carrierController.addDriver);
+router.delete('/me/drivers/:driverId', authenticate, carrierController.removeDriver);
+router.get('/me/cases', authenticate, carrierController.getCases);
 
 module.exports = router;

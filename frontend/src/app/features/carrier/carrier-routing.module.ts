@@ -1,6 +1,9 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CarrierDashboardComponent } from './dashboard/carrier-dashboard.component';
+import { CarrierDriversComponent } from './drivers/carrier-drivers.component';
+import { CarrierCasesComponent } from './cases/carrier-cases.component';
+import { CarrierProfileComponent } from './profile/carrier-profile.component';
 import { LayoutComponent } from '../../core/layout/layout.component';
 
 const routes: Routes = [
@@ -16,6 +19,18 @@ const routes: Routes = [
       {
         path: 'dashboard',
         component: CarrierDashboardComponent
+      },
+      {
+        path: 'drivers',
+        component: CarrierDriversComponent
+      },
+      {
+        path: 'cases',
+        component: CarrierCasesComponent
+      },
+      {
+        path: 'profile',
+        component: CarrierProfileComponent
       }
     ]
   }
