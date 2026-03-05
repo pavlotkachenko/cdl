@@ -20,6 +20,10 @@ const routes: Routes = [
       {
         path: 'subscription',
         loadComponent: () => import('./subscription-management/subscription-management.component').then(m => m.SubscriptionManagementComponent)
+      },
+      {
+        path: 'cases/:caseId',
+        loadComponent: () => import('./attorney-case-detail/attorney-case-detail.component').then(m => m.AttorneyCaseDetailComponent)
       }
     ]
   }

@@ -23,6 +23,10 @@ const userRoutes = require('./routes/user.routes');
 const fileRoutes = require('./routes/file.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
+const ocrRoutes = require('./routes/ocr.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const assignmentRoutes = require('./routes/assignment.routes');
+const operatorRoutes = require('./routes/operator.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -127,6 +131,18 @@ app.use('/api/notifications', notificationRoutes);
 
 // Admin
 app.use('/api/admin', adminRoutes);
+
+// OCR
+app.use('/api/ocr', ocrRoutes);
+
+// Payments
+app.use('/api/payments', paymentRoutes);
+
+// Assignment
+app.use('/api/assignment', assignmentRoutes);
+
+// Operator
+app.use('/api/operator', operatorRoutes);
 
 // ============================================
 // ERROR HANDLING

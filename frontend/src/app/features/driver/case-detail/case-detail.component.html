@@ -131,35 +131,56 @@
           <mat-card-header>
             <mat-card-title>
               <mat-icon>attach_file</mat-icon>
-              Documents ({{ case.documents?.length || 0 }})
+              Documents ({{ realDocuments.length }})
             </mat-card-title>
-            <button mat-icon-button (click)="uploadDocument()" matTooltip="Upload Document">
+            <button mat-icon-button (click)="triggerFileInput()" matTooltip="Upload Document"
+                    [disabled]="uploadingDoc">
               <mat-icon>add</mat-icon>
             </button>
           </mat-card-header>
           <mat-card-content>
-            <div *ngIf="!case.documents || case.documents.length === 0" class="no-documents">
+
+            <!-- Hidden file input -->
+            <input id="doc-file-input" type="file"
+                   accept="image/jpeg,image/png,application/pdf,image/heic"
+                   style="display:none"
+                   (change)="onFileSelected($event)">
+
+            <!-- Upload progress -->
+            <div *ngIf="uploadingDoc" style="display:flex;align-items:center;gap:12px;padding:12px 0">
+              <mat-spinner diameter="24"></mat-spinner>
+              <span>Uploading...</span>
+            </div>
+
+            <!-- Empty state -->
+            <div *ngIf="!uploadingDoc && realDocuments.length === 0" class="no-documents">
               <mat-icon>folder_open</mat-icon>
               <p>No documents uploaded yet</p>
-              <button mat-raised-button color="primary" (click)="uploadDocument()">
+              <button mat-raised-button color="primary" (click)="triggerFileInput()">
                 <mat-icon>cloud_upload</mat-icon>
                 Upload Document
               </button>
             </div>
 
-            <div *ngIf="case.documents && case.documents.length > 0" class="documents-list">
-              <div *ngFor="let doc of case.documents" class="document-item" (click)="viewDocument(doc)">
+            <!-- Document list -->
+            <div *ngIf="realDocuments.length > 0" class="documents-list">
+              <div *ngFor="let doc of realDocuments" class="document-item">
                 <mat-icon class="doc-icon">{{ getFileIcon(doc.fileName) }}</mat-icon>
                 <div class="doc-info">
                   <p class="doc-name">{{ doc.fileName }}</p>
-                  <p class="doc-meta">{{ formatFileSize(doc.fileSize) }} • {{ formatDate(doc.uploadedAt) }}</p>
+                  <p class="doc-meta">{{ formatDate(doc.uploadedAt) }}</p>
                 </div>
                 <div class="doc-actions">
-                  <button mat-icon-button (click)="viewDocument(doc); $event.stopPropagation()" matTooltip="View">
-                    <mat-icon>visibility</mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="downloadDocument(doc); $event.stopPropagation()" matTooltip="Download">
+                  <a *ngIf="doc.signedUrl"
+                     [href]="doc.signedUrl" target="_blank" rel="noopener noreferrer"
+                     mat-icon-button matTooltip="Download">
                     <mat-icon>download</mat-icon>
+                  </a>
+                  <button mat-icon-button color="warn"
+                          matTooltip="Delete"
+                          [disabled]="deletingDocId === doc.id"
+                          (click)="deleteDoc(doc.id)">
+                    <mat-icon>delete</mat-icon>
                   </button>
                 </div>
               </div>
@@ -321,7 +342,8 @@
           </mat-card-header>
           <mat-card-content>
             <div class="quick-actions">
-              <button mat-stroked-button class="action-button" (click)="uploadDocument()">
+              <button mat-stroked-button class="action-button" (click)="triggerFileInput()"
+                      [disabled]="uploadingDoc">
                 <mat-icon>file_upload</mat-icon>
                 Upload Document
               </button>

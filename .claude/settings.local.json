@@ -14,7 +14,11 @@
       "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Tests:|Test Suites:\\)\" | tail -20)",
       "Bash(grep -h \"Status:\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_002/*.md)",
       "Bash(grep -h \"Status: TODO\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_002/*.md; grep -l \"Status.*TODO\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_002/*.md)",
-      "Bash(grep -h \"Status:\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_001/*.md 2>/dev/null | sort | uniq -c)"
+      "Bash(grep -h \"Status:\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_001/*.md 2>/dev/null | sort | uniq -c)",
+      "Bash(npm test -- --testPathPattern=\"case.controller|operator.controller\" 2>&1 | tail -80)",
+      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -100)",
+      "Bash(npx jest --testPathPattern=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -30)",
+      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -40)"
     ]
   }
 }

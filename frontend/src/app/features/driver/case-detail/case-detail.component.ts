@@ -28,6 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 // Services
 import { CaseService, Case } from '../../../core/services/case.service';
 import { PdfGeneratorService } from '../../../core/services/pdf-generator.service';
+import { SocketService } from '../../../core/services/socket.service';
 
 // Shared Components
 import { DocumentViewerComponent } from '../../../shared/components/document-viewer/document-viewer.component';
@@ -83,23 +84,29 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
   // Document Viewer
   selectedDocument: any = null;
   isDocumentViewerOpen = false;
-  
+
   // Image Lightbox
   lightboxImages: any[] = [];
   currentLightboxIndex = 0;
   isLightboxOpen = false;
-  
+
   // Edit mode
   isEditing = false;
-  
+
   // PDF Export
   exportingPdf = false;
+
+  // Document upload
+  uploadingDoc = false;
+  deletingDocId: string | null = null;
+  realDocuments: any[] = [];
   
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private caseService: CaseService,
     private pdfGeneratorService: PdfGeneratorService,
+    private socketService: SocketService,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
@@ -114,10 +121,13 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
       .subscribe(params => {
         this.caseId = params['id'];
         this.loadCaseDetails();
+        this.loadRealDocuments();
+        this.connectSocket();
       });
   }
 
   ngOnDestroy(): void {
+    this.socketService.leaveCase(this.caseId);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -283,10 +293,97 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
   }
 
+  private connectSocket(): void {
+    this.socketService.connect();
+    this.socketService.joinCase(this.caseId);
+    this.socketService.onCaseStatusUpdate()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(event => {
+        if (event.caseId === this.caseId) {
+          this.snackBar.open('Case status updated', 'View', { duration: 4000 });
+          this.loadCaseDetails();
+        }
+      });
+  }
+
+  private loadRealDocuments(): void {
+    this.caseService.listDocuments(this.caseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          this.realDocuments = response.documents || [];
+          this.cdr.detectChanges();
+        },
+        error: () => {}
+      });
+  }
+
+  triggerFileInput(): void {
+    const input = document.getElementById('doc-file-input') as HTMLInputElement;
+    input?.click();
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf', 'image/heic'];
+    if (!allowed.includes(file.type)) {
+      this.snackBar.open('Only JPG, PNG, PDF, or HEIC files are allowed', 'Close', { duration: 4000 });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      this.snackBar.open('File must be under 10 MB', 'Close', { duration: 4000 });
+      return;
+    }
+
+    this.uploadingDoc = true;
+    this.cdr.detectChanges();
+
+    this.caseService.uploadDocument(this.caseId, file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (doc: any) => {
+          this.realDocuments = [doc, ...this.realDocuments];
+          this.uploadingDoc = false;
+          this.snackBar.open('Document uploaded', 'Close', { duration: 3000 });
+          this.cdr.detectChanges();
+          input.value = '';
+        },
+        error: (err: any) => {
+          const msg = err?.error?.error || 'Upload failed';
+          this.snackBar.open(msg, 'Close', { duration: 4000 });
+          this.uploadingDoc = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  deleteDoc(docId: string): void {
+    if (!confirm('Delete this document?')) return;
+    this.deletingDocId = docId;
+    this.cdr.detectChanges();
+
+    this.caseService.deleteDocument(this.caseId, docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.realDocuments = this.realDocuments.filter(d => d.id !== docId);
+          this.deletingDocId = null;
+          this.snackBar.open('Document deleted', 'Close', { duration: 3000 });
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.snackBar.open('Failed to delete document', 'Close', { duration: 3000 });
+          this.deletingDocId = null;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
   uploadDocument(): void {
-    this.snackBar.open('Upload feature coming soon', 'Close', {
-      duration: 3000
-    });
+    this.triggerFileInput();
   }
 
   // Comments

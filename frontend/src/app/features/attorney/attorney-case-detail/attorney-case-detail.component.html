@@ -1,0 +1,179 @@
+<div class="attorney-case-detail">
+
+  @if (loading()) {
+    <div class="loading-state" style="display:flex;justify-content:center;padding:48px">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  }
+
+  @if (!loading() && caseData()) {
+    <!-- Header -->
+    <div class="detail-header" style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+      <button mat-icon-button (click)="goBack()" aria-label="Back to dashboard">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1 style="margin:0;font-size:1.5rem">{{ caseData().case_number || caseData().id }}</h1>
+        <mat-chip [style.background]="caseData().status === 'assigned_to_attorney' ? '#ff9800' : '#1976d2'"
+                  style="color:white;margin-top:4px">
+          {{ getStatusLabel(caseData().status) }}
+        </mat-chip>
+      </div>
+    </div>
+
+    <!-- Accept / Decline Banner -->
+    @if (caseData().status === 'assigned_to_attorney') {
+      <mat-card style="margin-bottom:24px;border-left:4px solid #ff9800">
+        <mat-card-content style="padding:16px">
+          <p style="margin:0 0 16px;font-weight:500">New case assignment — accept or decline within 24 hours</p>
+          <div style="display:flex;gap:12px">
+            <button mat-raised-button color="primary"
+                    [disabled]="processing()"
+                    (click)="accept()">
+              <mat-icon>check_circle</mat-icon>
+              Accept Case
+            </button>
+            <button mat-stroked-button color="warn"
+                    [disabled]="processing()"
+                    (click)="decline()">
+              <mat-icon>cancel</mat-icon>
+              Decline
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px">
+
+      <!-- Left: Case Info -->
+      <div>
+        <mat-card style="margin-bottom:24px">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon style="vertical-align:middle;margin-right:8px">info</mat-icon>
+              Case Details
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+              <div>
+                <label style="font-size:.75rem;color:#666;display:block">Violation Type</label>
+                <p style="margin:4px 0">{{ caseData().violation_type || 'N/A' }}</p>
+              </div>
+              <div>
+                <label style="font-size:.75rem;color:#666;display:block">State</label>
+                <p style="margin:4px 0">{{ caseData().state || 'N/A' }}</p>
+              </div>
+              <div>
+                <label style="font-size:.75rem;color:#666;display:block">Violation Date</label>
+                <p style="margin:4px 0">{{ caseData().violation_date | date:'mediumDate' }}</p>
+              </div>
+              <div>
+                <label style="font-size:.75rem;color:#666;display:block">Court Date</label>
+                <p style="margin:4px 0">{{ (caseData().court_date | date:'mediumDate') || 'Not set' }}</p>
+              </div>
+              <div>
+                <label style="font-size:.75rem;color:#666;display:block">Attorney Fee</label>
+                <p style="margin:4px 0">{{ caseData().attorney_price ? ('$' + caseData().attorney_price) : 'Not set' }}</p>
+              </div>
+              <div>
+                <label style="font-size:.75rem;color:#666;display:block">Case Created</label>
+                <p style="margin:4px 0">{{ caseData().created_at | date:'mediumDate' }}</p>
+              </div>
+            </div>
+
+            @if (caseData().violation_details) {
+              <mat-divider style="margin:16px 0"></mat-divider>
+              <label style="font-size:.75rem;color:#666;display:block">Description</label>
+              <p style="margin:4px 0">{{ caseData().violation_details }}</p>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Documents -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon style="vertical-align:middle;margin-right:8px">attach_file</mat-icon>
+              Documents ({{ documents().length }})
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (documents().length === 0) {
+              <div style="text-align:center;padding:24px;color:#666">
+                <mat-icon style="font-size:40px;height:40px;width:40px">folder_open</mat-icon>
+                <p>No documents uploaded</p>
+              </div>
+            }
+            @for (doc of documents(); track doc.id) {
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0">
+                <mat-icon color="primary">{{ getFileIcon(doc.fileType) }}</mat-icon>
+                <div style="flex:1">
+                  <p style="margin:0;font-weight:500">{{ doc.fileName }}</p>
+                  <p style="margin:0;font-size:.75rem;color:#666">{{ doc.uploadedAt | date:'medium' }}</p>
+                </div>
+                @if (doc.signedUrl) {
+                  <a [href]="doc.signedUrl" target="_blank" rel="noopener noreferrer"
+                     mat-icon-button aria-label="Download document">
+                    <mat-icon>download</mat-icon>
+                  </a>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Right: Driver + Status Update -->
+      <div>
+
+        <!-- Driver Info -->
+        @if (caseData().driver) {
+          <mat-card style="margin-bottom:24px">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon style="vertical-align:middle;margin-right:8px">person</mat-icon>
+                Driver
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content style="margin-top:8px">
+              <p style="margin:4px 0;font-weight:500">{{ caseData().driver.full_name }}</p>
+              <p style="margin:4px 0;color:#666">{{ caseData().driver.phone }}</p>
+              <p style="margin:4px 0;color:#666">{{ caseData().driver.email }}</p>
+              <p style="margin:4px 0;font-size:.75rem;color:#999">Phone shown after payment</p>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Update Status -->
+        @if (caseData().status !== 'assigned_to_attorney' && caseData().status !== 'closed') {
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>Update Status</mat-card-title>
+            </mat-card-header>
+            <mat-card-content style="padding-top:16px">
+              <mat-form-field appearance="outline" style="width:100%">
+                <mat-label>New Status</mat-label>
+                <mat-select [(ngModel)]="selectedStatus">
+                  @for (s of UPDATABLE_STATUSES; track s.value) {
+                    <mat-option [value]="s.value">{{ s.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button mat-raised-button color="primary"
+                      style="width:100%"
+                      [disabled]="!selectedStatus || processing()"
+                      (click)="updateStatus()">
+                <mat-icon>update</mat-icon>
+                Update
+              </button>
+            </mat-card-content>
+          </mat-card>
+        }
+
+      </div>
+    </div>
+  }
+
+</div>

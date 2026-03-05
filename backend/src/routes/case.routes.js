@@ -9,6 +9,17 @@ const router = express.Router();
 const { authenticate, authorize, canAccessCase, optionalAuth } = require('../middleware/auth');
 const caseController = require('../controllers/case.controller');
 const { body, param, query } = require('express-validator');
+const multer = require('multer');
+const path = require('path');
+
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf', 'image/heic'];
+    cb(allowed.includes(file.mimetype) ? null : new Error('Invalid file type'), allowed.includes(file.mimetype));
+  }
+}).single('file');
 
 // ============================================
 // VALIDATION RULES
@@ -202,6 +213,46 @@ router.get(
   authenticate,
   canAccessCase,
   caseController.getCaseActivity
+);
+
+/**
+ * GET /api/cases/:id/documents
+ * List uploaded documents for a case
+ * Access: Case owner and assigned users
+ */
+router.get(
+  '/:id/documents',
+  authenticate,
+  canAccessCase,
+  caseController.listDocuments
+);
+
+/**
+ * POST /api/cases/:id/documents
+ * Upload a document to a case (driver only, max 10MB)
+ * Access: Driver who owns the case
+ */
+router.post(
+  '/:id/documents',
+  authenticate,
+  authorize(['driver']),
+  (req, res, next) => documentUpload(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  }),
+  caseController.uploadDocument
+);
+
+/**
+ * DELETE /api/cases/:id/documents/:documentId
+ * Delete a document (driver who uploaded only)
+ * Access: Driver who owns the case
+ */
+router.delete(
+  '/:id/documents/:documentId',
+  authenticate,
+  authorize(['driver']),
+  caseController.deleteDocument
 );
 
 /**

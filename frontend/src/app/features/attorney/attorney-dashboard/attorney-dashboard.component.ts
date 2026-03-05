@@ -16,6 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Chart } from 'chart.js/auto';
+import { Router } from '@angular/router';
 
 import { CaseService } from '../../../core/services/case.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -159,7 +160,8 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   constructor(
     private caseService: CaseService,
     private authService: AuthService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -492,8 +494,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
    * Open case details
    */
   openCaseDetails(caseItem: KanbanCase): void {
-    console.log('Open case details:', caseItem);
-    // Navigate to case details or open dialog
+    this.router.navigate(['/attorney/cases', caseItem.caseId]);
   }
 
   /**
