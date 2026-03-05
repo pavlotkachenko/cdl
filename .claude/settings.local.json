@@ -3,7 +3,15 @@
     "allow": [
       "Bash(xargs:*)",
       "Bash(claude doctor:*)",
-      "Bash(sudo npm install -g @anthropic-ai/claude-code)"
+      "Bash(sudo npm install -g @anthropic-ai/claude-code)",
+      "Bash(cd /Users/paveltkachenko/prj/cdl-ticket-management/backend && npm test -- --testPathPattern=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" --no-coverage 2>&1 | tail -80)",
+      "Bash(npx jest --verbose --forceExit --detectOpenHandles --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | tail -100)",
+      "Bash(npx jest --verbose --forceExit --detectOpenHandles --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | head -120)",
+      "Bash(npx jest --verbose --forceExit --detectOpenHandles --no-coverage --testPathPatterns=\"payment.service|analytics.service|ocr.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Cannot find|Error:|✓|✗|×\\)\" | head -60)",
+      "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|✓|✗|×|●|Tests:|Test Suites:\\)\" | head -80)",
+      "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Tests:|Test Suites:|✗|×\\)\" | tail -40)",
+      "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"payment.service|analytics.service|ocr.service\" 2>&1 | grep -A 20 \"●\" | head -100)",
+      "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Tests:|Test Suites:\\)\" | tail -20)"
     ]
   }
 }
