@@ -42,7 +42,10 @@
       "Bash(grep -c \"payAttorneyFee\\\\|attorney-recommendation\\\\|attorneys\" /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/driver/case-detail/case-detail.component.ts 2>/dev/null; ls /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/driver/case-detail/*.html 2>/dev/null)",
       "Bash(cd /Users/paveltkachenko/prj/cdl-ticket-management/frontend && npx ng test --no-watch 2>&1 | tail -80)",
       "Bash(npx ng test --no-watch 2>&1 | tail -60)",
-      "Bash(npx ng test --no-watch 2>&1 | tail -40)"
+      "Bash(npx ng test --no-watch 2>&1 | tail -40)",
+      "Bash(npx ng test --no-watch --include=\"src/app/features/carrier/**/*.spec.ts\" 2>&1 | tail -60)",
+      "Bash(npx ng test --no-watch --include=\"src/app/features/carrier/**/*.spec.ts\" 2>&1 | tail -50)",
+      "Bash(npx ng test --no-watch 2>&1 | grep -E \"✓|✘|Tests|Test Files\" | tail -20)"
     ]
   }
 }

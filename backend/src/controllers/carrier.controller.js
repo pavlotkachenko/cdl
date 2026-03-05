@@ -139,6 +139,210 @@ const register = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────
+// GET /api/carriers/me
+// ─────────────────────────────────────────────
+const getProfile = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  try {
+    const result = await pool.query(
+      'SELECT company_name, usdot_number, email, phone_number, notify_on_new_ticket FROM carriers WHERE id = $1',
+      [carrierId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Carrier not found' } });
+    res.json({ carrier: result.rows[0] });
+  } catch (err) {
+    console.error('getProfile error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch profile' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PUT /api/carriers/me
+// ─────────────────────────────────────────────
+const updateProfile = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { company_name, phone_number, notify_on_new_ticket } = req.body;
+  if (!company_name || company_name.trim().length < 2) {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: 'Company name is required' } });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE carriers SET company_name = $1, phone_number = $2, notify_on_new_ticket = $3, updated_at = NOW()
+       WHERE id = $4
+       RETURNING company_name, usdot_number, email, phone_number, notify_on_new_ticket`,
+      [company_name.trim(), phone_number ?? '', notify_on_new_ticket ?? false, carrierId]
+    );
+    res.json({ carrier: result.rows[0] });
+  } catch (err) {
+    console.error('updateProfile error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to update profile' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/stats
+// ─────────────────────────────────────────────
+const getStats = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const ACTIVE = "('assigned_to_attorney','send_info_to_attorney','call_court','check_with_manager')";
+  const PENDING = "('new','reviewed','waiting_for_driver','pay_attorney')";
+
+  try {
+    const [driversResult, casesResult] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM drivers WHERE carrier_id = $1', [carrierId]),
+      pool.query(
+        `SELECT
+           SUM(CASE WHEN status IN ${ACTIVE} THEN 1 ELSE 0 END) AS active_cases,
+           SUM(CASE WHEN status IN ${PENDING} THEN 1 ELSE 0 END) AS pending_cases,
+           SUM(CASE WHEN status IN ('closed','resolved') THEN 1 ELSE 0 END) AS resolved_cases
+         FROM cases WHERE carrier_id = $1`,
+        [carrierId]
+      ),
+    ]);
+
+    const row = casesResult.rows[0];
+    res.json({
+      totalDrivers: parseInt(driversResult.rows[0].count, 10),
+      activeCases: parseInt(row.active_cases ?? 0, 10),
+      pendingCases: parseInt(row.pending_cases ?? 0, 10),
+      resolvedCases: parseInt(row.resolved_cases ?? 0, 10),
+    });
+  } catch (err) {
+    console.error('getStats error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch stats' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/drivers
+// ─────────────────────────────────────────────
+const getDrivers = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const OPEN_STATUSES = "('new','reviewed','waiting_for_driver','pay_attorney','assigned_to_attorney','send_info_to_attorney','call_court','check_with_manager')";
+
+  try {
+    const result = await pool.query(
+      `SELECT d.id, d.full_name, d.cdl_number,
+              COUNT(c.id) FILTER (WHERE c.status IN ${OPEN_STATUSES}) AS "openCases"
+       FROM drivers d
+       LEFT JOIN cases c ON c.driver_id = d.id
+       WHERE d.carrier_id = $1
+       GROUP BY d.id
+       ORDER BY d.full_name`,
+      [carrierId]
+    );
+    const drivers = result.rows.map(r => ({ ...r, openCases: parseInt(r.openCases, 10) }));
+    res.json({ drivers });
+  } catch (err) {
+    console.error('getDrivers error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch drivers' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// POST /api/carriers/me/drivers
+// ─────────────────────────────────────────────
+const addDriver = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { full_name, cdl_number } = req.body;
+  if (!full_name || !cdl_number) {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: 'full_name and cdl_number are required' } });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO drivers (full_name, cdl_number, carrier_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       RETURNING id, full_name, cdl_number`,
+      [full_name.trim(), cdl_number.trim(), carrierId]
+    );
+    res.status(201).json({ driver: { ...result.rows[0], openCases: 0 } });
+  } catch (err) {
+    console.error('addDriver error:', err);
+    if (err.code === '23505') {
+      return res.status(400).json({ error: { code: 'DUPLICATE', message: 'CDL number already registered' } });
+    }
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to add driver' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// DELETE /api/carriers/me/drivers/:driverId
+// ─────────────────────────────────────────────
+const removeDriver = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  const { driverId } = req.params;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM drivers WHERE id = $1 AND carrier_id = $2 RETURNING id',
+      [driverId, carrierId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Driver not found' } });
+    }
+    res.json({ message: 'Driver removed' });
+  } catch (err) {
+    console.error('removeDriver error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to remove driver' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/cases
+// ─────────────────────────────────────────────
+const getCases = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { status } = req.query;
+  const params = [carrierId];
+  let statusClause = '';
+  if (status && status !== 'all') {
+    params.push(status);
+    statusClause = 'AND c.status = $2';
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT c.id, c.case_number, c.violation_type, c.state, c.status,
+              d.full_name AS driver_name,
+              COALESCE(u.name, '') AS attorney_name
+       FROM cases c
+       JOIN drivers d ON d.id = c.driver_id
+       LEFT JOIN attorneys a ON a.id = c.attorney_id
+       LEFT JOIN users u ON u.id = a.user_id
+       WHERE c.carrier_id = $1 ${statusClause}
+       ORDER BY c.created_at DESC`,
+      params
+    );
+    res.json({ cases: result.rows });
+  } catch (err) {
+    console.error('getCases error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch cases' } });
+  }
+};
+
 module.exports = {
-  register
+  register,
+  getProfile,
+  updateProfile,
+  getStats,
+  getDrivers,
+  addDriver,
+  removeDriver,
+  getCases,
 };
