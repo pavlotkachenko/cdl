@@ -88,6 +88,30 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'Subscription', icon: 'credit_card', link: '/attorney/subscription' }
   ];
 
+  // Carrier Navigation
+  private carrierNavigation: NavigationItem[] = [
+    { name: 'Dashboard', icon: 'dashboard', link: '/carrier/dashboard' },
+    { name: 'My Drivers', icon: 'groups', link: '/carrier/drivers' },
+    { name: 'Fleet Cases', icon: 'gavel', link: '/carrier/cases' },
+    { name: 'Documents', icon: 'folder', link: '/carrier/documents' },
+    { name: 'Analytics', icon: 'bar_chart', link: '/carrier/analytics' },
+    { name: 'Payments', icon: 'payment', link: '/carrier/payments' },
+    { name: 'Notifications', icon: 'notifications', link: '/carrier/notifications', badge: 0 },
+    { name: 'Settings', icon: 'settings', link: '/carrier/settings' }
+  ];
+
+  // Paralegal Navigation
+  private paralegalNavigation: NavigationItem[] = [
+    { name: 'Dashboard', icon: 'dashboard', link: '/paralegal/dashboard' },
+    { name: 'Cases', icon: 'gavel', link: '/paralegal/cases' },
+    { name: 'Tasks', icon: 'checklist', link: '/paralegal/tasks' },
+    { name: 'Documents', icon: 'folder', link: '/paralegal/documents' },
+    { name: 'Calendar', icon: 'calendar_today', link: '/paralegal/calendar' },
+    { name: 'Messages', icon: 'forum', link: '/paralegal/messages', badge: 0 },
+    { name: 'Notifications', icon: 'notifications', link: '/paralegal/notifications', badge: 0 },
+    { name: 'Profile', icon: 'person', link: '/paralegal/profile' }
+  ];
+
   constructor(
     private notificationService: NotificationService,
     private authService: AuthService
@@ -134,8 +158,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
       case 'attorney':
         this.navigation = [...this.attorneyNavigation];
         break;
+      case 'carrier':
+        this.navigation = [...this.carrierNavigation];
+        break;
       case 'paralegal':
-        this.navigation = [...this.attorneyNavigation];
+        this.navigation = [...this.paralegalNavigation];
         break;
       case 'driver':
       default:

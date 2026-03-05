@@ -6,13 +6,11 @@ const { supabase, supabaseAnon } = require('../config/supabase');
 const authClient = supabaseAnon;
 
 // Valid DB enum values for user_role
-const VALID_DB_ROLES = ['driver', 'attorney', 'admin', 'operator'];
+const VALID_DB_ROLES = ['driver', 'carrier', 'attorney', 'admin', 'operator'];
 
 // Map a requested role to a valid DB role; keep the original in user_metadata
 function dbRole(role) {
   if (VALID_DB_ROLES.includes(role)) return role;
-  // carrier → driver in the DB (they share the same dashboard)
-  if (role === 'carrier') return 'driver';
   // paralegal → operator in the DB
   if (role === 'paralegal') return 'operator';
   return 'driver';
@@ -189,6 +187,47 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// POST /api/auth/reset-password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { access_token, password } = req.body;
+
+    if (!access_token || !password) {
+      return res.status(400).json({ error: 'Access token and new password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Verify the Supabase access token to get the user
+    const { data: userData, error: userError } = await supabase.auth.getUser(access_token);
+
+    if (userError || !userData.user) {
+      return res.status(401).json({ error: 'Invalid or expired reset token. Please request a new password reset.' });
+    }
+
+    // Update the password using Supabase Admin
+    const { supabaseAdmin } = require('../config/supabase');
+    const adminClient = supabaseAdmin || supabase;
+
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(
+      userData.user.id,
+      { password }
+    );
+
+    if (updateError) {
+      console.error('Password update error:', updateError);
+      return res.status(500).json({ error: 'Failed to update password' });
+    }
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+};
+
 // POST /api/auth/refresh
 exports.refresh = async (req, res) => {
   try {
@@ -222,3 +261,6 @@ exports.refresh = async (req, res) => {
     res.status(401).json({ error: 'Invalid or expired refresh token' });
   }
 };
+
+// Exported for unit testing (see HARD_BUGS_REGISTRY.md BUG-004)
+exports._testExports = { dbRole, VALID_DB_ROLES };

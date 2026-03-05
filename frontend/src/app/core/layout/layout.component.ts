@@ -64,7 +64,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private breakpointObserver: BreakpointObserver,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -142,14 +143,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // ============================================
 
   logout(): void {
-    // Clear user data
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('authToken');
-    
-    // Navigate to login
-    this.router.navigate(['/login']);
-    
-    // Show confirmation (optional)
-    console.log('User logged out');
+    this.authService.logout().subscribe();
   }
 }

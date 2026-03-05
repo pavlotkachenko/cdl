@@ -240,6 +240,60 @@ grep -rn "path:" frontend/src/app/*routing* frontend/src/app/app.routes.ts
 
 ---
 
+---
+
+## Detection Scan Results (2026-03-03)
+
+### BUG-001 Scan: Auth Interceptor Public Endpoints
+**Result: CLEAN** — All auth endpoints called by AuthService are in the public endpoints list.
+
+### BUG-002 Scan: Observable Hang Patterns
+**Result: 6 related issues found** — All in the same auth interceptor file (two versions: functional + class-based). The core BUG-002 is unfixed; the `it.fails` test documents this. Key concerns:
+- `refreshTokenSubject` filter hangs when no refresh token exists (CRITICAL, unfixed)
+- `refreshTokenSubject` is never completed on refresh failure
+- `isRefreshing` module-level state can get stuck at `true`
+- Fire-and-forget `authService.logout().subscribe()` in catch block
+
+### BUG-003 Scan: Supabase Admin Client Auth Pollution
+**Result: CLEAN** — Auth controller correctly uses `supabaseAnon` for `signInWithPassword`. No other files call `signInWithPassword` or `signUp` on the admin client.
+
+### BUG-004 Scan: DB Enum Mismatch
+**Result: 1 NEW BUG FOUND**
+- **carrier.controller.js:89** — Inserts `'carrier'` directly into `users` table without using `dbRole()` mapping. The `carrier` value is NOT a valid PostgreSQL `user_role` enum. This will cause a 500 error on carrier signup via this code path.
+  - **Fix:** Change `'carrier'` to `'driver'` or import and use `dbRole('carrier')`
+
+### BUG-005 Scan: Invalid Navigation Paths
+**Result: 10 distinct issues found across the codebase**
+
+**Critical (navigation goes to `/login` via catch-all):**
+
+| File | Line | Bad Path | Should Be |
+|------|------|----------|-----------|
+| `carrier-signup.component.ts` | 85 | `/app/dashboard` | `/driver/dashboard` |
+| `carrier-signup.component.ts` | 60 | `/auth/driver-signup` | `/signup/driver` |
+| `landing-header.component.ts` | 32 | `/sign-in` | `/login` |
+| `landing.component.ts` | 160 | `/sign-in` | `/login` |
+| `notification-bell.component.ts` | 157,172 | `/driver/cases/:id` | `/driver/tickets/:id` |
+| `notification-bell.component.ts` | 167 | `/driver/calendar` | (route doesn't exist) |
+| `header.component.ts` (landing) | 48 | `/signup` | `/signup/carrier` or `/signup/driver` |
+
+**Medium (route parameter not defined):**
+
+| File | Line | Bad Path | Issue |
+|------|------|----------|-------|
+| `staff-management.component.ts` | 133 | `/admin/staff/:id` | Only `/admin/staff` is defined |
+| `client-management.component.ts` | 117 | `/admin/clients/:id` | Only `/admin/clients` is defined |
+| `case-management.component.html` | 13 | `/admin/cases/new` | Not defined in routes |
+| `admin-dashboard.component.html` | 14 | `/admin/cases/new` | Not defined in routes |
+
+**Legacy (orphaned HTML file):**
+
+| File | Lines | Bad Paths |
+|------|-------|-----------|
+| `app/driver/dashboard/dashboard.html` | 52,86,101 | `/app/driver/ticket`, `/app/driver/submit-ticket` |
+
+---
+
 ## How to Use This Document
 
 1. **Write regression tests** for each bug listed above (see "Test to write" sections)

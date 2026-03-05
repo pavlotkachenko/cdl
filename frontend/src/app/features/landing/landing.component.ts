@@ -1,15 +1,18 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { LandingHeaderComponent } from './components/landing-header/landing-header.component';
 import { LandingFooterComponent } from './components/landing-footer/landing-footer.component';
+import { CaseService } from '../../core/services/case.service';
 
 interface Testimonial {
   name: string;
@@ -21,15 +24,18 @@ interface Testimonial {
   selector: 'app-landing',
   templateUrl: './landing.component.html',
   styleUrls: ['./landing.component.scss'],
-  standalone: true,                                // ← THIS WAS MISSING
-  imports: [                                       // ← THIS WAS MISSING
+  standalone: true,
+  imports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
     LandingHeaderComponent,
     LandingFooterComponent
   ]
@@ -110,10 +116,31 @@ export class LandingComponent implements OnInit {
   currentTestimonialIndex = 0;
   testimonialPageCount = Math.ceil(this.testimonials.length / 4);
 
-  constructor(private route: ActivatedRoute, private router: Router) {}
+  // Submit Request form
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  submitForm!: FormGroup;
+  submitting = false;
+  submitSuccess = false;
+  submitError = '';
+  uploadedFiles: File[] = [];
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private fb: FormBuilder,
+    private caseService: CaseService,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit(): void {
     setInterval(() => this.nextSlide(), 5000);
+
+    this.submitForm = this.fb.group({
+      customer_name: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      driver_phone: ['', Validators.required],
+      violation_details: ['', Validators.required]
+    });
 
     this.route.fragment.subscribe(fragment => {
       if (fragment) {
@@ -157,7 +184,7 @@ export class LandingComponent implements OnInit {
   }
 
   navigateToSubmit(): void {
-    this.router.navigate(['/sign-in']);
+    this.scrollToSection('contact');
   }
 
   // Fixed & safe initials
@@ -174,5 +201,66 @@ export class LandingComponent implements OnInit {
     const img = event.target as HTMLImageElement;
     img.src = '/assets/images/testimonials/placeholder.jpg';
     img.onerror = null;
+  }
+
+  // File upload handling (reused from submit-ticket)
+  onFileSelected(event: any): void {
+    const files: FileList = event.target.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 10 * 1024 * 1024) {
+          this.snackBar.open(`File ${file.name} is too large. Maximum 10MB.`, 'Close', { duration: 5000 });
+          continue;
+        }
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+          this.snackBar.open(`File ${file.name}: only PDF, JPG, PNG allowed.`, 'Close', { duration: 5000 });
+          continue;
+        }
+        this.uploadedFiles.push(file);
+      }
+    }
+  }
+
+  removeFile(index: number): void {
+    this.uploadedFiles.splice(index, 1);
+  }
+
+  getFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  triggerFileInput(): void {
+    this.fileInput?.nativeElement?.click();
+  }
+
+  onSubmitRequest(): void {
+    if (this.submitForm.invalid) {
+      Object.keys(this.submitForm.controls).forEach(key => {
+        this.submitForm.get(key)?.markAsTouched();
+      });
+      return;
+    }
+
+    this.submitting = true;
+    this.submitError = '';
+
+    this.caseService.publicSubmit(this.submitForm.value).subscribe({
+      next: () => {
+        this.submitting = false;
+        this.submitSuccess = true;
+        this.snackBar.open('Request submitted successfully! We will contact you within 1 hour.', 'Close', { duration: 5000 });
+        this.submitForm.reset();
+        this.uploadedFiles = [];
+      },
+      error: (error) => {
+        this.submitting = false;
+        this.submitError = error.error?.message || 'Failed to submit request. Please try again.';
+        this.snackBar.open(this.submitError, 'Close', { duration: 5000 });
+      }
+    });
   }
 }

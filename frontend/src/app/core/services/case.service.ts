@@ -125,20 +125,14 @@ export class CaseService {
    * Create a new case
    */
   createCase(caseData: any): Observable<any> {
-    // TODO: Replace with actual HTTP call
-    // return this.http.post(`${this.apiUrl}/cases`, caseData);
-    
-    const newCase: Case = {
-      id: `case-${Date.now()}`,
-      ticketNumber: `TCK-${String(this.mockCases.length + 1).padStart(3, '0')}`,
-      status: 'submitted',
-      createdAt: new Date(),
-      created_at: new Date(),
-      ...caseData
-    };
-    
-    this.mockCases.unshift(newCase);
-    return of({ data: newCase, id: newCase.id }).pipe(delay(1000));
+    return this.http.post(`${this.apiUrl}/cases`, caseData);
+  }
+
+  /**
+   * Public submission from landing page (no auth required)
+   */
+  publicSubmit(formData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/public-submit`, formData);
   }
 
   /**

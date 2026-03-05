@@ -12,6 +12,7 @@
 -- User roles (who can do what)
 CREATE TYPE user_role AS ENUM (
   'driver',           -- CDL drivers who submit tickets
+  'carrier',          -- Carrier companies managing drivers
   'operator',         -- Case managers who organize cases
   'attorney',         -- Lawyers who handle cases
   'admin'            -- System administrators

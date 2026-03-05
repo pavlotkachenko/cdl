@@ -11,6 +11,9 @@ router.post('/register', authController.register);
 // Forgot password
 router.post('/forgot-password', authController.forgotPassword);
 
+// Reset password (with Supabase recovery token)
+router.post('/reset-password', authController.resetPassword);
+
 // Refresh token
 router.post('/refresh', authController.refresh);
 

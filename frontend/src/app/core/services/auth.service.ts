@@ -95,7 +95,7 @@ export class AuthService {
         this.router.navigate(['/driver/dashboard']);
         break;
       case 'carrier':
-        this.router.navigate(['/driver/dashboard']);
+        this.router.navigate(['/carrier/dashboard']);
         break;
       case 'attorney':
         this.router.navigate(['/attorney/dashboard']);
@@ -104,7 +104,7 @@ export class AuthService {
         this.router.navigate(['/admin/dashboard']);
         break;
       case 'paralegal':
-        this.router.navigate(['/attorney/dashboard']);
+        this.router.navigate(['/paralegal/dashboard']);
         break;
       default:
         this.router.navigate(['/']);
@@ -126,6 +126,10 @@ export class AuthService {
 
   forgotPassword(email: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiUrl}/auth/forgot-password`, { email });
+  }
+
+  resetPassword(accessToken: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/reset-password`, { access_token: accessToken, password: newPassword });
   }
 
   logout(): Observable<void> {
