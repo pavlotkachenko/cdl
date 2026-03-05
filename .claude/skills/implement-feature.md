@@ -89,24 +89,30 @@ Build the user interface **following the UX Expert's screen specifications**:
 
 ### Step 6: Test Writing (QA Tester)
 
-Write comprehensive tests:
+**Per-file requirement (Sprint Testing Mandate):** For EVERY file created or modified in Steps 4 and 5, a corresponding test file MUST be created or updated. Build the coverage matrix first (see `test-suite` skill, Step 0) before writing tests.
 
-1. **Backend:** Jest tests in `backend/src/__tests__/`
-   - At minimum: happy path + error case for each service function
-2. **Frontend:** `.spec.ts` files co-located with components
-   - At minimum: component creation + key interaction tests
-3. **E2E:** Cypress test for the primary user flow
-   - At minimum: complete happy path end-to-end
-4. **Accessibility:** Verify AXE checks pass for new components
+File mapping rules:
+- `backend/src/services/<name>.service.js` → `backend/src/__tests__/<name>.test.js`
+- `backend/src/controllers/<name>.controller.js` → `backend/src/__tests__/<name>.test.js`
+- `frontend/src/**/<name>.component.ts` → co-located `<name>.component.spec.ts`
+- `frontend/src/**/<name>.service.ts` → co-located `<name>.service.spec.ts`
+
+Minimum test requirements per file:
+1. **Backend service/controller** — happy path + at least one error/validation case per public function
+2. **Frontend component** — creation test + key interaction or signal state test per component
+3. **E2E** — one Cypress spec covering the complete primary user flow for the story
+4. **Accessibility** — AXE checks pass for all new/modified Angular components
+
+Record all test files in the sprint's `story-X.Y-tests.md` (create it if it doesn't exist).
 
 Run and verify all tests pass:
 ```bash
 cd backend && npm test
-cd frontend && ng test --watch=false --browsers=ChromeHeadless
+cd frontend && npx ng test --no-watch
 cd frontend && npm run cy:run
 ```
 
-**Output:** All tests passing
+**Output:** Coverage matrix complete (no ❌ rows), all tests passing
 
 ### Step 7: Critic Review (Critic)
 

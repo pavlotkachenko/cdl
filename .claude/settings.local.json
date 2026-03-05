@@ -38,7 +38,11 @@
       "Bash(npx jest --forceExit 2>&1 | tail -10)",
       "Bash(cd /Users/paveltkachenko/prj/cdl-ticket-management/backend && npx jest --forceExit 2>&1 | tail -10)",
       "Bash(npx jest --forceExit 2>&1 | grep -E \"FAIL|PASS|✓|✗|×\" | head -20)",
-      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -8)"
+      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -8)",
+      "Bash(grep -c \"payAttorneyFee\\\\|attorney-recommendation\\\\|attorneys\" /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/driver/case-detail/case-detail.component.ts 2>/dev/null; ls /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/driver/case-detail/*.html 2>/dev/null)",
+      "Bash(cd /Users/paveltkachenko/prj/cdl-ticket-management/frontend && npx ng test --no-watch 2>&1 | tail -80)",
+      "Bash(npx ng test --no-watch 2>&1 | tail -60)",
+      "Bash(npx ng test --no-watch 2>&1 | tail -40)"
     ]
   }
 }
