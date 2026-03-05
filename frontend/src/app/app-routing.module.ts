@@ -10,6 +10,14 @@ import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 
+import {
+  driverGuard,
+  adminGuard,
+  attorneyGuard,
+  operatorGuard,
+  carrierGuard,
+} from './core/guards/auth.guard';
+
 // ← EXPORT the routes constant
 export const routes: Routes = [
   // Public routes
@@ -37,24 +45,41 @@ export const routes: Routes = [
     path: 'signup/driver',
     component: RegisterComponent
   },
+  {
+    path: 'unauthorized',
+    loadComponent: () => import('./features/auth/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
+  },
 
   // Protected routes
   {
     path: 'driver',
     loadChildren: () => import('./features/driver/driver.module').then(m => m.DriverModule),
-    //canActivate: [AuthGuard]
+    canActivate: [driverGuard],
   },
   {
     path: 'admin',
-    loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule)
+    loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule),
+    canActivate: [adminGuard],
   },
   {
     path: 'attorney',
-    loadChildren: () => import('./features/attorney/attorney.module').then(m => m.AttorneyModule)
+    loadChildren: () => import('./features/attorney/attorney.module').then(m => m.AttorneyModule),
+    canActivate: [attorneyGuard],
   },
   {
     path: 'operator',
-    loadChildren: () => import('./features/operator/operator.module').then(m => m.OperatorModule)
+    loadChildren: () => import('./features/operator/operator.module').then(m => m.OperatorModule),
+    canActivate: [operatorGuard],
+  },
+  {
+    path: 'carrier',
+    loadChildren: () => import('./features/carrier/carrier.module').then(m => m.CarrierModule),
+    canActivate: [carrierGuard],
+  },
+  {
+    path: 'paralegal',
+    loadChildren: () => import('./features/paralegal/paralegal.module').then(m => m.ParalegalModule),
+    canActivate: [attorneyGuard],
   },
   {
     path: 'driver/help',
@@ -64,7 +89,7 @@ export const routes: Routes = [
     path: 'driver/contact',
     component: ContactComponent
   },
-  
+
   // Legal Pages
   {
     path: 'privacy',
@@ -74,7 +99,7 @@ export const routes: Routes = [
     path: 'terms',
     component: TermsComponent
   },
-  
+
   // Placeholder routes (optional)
   {
     path: 'cookies',

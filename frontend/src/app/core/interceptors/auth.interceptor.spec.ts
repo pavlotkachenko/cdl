@@ -176,10 +176,8 @@ describe('BUG-002: handle401Error must not hang without refresh token', () => {
 
   afterEach(() => httpTesting.verify());
 
-  // BUG-002 is UNFIXED: handle401Error hangs when no refresh token exists.
-  // This test times out (proving the bug), so we mark it with it.fails.
-  // When BUG-002 is fixed, change it.fails → it and the test will pass.
-  it.fails('should not hang forever on 401 from protected endpoint when no refresh token exists', async () => {
+  // BUG-002 is FIXED: handle401Error no longer hangs when no refresh token exists.
+  it('should not hang forever on 401 from protected endpoint when no refresh token exists', async () => {
     const promise = firstValueFrom(
       http.get('http://localhost:3000/api/protected/resource'),
     ).then(

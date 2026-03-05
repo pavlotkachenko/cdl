@@ -1,7 +1,7 @@
 /**
  * Tests for AttorneyCaseDetailComponent — Sprint 003 Story 7.7
  */
-import { TestBed, ComponentFixture, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -30,21 +30,20 @@ function makeCaseData(overrides = {}) {
 describe('AttorneyCaseDetailComponent', () => {
   let fixture: ComponentFixture<AttorneyCaseDetailComponent>;
   let component: AttorneyCaseDetailComponent;
-  let caseServiceSpy: jest.Mocked<Partial<CaseService>>;
-  let routerSpy: { navigate: jest.Mock };
-  let snackBarSpy: { open: jest.Mock };
+  let caseServiceSpy: { getCaseById: ReturnType<typeof vi.fn>; listDocuments: ReturnType<typeof vi.fn>; acceptCase: ReturnType<typeof vi.fn>; declineCase: ReturnType<typeof vi.fn>; updateStatus: ReturnType<typeof vi.fn> };
+  let routerSpy: { navigate: ReturnType<typeof vi.fn> };
+  let snackBarSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     caseServiceSpy = {
-      getCaseById: jest.fn().mockReturnValue(of({ data: makeCaseData() })),
-      listDocuments: jest.fn().mockReturnValue(of({ documents: [] })),
-      acceptCase: jest.fn().mockReturnValue(of({ message: 'Accepted' })),
-      declineCase: jest.fn().mockReturnValue(of({ message: 'Declined' })),
-      updateStatus: jest.fn().mockReturnValue(of({ message: 'Updated' })),
+      getCaseById: vi.fn().mockReturnValue(of({ data: makeCaseData() })),
+      listDocuments: vi.fn().mockReturnValue(of({ documents: [] })),
+      acceptCase: vi.fn().mockReturnValue(of({ message: 'Accepted' })),
+      declineCase: vi.fn().mockReturnValue(of({ message: 'Declined' })),
+      updateStatus: vi.fn().mockReturnValue(of({ message: 'Updated' })),
     };
 
-    routerSpy = { navigate: jest.fn() };
-    snackBarSpy = { open: jest.fn() };
+    routerSpy = { navigate: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [AttorneyCaseDetailComponent, NoopAnimationsModule],
@@ -52,12 +51,16 @@ describe('AttorneyCaseDetailComponent', () => {
         { provide: CaseService, useValue: caseServiceSpy },
         { provide: Router, useValue: routerSpy },
         { provide: ActivatedRoute, useValue: { params: of({ caseId: 'case-1' }) } },
-        { provide: MatSnackBar, useValue: snackBarSpy },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AttorneyCaseDetailComponent);
     component = fixture.componentInstance;
+
+    // Spy on the actual MatSnackBar instance used by the component
+    const snackBar = fixture.debugElement.injector.get(MatSnackBar);
+    snackBarSpy = vi.spyOn(snackBar, 'open').mockReturnValue(null as any);
+
     fixture.detectChanges();
   });
 
@@ -80,12 +83,11 @@ describe('AttorneyCaseDetailComponent', () => {
   // ----------------------------------------------------------------
   // accept()
   // ----------------------------------------------------------------
-  it('accept() calls caseService.acceptCase and reloads case', fakeAsync(() => {
+  it('accept() calls caseService.acceptCase and reloads case', () => {
     component.accept();
-    tick();
 
     expect(caseServiceSpy.acceptCase).toHaveBeenCalledWith('case-1');
-    expect(snackBarSpy.open).toHaveBeenCalledWith(
+    expect(snackBarSpy).toHaveBeenCalledWith(
       expect.stringContaining('accept'),
       expect.anything(),
       expect.any(Object)
@@ -93,40 +95,37 @@ describe('AttorneyCaseDetailComponent', () => {
     // Should reload case after acceptance
     expect(caseServiceSpy.getCaseById).toHaveBeenCalledTimes(2);
     expect(component.processing()).toBe(false);
-  }));
+  });
 
-  it('accept() shows error snackbar when service fails', fakeAsync(() => {
-    caseServiceSpy.acceptCase!.mockReturnValue(throwError(() => new Error('Failed')));
+  it('accept() shows error snackbar when service fails', () => {
+    caseServiceSpy.acceptCase.mockReturnValue(throwError(() => new Error('Failed')));
     component.accept();
-    tick();
 
-    expect(snackBarSpy.open).toHaveBeenCalledWith(
+    expect(snackBarSpy).toHaveBeenCalledWith(
       expect.stringContaining('Failed'),
       expect.anything(),
       expect.any(Object)
     );
     expect(component.processing()).toBe(false);
-  }));
+  });
 
   // ----------------------------------------------------------------
   // decline()
   // ----------------------------------------------------------------
-  it('decline() calls caseService.declineCase and navigates to dashboard', fakeAsync(() => {
+  it('decline() calls caseService.declineCase and navigates to dashboard', () => {
     component.decline();
-    tick();
 
     expect(caseServiceSpy.declineCase).toHaveBeenCalledWith('case-1');
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/attorney/dashboard']);
-  }));
+  });
 
-  it('decline() shows error when service fails', fakeAsync(() => {
-    caseServiceSpy.declineCase!.mockReturnValue(throwError(() => new Error('error')));
+  it('decline() shows error when service fails', () => {
+    caseServiceSpy.declineCase.mockReturnValue(throwError(() => new Error('error')));
     component.decline();
-    tick();
 
     expect(routerSpy.navigate).not.toHaveBeenCalled();
     expect(component.processing()).toBe(false);
-  }));
+  });
 
   // ----------------------------------------------------------------
   // updateStatus()
@@ -137,15 +136,14 @@ describe('AttorneyCaseDetailComponent', () => {
     expect(caseServiceSpy.updateStatus).not.toHaveBeenCalled();
   });
 
-  it('updateStatus() calls caseService.updateStatus with selected status', fakeAsync(() => {
+  it('updateStatus() calls caseService.updateStatus with selected status', () => {
     component.selectedStatus = 'send_info_to_attorney';
     component.updateStatus();
-    tick();
 
     expect(caseServiceSpy.updateStatus).toHaveBeenCalledWith('case-1', 'send_info_to_attorney');
     expect(component.selectedStatus).toBe('');
     expect(component.processing()).toBe(false);
-  }));
+  });
 
   // ----------------------------------------------------------------
   // getStatusLabel()

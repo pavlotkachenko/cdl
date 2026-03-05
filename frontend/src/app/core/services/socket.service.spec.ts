@@ -4,31 +4,32 @@
 import { TestBed } from '@angular/core/testing';
 import { SocketService } from './socket.service';
 import { AuthService } from './auth.service';
+import { io } from 'socket.io-client';
 
 // Mock socket.io-client
 const mockSocket = {
   connected: false,
-  on: jest.fn(),
-  off: jest.fn(),
-  emit: jest.fn(),
-  disconnect: jest.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  emit: vi.fn(),
+  disconnect: vi.fn(),
 };
 
-jest.mock('socket.io-client', () => ({
-  io: jest.fn(() => mockSocket),
+vi.mock('socket.io-client', () => ({
+  io: vi.fn(() => mockSocket),
 }));
 
-const { io } = require('socket.io-client');
+const ioMock = io as ReturnType<typeof vi.fn>;
 
 describe('SocketService', () => {
   let service: SocketService;
-  let authStub: Partial<AuthService>;
+  let authStub: { getToken: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockSocket.connected = false;
 
-    authStub = { getToken: jest.fn().mockReturnValue('test-jwt') };
+    authStub = { getToken: vi.fn().mockReturnValue('test-jwt') };
 
     TestBed.configureTestingModule({
       providers: [
@@ -48,7 +49,7 @@ describe('SocketService', () => {
   describe('connect', () => {
     it('creates a socket with the auth token', () => {
       service.connect();
-      expect(io).toHaveBeenCalledWith(
+      expect(ioMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ auth: { token: 'test-jwt' } })
       );
@@ -58,13 +59,13 @@ describe('SocketService', () => {
       mockSocket.connected = true;
       (service as any).socket = mockSocket;
       service.connect();
-      expect(io).not.toHaveBeenCalled();
+      expect(ioMock).not.toHaveBeenCalled();
     });
 
     it('does not connect when no token is available', () => {
-      (authStub.getToken as jest.Mock).mockReturnValue(null);
+      authStub.getToken.mockReturnValue(null);
       service.connect();
-      expect(io).not.toHaveBeenCalled();
+      expect(ioMock).not.toHaveBeenCalled();
     });
   });
 
@@ -132,23 +133,24 @@ describe('SocketService', () => {
   // onCaseStatusUpdate
   // ----------------------------------------------------------------
   describe('onCaseStatusUpdate', () => {
-    it('returns an Observable that emits when case:status_updated fires', done => {
-      (service as any).socket = mockSocket;
+    it('returns an Observable that emits when case:status_updated fires', () => {
+      return new Promise<void>(resolve => {
+        (service as any).socket = mockSocket;
 
-      let registeredHandler: Function;
-      mockSocket.on.mockImplementation((event: string, handler: Function) => {
-        if (event === 'case:status_updated') registeredHandler = handler;
+        let registeredHandler: (payload: unknown) => void;
+        mockSocket.on.mockImplementation((event: string, handler: (p: unknown) => void) => {
+          if (event === 'case:status_updated') registeredHandler = handler;
+        });
+
+        const payload = { caseId: 'case-1', status: 'send_info_to_attorney', updatedAt: '2026-01-01' };
+
+        service.onCaseStatusUpdate().subscribe(data => {
+          expect(data).toEqual(payload);
+          resolve();
+        });
+
+        registeredHandler!(payload);
       });
-
-      const payload = { caseId: 'case-1', status: 'send_info_to_attorney', updatedAt: '2026-01-01' };
-
-      service.onCaseStatusUpdate().subscribe(data => {
-        expect(data).toEqual(payload);
-        done();
-      });
-
-      // Simulate server emitting the event
-      registeredHandler!(payload);
     });
 
     it('unregisters the handler on unsubscribe', () => {
@@ -166,22 +168,24 @@ describe('SocketService', () => {
   // onNewMessage
   // ----------------------------------------------------------------
   describe('onNewMessage', () => {
-    it('returns an Observable that emits on new-message event', done => {
-      (service as any).socket = mockSocket;
+    it('returns an Observable that emits on new-message event', () => {
+      return new Promise<void>(resolve => {
+        (service as any).socket = mockSocket;
 
-      let registeredHandler: Function;
-      mockSocket.on.mockImplementation((event: string, handler: Function) => {
-        if (event === 'new-message') registeredHandler = handler;
+        let registeredHandler: (payload: unknown) => void;
+        mockSocket.on.mockImplementation((event: string, handler: (p: unknown) => void) => {
+          if (event === 'new-message') registeredHandler = handler;
+        });
+
+        const payload = { id: 'msg-1', content: 'Hello' };
+
+        service.onNewMessage().subscribe(data => {
+          expect(data).toEqual(payload);
+          resolve();
+        });
+
+        registeredHandler!(payload);
       });
-
-      const payload = { id: 'msg-1', content: 'Hello' };
-
-      service.onNewMessage().subscribe(data => {
-        expect(data).toEqual(payload);
-        done();
-      });
-
-      registeredHandler!(payload);
     });
   });
 });

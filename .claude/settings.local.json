@@ -18,7 +18,27 @@
       "Bash(npm test -- --testPathPattern=\"case.controller|operator.controller\" 2>&1 | tail -80)",
       "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -100)",
       "Bash(npx jest --testPathPattern=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -30)",
-      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -40)"
+      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -40)",
+      "Bash(find /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features -name \"*.module.ts\" -o -name \"*-routing.module.ts\" 2>/dev/null | sort)",
+      "Bash(find /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/carrier -name \"*.ts\" 2>/dev/null | head -20)",
+      "Bash(ls /Users/paveltkachenko/prj/cdl-ticket-management/frontend/vite*.config* /Users/paveltkachenko/prj/cdl-ticket-management/frontend/vitest* 2>/dev/null)",
+      "Bash(cd /Users/paveltkachenko/prj/cdl-ticket-management/frontend && ng test --include=\"src/app/core/guards/auth.guard.spec.ts\" --no-watch 2>&1 | tail -40)",
+      "Bash(npx ng test --include=\"src/app/core/guards/auth.guard.spec.ts\" --no-watch 2>&1 | tail -50)",
+      "Bash(cat /Users/paveltkachenko/prj/cdl-ticket-management/frontend/package.json | python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in {**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}.items\\(\\) if any\\(x in k for x in ['vitest','jest','@angular/build','jasmine','karma']\\)]\")",
+      "Bash(npx ng test --include=\"src/app/core/guards/auth.guard.spec.ts\" --no-watch 2>&1 | tail -30)",
+      "Bash(for f in \\\\\n  /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/core/services/socket.service.spec.ts \\\\\n  /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/operator/operator-dashboard/operator-dashboard.component.spec.ts \\\\\n  /Users/paveltkachenko/prj/cdl-ticket-management/frontend/src/app/features/attorney/attorney-case-detail/attorney-case-detail.component.spec.ts; do\n  sed -i '' 's/jest\\\\./vi\\\\./g' \"$f\"\n  echo \"Fixed $f\"\ndone)",
+      "Bash(npx ng test --include=\"src/app/core/guards/auth.guard.spec.ts\" --no-watch 2>&1 | tail -40)",
+      "Bash(npx ng test --include=\"src/app/features/auth/unauthorized/unauthorized.component.spec.ts\" --no-watch 2>&1 | tail -20)",
+      "Bash(npx ng test --no-watch 2>&1 | tail -25)",
+      "Bash(npx ng test --no-watch 2>&1 | grep -E \"FAIL|Error:|✓|✗|×|⠴\" | head -40)",
+      "Bash(npx ng test --include=\"src/app/features/operator/operator-dashboard/operator-dashboard.component.spec.ts\" --no-watch 2>&1 | grep -A10 \"FAIL\\\\|Error\\\\|fakeAsync\\\\|Error:\" | head -40)",
+      "Bash(npx ng test --no-watch 2>&1 | tail -15)",
+      "Bash(npx ng test --include=\"src/app/features/operator/operator-dashboard/operator-dashboard.component.spec.ts\" --no-watch 2>&1 | grep -A 20 \"FAIL\\\\|AssertionError\\\\|Expected\\\\|Received\" | head -60)",
+      "Bash(npx ng test --no-watch 2>&1 | tail -10)",
+      "Bash(npx jest --forceExit 2>&1 | tail -10)",
+      "Bash(cd /Users/paveltkachenko/prj/cdl-ticket-management/backend && npx jest --forceExit 2>&1 | tail -10)",
+      "Bash(npx jest --forceExit 2>&1 | grep -E \"FAIL|PASS|✓|✗|×\" | head -20)",
+      "Bash(npx jest --testPathPatterns=\"case.controller|operator.controller\" --forceExit 2>&1 | tail -8)"
     ]
   }
 }

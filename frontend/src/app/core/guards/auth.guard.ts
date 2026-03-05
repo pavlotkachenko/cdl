@@ -123,3 +123,13 @@ export const driverGuard: CanActivateFn = roleGuard(['driver']);
 // Attorney Guard - Attorneys and paralegals can access
 // ============================================
 export const attorneyGuard: CanActivateFn = roleGuard(['attorney', 'paralegal']);
+
+// ============================================
+// Operator Guard - Only operators can access
+// ============================================
+export const operatorGuard: CanActivateFn = roleGuard(['operator']);
+
+// ============================================
+// Carrier Guard - Only carriers can access
+// ============================================
+export const carrierGuard: CanActivateFn = roleGuard(['carrier']);
