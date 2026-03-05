@@ -1,10 +1,23 @@
 <!-- Driver Dashboard Template - Uses ONLY Material Components -->
 <div class="dashboard-container">
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <mat-spinner diameter="60"></mat-spinner>
-    <p>Loading your dashboard...</p>
+  <!-- Skeleton Loading State -->
+  <div *ngIf="loading" class="skeleton-loading">
+    <div class="skeleton-header">
+      <div class="skeleton-block" style="width: 200px; height: 32px;"></div>
+      <div class="skeleton-block" style="width: 160px; height: 40px;"></div>
+    </div>
+    <div class="skeleton-stats">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+    <div class="skeleton-list">
+      <div class="skeleton-row-item"></div>
+      <div class="skeleton-row-item"></div>
+      <div class="skeleton-row-item"></div>
+    </div>
   </div>
 
   <!-- Error State -->

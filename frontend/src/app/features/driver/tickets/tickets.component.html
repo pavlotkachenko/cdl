@@ -305,10 +305,9 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading-container">
-    <mat-spinner diameter="60"></mat-spinner>
-    <p>Loading your tickets...</p>
+  <!-- Skeleton Loading State -->
+  <div *ngIf="loading" class="skeleton-loading">
+    <div class="skeleton-row-item" *ngFor="let i of [1,2,3,4,5]"></div>
   </div>
 
   <!-- Error State -->

@@ -130,7 +130,7 @@ export class StaffManagementComponent implements OnInit {
   // ============================================
 
   viewStaff(member: StaffMember): void {
-    this.router.navigate(['/admin/staff', member.id]);
+    this.snackBar.open(`Viewing ${member.name} — staff detail coming soon`, 'Close', { duration: 3000 });
   }
 
   editStaff(member: StaffMember): void {

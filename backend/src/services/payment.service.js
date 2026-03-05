@@ -5,6 +5,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabase } = require('../config/supabase');
+const { sendPaymentConfirmationEmail } = require('./email.service');
 
 class PaymentService {
   /**
@@ -134,6 +135,25 @@ class PaymentService {
           payment_status: 'paid'
         })
         .eq('id', payment.ticket_id);
+
+      // Send payment confirmation email (non-blocking)
+      const charge = paymentIntent.charges?.data?.[0];
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', payment.user_id)
+        .maybeSingle();
+
+      if (userProfile) {
+        sendPaymentConfirmationEmail({
+          name: userProfile.full_name || userProfile.email,
+          email: userProfile.email,
+          amount: payment.amount * 100, // convert dollars → cents for formatter
+          caseId: payment.ticket_id,
+          last4: charge?.payment_method_details?.card?.last4,
+          transactionId: charge?.id,
+        });
+      }
 
       return payment;
     } catch (error) {

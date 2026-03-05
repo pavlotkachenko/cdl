@@ -154,7 +154,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     switch (notification.type) {
       case 'case':
         if (notification.data?.caseId) {
-          this.router.navigate(['/driver/cases', notification.data.caseId]);
+          this.router.navigate(['/driver/tickets', notification.data.caseId]);
         }
         break;
       case 'message':
@@ -163,13 +163,11 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
         }
         break;
       case 'court':
-        if (notification.data?.courtDateId || notification.data?.caseId) {
-          this.router.navigate(['/driver/calendar']);
-        }
+        this.router.navigate(['/driver/notifications']);
         break;
       case 'payment':
         if (notification.data?.caseId) {
-          this.router.navigate(['/driver/cases', notification.data.caseId]);
+          this.router.navigate(['/driver/tickets', notification.data.caseId]);
         }
         break;
       default:

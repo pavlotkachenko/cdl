@@ -18,6 +18,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 // Services
 import { CaseService } from '../../../core/services/case.service';
@@ -39,7 +40,8 @@ import { CaseService } from '../../../core/services/case.service';
     MatIconModule,
     MatCardModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatProgressBarModule
   ]
 })
 export class SubmitTicketComponent implements OnInit {
@@ -179,7 +181,7 @@ onFileSelected(event: any): void {
   }
 
   viewTicket(): void {
-    this.router.navigate(['/driver/cases', this.ticketId]);
+    this.router.navigate(['/driver/tickets', this.ticketId]);
   }
 
   submitAnother(): void {

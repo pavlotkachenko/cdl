@@ -90,7 +90,11 @@
         <div class="empty-state">
           <mat-icon>groups</mat-icon>
           <h3>No drivers yet</h3>
-          <p>Add drivers to your fleet to start managing their cases</p>
+          <p>Add your first driver to get started</p>
+          <button mat-raised-button color="primary" (click)="navigateToDrivers()">
+            <mat-icon>person_add</mat-icon>
+            Add Driver
+          </button>
         </div>
       </mat-card-content>
     </mat-card>

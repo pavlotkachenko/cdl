@@ -114,7 +114,7 @@ export class ClientManagementComponent implements OnInit {
   // ============================================
 
   viewClient(client: Client): void {
-    this.router.navigate(['/admin/clients', client.id]);
+    this.snackBar.open(`Viewing ${client.name} — client detail coming soon`, 'Close', { duration: 3000 });
   }
 
   editClient(client: Client): void {

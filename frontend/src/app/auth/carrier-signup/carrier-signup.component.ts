@@ -57,7 +57,7 @@ export class CarrierSignupComponent {
 
   onUserTypeChange(type: string) {
     if (type === 'driver') {
-      this.router.navigate(['/auth/driver-signup']);
+      this.router.navigate(['/sign-in']);
     }
   }
 
@@ -82,7 +82,7 @@ export class CarrierSignupComponent {
         next: (response) => {
           localStorage.setItem('token', response.token);
           localStorage.setItem('user', JSON.stringify(response.user));
-          this.router.navigate(['/app/dashboard']);
+          this.router.navigate(['/carrier/dashboard']);
         },
         error: (error) => {
           console.error('Registration failed:', error);

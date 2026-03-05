@@ -182,6 +182,43 @@ body {
 }
 
 // ============================================
+// TOUCH TARGETS (WCAG 2.5.5 — minimum 44×44px)
+// Achieved via min-height/min-width without visual size changes.
+// ============================================
+
+// Material buttons
+.mat-mdc-button-base,
+.mat-mdc-fab,
+.mat-mdc-mini-fab {
+  min-height: 44px;
+}
+
+// Icon-only buttons: increase hit area via padding, keep visual icon size
+.mat-mdc-icon-button {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 10px !important;
+}
+
+// Chips acting as interactive controls
+.mat-mdc-chip.mat-mdc-chip-row,
+.mat-mdc-chip-option {
+  min-height: 44px;
+}
+
+// Nav links and anchor tags used as interactive controls
+a.mat-mdc-button,
+a.mat-mdc-raised-button,
+a.mat-mdc-stroked-button,
+a[mat-button],
+a[mat-raised-button],
+a[mat-stroked-button] {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+// ============================================
 // ACCESSIBILITY & UTILITIES
 // ============================================
 

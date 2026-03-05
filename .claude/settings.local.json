@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(claude doctor:*)",
+      "Bash(sudo npm install -g @anthropic-ai/claude-code)"
     ]
   }
 }

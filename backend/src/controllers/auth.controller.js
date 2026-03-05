@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { supabase, supabaseAnon } = require('../config/supabase');
+const { sendRegistrationEmail } = require('../services/email.service');
 
 // Use supabaseAnon for signInWithPassword so it doesn't pollute the admin
 // client's auth state (which would cause RLS to kick in on subsequent DB queries).
@@ -151,6 +152,9 @@ exports.register = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    // 5. Send welcome email (non-blocking)
+    sendRegistrationEmail({ name, email: emailLower, role: requestedRole });
 
     res.status(201).json({
       token,

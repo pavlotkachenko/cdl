@@ -149,11 +149,12 @@
 
   <!-- Empty State -->
   <div *ngIf="!loading && filteredNotifications.length === 0" class="empty-state">
-    <mat-icon>notifications_none</mat-icon>
-    <h2>No notifications</h2>
-    <p *ngIf="selectedFilter === 'all'">You don't have any notifications yet</p>
-    <p *ngIf="selectedFilter === 'unread'">No unread notifications</p>
-    <p *ngIf="selectedFilter === 'read'">No read notifications</p>
+    <mat-icon *ngIf="selectedFilter === 'all'">check_circle</mat-icon>
+    <mat-icon *ngIf="selectedFilter !== 'all'">notifications_none</mat-icon>
+    <h2 *ngIf="selectedFilter === 'all'">You're all caught up!</h2>
+    <h2 *ngIf="selectedFilter === 'unread'">No unread notifications</h2>
+    <h2 *ngIf="selectedFilter === 'read'">No read notifications</h2>
+    <p *ngIf="selectedFilter === 'all'">No new notifications right now</p>
     <button mat-raised-button color="primary" (click)="setFilter('all')" *ngIf="selectedFilter !== 'all'">
       View All Notifications
     </button>
