@@ -48,6 +48,11 @@
               </p>
             </div>
             <div class="pending-card-actions">
+              <button mat-stroked-button
+                      (click)="openCaseDetails({caseId: pendingCase.id, driverName: '', violationType: '', violationDate: '', priority: 'medium', status: pendingCase.status})">
+                <mat-icon>open_in_new</mat-icon>
+                Details
+              </button>
               <button mat-raised-button color="primary"
                       [disabled]="processingCaseId === pendingCase.id"
                       (click)="acceptCase(pendingCase.id)">

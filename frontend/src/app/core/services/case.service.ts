@@ -169,19 +169,50 @@ export class CaseService {
   }
 
   /**
+   * List documents for a case
+   */
+  listDocuments(caseId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/cases/${caseId}/documents`);
+  }
+
+  /**
    * Upload document for a case
    */
   uploadDocument(caseId: string, file: File): Observable<any> {
-    // TODO: Replace with actual HTTP call
-    // const formData = new FormData();
-    // formData.append('file', file);
-    // return this.http.post(`${this.apiUrl}/cases/${caseId}/documents`, formData);
-    
-    return of({ 
-      success: true, 
-      fileName: file.name,
-      fileSize: file.size 
-    }).pipe(delay(1500));
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.apiUrl}/cases/${caseId}/documents`, formData);
+  }
+
+  /**
+   * Delete a document from a case
+   */
+  deleteDocument(caseId: string, documentId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/cases/${caseId}/documents/${documentId}`);
+  }
+
+  /**
+   * Get operator case queue
+   */
+  getOperatorCases(status = 'new'): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/cases`, { params: { status } });
+  }
+
+  /**
+   * Get available attorneys for assignment
+   */
+  getAvailableAttorneys(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/attorneys`);
+  }
+
+  /**
+   * Assign attorney to case (operator action)
+   */
+  assignToAttorney(caseId: string, attorneyId: string, price: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/${caseId}/assign-attorney`, {
+      attorney_id: attorneyId,
+      attorney_price: price
+    });
   }
 
   /**

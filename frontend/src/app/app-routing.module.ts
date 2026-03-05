@@ -49,6 +49,14 @@ export const routes: Routes = [
     loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule)
   },
   {
+    path: 'attorney',
+    loadChildren: () => import('./features/attorney/attorney.module').then(m => m.AttorneyModule)
+  },
+  {
+    path: 'operator',
+    loadChildren: () => import('./features/operator/operator.module').then(m => m.OperatorModule)
+  },
+  {
     path: 'driver/help',
     component: HelpComponent
   },

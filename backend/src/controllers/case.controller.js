@@ -292,7 +292,12 @@ exports.getCaseById = async (req, res) => {
     if (!data) {
       return res.status(404).json({ error: 'Case not found' });
     }
-    
+
+    // Mask driver phone for attorneys (last 4 digits only)
+    if (req.user.role === 'attorney' && data.driver?.phone) {
+      data.driver = { ...data.driver, phone: '***-***-' + String(data.driver.phone).slice(-4) };
+    }
+
     res.json({ case: data });
     
   } catch (error) {
@@ -557,11 +562,21 @@ exports.changeStatus = async (req, res) => {
     
     await logActivity(id, req.user.id, activityMessage);
     
+    // Emit real-time update to case room
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`case:${id}`).emit('case:status_updated', {
+        caseId: id,
+        status: data.status,
+        updatedAt: data.updated_at
+      });
+    }
+
     res.json({
       message: 'Status updated successfully',
       case: data
     });
-    
+
   } catch (error) {
     console.error('Change status error:', error);
     res.status(500).json({ error: 'Failed to change status' });
@@ -724,6 +739,166 @@ async function autoAssignToOperator(caseId, state) {
     console.error('Auto-assignment error:', error);
   }
 }
+
+/**
+ * LIST DOCUMENTS
+ * List uploaded files for a case with signed URLs
+ */
+exports.listDocuments = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const storageService = require('../services/storage.service');
+
+    const { data, error } = await supabase
+      .from('case_files')
+      .select('id, file_name, file_url, file_type, uploaded_at')
+      .eq('case_id', id)
+      .order('uploaded_at', { ascending: false });
+
+    if (error) throw error;
+
+    const documents = await Promise.all((data || []).map(async (file) => {
+      let signedUrl = null;
+      try {
+        signedUrl = await storageService.generateSignedUrl(file.file_url, 3600);
+      } catch { /* use null */ }
+      return {
+        id: file.id,
+        fileName: file.file_name,
+        fileUrl: file.file_url,
+        fileType: file.file_type,
+        uploadedAt: file.uploaded_at,
+        signedUrl
+      };
+    }));
+
+    res.json({ documents });
+  } catch (error) {
+    console.error('List documents error:', error);
+    res.status(500).json({ error: 'Failed to fetch documents' });
+  }
+};
+
+/**
+ * UPLOAD DOCUMENT
+ * Driver uploads a file to their case (max 10MB, validated MIME)
+ */
+exports.uploadDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Verify driver owns the case
+    const { data: caseData, error: fetchError } = await supabase
+      .from('cases')
+      .select('id, driver_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    if (caseData.driver_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Enforce max 10 documents
+    const { count } = await supabase
+      .from('case_files')
+      .select('id', { count: 'exact', head: true })
+      .eq('case_id', id);
+
+    if (count >= 10) {
+      return res.status(400).json({ error: 'Maximum 10 documents per case reached' });
+    }
+
+    const storageService = require('../services/storage.service');
+    const uploadResult = await storageService.uploadToSupabase(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      `cases/${id}`
+    );
+
+    const { data: fileRecord, error: insertError } = await supabase
+      .from('case_files')
+      .insert([{
+        case_id: id,
+        file_name: req.file.originalname,
+        file_url: uploadResult.path,
+        file_type: 'driver_upload'
+      }])
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    let signedUrl = null;
+    try {
+      signedUrl = await storageService.generateSignedUrl(uploadResult.path, 3600);
+    } catch { /* non-critical */ }
+
+    res.status(201).json({
+      id: fileRecord.id,
+      fileName: fileRecord.file_name,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      uploadedAt: fileRecord.uploaded_at,
+      signedUrl
+    });
+  } catch (error) {
+    console.error('Upload document error:', error);
+    res.status(500).json({ error: 'Failed to upload document' });
+  }
+};
+
+/**
+ * DELETE DOCUMENT
+ * Driver deletes their uploaded file
+ */
+exports.deleteDocument = async (req, res) => {
+  try {
+    const { id, documentId } = req.params;
+
+    // Verify driver owns the case
+    const { data: caseData } = await supabase
+      .from('cases')
+      .select('driver_id')
+      .eq('id', id)
+      .single();
+
+    if (!caseData || caseData.driver_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Get file record
+    const { data: fileRecord, error: fetchError } = await supabase
+      .from('case_files')
+      .select('file_url')
+      .eq('id', documentId)
+      .eq('case_id', id)
+      .single();
+
+    if (fetchError || !fileRecord) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Delete from storage
+    const storageService = require('../services/storage.service');
+    await storageService.deleteFromSupabase(fileRecord.file_url);
+
+    // Delete from DB
+    await supabase.from('case_files').delete().eq('id', documentId);
+
+    res.json({ message: 'Document deleted' });
+  } catch (error) {
+    console.error('Delete document error:', error);
+    res.status(500).json({ error: 'Failed to delete document' });
+  }
+};
 
 /**
  * GET RECOMMENDED ATTORNEYS

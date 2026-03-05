@@ -166,6 +166,22 @@ const initializeSocket = (server) => {
     // - video-link-generated: When video link is created
 
     // ============================================
+    // JOIN / LEAVE CASE ROOM
+    // ============================================
+    socket.on('join-case', ({ caseId }) => {
+      if (caseId) {
+        socket.join(`case:${caseId}`);
+        console.log(`User ${socket.userId} joined case room ${caseId}`);
+      }
+    });
+
+    socket.on('leave-case', ({ caseId }) => {
+      if (caseId) {
+        socket.leave(`case:${caseId}`);
+      }
+    });
+
+    // ============================================
     // GET ONLINE USERS
     // ============================================
     socket.on('get-online-users', () => {
