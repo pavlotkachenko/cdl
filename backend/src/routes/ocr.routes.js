@@ -9,6 +9,18 @@ const ocrController = require('../controllers/ocr.controller');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 
 /**
+ * @route   POST /api/ocr/extract
+ * @desc    Extract ticket data from photo (driver-accessible)
+ * @access  Private (all authenticated users)
+ */
+router.post(
+  '/extract',
+  authenticate,
+  ocrController.uploadMiddleware,
+  ocrController.processTicket
+);
+
+/**
  * @route   POST /api/ocr/ticket
  * @desc    Process single ticket image with OCR
  * @access  Private (Operator, Admin)

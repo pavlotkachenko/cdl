@@ -50,9 +50,20 @@ export class OcrService {
    */
   processTicketImage(file: File): Observable<OCRResult> {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('ticket', file);
 
-    return this.http.post<OCRResult>(`${this.apiUrl}/ocr/process`, formData);
+    return this.http.post<any>(`${this.apiUrl}/ocr/extract`, formData).pipe(
+      map(response => {
+        // Backend wraps result in { success, message, data: OCRResult }
+        const data = response.data || response;
+        return {
+          success: data.success ?? response.success ?? false,
+          confidence: data.confidence ?? 0,
+          extractedData: data.extractedData ?? {},
+          rawText: data.rawText ?? ''
+        } as OCRResult;
+      })
+    );
   }
 
   /**

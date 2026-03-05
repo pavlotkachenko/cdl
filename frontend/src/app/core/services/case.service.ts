@@ -6,28 +6,36 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, delay } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export interface Case {
   id: string;
+  case_number?: string;
   userId?: string;
   ticketNumber?: string;
   type?: string;
   status: string;
   citationNumber?: string;
+  citation_number?: string;
   violationDate?: Date | string;
+  violation_date?: Date | string;
   violation_type?: string;
   state?: string;
   location?: string;
   description?: string;
   courtDate?: Date | string;
+  court_date?: Date | string;
   documents?: any[];
   statusHistory?: any[];
   assignedAttorney?: string;
+  attorney?: { id: string; full_name: string; email?: string; phone?: string } | null;
+  attorney_price?: number;
   resolution?: string;
   createdAt?: Date | string;
   created_at?: Date | string;
   updatedAt?: Date | string;
   full_name?: string;
+  driver_id?: string;
 }
 
 @Injectable({
@@ -87,14 +95,11 @@ export class CaseService {
 
   /**
    * Get all cases for the current user
-   * Returns mock data if backend is not available
    */
   getMyCases(): Observable<any> {
-    // TODO: Replace with actual HTTP call when backend is ready
-    // return this.http.get(`${this.apiUrl}/cases/my-cases`);
-    
-    // Return mock data for now
-    return of({ data: this.mockCases }).pipe(delay(800));
+    return this.http.get<any>(`${this.apiUrl}/cases/my-cases`).pipe(
+      map(response => ({ data: response.cases || [] }))
+    );
   }
 
   /**
@@ -114,11 +119,9 @@ export class CaseService {
    * Get a single case by ID
    */
   getCaseById(id: string): Observable<any> {
-    // TODO: Replace with actual HTTP call
-    // return this.http.get(`${this.apiUrl}/cases/${id}`);
-    
-    const caseItem = this.mockCases.find(c => c.id === id);
-    return of({ data: caseItem }).pipe(delay(600));
+    return this.http.get<any>(`${this.apiUrl}/cases/${id}`).pipe(
+      map(response => ({ data: response.case || response }))
+    );
   }
 
   /**
@@ -208,15 +211,35 @@ export class CaseService {
    * Update case status
    */
   updateStatus(id: string, status: string, note?: string): Observable<any> {
-    // TODO: Replace with actual HTTP call
-    // return this.http.patch(`${this.apiUrl}/cases/${id}/status`, { status, note });
-    
-    const caseItem = this.mockCases.find(c => c.id === id);
-    if (caseItem) {
-      caseItem.status = status;
-      return of({ data: caseItem }).pipe(delay(800));
-    }
-    return of({ error: 'Case not found' }).pipe(delay(800));
+    return this.http.post(`${this.apiUrl}/cases/${id}/status`, { status, comment: note });
+  }
+
+  /**
+   * Attorney accepts an assigned case
+   */
+  acceptCase(id: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/${id}/accept`, {});
+  }
+
+  /**
+   * Attorney declines an assigned case
+   */
+  declineCase(id: string, reason?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/${id}/decline`, { reason });
+  }
+
+  /**
+   * Get top 3 recommended attorneys for a case
+   */
+  getRecommendedAttorneys(caseId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cases/${caseId}/attorneys`);
+  }
+
+  /**
+   * Driver selects an attorney from recommendations
+   */
+  selectAttorney(caseId: string, attorneyId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/${caseId}/select-attorney`, { attorney_id: attorneyId });
   }
 
   /**

@@ -205,6 +205,68 @@ router.get(
 );
 
 /**
+ * GET /api/cases/:id/attorneys
+ * Get top 3 recommended attorneys for a case (driver-accessible)
+ * Access: Case owner (driver) or assigned users
+ */
+router.get(
+  '/:id/attorneys',
+  authenticate,
+  canAccessCase,
+  caseController.getRecommendedAttorneys
+);
+
+/**
+ * POST /api/cases/:id/select-attorney
+ * Driver selects an attorney from recommendations
+ * Access: Driver who owns the case
+ */
+router.post(
+  '/:id/select-attorney',
+  authenticate,
+  authorize(['driver']),
+  body('attorney_id').isUUID(),
+  caseController.selectAttorney
+);
+
+/**
+ * POST /api/cases/:id/payments
+ * Driver creates a payment intent for the attorney fee
+ * Access: Driver who owns the case
+ */
+router.post(
+  '/:id/payments',
+  authenticate,
+  authorize(['driver']),
+  caseController.createCasePayment
+);
+
+/**
+ * POST /api/cases/:id/accept
+ * Attorney accepts assigned case
+ * Access: Attorneys only
+ */
+router.post(
+  '/:id/accept',
+  authenticate,
+  authorize(['attorney']),
+  caseController.acceptCase
+);
+
+/**
+ * POST /api/cases/:id/decline
+ * Attorney declines assigned case - returns to queue
+ * Access: Attorneys only
+ */
+router.post(
+  '/:id/decline',
+  authenticate,
+  authorize(['attorney']),
+  body('reason').optional().isString(),
+  caseController.declineCase
+);
+
+/**
  * DELETE /api/cases/:id
  * Delete case (soft delete)
  * Access: Admins only

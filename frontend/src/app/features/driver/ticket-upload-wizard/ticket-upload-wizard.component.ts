@@ -344,19 +344,28 @@ export class TicketUploadWizardComponent implements OnInit, OnDestroy {
 
     this.caseService.createCase(caseData).subscribe({
       next: (createdCase) => {
+        const caseId = createdCase.id || createdCase.caseId || createdCase.case?.id;
         // Upload documents
         const uploadPromises = this.documentChecklist
           .filter(item => item.uploaded && item.file)
-          .map(item => this.uploadDocument(createdCase.caseId, item.file!, item.id));
+          .map(item => this.uploadDocument(caseId, item.file!, item.id));
 
         Promise.all(uploadPromises).then(() => {
           this.submitting = false;
-          this.snackBar.open('Case submitted successfully!', 'Close', { duration: 3000 });
-          this.router.navigate(['/driver/dashboard']);
-        }).catch((error) => {
-          console.error('Error uploading documents:', error);
+          this.snackBar.open('Case submitted! Now select your attorney.', 'Close', { duration: 3000 });
+          if (caseId) {
+            this.router.navigate(['/driver/cases', caseId, 'attorneys']);
+          } else {
+            this.router.navigate(['/driver/dashboard']);
+          }
+        }).catch(() => {
           this.submitting = false;
           this.snackBar.open('Case created but some documents failed to upload', 'Close', { duration: 5000 });
+          if (caseId) {
+            this.router.navigate(['/driver/cases', caseId, 'attorneys']);
+          } else {
+            this.router.navigate(['/driver/dashboard']);
+          }
         });
       },
       error: (error) => {

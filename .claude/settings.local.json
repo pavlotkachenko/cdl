@@ -11,7 +11,10 @@
       "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|✓|✗|×|●|Tests:|Test Suites:\\)\" | head -80)",
       "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Tests:|Test Suites:|✗|×\\)\" | tail -40)",
       "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"payment.service|analytics.service|ocr.service\" 2>&1 | grep -A 20 \"●\" | head -100)",
-      "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Tests:|Test Suites:\\)\" | tail -20)"
+      "Bash(npx jest --verbose --forceExit --no-coverage --testPathPatterns=\"auth.service|payment.service|analytics.service|ocr.service|conversation.service|message.service|storage.service\" 2>&1 | grep -E \"\\(FAIL|PASS|●|Tests:|Test Suites:\\)\" | tail -20)",
+      "Bash(grep -h \"Status:\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_002/*.md)",
+      "Bash(grep -h \"Status: TODO\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_002/*.md; grep -l \"Status.*TODO\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_002/*.md)",
+      "Bash(grep -h \"Status:\" /Users/paveltkachenko/prj/cdl-ticket-management/sprints/sprint_001/*.md 2>/dev/null | sort | uniq -c)"
     ]
   }
 }
