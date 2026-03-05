@@ -389,7 +389,7 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
   }
 
   payAttorneyFee(): void {
-    this.router.navigate(['/driver/cases', this.caseId, 'payment']);
+    this.router.navigate(['/driver/cases', this.caseId, 'pay']);
   }
 
   // Helper Methods

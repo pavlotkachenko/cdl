@@ -46,6 +46,25 @@ const routes: Routes = [
         component: CaseDetailComponent
       },
       {
+        path: 'cases/:caseId',
+        component: CaseDetailComponent
+      },
+      {
+        path: 'cases/:caseId/attorneys',
+        loadComponent: () => import('./attorney-recommendation/attorney-recommendation.component')
+          .then(m => m.AttorneyRecommendationComponent)
+      },
+      {
+        path: 'cases/:caseId/pay',
+        loadComponent: () => import('./case-payment/case-payment.component')
+          .then(m => m.CasePaymentComponent)
+      },
+      {
+        path: 'cases/:caseId/payment-success',
+        loadComponent: () => import('./payment-success/payment-success.component')
+          .then(m => m.PaymentSuccessComponent)
+      },
+      {
         path: 'submit-ticket',
         component: SubmitTicketComponent
       },

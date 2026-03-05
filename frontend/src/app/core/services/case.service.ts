@@ -229,6 +229,20 @@ export class CaseService {
   }
 
   /**
+   * Get top 3 recommended attorneys for a case
+   */
+  getRecommendedAttorneys(caseId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cases/${caseId}/attorneys`);
+  }
+
+  /**
+   * Driver selects an attorney from recommendations
+   */
+  selectAttorney(caseId: string, attorneyId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/${caseId}/select-attorney`, { attorney_id: attorneyId });
+  }
+
+  /**
    * Get cases with filters
    */
   getCasesWithFilters(filters: {

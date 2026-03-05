@@ -726,6 +726,129 @@ async function autoAssignToOperator(caseId, state) {
 }
 
 /**
+ * GET RECOMMENDED ATTORNEYS
+ * Returns top 3 ranked attorneys for a case (driver-accessible)
+ */
+exports.getRecommendedAttorneys = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assignmentService = require('../services/assignment.service');
+    const rankedAttorneys = await assignmentService.rankAttorneys(id);
+    const top3 = rankedAttorneys.slice(0, 3);
+    const attorneys = top3.map((a, index) => ({
+      id: a.userId,
+      fullName: `${a.firstName} ${a.lastName}`.trim(),
+      rating: Math.min(5, Math.max(1, Math.round((a.successRate || 0.5) * 5))),
+      successRate: a.successRate || 0,
+      specializations: a.specializations || [],
+      casesWon: a.casesWon || 0,
+      totalCases: a.currentCases || 0,
+      isRecommended: index === 0
+    }));
+    res.json({ attorneys });
+  } catch (error) {
+    console.error('Get recommended attorneys error:', error);
+    // Graceful fallback — empty list so driver can still proceed
+    res.json({ attorneys: [] });
+  }
+};
+
+/**
+ * SELECT ATTORNEY
+ * Driver selects an attorney from recommendations
+ */
+exports.selectAttorney = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attorney_id } = req.body;
+
+    if (!attorney_id) {
+      return res.status(400).json({ error: 'attorney_id is required' });
+    }
+
+    const { data: caseData, error: fetchError } = await supabase
+      .from('cases')
+      .select('id, status, driver_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    if (caseData.driver_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not have access to this case' });
+    }
+
+    if (!['new', 'reviewed'].includes(caseData.status)) {
+      return res.status(400).json({ error: 'An attorney has already been selected for this case' });
+    }
+
+    const { data, error } = await supabase
+      .from('cases')
+      .update({ assigned_attorney_id: attorney_id, status: 'assigned_to_attorney' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logActivity(id, req.user.id, 'Driver selected attorney');
+
+    res.json({ message: 'Attorney selected successfully', case: data });
+  } catch (error) {
+    console.error('Select attorney error:', error);
+    res.status(500).json({ error: 'Failed to select attorney' });
+  }
+};
+
+/**
+ * CREATE CASE PAYMENT
+ * Driver initiates payment for attorney fee
+ */
+exports.createCasePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: caseData, error: fetchError } = await supabase
+      .from('cases')
+      .select('id, case_number, attorney_price, driver_id, status, assigned_attorney_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    if (caseData.driver_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not have access to this case' });
+    }
+
+    if (!caseData.attorney_price || caseData.attorney_price <= 0) {
+      return res.status(400).json({ error: 'Attorney fee has not been set for this case yet' });
+    }
+
+    const paymentService = require('../services/payment.service');
+    const result = await paymentService.createPaymentIntent({
+      ticketId: id,
+      userId: req.user.id,
+      amount: caseData.attorney_price,
+      currency: 'USD',
+      metadata: { caseNumber: caseData.case_number || id }
+    });
+
+    res.json({
+      clientSecret: result.clientSecret,
+      paymentIntentId: result.paymentIntentId,
+      amount: caseData.attorney_price
+    });
+  } catch (error) {
+    console.error('Create case payment error:', error);
+    res.status(500).json({ error: 'Failed to create payment' });
+  }
+};
+
+/**
  * ACCEPT CASE
  * Attorney accepts assigned case - moves status to send_info_to_attorney
  */

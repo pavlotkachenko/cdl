@@ -205,6 +205,43 @@ router.get(
 );
 
 /**
+ * GET /api/cases/:id/attorneys
+ * Get top 3 recommended attorneys for a case (driver-accessible)
+ * Access: Case owner (driver) or assigned users
+ */
+router.get(
+  '/:id/attorneys',
+  authenticate,
+  canAccessCase,
+  caseController.getRecommendedAttorneys
+);
+
+/**
+ * POST /api/cases/:id/select-attorney
+ * Driver selects an attorney from recommendations
+ * Access: Driver who owns the case
+ */
+router.post(
+  '/:id/select-attorney',
+  authenticate,
+  authorize(['driver']),
+  body('attorney_id').isUUID(),
+  caseController.selectAttorney
+);
+
+/**
+ * POST /api/cases/:id/payments
+ * Driver creates a payment intent for the attorney fee
+ * Access: Driver who owns the case
+ */
+router.post(
+  '/:id/payments',
+  authenticate,
+  authorize(['driver']),
+  caseController.createCasePayment
+);
+
+/**
  * POST /api/cases/:id/accept
  * Attorney accepts assigned case
  * Access: Attorneys only
