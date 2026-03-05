@@ -5,6 +5,18 @@
 
 const { supabase } = require('../config/database');
 const logger = require('../utils/logger');
+const { sendCaseStatusEmail } = require('./email.service');
+
+// Statuses that meaningfully communicate progress to the driver
+const DRIVER_VISIBLE_STATUSES = new Set([
+  'assigned',
+  'in_progress',
+  'pending_court',
+  'pending_client',
+  'resolved',
+  'closed',
+  'withdrawn',
+]);
 
 /**
  * Valid status transitions
@@ -317,6 +329,26 @@ const updateCaseStatus = async (caseId, newStatus, changedBy = null, notes = nul
     await trackSLA(caseId, newStatus);
 
     logger.info(`Case ${caseId} status changed from ${case_.status} to ${newStatus}`);
+
+    // Send status change email to driver for visible transitions (non-blocking)
+    if (DRIVER_VISIBLE_STATUSES.has(newStatus) && case_.driver_id) {
+      supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', case_.driver_id)
+        .maybeSingle()
+        .then(({ data: driver }) => {
+          if (driver?.email) {
+            sendCaseStatusEmail({
+              name: driver.full_name || driver.email,
+              email: driver.email,
+              caseId,
+              newStatus,
+            });
+          }
+        })
+        .catch((err) => logger.error('Failed to fetch driver for status email:', err));
+    }
 
     return {
       success: true,

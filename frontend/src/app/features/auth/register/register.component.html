@@ -59,6 +59,7 @@
           <input
             matInput
             type="tel"
+            inputmode="tel"
             formControlName="phone"
             placeholder="+1234567890"
             autocomplete="tel"
@@ -75,8 +76,10 @@
           <input
             matInput
             type="text"
+            inputmode="numeric"
             formControlName="cdlNumber"
             placeholder="Enter your CDL number"
+            autocomplete="off"
           />
           <mat-icon matPrefix>badge</mat-icon>
         </mat-form-field>

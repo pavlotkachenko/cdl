@@ -248,13 +248,20 @@
               {{ error }}
             </div>
 
+            <mat-progress-bar
+              *ngIf="submitting"
+              mode="indeterminate"
+              class="submit-progress">
+            </mat-progress-bar>
+            <p *ngIf="submitting" class="submit-status">Submitting your ticket...</p>
+
             <div class="step-actions">
               <button mat-button matStepperPrevious [disabled]="submitting">
                 <mat-icon>arrow_back</mat-icon>
                 Back
               </button>
-              <button mat-raised-button color="primary" 
-                      (click)="submitTicket()" 
+              <button mat-raised-button color="primary"
+                      (click)="submitTicket()"
                       [disabled]="submitting">
                 <mat-icon *ngIf="!submitting">send</mat-icon>
                 <mat-icon *ngIf="submitting" class="spinning">sync</mat-icon>

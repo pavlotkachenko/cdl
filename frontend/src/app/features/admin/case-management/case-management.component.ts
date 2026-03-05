@@ -267,6 +267,10 @@ export class CaseManagementComponent implements OnInit {
     this.router.navigate(['/admin/cases', caseItem.id]);
   }
 
+  openNewCase(): void {
+    this.snackBar.open('Case creation coming soon', 'Close', { duration: 3000 });
+  }
+
   assignCase(caseItem: Case, staffId: string): void {
     this.adminService.assignCase(caseItem.id, staffId).subscribe({
       next: () => {

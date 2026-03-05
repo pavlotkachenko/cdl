@@ -13,7 +13,7 @@ import {
   HttpInterceptorFn
 } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, filter, take, switchMap } from 'rxjs/operators';
+import { catchError, filter, take, switchMap, timeout } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { inject } from '@angular/core';
 
@@ -59,7 +59,8 @@ function isPublicEndpoint(url: string): boolean {
     '/auth/refresh',
     '/auth/verify-email',
     '/public/',
-    '/cases/public-submit'
+    '/cases/public-submit',
+    '/carriers/register'
   ];
 
   return publicEndpoints.some(endpoint => url.includes(endpoint));
@@ -94,33 +95,40 @@ function handle401Error(
 
     const refreshToken = authService.getRefreshToken();
 
-    if (refreshToken) {
-      return authService.refreshToken().pipe(
-        switchMap((response: { accessToken: string }): Observable<HttpEvent<any>> => {
-          isRefreshing = false;
-          refreshTokenSubject.next(response.accessToken);
-
-          // Retry original request with new token
-          return next(addTokenToRequest(request, response.accessToken));
-        }),
-        catchError((error) => {
-          isRefreshing = false;
-
-          // Refresh failed, logout user
-          authService.logout().subscribe();
-
-          return throwError(() => error);
-        })
-      );
+    if (!refreshToken) {
+      // No refresh token — fail immediately, never hang
+      isRefreshing = false;
+      authService.logout().subscribe();
+      return throwError(() => new HttpErrorResponse({ status: 401 }));
     }
+
+    return authService.refreshToken().pipe(
+      switchMap((response: { accessToken: string }): Observable<HttpEvent<any>> => {
+        isRefreshing = false;
+        refreshTokenSubject.next(response.accessToken);
+        return next(addTokenToRequest(request, response.accessToken));
+      }),
+      catchError((error) => {
+        isRefreshing = false;
+        refreshTokenSubject.next(null);
+        authService.logout().subscribe();
+        return throwError(() => error);
+      })
+    );
   }
 
-  // Wait for token refresh to complete
+  // Another request is already refreshing — wait up to 10s for a new token
   return refreshTokenSubject.pipe(
     filter((token): token is string => token !== null),
     take(1),
+    timeout(10000),
     switchMap((token): Observable<HttpEvent<any>> => {
       return next(addTokenToRequest(request, token));
+    }),
+    catchError(() => {
+      isRefreshing = false;
+      authService.logout().subscribe();
+      return throwError(() => new HttpErrorResponse({ status: 401 }));
     })
   );
 }
@@ -166,33 +174,40 @@ export class AuthInterceptor implements HttpInterceptor {
 
       const refreshToken = this.authService.getRefreshToken();
 
-      if (refreshToken) {
-        return this.authService.refreshToken().pipe(
-          switchMap((response: { accessToken: string }) => {
-            this.isRefreshing = false;
-            this.refreshTokenSubject.next(response.accessToken);
-            
-            // Retry original request with new token
-            return next.handle(addTokenToRequest(request, response.accessToken));
-          }),
-          catchError((error) => {
-            this.isRefreshing = false;
-            
-            // Refresh failed, logout user
-            this.authService.logout().subscribe();
-            
-            return throwError(() => error);
-          })
-        );
+      if (!refreshToken) {
+        // No refresh token — fail immediately, never hang
+        this.isRefreshing = false;
+        this.authService.logout().subscribe();
+        return throwError(() => new HttpErrorResponse({ status: 401 }));
       }
+
+      return this.authService.refreshToken().pipe(
+        switchMap((response: { accessToken: string }) => {
+          this.isRefreshing = false;
+          this.refreshTokenSubject.next(response.accessToken);
+          return next.handle(addTokenToRequest(request, response.accessToken));
+        }),
+        catchError((error) => {
+          this.isRefreshing = false;
+          this.refreshTokenSubject.next(null);
+          this.authService.logout().subscribe();
+          return throwError(() => error);
+        })
+      );
     }
 
-    // Wait for token refresh to complete
+    // Another request is already refreshing — wait up to 10s for a new token
     return this.refreshTokenSubject.pipe(
       filter(token => token !== null),
       take(1),
+      timeout(10000),
       switchMap(token => {
         return next.handle(addTokenToRequest(request, token!));
+      }),
+      catchError(() => {
+        this.isRefreshing = false;
+        this.authService.logout().subscribe();
+        return throwError(() => new HttpErrorResponse({ status: 401 }));
       })
     );
   }

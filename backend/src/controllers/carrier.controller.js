@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const { sendRegistrationEmail } = require('../services/email.service');
 
 const validateCarrierRegistration = (data) => {
   const errors = [];
@@ -81,12 +82,14 @@ const register = async (req, res) => {
     const saltRounds = 10;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
-    // Create user in users table
+    // Create user in users table.
+    // DB enum user_role uses 'driver' for carrier accounts; real role is
+    // returned in the API response as 'carrier' (matches user_metadata).
     const userResult = await client.query(
       `INSERT INTO users (email, password_hash, role, created_at, updated_at)
        VALUES ($1, $2, $3, NOW(), NOW())
        RETURNING id, email, role`,
-      [email.toLowerCase(), password_hash, 'carrier']
+      [email.toLowerCase(), password_hash, 'driver']
     );
 
     const user = userResult.rows[0];
@@ -114,13 +117,16 @@ const register = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Return response
+    // Send welcome email (non-blocking)
+    sendRegistrationEmail({ name: company_name, email: email.toLowerCase(), role: 'carrier' });
+
+    // Return response — expose 'carrier' as the role (not the DB-mapped 'driver')
     res.status(201).json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: 'carrier'
       }
     });
 

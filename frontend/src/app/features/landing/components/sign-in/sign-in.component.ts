@@ -183,7 +183,7 @@ export class SignInPageComponent implements OnInit {
         next: () => {
           this.loading = false;
           this.snackBar.open('Registration successful!', 'Close', { duration: 5000 });
-          this.router.navigate(['/driver/dashboard']);
+          this.router.navigate(['/carrier/dashboard']);
         },
         error: (error) => {
           this.loading = false;

@@ -5,7 +5,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 
 // Angular Material
@@ -52,18 +52,23 @@ export class RegisterComponent implements OnInit {
   errorMessage = '';
   passwordStrength: number = 0;
   passwordStrengthLabel: string = '';
+  role: string = 'driver';
 
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    // Read role from route data (set by /signup/driver or /signup/carrier)
+    this.role = this.route.snapshot.data['role'] || 'driver';
+
     // Redirect if already authenticated
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/driver/dashboard']);
+      this.navigateByRole(this.role);
       return;
     }
 
@@ -113,7 +118,8 @@ export class RegisterComponent implements OnInit {
       email,
       phone: phone || undefined,
       cdlNumber: cdlNumber || undefined,
-      password
+      password,
+      role: this.role
     }).subscribe({
       next: (response: any) => {
         console.log('✅ Registration successful:', response);
@@ -127,8 +133,8 @@ export class RegisterComponent implements OnInit {
           panelClass: ['success-snackbar']
         });
 
-        // Redirect to dashboard
-        this.router.navigate(['/driver/dashboard']);
+        // Redirect to role-appropriate dashboard
+        this.navigateByRole(response?.user?.role || this.role);
       },
       error: (error: any) => {
         console.error('❌ Registration error:', error);
@@ -154,6 +160,19 @@ export class RegisterComponent implements OnInit {
         });
       }
     });
+  }
+
+  // ============================================
+  // Navigate to role-appropriate dashboard
+  // ============================================
+  private navigateByRole(role: string): void {
+    switch (role) {
+      case 'carrier': this.router.navigate(['/carrier/dashboard']); break;
+      case 'attorney': this.router.navigate(['/attorney/dashboard']); break;
+      case 'admin': this.router.navigate(['/admin/dashboard']); break;
+      case 'paralegal': this.router.navigate(['/paralegal/dashboard']); break;
+      default: this.router.navigate(['/driver/dashboard']);
+    }
   }
 
   // ============================================

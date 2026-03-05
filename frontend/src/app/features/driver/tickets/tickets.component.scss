@@ -2,6 +2,37 @@
 // Phase 3: Advanced Tickets Styles
 // ============================================
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.skeleton-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.skeleton-row-item {
+  background: #e0e0e0;
+  border-radius: 8px;
+  height: 80px;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+}
+
 $primary-color: #1dad8c;
 $success-color: #28a745;
 $warning-color: #f59e0b;

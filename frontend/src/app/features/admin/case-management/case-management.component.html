@@ -10,7 +10,7 @@
       </h1>
       <p>Manage and assign cases to attorneys</p>
     </div>
-    <button mat-raised-button color="primary" [routerLink]="['/admin/cases/new']">
+    <button mat-raised-button color="primary" (click)="openNewCase()">
       <mat-icon>add</mat-icon>
       New Case
     </button>
