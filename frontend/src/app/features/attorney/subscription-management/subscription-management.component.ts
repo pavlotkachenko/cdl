@@ -1,266 +1,195 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule, UpperCasePipe } from '@angular/common';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import {
+  Component, OnInit, signal, inject, ChangeDetectionStrategy,
+} from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatTableModule } from '@angular/material/table';
+import { MatIconModule } from '@angular/material/icon';
+import { UpperCasePipe } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SubscriptionService, Subscription, SubscriptionPlan, BillingHistory } from '../../../services/subscription.service';
-import { CancelSubscriptionDialogComponent } from './cancel-subscription-dialog/cancel-subscription-dialog.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
+import {
+  SubscriptionService, Subscription, SubscriptionPlan,
+} from '../../../services/subscription.service';
 
 @Component({
   selector: 'app-subscription-management',
-  standalone: true,
-  templateUrl: './subscription-management.component.html',
-  styleUrls: ['./subscription-management.component.scss'],
-  imports: [
-    CommonModule,
-    UpperCasePipe,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatChipsModule,
-    MatDividerModule,
-    MatTableModule,
-    MatProgressSpinnerModule,
-  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [UpperCasePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  template: `
+    <div class="sub-page">
+      <h1>Subscription</h1>
+
+      @if (loading()) {
+        <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+      } @else {
+        <mat-card class="current-plan">
+          <mat-card-content>
+            @if (subscription()) {
+              <div class="plan-row">
+                <div>
+                  <p class="plan-name">{{ currentPlanName() }}</p>
+                  <p class="plan-status status-{{ subscription()!.status }}">
+                    {{ subscription()!.status | uppercase }}
+                  </p>
+                </div>
+                @if (subscription()!.status === 'active' || subscription()!.status === 'trialing') {
+                  <button mat-stroked-button color="warn" (click)="cancelSubscription()">
+                    Cancel Plan
+                  </button>
+                }
+              </div>
+              @if (subscription()!.cancel_at_period_end) {
+                <p class="cancel-notice">
+                  <mat-icon aria-hidden="true">info</mat-icon>
+                  Your plan will cancel at the end of the billing period.
+                </p>
+              }
+            } @else {
+              <p class="no-sub">No active subscription.</p>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @if (plans().length > 0) {
+          <h2>Available Plans</h2>
+          <div class="plan-grid">
+            @for (plan of plans(); track plan.id) {
+              <mat-card class="plan-card" [class.current]="isCurrentPlan(plan)">
+                <mat-card-content>
+                  <p class="plan-card-name">{{ plan.name }}</p>
+                  <p class="plan-price">
+                    \${{ plan.price / 100 }}<span class="interval">/{{ plan.interval }}</span>
+                  </p>
+                  <ul class="features" aria-label="Plan features">
+                    @for (f of plan.features; track f) {
+                      <li><mat-icon aria-hidden="true">check</mat-icon> {{ f }}</li>
+                    }
+                  </ul>
+                  @if (isCurrentPlan(plan)) {
+                    <p class="current-badge">Current Plan</p>
+                  } @else {
+                    <button mat-raised-button color="primary"
+                            (click)="selectPlan(plan)"
+                            [attr.aria-label]="'Select ' + plan.name + ' plan'">
+                      Select
+                    </button>
+                  }
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
+        }
+      }
+    </div>
+  `,
+  styles: [`
+    .sub-page { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+    h1 { margin: 0 0 20px; font-size: 1.4rem; }
+    h2 { margin: 24px 0 12px; font-size: 1.1rem; }
+    .loading { display: flex; justify-content: center; padding: 48px; }
+    .current-plan { margin-bottom: 8px; }
+    .plan-row { display: flex; justify-content: space-between; align-items: center; }
+    .plan-name { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .plan-status { margin: 4px 0 0; font-size: 0.75rem; font-weight: 600; }
+    .status-active { color: #388e3c; }
+    .status-trialing { color: #1976d2; }
+    .status-past_due { color: #d32f2f; }
+    .status-canceled { color: #757575; }
+    .cancel-notice { display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
+      color: #f57c00; margin: 10px 0 0; }
+    .cancel-notice mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .no-sub { color: #999; margin: 0; }
+    .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .plan-card { border: 2px solid transparent; }
+    .plan-card.current { border-color: #1976d2; }
+    .plan-card-name { margin: 0 0 4px; font-weight: 600; font-size: 0.95rem; }
+    .plan-price { font-size: 1.4rem; font-weight: 700; margin: 4px 0 8px; }
+    .interval { font-size: 0.8rem; font-weight: 400; color: #666; }
+    .features { list-style: none; padding: 0; margin: 0 0 12px; font-size: 0.8rem; }
+    .features li { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
+    .features mat-icon { font-size: 14px; width: 14px; height: 14px; color: #388e3c; }
+    .current-badge { font-size: 0.75rem; font-weight: 600; color: #1976d2; margin: 0; }
+  `],
 })
 export class SubscriptionManagementComponent implements OnInit {
-  currentSubscription: Subscription | null = null;
-  availablePlans: SubscriptionPlan[] = [];
-  billingHistory: BillingHistory[] = [];
-  loading = false;
-  billingHistoryColumns: string[] = ['date', 'amount', 'status', 'actions'];
+  private subscriptionService = inject(SubscriptionService);
+  private snackBar = inject(MatSnackBar);
 
-  constructor(
-    private subscriptionService: SubscriptionService,
-    private dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {}
+  loading = signal(true);
+  subscription = signal<Subscription | null>(null);
+  plans = signal<SubscriptionPlan[]>([]);
 
   ngOnInit(): void {
-    this.loadSubscription();
-    this.loadPlans();
-    this.loadBillingHistory();
+    this.loadAll();
   }
 
-  loadSubscription(): void {
-    this.loading = true;
+  private loadAll(): void {
+    this.loading.set(true);
     this.subscriptionService.getCurrentSubscription().subscribe({
-      next: (subscription) => {
-        this.currentSubscription = subscription;
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('Error loading subscription:', error);
-        this.loading = false;
-        if (error.status !== 404) {
-          this.snackBar.open('Error loading subscription', 'Close', { duration: 3000 });
-        }
-      }
-    });
-  }
-
-  loadPlans(): void {
-    this.subscriptionService.getPlans().subscribe({
-      next: (plans) => {
-        this.availablePlans = plans;
-      },
-      error: (error) => {
-        console.error('Error loading plans:', error);
-        this.snackBar.open('Error loading plans', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  loadBillingHistory(): void {
-    this.subscriptionService.getBillingHistory().subscribe({
-      next: (history) => {
-        this.billingHistory = history;
-      },
-      error: (error) => {
-        console.error('Error loading billing history:', error);
-        this.snackBar.open('Error loading billing history', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  getCurrentPlan(): SubscriptionPlan | undefined {
-    if (!this.currentSubscription) return undefined;
-    return this.availablePlans.find(p => p.price_id === this.currentSubscription?.stripe_price_id);
-  }
-
-  getTrialDaysRemaining(): number {
-    if (!this.currentSubscription?.trial_end) return 0;
-    const trialEnd = new Date(this.currentSubscription.trial_end);
-    const now = new Date();
-    const diff = trialEnd.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }
-
-  isTrialing(): boolean {
-    return this.currentSubscription?.status === 'trialing';
-  }
-
-  isPlanCurrent(plan: SubscriptionPlan): boolean {
-    return plan.price_id === this.currentSubscription?.stripe_price_id;
-  }
-
-  canUpgrade(plan: SubscriptionPlan): boolean {
-    if (!this.currentSubscription) return true;
-    const currentPlan = this.getCurrentPlan();
-    return currentPlan ? plan.price > currentPlan.price : false;
-  }
-
-  canDowngrade(plan: SubscriptionPlan): boolean {
-    if (!this.currentSubscription) return false;
-    const currentPlan = this.getCurrentPlan();
-    return currentPlan ? plan.price < currentPlan.price : false;
-  }
-
-  async changePlan(plan: SubscriptionPlan): Promise<void> {
-    if (!this.currentSubscription) {
-      this.snackBar.open('Please create a subscription first', 'Close', { duration: 3000 });
-      return;
-    }
-
-    if (this.isPlanCurrent(plan)) {
-      this.snackBar.open('This is your current plan', 'Close', { duration: 3000 });
-      return;
-    }
-
-    this.loading = true;
-
-    // Get proration preview
-    this.subscriptionService.getProrationPreview(this.currentSubscription.id, plan.price_id).subscribe({
-      next: (preview) => {
-        const action = this.canUpgrade(plan) ? 'upgrade' : 'downgrade';
-        const message = `${action.charAt(0).toUpperCase() + action.slice(1)} to ${plan.name}? ${preview.proration_message || ''}`;
-
-        if (confirm(message)) {
-          this.updateSubscription(plan.price_id);
+      next: (s) => { this.subscription.set(s); this.loadPlans(); },
+      error: (err) => {
+        if (err.status === 404) {
+          this.subscription.set(null);
+          this.loadPlans();
         } else {
-          this.loading = false;
+          this.loading.set(false);
+          this.snackBar.open('Failed to load subscription.', 'Close', { duration: 3000 });
         }
       },
-      error: (error) => {
-        console.error('Error getting proration preview:', error);
-        this.loading = false;
-        this.snackBar.open('Error calculating proration', 'Close', { duration: 3000 });
-      }
     });
   }
 
-  private updateSubscription(newPriceId: string): void {
-    if (!this.currentSubscription) return;
-
-    this.subscriptionService.updateSubscription(this.currentSubscription.id, newPriceId).subscribe({
-      next: (subscription) => {
-        this.currentSubscription = subscription;
-        this.loading = false;
-        this.snackBar.open('Subscription updated successfully', 'Close', { duration: 3000 });
-        this.loadBillingHistory();
+  private loadPlans(): void {
+    this.subscriptionService.getPlans().subscribe({
+      next: (p) => { this.plans.set(p); this.loading.set(false); },
+      error: () => {
+        this.plans.set([]);
+        this.loading.set(false);
       },
-      error: (error) => {
-        console.error('Error updating subscription:', error);
-        this.loading = false;
-        this.snackBar.open('Error updating subscription', 'Close', { duration: 3000 });
-      }
     });
   }
 
-  openCancelDialog(): void {
-    const dialogRef = this.dialog.open(CancelSubscriptionDialogComponent, {
-      width: '500px',
-      data: { subscription: this.currentSubscription }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.cancelSubscription(result.immediately);
-      }
-    });
+  currentPlanName(): string {
+    const sub = this.subscription();
+    if (!sub) return 'No Plan';
+    const match = this.plans().find(p => p.price_id === sub.stripe_price_id);
+    return match?.name ?? 'Unknown Plan';
   }
 
-  private cancelSubscription(immediately: boolean): void {
-    if (!this.currentSubscription) return;
+  isCurrentPlan(plan: SubscriptionPlan): boolean {
+    return plan.price_id === this.subscription()?.stripe_price_id;
+  }
 
-    this.loading = true;
-    this.subscriptionService.cancelSubscription(this.currentSubscription.id, immediately).subscribe({
-      next: (subscription) => {
-        this.currentSubscription = subscription;
-        this.loading = false;
-        const message = immediately 
-          ? 'Subscription canceled immediately' 
-          : 'Subscription will cancel at period end';
-        this.snackBar.open(message, 'Close', { duration: 3000 });
+  selectPlan(plan: SubscriptionPlan): void {
+    if (!this.subscription()) {
+      this.snackBar.open('Please contact support to subscribe.', 'Close', { duration: 4000 });
+      return;
+    }
+    if (!confirm(`Switch to ${plan.name}?`)) return;
+    this.loading.set(true);
+    this.subscriptionService.updateSubscription(this.subscription()!.id, plan.price_id).subscribe({
+      next: (s) => { this.subscription.set(s); this.loading.set(false); },
+      error: () => {
+        this.loading.set(false);
+        this.snackBar.open('Failed to change plan.', 'Close', { duration: 3000 });
       },
-      error: (error) => {
-        console.error('Error canceling subscription:', error);
-        this.loading = false;
-        this.snackBar.open('Error canceling subscription', 'Close', { duration: 3000 });
-      }
     });
   }
 
-  reactivateSubscription(): void {
-    if (!this.currentSubscription) return;
-
-    this.loading = true;
-    this.subscriptionService.reactivateSubscription(this.currentSubscription.id).subscribe({
-      next: (subscription) => {
-        this.currentSubscription = subscription;
-        this.loading = false;
-        this.snackBar.open('Subscription reactivated successfully', 'Close', { duration: 3000 });
+  cancelSubscription(): void {
+    if (!confirm('Cancel your subscription? Access continues until the end of the billing period.')) return;
+    this.loading.set(true);
+    this.subscriptionService.cancelSubscription(this.subscription()!.id, false).subscribe({
+      next: (s) => {
+        this.subscription.set(s);
+        this.loading.set(false);
+        this.snackBar.open('Subscription will cancel at period end.', 'Close', { duration: 4000 });
       },
-      error: (error) => {
-        console.error('Error reactivating subscription:', error);
-        this.loading = false;
-        this.snackBar.open('Error reactivating subscription', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  downloadInvoice(invoiceId: string): void {
-    this.subscriptionService.downloadInvoice(invoiceId).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `invoice-${invoiceId}.pdf`;
-        link.click();
-        window.URL.revokeObjectURL(url);
+      error: () => {
+        this.loading.set(false);
+        this.snackBar.open('Failed to cancel subscription.', 'Close', { duration: 3000 });
       },
-      error: (error) => {
-        console.error('Error downloading invoice:', error);
-        this.snackBar.open('Error downloading invoice', 'Close', { duration: 3000 });
-      }
     });
-  }
-
-  formatCurrency(amount: number, currency: string = 'USD'): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency
-    }).format(amount / 100);
-  }
-
-  formatDate(date: string): string {
-    return new Date(date).toLocaleDateString();
-  }
-
-  getStatusColor(status: string): string {
-    const colors: { [key: string]: string } = {
-      'active': 'primary',
-      'trialing': 'accent',
-      'past_due': 'warn',
-      'canceled': 'basic',
-      'incomplete': 'warn'
-    };
-    return colors[status] || 'basic';
   }
 }
