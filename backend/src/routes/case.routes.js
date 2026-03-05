@@ -205,6 +205,31 @@ router.get(
 );
 
 /**
+ * POST /api/cases/:id/accept
+ * Attorney accepts assigned case
+ * Access: Attorneys only
+ */
+router.post(
+  '/:id/accept',
+  authenticate,
+  authorize(['attorney']),
+  caseController.acceptCase
+);
+
+/**
+ * POST /api/cases/:id/decline
+ * Attorney declines assigned case - returns to queue
+ * Access: Attorneys only
+ */
+router.post(
+  '/:id/decline',
+  authenticate,
+  authorize(['attorney']),
+  body('reason').optional().isString(),
+  caseController.declineCase
+);
+
+/**
  * DELETE /api/cases/:id
  * Delete case (soft delete)
  * Access: Admins only

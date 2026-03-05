@@ -233,8 +233,25 @@
       <!-- Right Column - Timeline & Attorney Info -->
       <div class="right-column">
 
+        <!-- Pay Attorney Fee Alert -->
+        <mat-card class="pay-attorney-card" *ngIf="case.status === 'pay_attorney'">
+          <mat-card-content>
+            <div class="pay-alert">
+              <mat-icon class="pay-icon">payment</mat-icon>
+              <div class="pay-info">
+                <strong>Attorney Fee Due</strong>
+                <p *ngIf="case.attorney_price">Amount: ${{ case.attorney_price }}</p>
+                <p *ngIf="!case.attorney_price">Payment required to proceed</p>
+              </div>
+              <button mat-raised-button color="primary" (click)="payAttorneyFee()">
+                Pay Now
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
         <!-- Attorney Info Card -->
-        <mat-card class="attorney-card" *ngIf="case.assignedAttorney">
+        <mat-card class="attorney-card" *ngIf="case.attorney || case.assignedAttorney">
           <mat-card-header>
             <mat-card-title>
               <mat-icon>gavel</mat-icon>
@@ -247,14 +264,14 @@
                 <mat-icon>account_circle</mat-icon>
               </div>
               <div class="attorney-details">
-                <h3>{{ case.assignedAttorney }}</h3>
+                <h3>{{ case.attorney?.full_name || case.assignedAttorney }}</h3>
                 <p>Licensed Attorney</p>
                 <div class="attorney-contact">
                   <button mat-button color="primary">
                     <mat-icon>email</mat-icon>
                     Send Message
                   </button>
-                  <button mat-button>
+                  <button mat-button *ngIf="case.attorney?.phone">
                     <mat-icon>phone</mat-icon>
                     Call
                   </button>

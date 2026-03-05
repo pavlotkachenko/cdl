@@ -150,6 +150,9 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   loading = false;
   selectedTemplate: CaseTemplate | null = null;
   showTemplatesSidebar = true;
+  pendingCases: any[] = [];
+  pendingLoading = false;
+  processingCaseId: string | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -161,6 +164,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadDashboardData();
+    this.loadPendingCases();
     this.initializeCharts();
   }
 
@@ -431,6 +435,50 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   generateReport(): void {
     console.log('Generate report');
     // Open report generation dialog
+  }
+
+  /**
+   * Load cases awaiting attorney acceptance
+   */
+  loadPendingCases(): void {
+    this.pendingLoading = true;
+    this.caseService.getMyCases().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response: any) => {
+        const cases = response?.data || [];
+        this.pendingCases = cases.filter((c: any) => c.status === 'assigned_to_attorney');
+        this.pendingLoading = false;
+      },
+      error: () => { this.pendingLoading = false; }
+    });
+  }
+
+  /**
+   * Accept an assigned case
+   */
+  acceptCase(caseId: string): void {
+    this.processingCaseId = caseId;
+    this.caseService.acceptCase(caseId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.pendingCases = this.pendingCases.filter(c => c.id !== caseId);
+        this.processingCaseId = null;
+        this.loadDashboardData();
+      },
+      error: () => { this.processingCaseId = null; }
+    });
+  }
+
+  /**
+   * Decline an assigned case
+   */
+  declineCase(caseId: string): void {
+    this.processingCaseId = caseId;
+    this.caseService.declineCase(caseId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.pendingCases = this.pendingCases.filter(c => c.id !== caseId);
+        this.processingCaseId = null;
+      },
+      error: () => { this.processingCaseId = null; }
+    });
   }
 
   /**

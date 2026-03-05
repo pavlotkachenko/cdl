@@ -726,6 +726,105 @@ async function autoAssignToOperator(caseId, state) {
 }
 
 /**
+ * ACCEPT CASE
+ * Attorney accepts assigned case - moves status to send_info_to_attorney
+ */
+exports.acceptCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: caseData, error: fetchError } = await supabase
+      .from('cases')
+      .select('id, case_number, status, assigned_attorney_id, driver_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    if (caseData.assigned_attorney_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to accept this case' });
+    }
+
+    if (caseData.status !== 'assigned_to_attorney') {
+      return res.status(400).json({ error: 'Case is not awaiting attorney acceptance' });
+    }
+
+    const { data, error } = await supabase
+      .from('cases')
+      .update({ status: 'send_info_to_attorney' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logActivity(id, req.user.id, 'Attorney accepted case');
+
+    if (caseData.driver_id) {
+      await createNotification(
+        caseData.driver_id,
+        id,
+        'Attorney Accepted Your Case',
+        `Your attorney has accepted case ${caseData.case_number} and is now working on your defense`,
+        'status_change'
+      );
+    }
+
+    res.json({ message: 'Case accepted successfully', case: data });
+  } catch (error) {
+    console.error('Accept case error:', error);
+    res.status(500).json({ error: 'Failed to accept case' });
+  }
+};
+
+/**
+ * DECLINE CASE
+ * Attorney declines assigned case - returns to new for re-assignment
+ */
+exports.declineCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const { data: caseData, error: fetchError } = await supabase
+      .from('cases')
+      .select('id, case_number, status, assigned_attorney_id, driver_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    if (caseData.assigned_attorney_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to decline this case' });
+    }
+
+    if (caseData.status !== 'assigned_to_attorney') {
+      return res.status(400).json({ error: 'Case is not awaiting attorney acceptance' });
+    }
+
+    const { data, error } = await supabase
+      .from('cases')
+      .update({ status: 'new', assigned_attorney_id: null })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logActivity(id, req.user.id, 'Attorney declined case', reason ? { reason } : null);
+
+    res.json({ message: 'Case declined successfully', case: data });
+  } catch (error) {
+    console.error('Decline case error:', error);
+    res.status(500).json({ error: 'Failed to decline case' });
+  }
+};
+
+/**
  * LOG ACTIVITY
  * Record action in activity log
  */

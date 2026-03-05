@@ -21,6 +21,52 @@
     </div>
   </div>
 
+  <!-- Pending Cases Queue -->
+  <div class="pending-queue" *ngIf="pendingCases.length > 0 || pendingLoading">
+    <div class="section-subheader">
+      <h2>
+        <mat-icon>inbox</mat-icon>
+        Pending Acceptance
+        <span class="pending-badge">{{ pendingCases.length }}</span>
+      </h2>
+    </div>
+
+    <div *ngIf="pendingLoading" class="pending-loading">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+
+    <div class="pending-list" *ngIf="!pendingLoading">
+      <mat-card class="pending-card" *ngFor="let pendingCase of pendingCases">
+        <mat-card-content>
+          <div class="pending-card-body">
+            <div class="pending-card-info">
+              <h4>{{ pendingCase.case_number || pendingCase.id }}</h4>
+              <p class="violation-type">{{ pendingCase.violation_type || pendingCase.type }} — {{ pendingCase.state }}</p>
+              <p class="attorney-fee" *ngIf="pendingCase.attorney_price">
+                <mat-icon>attach_money</mat-icon>
+                Fee: ${{ pendingCase.attorney_price }}
+              </p>
+            </div>
+            <div class="pending-card-actions">
+              <button mat-raised-button color="primary"
+                      [disabled]="processingCaseId === pendingCase.id"
+                      (click)="acceptCase(pendingCase.id)">
+                <mat-icon>check</mat-icon>
+                Accept
+              </button>
+              <button mat-stroked-button color="warn"
+                      [disabled]="processingCaseId === pendingCase.id"
+                      (click)="declineCase(pendingCase.id)">
+                <mat-icon>close</mat-icon>
+                Decline
+              </button>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
   <!-- Performance Metrics Cards -->
   <div class="metrics-grid">
     <mat-card class="metric-card">

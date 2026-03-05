@@ -342,14 +342,16 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
   // Status Methods
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'new': 'New',
-      'submitted': 'Submitted',
-      'under_review': 'Under Review',
-      'in_progress': 'In Progress',
-      'resolved': 'Resolved',
-      'closed': 'Closed',
-      'rejected': 'Rejected',
-      'waiting_for_driver': 'Waiting for Info'
+      'new': 'Submitted',
+      'reviewed': 'Under Review',
+      'assigned_to_attorney': 'Attorney Assigned',
+      'waiting_for_driver': 'Response Needed',
+      'send_info_to_attorney': 'With Your Attorney',
+      'attorney_paid': 'Attorney Confirmed',
+      'call_court': 'Court Proceedings',
+      'check_with_manager': 'Reviewing Options',
+      'pay_attorney': 'Payment Due',
+      'closed': 'Case Closed'
     };
     return labels[status] || status;
   }
@@ -357,13 +359,15 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
   getStatusClass(status: string): string {
     const classes: Record<string, string> = {
       'new': 'status-new',
-      'submitted': 'status-submitted',
-      'under_review': 'status-progress',
-      'in_progress': 'status-progress',
-      'resolved': 'status-success',
-      'closed': 'status-success',
-      'rejected': 'status-error',
-      'waiting_for_driver': 'status-warning'
+      'reviewed': 'status-progress',
+      'assigned_to_attorney': 'status-progress',
+      'waiting_for_driver': 'status-warning',
+      'send_info_to_attorney': 'status-progress',
+      'attorney_paid': 'status-progress',
+      'call_court': 'status-warning',
+      'check_with_manager': 'status-warning',
+      'pay_attorney': 'status-warning',
+      'closed': 'status-success'
     };
     return classes[status] || 'status-default';
   }
@@ -371,15 +375,21 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
   getStatusIcon(status: string): string {
     const icons: Record<string, string> = {
       'new': 'fiber_new',
-      'submitted': 'send',
-      'under_review': 'visibility',
-      'in_progress': 'pending',
-      'resolved': 'check_circle',
-      'closed': 'done_all',
-      'rejected': 'cancel',
-      'waiting_for_driver': 'schedule'
+      'reviewed': 'visibility',
+      'assigned_to_attorney': 'person_add',
+      'waiting_for_driver': 'schedule',
+      'send_info_to_attorney': 'gavel',
+      'attorney_paid': 'payment',
+      'call_court': 'gavel',
+      'check_with_manager': 'supervisor_account',
+      'pay_attorney': 'payment',
+      'closed': 'done_all'
     };
     return icons[status] || 'info';
+  }
+
+  payAttorneyFee(): void {
+    this.router.navigate(['/driver/cases', this.caseId, 'payment']);
   }
 
   // Helper Methods
