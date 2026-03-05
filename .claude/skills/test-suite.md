@@ -9,8 +9,28 @@ Use when:
 - "Add test coverage for [component/service]"
 - "Run the test suite"
 - After implementing a new feature (Step 5 of implement-feature pipeline)
+- At the end of a sprint story to verify per-file test coverage
 
 ## Test Generation Pipeline
+
+### Step 0: Sprint File Audit (run first when working within a sprint)
+
+Before writing any tests, identify every code file touched by the current sprint story:
+
+1. **From the sprint story file** (`sprints/sprint_XXX/story-X.Y-*.md`), list all files mentioned in the implementation scope.
+2. **From git** (if the story has been partially implemented), run:
+   ```bash
+   git diff --name-only HEAD~1 HEAD -- 'backend/src/**' 'frontend/src/**'
+   ```
+3. Build a test coverage matrix — one row per touched file:
+
+   | Source File | Expected Test File | Exists? |
+   |---|---|---|
+   | `backend/src/services/payment.service.js` | `backend/src/__tests__/payment.test.js` | ✅ / ❌ |
+   | `frontend/src/.../payment.component.ts` | `frontend/src/.../payment.component.spec.ts` | ✅ / ❌ |
+
+4. **Every ❌ row must be resolved before the story is marked DONE.** Write the missing test file now (Steps 2–4 below).
+5. After closing all gaps, record the completed matrix in the sprint's `story-X.Y-tests.md` file (create it if it doesn't exist).
 
 ### Step 1: Identify Test Targets
 

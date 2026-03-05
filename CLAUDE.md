@@ -54,13 +54,24 @@ All code must conform to the canonical documentation in `/docs/`:
 - **Database:** RLS policies have integration tests verifying role-based access
 - **Target:** 100% feature coverage (every user-facing feature has at least one test)
 
+#### Sprint Testing Mandate (Non-Negotiable)
+
+For every sprint story, **every code file created or modified** MUST have a corresponding test file created or updated **within the same sprint**. This applies to:
+
+- `backend/src/services/*.js` → `backend/src/__tests__/*.test.js`
+- `backend/src/controllers/*.js` → `backend/src/__tests__/*.test.js`
+- `frontend/src/**/*.component.ts` → co-located `*.component.spec.ts`
+- `frontend/src/**/*.service.ts` → co-located `*.service.spec.ts`
+
+**No sprint story is DONE until all files it touches have corresponding tests.** Stories are tracked in `sprints/sprint_XXX/`. Test scope belongs in the sprint's dedicated `story-X.Y-tests.md` file (create one if it doesn't exist). Use the `test-suite` skill to audit coverage before marking any story complete.
+
 **Test Commands:**
 ```bash
 # Backend
 cd backend && npm test
 
 # Frontend unit tests
-cd frontend && ng test --watch=false --browsers=ChromeHeadless
+cd frontend && npx ng test --no-watch
 
 # E2E tests
 cd frontend && npm run cy:run
