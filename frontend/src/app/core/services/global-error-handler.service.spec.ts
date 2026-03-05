@@ -6,7 +6,7 @@ import { GlobalErrorHandler } from './global-error-handler.service';
 describe('GlobalErrorHandler', () => {
   let handler: GlobalErrorHandler;
   let snackBar: MatSnackBar;
-  let openSpy: jasmine.Spy;
+  let openSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -15,7 +15,7 @@ describe('GlobalErrorHandler', () => {
     });
     handler = TestBed.inject(GlobalErrorHandler);
     snackBar = TestBed.inject(MatSnackBar);
-    openSpy = spyOn(snackBar, 'open');
+    openSpy = vi.spyOn(snackBar, 'open');
   });
 
   it('should show generic snackbar on error', () => {
@@ -23,12 +23,12 @@ describe('GlobalErrorHandler', () => {
     expect(openSpy).toHaveBeenCalledWith(
       'Something went wrong. Please try again.',
       'Dismiss',
-      jasmine.objectContaining({ duration: 5000 })
+      expect.objectContaining({ duration: 5000 })
     );
   });
 
   it('should log error to console', () => {
-    const consoleSpy = spyOn(console, 'error');
+    const consoleSpy = vi.spyOn(console, 'error');
     const err = new Error('boom');
     handler.handleError(err);
     expect(consoleSpy).toHaveBeenCalledWith('[GlobalErrorHandler]', err);

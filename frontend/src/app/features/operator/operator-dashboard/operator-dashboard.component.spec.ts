@@ -1,7 +1,7 @@
 /**
  * Tests for OperatorDashboardComponent — Sprint 003 Story 7.8
  */
-import { TestBed, ComponentFixture, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -29,31 +29,34 @@ const MOCK_ATTORNEYS = {
 describe('OperatorDashboardComponent', () => {
   let fixture: ComponentFixture<OperatorDashboardComponent>;
   let component: OperatorDashboardComponent;
-  let caseServiceSpy: jest.Mocked<Partial<CaseService>>;
-  let routerSpy: { navigate: jest.Mock };
-  let snackBarSpy: { open: jest.Mock };
+  let caseServiceSpy: { getOperatorCases: ReturnType<typeof vi.fn>; getAvailableAttorneys: ReturnType<typeof vi.fn>; assignToAttorney: ReturnType<typeof vi.fn> };
+  let routerSpy: { navigate: ReturnType<typeof vi.fn> };
+  let snackBarSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     caseServiceSpy = {
-      getOperatorCases: jest.fn().mockReturnValue(of(MOCK_CASES_RESPONSE)),
-      getAvailableAttorneys: jest.fn().mockReturnValue(of(MOCK_ATTORNEYS)),
-      assignToAttorney: jest.fn().mockReturnValue(of({ message: 'Assigned' })),
+      getOperatorCases: vi.fn().mockReturnValue(of(MOCK_CASES_RESPONSE)),
+      getAvailableAttorneys: vi.fn().mockReturnValue(of(MOCK_ATTORNEYS)),
+      assignToAttorney: vi.fn().mockReturnValue(of({ message: 'Assigned' })),
     };
 
-    routerSpy = { navigate: jest.fn() };
-    snackBarSpy = { open: jest.fn() };
+    routerSpy = { navigate: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [OperatorDashboardComponent, NoopAnimationsModule],
       providers: [
         { provide: CaseService, useValue: caseServiceSpy },
         { provide: Router, useValue: routerSpy },
-        { provide: MatSnackBar, useValue: snackBarSpy },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(OperatorDashboardComponent);
     component = fixture.componentInstance;
+
+    // Spy on the actual MatSnackBar instance used by the component
+    const snackBar = fixture.debugElement.injector.get(MatSnackBar);
+    snackBarSpy = vi.spyOn(snackBar, 'open').mockReturnValue(null as any);
+
     fixture.detectChanges();
   });
 
@@ -92,7 +95,7 @@ describe('OperatorDashboardComponent', () => {
   });
 
   it('load() handles errors gracefully', () => {
-    caseServiceSpy.getOperatorCases!.mockReturnValue(throwError(() => new Error('DB error')));
+    caseServiceSpy.getOperatorCases.mockReturnValue(throwError(() => new Error('DB error')));
     component.load();
     expect(component.loading()).toBe(false);
   });
@@ -119,23 +122,22 @@ describe('OperatorDashboardComponent', () => {
   // ----------------------------------------------------------------
   // confirmAssign()
   // ----------------------------------------------------------------
-  it('confirmAssign() calls assignToAttorney and reloads on success', fakeAsync(() => {
+  it('confirmAssign() calls assignToAttorney and reloads on success', () => {
     component.openAssign('case-1');
     component.selectedAttorneyId = 'a1';
     component.attorneyPrice = '450';
 
     component.confirmAssign();
-    tick();
 
     expect(caseServiceSpy.assignToAttorney).toHaveBeenCalledWith('case-1', 'a1', 450);
-    expect(snackBarSpy.open).toHaveBeenCalledWith(
+    expect(snackBarSpy).toHaveBeenCalledWith(
       expect.stringContaining('success'),
       expect.anything(),
       expect.any(Object)
     );
     expect(component.selectedCaseId()).toBeNull();
     expect(component.assigning()).toBe(false);
-  }));
+  });
 
   it('confirmAssign() shows error snackbar on price invalid', () => {
     component.openAssign('case-1');
@@ -145,7 +147,7 @@ describe('OperatorDashboardComponent', () => {
     component.confirmAssign();
 
     expect(caseServiceSpy.assignToAttorney).not.toHaveBeenCalled();
-    expect(snackBarSpy.open).toHaveBeenCalledWith(
+    expect(snackBarSpy).toHaveBeenCalledWith(
       expect.stringContaining('fee'),
       expect.anything(),
       expect.any(Object)
@@ -157,22 +159,21 @@ describe('OperatorDashboardComponent', () => {
     expect(caseServiceSpy.assignToAttorney).not.toHaveBeenCalled();
   });
 
-  it('confirmAssign() shows error snackbar when service fails', fakeAsync(() => {
-    caseServiceSpy.assignToAttorney!.mockReturnValue(throwError(() => new Error('Failed')));
+  it('confirmAssign() shows error snackbar when service fails', () => {
+    caseServiceSpy.assignToAttorney.mockReturnValue(throwError(() => new Error('Failed')));
     component.openAssign('case-1');
     component.selectedAttorneyId = 'a1';
     component.attorneyPrice = '450';
 
     component.confirmAssign();
-    tick();
 
-    expect(snackBarSpy.open).toHaveBeenCalledWith(
+    expect(snackBarSpy).toHaveBeenCalledWith(
       expect.stringContaining('Failed'),
       expect.anything(),
       expect.any(Object)
     );
     expect(component.assigning()).toBe(false);
-  }));
+  });
 
   // ----------------------------------------------------------------
   // formatAge()
