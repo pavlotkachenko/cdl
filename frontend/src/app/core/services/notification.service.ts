@@ -423,4 +423,16 @@ export class NotificationService {
   get currentUnreadCount(): number {
     return this.unreadCountSubject.value;
   }
+
+  // ============================================
+  // Push a notification received via Socket.io
+  // ============================================
+  pushSocketNotification(notification: Notification): void {
+    const current = this.notificationsSubject.value;
+    this.notificationsSubject.next([notification, ...current]);
+    if (!notification.read) {
+      this.unreadCountSubject.next(this.unreadCountSubject.value + 1);
+    }
+    this.newNotificationSubject.next(notification);
+  }
 }
