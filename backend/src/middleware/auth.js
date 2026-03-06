@@ -192,9 +192,49 @@ const canAccessCase = async (req, res, next) => {
   }
 };
 
+/**
+ * Require an active subscription.
+ * Apply after `authenticate`. Returns 402 if no active/trialing subscription found.
+ */
+const requireSubscription = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('id, status')
+      .eq('user_id', req.user.id)
+      .in('status', ['active', 'trialing'])
+      .limit(1);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.status(402).json({
+        error: {
+          code: 'SUBSCRIPTION_REQUIRED',
+          message: 'An active subscription is required to access this feature',
+        },
+      });
+    }
+
+    next();
+  } catch (err) {
+    console.error('[requireSubscription] DB error:', err.message);
+    res.status(500).json({
+      error: { code: 'SERVER_ERROR', message: 'Failed to verify subscription' },
+    });
+  }
+};
+
 module.exports = {
   authenticate,
   authorize,
   canAccessCase,
-  optionalAuth
+  optionalAuth,
+  requireSubscription,
 };

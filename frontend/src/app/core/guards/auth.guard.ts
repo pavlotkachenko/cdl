@@ -12,7 +12,9 @@ import {
   RouterStateSnapshot,
   UrlTree
 } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { SubscriptionService } from '../../services/subscription.service';
 import { AuthService } from '../services/auth.service';
 
 // ============================================
@@ -133,3 +135,23 @@ export const operatorGuard: CanActivateFn = roleGuard(['operator']);
 // Carrier Guard - Only carriers can access
 // ============================================
 export const carrierGuard: CanActivateFn = roleGuard(['carrier']);
+
+// ============================================
+// Subscription Guard — requires active subscription
+// Redirects to /attorney/subscription on 404; fails open on other errors.
+// ============================================
+export const subscriptionGuard: CanActivateFn = () => {
+  const subscriptionService = inject(SubscriptionService);
+  const router = inject(Router);
+
+  return subscriptionService.getCurrentSubscription().pipe(
+    map(() => true as const),
+    catchError((err) => {
+      if (err?.status === 404) {
+        router.navigate(['/attorney/subscription']);
+        return of(false as const);
+      }
+      return of(true as const); // fail open on server errors
+    }),
+  );
+};

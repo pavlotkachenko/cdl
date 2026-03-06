@@ -8,14 +8,14 @@ import { SubscriptionService, Subscription, SubscriptionPlan } from '../../../se
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 const MOCK_SUB: Subscription = {
-  id: 's1', user_id: 'u1', stripe_subscription_id: 'sub_xxx', stripe_price_id: 'price_pro',
+  id: 's1', user_id: 'u1', plan_name: 'basic',
   status: 'active', current_period_start: '2026-01-01', current_period_end: '2026-02-01',
-  cancel_at_period_end: false, created_at: '2026-01-01', updated_at: '2026-01-01',
+  cancel_at_period_end: false, created_at: '2026-01-01',
 };
 
 const MOCK_PLANS: SubscriptionPlan[] = [
-  { id: 'p1', name: 'Pro', price_id: 'price_pro', price: 9900, currency: 'usd', interval: 'month', features: ['Unlimited cases'] },
-  { id: 'p2', name: 'Enterprise', price_id: 'price_ent', price: 29900, currency: 'usd', interval: 'month', features: ['Everything'] },
+  { id: 'basic', name: 'Basic', price_id: 'price_basic_monthly', price: 29, currency: 'usd', interval: 'month', features: ['5 active cases'] },
+  { id: 'premium', name: 'Premium', price_id: 'price_premium_monthly', price: 79, currency: 'usd', interval: 'month', features: ['Unlimited cases'] },
 ];
 
 function makeServiceSpy(sub: Subscription | null = MOCK_SUB, plans = MOCK_PLANS) {
@@ -25,7 +25,7 @@ function makeServiceSpy(sub: Subscription | null = MOCK_SUB, plans = MOCK_PLANS)
     ),
     getPlans: vi.fn().mockReturnValue(of(plans)),
     cancelSubscription: vi.fn().mockReturnValue(of({ ...MOCK_SUB, cancel_at_period_end: true })),
-    updateSubscription: vi.fn().mockReturnValue(of(MOCK_SUB)),
+    createCheckoutSession: vi.fn().mockReturnValue(of({ url: 'http://app/success', subscription: MOCK_SUB })),
   };
 }
 
@@ -46,7 +46,7 @@ describe('SubscriptionManagementComponent', () => {
   it('displays current plan name after load', async () => {
     const { fixture } = await setup();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('Pro');
+    expect(el.textContent).toContain('Basic');
   });
 
   it('shows "No active subscription" when API returns 404', async () => {
@@ -68,5 +68,18 @@ describe('SubscriptionManagementComponent', () => {
     const { component, spy } = await setup();
     component.cancelSubscription();
     expect(spy.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  it('selectPlan calls createCheckoutSession with plan price_id', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { component, spy } = await setup();
+    component.selectPlan(MOCK_PLANS[1]); // Premium
+    expect(spy.createCheckoutSession).toHaveBeenCalledWith('price_premium_monthly');
+  });
+
+  it('isCurrentPlan returns true for plan matching subscription plan_name', async () => {
+    const { component } = await setup();
+    expect(component.isCurrentPlan(MOCK_PLANS[0])).toBe(true);   // basic matches
+    expect(component.isCurrentPlan(MOCK_PLANS[1])).toBe(false);  // premium does not
   });
 });
