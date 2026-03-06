@@ -65,7 +65,6 @@ describe('OperatorDashboardComponent', () => {
   });
 
   afterEach(() => {
-    component.ngOnDestroy();
     TestBed.resetTestingModule();
   });
 
