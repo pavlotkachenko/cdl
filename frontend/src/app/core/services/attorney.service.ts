@@ -23,6 +23,20 @@ export interface CaseDocument {
   url?: string;
 }
 
+export interface CaseNote {
+  id: string;
+  content: string;
+  created_at: string;
+  author?: string;
+}
+
+export interface CourtDate {
+  id?: string;
+  court_date: string;
+  location?: string;
+  notes?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AttorneyService {
   private http = inject(HttpClient);
@@ -50,5 +64,27 @@ export class AttorneyService {
 
   updateStatus(caseId: string, status: string, comment?: string): Observable<void> {
     return this.http.post<void>(`${this.api}/${caseId}/status`, { status, comment });
+  }
+
+  getCaseNotes(caseId: string): Observable<{ notes: CaseNote[] }> {
+    return this.http.get<{ notes: CaseNote[] }>(`${this.api}/${caseId}/notes`);
+  }
+
+  addNote(caseId: string, content: string): Observable<{ note: CaseNote }> {
+    return this.http.post<{ note: CaseNote }>(`${this.api}/${caseId}/notes`, { content });
+  }
+
+  getCourtDate(caseId: string): Observable<{ court_date: CourtDate | null }> {
+    return this.http.get<{ court_date: CourtDate | null }>(`${this.api}/${caseId}/court-date`);
+  }
+
+  setCourtDate(caseId: string, date: string, location?: string, notes?: string): Observable<void> {
+    return this.http.post<void>(`${this.api}/${caseId}/court-date`, { court_date: date, location, notes });
+  }
+
+  uploadDocument(caseId: string, file: File): Observable<{ document: CaseDocument }> {
+    const formData = new FormData();
+    formData.append('document', file);
+    return this.http.post<{ document: CaseDocument }>(`${this.api}/${caseId}/documents`, formData);
   }
 }
