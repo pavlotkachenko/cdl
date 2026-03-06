@@ -45,6 +45,10 @@ const routes: Routes = [
       {
         path: 'revenue',
         loadComponent: () => import('../admin/revenue-dashboard/revenue-dashboard.component').then(m => m.RevenueDashboardComponent)
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('../admin/user-management/user-management.component').then(m => m.UserManagementComponent)
       }
     ]
   }

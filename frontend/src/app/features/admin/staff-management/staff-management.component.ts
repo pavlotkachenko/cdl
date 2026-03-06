@@ -218,7 +218,7 @@ export class StaffManagementComponent implements OnInit {
   }
 
   addNewStaff(): void {
-    this.snackBar.open('Add staff feature coming soon.', 'Close', { duration: 3000 });
+    this.router.navigate(['/admin/users']);
   }
 
   getRoleLabel(role: StaffMember['role']): string {
