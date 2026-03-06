@@ -12,6 +12,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import {
   AdminService, DashboardStats, Case, WorkloadDistribution,
 } from '../../../core/services/admin.service';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 
 const STATUS_LABELS: Record<Case['status'], string> = {
   new: 'New', assigned: 'Assigned', in_progress: 'In Progress',
@@ -28,6 +30,7 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
   imports: [
     MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatDividerModule, MatChipsModule,
+    ErrorStateComponent, SkeletonLoaderComponent,
   ],
   template: `
     <div class="admin-dash">
@@ -41,7 +44,11 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
       </div>
 
       @if (loading()) {
-        <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+        <app-skeleton-loader [rows]="6" [height]="68"></app-skeleton-loader>
+        <div style="height:16px"></div>
+        <app-skeleton-loader [rows]="3" [height]="56"></app-skeleton-loader>
+      } @else if (error()) {
+        <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadDashboardData()"></app-error-state>
       } @else {
         <div class="stat-grid">
           <mat-card class="stat-card">
@@ -145,7 +152,6 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .page-header h1 { margin: 0; font-size: 1.4rem; }
     .quick-actions { display: flex; gap: 8px; }
-    .loading { display: flex; justify-content: center; padding: 48px; }
     .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .stat-card mat-card-content { padding: 12px 16px; }
     .stat-lbl { margin: 0; font-size: 0.72rem; color: #888; text-transform: uppercase; }
@@ -196,6 +202,7 @@ export class AdminDashboardComponent implements OnInit {
   recentCases = signal<Case[]>([]);
   workload = signal<WorkloadDistribution[]>([]);
   loading = signal(true);
+  error = signal('');
 
   revenueChange = computed(() => {
     const s = this.stats();
@@ -210,13 +217,14 @@ export class AdminDashboardComponent implements OnInit {
 
   loadDashboardData(): void {
     this.loading.set(true);
+    this.error.set('');
     this.adminService.getDashboardStats().subscribe({
       next: (s) => this.stats.set(s),
       error: () => {},
     });
     this.adminService.getAllCases({ limit: 10, sort: 'createdAt', order: 'desc' }).subscribe({
       next: (cases) => { this.recentCases.set(cases.slice(0, 10)); this.loading.set(false); },
-      error: () => this.loading.set(false),
+      error: () => { this.error.set('Failed to load dashboard data.'); this.loading.set(false); },
     });
     this.adminService.getWorkloadDistribution().subscribe({
       next: (w) => this.workload.set(w),

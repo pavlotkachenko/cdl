@@ -97,11 +97,22 @@ describe('AttorneyDashboardComponent', () => {
     expect(snackBar.open).toHaveBeenCalledWith('Failed to accept case.', 'Close', expect.any(Object));
   });
 
-  it('shows snackBar when loadCases fails', async () => {
+  it('sets error signal when loadCases fails', async () => {
     const spy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
-    const { snackBar } = await setup(spy as any);
-    expect(snackBar.open).toHaveBeenCalledWith(
-      'Failed to load cases. Please try again.', 'Close', expect.any(Object),
-    );
+    const { component, fixture } = await setup(spy as any);
+    expect(component.error()).toBe('Failed to load cases. Please try again.');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Failed to load cases. Please try again.');
+  });
+
+  it('clears error and reloads on retry', async () => {
+    const failSpy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
+    const { component, spy: s } = await setup(failSpy as any);
+    expect(component.error()).toBeTruthy();
+    // Restore success response and retry
+    (failSpy as any).getMyCases.mockReturnValue(of({ cases: [PENDING] }));
+    component.loadCases();
+    expect(component.error()).toBe('');
+    expect(component.cases().length).toBe(1);
   });
 });

@@ -10,6 +10,8 @@ import { MatDividerModule } from '@angular/material/divider';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { CaseService, Case } from '../../../core/services/case.service';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 
 const ACTIVE_STATUSES = new Set([
   'new', 'reviewed', 'assigned_to_attorney', 'send_info_to_attorney', 'in_progress', 'under_review',
@@ -51,7 +53,7 @@ const STATUS_CLASSES: Record<string, string> = {
 @Component({
   selector: 'app-driver-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatDividerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatDividerModule, ErrorStateComponent, SkeletonLoaderComponent],
   template: `
     <div class="dash-page">
       <div class="dash-header">
@@ -66,38 +68,40 @@ const STATUS_CLASSES: Record<string, string> = {
         </button>
       </div>
 
-      <div class="stat-grid">
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <p class="stat-label">Total</p>
-            <p class="stat-value">{{ stats().total }}</p>
-          </mat-card-content>
-        </mat-card>
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <p class="stat-label">Active</p>
-            <p class="stat-value active">{{ stats().active }}</p>
-          </mat-card-content>
-        </mat-card>
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <p class="stat-label">Pending</p>
-            <p class="stat-value pending">{{ stats().pending }}</p>
-          </mat-card-content>
-        </mat-card>
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <p class="stat-label">Resolved</p>
-            <p class="stat-value resolved">{{ stats().resolved }}</p>
-          </mat-card-content>
-        </mat-card>
-      </div>
-
       @if (loading()) {
-        <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+        <app-skeleton-loader [rows]="4" [height]="72"></app-skeleton-loader>
+        <div class="skeleton-spacer"></div>
+        <app-skeleton-loader [rows]="3" [height]="56"></app-skeleton-loader>
       } @else if (error()) {
-        <p class="error-msg" role="alert">{{ error() }}</p>
+        <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadDashboardData()"></app-error-state>
       } @else {
+        <div class="stat-grid">
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <p class="stat-label">Total</p>
+              <p class="stat-value">{{ stats().total }}</p>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <p class="stat-label">Active</p>
+              <p class="stat-value active">{{ stats().active }}</p>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <p class="stat-label">Pending</p>
+              <p class="stat-value pending">{{ stats().pending }}</p>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <p class="stat-label">Resolved</p>
+              <p class="stat-value resolved">{{ stats().resolved }}</p>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
         <mat-card class="cases-card">
           <mat-card-header>
             <mat-card-title>Recent Cases</mat-card-title>
@@ -132,6 +136,7 @@ const STATUS_CLASSES: Record<string, string> = {
       }
     </div>
   `,
+
   styles: [`
     .dash-page { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
     .dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
@@ -144,8 +149,7 @@ const STATUS_CLASSES: Record<string, string> = {
     .stat-value.active { color: #1976d2; }
     .stat-value.pending { color: #f57c00; }
     .stat-value.resolved { color: #388e3c; }
-    .loading { display: flex; justify-content: center; padding: 48px; }
-    .error-msg { color: #d32f2f; text-align: center; padding: 24px; }
+    .skeleton-spacer { height: 20px; }
     .cases-card mat-card-header { display: flex; justify-content: space-between; align-items: center; }
     .header-actions { margin-left: auto; }
     .empty-state { color: #999; text-align: center; padding: 24px 0; margin: 0; }

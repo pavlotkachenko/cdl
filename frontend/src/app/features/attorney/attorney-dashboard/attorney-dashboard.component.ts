@@ -11,6 +11,8 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 
 import { AttorneyService, AttorneyCase } from '../../../core/services/attorney.service';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 
 type TabId = 'pending' | 'active' | 'resolved';
 
@@ -24,6 +26,7 @@ const ACTIVE_STATUSES = new Set([
   imports: [
     MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatTabsModule, MatChipsModule,
+    ErrorStateComponent, SkeletonLoaderComponent,
   ],
   template: `
     <div class="dashboard">
@@ -34,20 +37,22 @@ const ACTIVE_STATUSES = new Set([
         </button>
       </header>
 
-      <div class="stat-row" role="region" aria-label="Case counts">
-        <div class="stat-chip pending-chip">
-          <span class="stat-num">{{ pendingCases().length }}</span>
-          <span class="stat-lbl">Pending</span>
+      @if (!loading() && !error()) {
+        <div class="stat-row" role="region" aria-label="Case counts">
+          <div class="stat-chip pending-chip">
+            <span class="stat-num">{{ pendingCases().length }}</span>
+            <span class="stat-lbl">Pending</span>
+          </div>
+          <div class="stat-chip active-chip">
+            <span class="stat-num">{{ activeCases().length }}</span>
+            <span class="stat-lbl">Active</span>
+          </div>
+          <div class="stat-chip resolved-chip">
+            <span class="stat-num">{{ resolvedCases().length }}</span>
+            <span class="stat-lbl">Resolved</span>
+          </div>
         </div>
-        <div class="stat-chip active-chip">
-          <span class="stat-num">{{ activeCases().length }}</span>
-          <span class="stat-lbl">Active</span>
-        </div>
-        <div class="stat-chip resolved-chip">
-          <span class="stat-num">{{ resolvedCases().length }}</span>
-          <span class="stat-lbl">Resolved</span>
-        </div>
-      </div>
+      }
 
       <div class="tabs">
         @for (tab of tabs; track tab.id) {
@@ -61,7 +66,9 @@ const ACTIVE_STATUSES = new Set([
       </div>
 
       @if (loading()) {
-        <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+        <app-skeleton-loader [rows]="4" [height]="88"></app-skeleton-loader>
+      } @else if (error()) {
+        <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadCases()"></app-error-state>
       } @else {
         <div class="case-list" role="list">
           @for (c of visibleCases(); track c.id) {
@@ -120,7 +127,6 @@ const ACTIVE_STATUSES = new Set([
     .stat-lbl { font-size: 0.75rem; color: #666; margin-top: 2px; }
     .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
     .active-tab { background: #1976d2; color: #fff; }
-    .loading { display: flex; justify-content: center; padding: 48px; }
     .case-list { display: flex; flex-direction: column; gap: 10px; }
     .case-card { transition: box-shadow 0.15s; }
     .case-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
@@ -142,6 +148,7 @@ export class AttorneyDashboardComponent implements OnInit {
 
   cases = signal<AttorneyCase[]>([]);
   loading = signal(true);
+  error = signal('');
   activeTab = signal<TabId>('pending');
   processingId = signal<string | null>(null);
 
@@ -168,11 +175,12 @@ export class AttorneyDashboardComponent implements OnInit {
 
   loadCases(): void {
     this.loading.set(true);
+    this.error.set('');
     this.attorneyService.getMyCases().subscribe({
       next: (r) => { this.cases.set(r.cases ?? []); this.loading.set(false); },
       error: () => {
         this.loading.set(false);
-        this.snackBar.open('Failed to load cases. Please try again.', 'Close', { duration: 3000 });
+        this.error.set('Failed to load cases. Please try again.');
       },
     });
   }

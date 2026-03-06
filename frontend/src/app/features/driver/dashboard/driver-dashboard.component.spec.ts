@@ -92,4 +92,22 @@ describe('DriverDashboardComponent', () => {
     expect(component.getStatusLabel('resolved')).toBe('Resolved');
     expect(component.getStatusLabel('waiting_for_driver')).toBe('Waiting for Info');
   });
+
+  it('error state renders retry button via ErrorStateComponent', async () => {
+    const spy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
+    const { fixture } = await setup(spy as any);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Failed to load dashboard data');
+    expect(el.querySelector('button[mat-stroked-button]')).toBeTruthy();
+  });
+
+  it('clears error and reloads on retry', async () => {
+    const spy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
+    const { component } = await setup(spy as any);
+    expect(component.error()).toBeTruthy();
+    (spy as any).getMyCases.mockReturnValue(of({ data: MOCK_CASES }));
+    component.loadDashboardData();
+    expect(component.error()).toBe('');
+    expect(component.cases().length).toBe(3);
+  });
 });

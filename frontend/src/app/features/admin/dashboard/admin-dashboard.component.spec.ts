@@ -101,4 +101,24 @@ describe('AdminDashboardComponent', () => {
     expect(component.getStatusLabel('pending_court')).toBe('Pending Court');
     expect(component.getStatusLabel('closed')).toBe('Closed');
   });
+
+  it('sets error signal when getAllCases fails', async () => {
+    const spy = makeServiceSpy();
+    spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
+    const { component, fixture } = await setup(spy);
+    expect(component.error()).toBe('Failed to load dashboard data.');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Failed to load dashboard data.');
+  });
+
+  it('clears error and retries on loadDashboardData call', async () => {
+    const spy = makeServiceSpy();
+    spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
+    const { component } = await setup(spy);
+    expect(component.error()).toBeTruthy();
+    spy.getAllCases.mockReturnValue(of(MOCK_CASES));
+    component.loadDashboardData();
+    expect(component.error()).toBe('');
+    expect(component.recentCases().length).toBe(2);
+  });
 });
