@@ -53,7 +53,7 @@ import { CarrierService } from '../../../core/services/carrier.service';
 
               <mat-form-field appearance="outline">
                 <mat-label>Contact Email</mat-label>
-                <input matInput formControlName="email" readonly aria-readonly="true">
+                <input matInput formControlName="email" type="email" autocomplete="email" readonly aria-readonly="true">
                 <mat-hint>Cannot be changed here</mat-hint>
               </mat-form-field>
 

@@ -91,4 +91,22 @@ describe('ProfileComponent', () => {
     expect(authSpy.changePassword).not.toHaveBeenCalled();
     expect(snackBar.open).toHaveBeenCalledWith('Passwords do not match.', 'Close', expect.any(Object));
   });
+
+  it('phone input has type=tel in edit mode for mobile keyboard', async () => {
+    const { fixture, component } = await setup();
+    component.editingProfile.set(true);
+    fixture.detectChanges();
+    const phoneInput: HTMLInputElement | null = fixture.nativeElement.querySelector('input[formcontrolname="phone"]');
+    expect(phoneInput).toBeTruthy();
+    expect(phoneInput?.type).toBe('tel');
+  });
+
+  it('email input has type=email in edit mode', async () => {
+    const { fixture, component } = await setup();
+    component.editingProfile.set(true);
+    fixture.detectChanges();
+    const emailInput: HTMLInputElement | null = fixture.nativeElement.querySelector('input[formcontrolname="email"]');
+    expect(emailInput).toBeTruthy();
+    expect(emailInput?.type).toBe('email');
+  });
 });
