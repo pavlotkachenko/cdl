@@ -15,7 +15,7 @@ Use when:
 Before creating a PR, ALL of these must be true:
 - [ ] Code compiles: `cd frontend && ng build` succeeds
 - [ ] Backend tests pass: `cd backend && npm test`
-- [ ] Frontend tests pass: `cd frontend && ng test --watch=false --browsers=ChromeHeadless`
+- [ ] Frontend tests pass: `cd frontend && npx ng test --no-watch`
 - [ ] Critic review completed with APPROVED verdict
 
 If any prerequisite fails, **STOP** and fix the issue first.

@@ -1,304 +1,227 @@
-Great question. Let me give you a practical, step-by-step playbook for how to actually use this system day-to-day.
+# Claude Code Operating Manual — CDL Ticket Management
 
-
-
-
----
-
-
-
-How to Work With Your New Claude Code Agent Team
-
-
-The Short Version
-
-
-
-Every time you want to build something, you follow this pattern:
-
-
-
-PLAINTEXT
-You → Tell Claude what you want → PM decomposes → You approve stories → Claude builds each one
-
-
+> This file is the single source of truth for how to work with Claude Code on this project.
+> Read automatically by Claude Code when opened from the project root.
 
 ---
 
+## Session Start Checklist
 
-
-Step-by-Step: Your First Feature Build
-
-
-
-Step 1: Open Claude Code in the project directory
-
-
-
-BASH
-cd /Users/paveltkachenko/prj/cdl-ticket-management
-claude
-
-
-
-Claude reads CLAUDE.md automatically and knows the entire project constitution, all agents, all skills.
-
-
-
-
-Step 2: Request a feature using the PM agent
-
-
-
-
-Pick a feature from your roadmap. For example, if you're working on MVP completion:
-
-
-
-PLAINTEXT
-As the product-manager, decompose the "payment plans UI" feature into implementable stories
-
-
-
-Claude (as PM) will:
-
-Read all your /docs/ files
-Trace the feature to 04_FUNCTIONAL_REQUIREMENTS.md
-Identify persona (Miguel — driver, low tech, mobile)
-Break it into 3-5 small stories with acceptance criteria
-Present the breakdown to you
-
-
-
-Step 3: Review and approve the stories
-
-
-
-
-You'll see something like:
-
-
-
-PLAINTEXT
-Story 1: Create payment_plans table + RLS policies
-Story 2: Build POST /api/payments/plans endpoint
-Story 3: Build PaymentPlanSelectorComponent (mobile-first)
-Story 4: Wire Stripe payment intent with plan selection
-Story 5: Add Jest + Cypress tests for payment flow
-
-
-
-You say: "Approved, start with Story 1" or "Cut Story 4 for now, we'll do Stripe later"
-
-
-
-
-Step 4: Claude executes the pipeline per story
-
-
-
-
-For each story you approve, Claude runs the full pipeline:
-
-
-
-PLAINTEXT
-Architect  → designs schema/API
-UX Expert  → reviews mobile layout, 3-click rule, accessibility
-Dev Lead   → writes backend code, then frontend code
-QA Tester  → writes tests
-Critic     → reviews for security/DRY/performance
-DevOps     → creates branch + PR → waits for YOUR approval
-
-
-
-You just watch the progress and approve the PR at the end.
-
-
-
-
-Step 5: Repeat for next story
-
-
-
-PLAINTEXT
-"Proceed with Story 2"
-
-
+When starting a new session, Claude should:
+1. Read `CLAUDE.md` (project constitution — auto-loaded)
+2. Read memory files: `~/.claude/projects/.../memory/MEMORY.md` (auto-loaded, links to topic files)
+3. Check `sprints/` for current sprint state
+4. Run `git status` to understand current branch and uncommitted work
 
 ---
 
+## How to Request Features
 
+### New feature (use PM decomposition)
+```
+As the product-manager, decompose "<feature name>" into implementable stories
+```
+Claude (as PM) will: read docs/, trace to requirements, break into 3-5 stories, present for approval.
+**You approve before any code is written.**
 
-Practical Commands for Common Situations
+### Bug fix (skip PM)
+```
+Fix <bug description>
+```
+Or reference the bug registry:
+```
+Fix BUG-004 from docs/HARD_BUGS_REGISTRY.md
+```
 
+### Code review
+```
+As the critic, review <file or feature> for security, DRY, and performance
+```
 
+### UX review
+```
+As the ux-expert, review <screen> for mobile usability and 3-click compliance
+```
 
-Starting your day — check project status:
+---
 
-PLAINTEXT
+## Sprint Workflow (mandatory)
+
+**Every sprint follows this sequence — no exceptions:**
+
+```
+1. PM decomposes → you approve stories
+2. Create sprints/sprint_XXX/ folder with all story files  ← do this FIRST
+3. Architect designs schema/API (for new data or endpoints)
+4. UX Expert reviews mobile layout (for any UI changes)
+5. Dev Lead implements (backend first, then frontend)
+6. QA Tester writes tests
+7. Critic reviews (security, DRY, performance, accessibility)
+8. DevOps creates PR → you approve and merge         ← Claude must do this, not the user
+```
+
+### Step 8 — DevOps (PR creation) — Claude must do this proactively
+
+At sprint end, after all tests pass, Claude creates the PR without waiting to be asked:
+
+```bash
+# 1. Verify tests
+cd frontend && npx ng test --no-watch
+cd backend && npm test
+
+# 2. Stage changed files (never git add -A)
+git add <specific files only>
+
+# 3. Commit with conventional message
+git commit -m "feat: <description>
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+
+# 4. Push
+git push -u origin $(git branch --show-current)
+
+# 5. Create PR via gh CLI
+gh pr create --title "..." --body "..."
+
+# 6. Post PR URL to user and STOP — Gate 4 requires human approval before merge
+```
+
+The DevOps agent definition lives at `.claude/agents/devops.md` and can be invoked via the `Agent` tool for complex git scenarios.
+
+Sprint folder structure:
+```
+sprints/sprint_XXX/
+├── story-sprint-overview.md   ← sprint goal + story table + DoD
+├── story-<ID>-<slug>.md       ← one per story
+└── story-<ID>-tests.md        ← all test cases
+```
+
+See `memory/sprint-conventions.md` for templates.
+
+---
+
+## Memory Files (Claude's Persistent Context)
+
+| File | Contents |
+|---|---|
+| `~/.claude/projects/.../memory/MEMORY.md` | Current state, key architecture summary, key files |
+| `~/.claude/projects/.../memory/testing-patterns.md` | All Vitest/Jest patterns, mock setups, gotchas |
+| `~/.claude/projects/.../memory/architecture.md` | Full file map, DB conventions, service/route table |
+| `~/.claude/projects/.../memory/sprint-conventions.md` | Sprint folder format, story templates, completed sprint log |
+
+Claude reads topic files with the `Read` tool when deeper context is needed for a specific area.
+
+---
+
+## Quality Gates (summary — full spec in CLAUDE.md §2)
+
+| Gate | Description | Blocker? |
+|---|---|---|
+| 1. Architecture | Feature traces to docs/, follows patterns | Yes |
+| 2. Test Coverage | Every modified file has a test file | Yes |
+| 3. Critic Review | Security, DRY, performance, accessibility | Yes |
+| 4. Human Approval | Destructive ops, deployments, financial logic | Yes — never automate |
+
+**Gate 4 actions requiring explicit approval:**
+- `git push`, PR merge, any production deployment
+- `DROP TABLE`, schema migrations, bulk data changes
+- Payment logic changes, RLS policy changes
+- Force push, branch deletion
+
+---
+
+## Test Commands
+
+```bash
+# Frontend (Vitest via Angular)
+cd frontend && npx ng test --no-watch
+
+# Backend (Jest)
+cd backend && npm test
+
+# Single backend suite
+cd backend && npx jest <name> --no-coverage
+
+# E2E
+cd frontend && npm run cy:run
+```
+
+**Expected baselines (update after each sprint):**
+- Frontend: 448/449 pass (1 pre-existing socket.service failure — do not fix)
+- Backend: 173/176 pass (5 pre-existing suite failures due to missing ENV vars — do not fix)
+
+---
+
+## Common Commands
+
+### Check project status
+```
 Run all tests and report results
+```
 
+### Start a sprint
+```
+Let's start Sprint 021. As the product-manager, decompose <feature> into stories.
+```
 
+### Continue in-progress work
+```
+Continue Sprint XXX — we were implementing story <ID>
+```
+Claude will read the sprint folder and resume.
 
-Working on a specific bug:
-
-PLAINTEXT
-Fix the auth interceptor hang described in BUG-002 in HARD_BUGS_REGISTRY.md
-
-(No need for the full PM pipeline for bug fixes — Dev Lead handles directly)
-
-
-
-
-Reviewing existing code for issues:
-
-PLAINTEXT
-As the critic, review the entire auth flow — controllers, services, middleware, and RLS policies
-
-
-
-Improving UX of an existing screen:
-
-PLAINTEXT
-As the ux-expert, review the driver ticket submission flow for mobile usability and 3-click compliance
-
-
-
-Adding a database table:
-
-PLAINTEXT
-Create a migration for adding the court_dates table with RLS policies
-
-
-
-Shipping completed work:
-
-PLAINTEXT
-Create a PR for this work
-
-
+### Ship completed work
+```
+Create a PR for this sprint's work
+```
 
 ---
 
+## Key Files Quick Reference
 
-
-Recommended Implementation Order
-
-
-
-Based on your roadmap (docs/07_ROADMAP_AND_PRIORITIES.md), here's what I'd suggest tackling first:
-
-
-
-
-Phase 1 — MVP Completion (your current focus)
-
-
-
-
-Start with the features marked Must-Have that are not yet complete. Ask the PM to decompose each one:
-
-
-
-PLAINTEXT
-1. "As the product-manager, decompose the remaining MVP must-haves into stories"
-
-
-
-This will audit what's built vs what's missing and produce a prioritized backlog.
-
-
-
-
-Phase 2 — Test Coverage Gap
-
-
-
-
-Your backend has only 2 test files. The QA agent can bulk-generate tests:
-
-
-
-PLAINTEXT
-2. "As the qa-tester, write Jest tests for all backend services that don't have tests yet"
-
-
-
-Phase 3 — Security Hardening
-
-
-
-
-Before any production deployment:
-
-
-
-PLAINTEXT
-3. "Run a full security audit"
-
-
-
-Phase 4 — V1 Revenue Features
-
-
-
-
-Then move into the V1 roadmap items (payment plans, subscription management, analytics dashboard).
-
-
-
+| What | Where |
+|---|---|
+| Project constitution | `CLAUDE.md` |
+| Backend conventions | `backend/CLAUDE.md` |
+| Frontend conventions | `frontend/.claude/CLAUDE.md` |
+| DB schema | `supabase_schema.sql` |
+| API spec | `docs/API_SPECIFICATION.md` |
+| Roadmap | `docs/07_ROADMAP_AND_PRIORITIES.md` |
+| Bug registry | `docs/HARD_BUGS_REGISTRY.md` |
+| Sprint folders | `sprints/sprint_XXX/` |
 
 ---
 
+## Agent Model Budget
 
-
-Key Principles for Working With the Agents
-
-
-Always start with the PM for new features — it prevents scope creep and ensures traceability
-
-
-Bug fixes and small changes skip the PM — go directly to the Dev Lead:
-PLAINTEXT
-   "Fix the carrier registration enum mismatch (BUG-004)"
-   
-
-
-You are Gate 4 — Claude will never merge or deploy without your explicit approval
-
-
-You can invoke any agent directly when you need focused work:
-PLAINTEXT
-   "As the architect, ..."
-   "As the ux-expert, ..."
-   "As the critic, ..."
-   
-
-
-One story = one branch = one PR — keeps changes small and reviewable
-
-
-If Claude asks a question, answer it — the PM and UX agents are designed to surface ambiguity rather than guess
-
-
+| Agent | Model | When to invoke |
+|---|---|---|
+| Product Manager | sonnet | New features, requirement decomposition |
+| Architect | opus | Schema design, API contracts, system design |
+| UX Expert | sonnet | Any UI changes — mobile layout, accessibility |
+| Dev Lead | sonnet | Implementation (backend + frontend) |
+| Critic | sonnet | Security review, pre-PR audit |
+| QA Tester | haiku | Test generation |
+| DevOps | haiku | Branching, committing, PRs |
 
 ---
 
+## Angular 21 Quick Rules
 
+- No `standalone: true` (it's the default — omit it)
+- `inject()` not constructor injection
+- `signal()`, `computed()` for state
+- `@if`/`@for` not `*ngIf`/`*ngFor`
+- `OnPush` always
+- `input()`/`output()` not `@Input()`/`@Output()`
+- Reactive forms (FormBuilder) not template-driven
+- No `ngClass`/`ngStyle` — use `[class]`/`[style]` bindings
 
-Ready to Start?
+## Backend Quick Rules
 
-
-
-My recommendation for your very first command:
-
-
-
-PLAINTEXT
-As the product-manager, audit the current codebase against docs/07_ROADMAP_AND_PRIORITIES.md 
-and tell me what MVP must-haves are complete vs still missing
-
-
-
-This gives you a clear picture of where you stand and produces a prioritized list of stories to work through. Want me to run that now?
+- Controllers thin — logic in services
+- Error shape: `{ error: { code, message } }`
+- `supabaseAnon` for auth only, `supabase` for all DB queries
+- bcrypt 10 rounds, JWT 7-day expiry with `role` claim
+- RLS on every table
+- Non-blocking emails: `.catch(err => console.error(...))`

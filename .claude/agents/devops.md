@@ -91,12 +91,16 @@ cd backend && npm test
 # Frontend build (catch TypeScript errors)
 cd frontend && ng build
 
-# Frontend unit tests
-cd frontend && ng test --watch=false --browsers=ChromeHeadless
+# Frontend unit tests (Vitest — NOT Karma/ChromeHeadless)
+cd frontend && npx ng test --no-watch
 
 # Lint check (if configured)
 cd frontend && ng lint
 ```
+
+Expected baselines:
+- Frontend: 448/449 pass (socket.service failure is pre-existing — OK)
+- Backend: 173/176 pass (5 suite failures are pre-existing ENV issues — OK)
 
 ## Rules
 
