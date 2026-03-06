@@ -1,17 +1,13 @@
-<!-- ============================================ -->
-<!-- NOTIFICATION BELL COMPONENT TEMPLATE -->
-<!-- Location: frontend/src/app/shared/components/notification-bell/notification-bell.component.html -->
-<!-- ============================================ -->
-
 <button
   mat-icon-button
   [matMenuTriggerFor]="notificationMenu"
   matTooltip="Notifications"
+  aria-label="Notifications"
   class="notification-bell-button"
 >
   <mat-icon
-    [matBadge]="unreadCount"
-    [matBadgeHidden]="unreadCount === 0"
+    [matBadge]="unreadCount()"
+    [matBadgeHidden]="unreadCount() === 0"
     matBadgeColor="warn"
     matBadgeSize="small"
   >
@@ -23,71 +19,67 @@
   <!-- Menu Header -->
   <div class="notification-header" (click)="$event.stopPropagation()">
     <h3>Notifications</h3>
-    <button
-      mat-button
-      *ngIf="unreadCount > 0"
-      (click)="markAllAsRead()"
-      class="mark-all-read-button"
-    >
-      Mark all as read
-    </button>
+    @if (unreadCount() > 0) {
+      <button mat-button (click)="markAllAsRead()" class="mark-all-read-button">
+        Mark all as read
+      </button>
+    }
   </div>
 
   <mat-divider></mat-divider>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="notification-loading" (click)="$event.stopPropagation()">
-    <mat-icon class="spin">refresh</mat-icon>
-    <p>Loading notifications...</p>
-  </div>
+  @if (loading()) {
+    <div class="notification-loading" (click)="$event.stopPropagation()">
+      <mat-icon class="spin">refresh</mat-icon>
+      <p>Loading notifications...</p>
+    </div>
+  }
 
   <!-- Empty State -->
-  <div
-    *ngIf="!loading && notifications.length === 0"
-    class="notification-empty"
-    (click)="$event.stopPropagation()"
-  >
-    <mat-icon>notifications_none</mat-icon>
-    <p>No notifications</p>
-  </div>
+  @if (!loading() && recentNotifications().length === 0) {
+    <div class="notification-empty" (click)="$event.stopPropagation()">
+      <mat-icon>notifications_none</mat-icon>
+      <p>No notifications</p>
+    </div>
+  }
 
   <!-- Notification List -->
-  <div class="notification-list" *ngIf="!loading && notifications.length > 0">
-    <button
-      mat-menu-item
-      *ngFor="let notification of notifications"
-      class="notification-item"
-      [class.unread]="!notification.read"
-      (click)="onNotificationClick(notification)"
-    >
-      <div class="notification-content">
-        <!-- Icon -->
-        <div class="notification-icon" [class]="getNotificationColor(notification.type)">
-          <mat-icon>{{ getNotificationIcon(notification.type) }}</mat-icon>
-        </div>
+  @if (!loading() && recentNotifications().length > 0) {
+    <div class="notification-list">
+      @for (notification of recentNotifications(); track notification.id) {
+        <button
+          mat-menu-item
+          class="notification-item"
+          [class.unread]="!notification.read"
+          (click)="onNotificationClick(notification)"
+        >
+          <div class="notification-content">
+            <div class="notification-icon">
+              <mat-icon>{{ getNotificationIcon(notification.type) }}</mat-icon>
+            </div>
+            <div class="notification-text">
+              <div class="notification-title">{{ notification.title }}</div>
+              <div class="notification-message">{{ notification.message }}</div>
+              <div class="notification-time">{{ getTimeAgo(notification.createdAt) }}</div>
+            </div>
+            @if (!notification.read) {
+              <div class="notification-indicator">
+                <div class="unread-dot"></div>
+              </div>
+            }
+          </div>
+        </button>
+      }
+    </div>
 
-        <!-- Text Content -->
-        <div class="notification-text">
-          <div class="notification-title">{{ notification.title }}</div>
-          <div class="notification-message">{{ notification.message }}</div>
-          <div class="notification-time">{{ getTimeAgo(notification.createdAt) }}</div>
-        </div>
+    <mat-divider></mat-divider>
 
-        <!-- Unread Indicator -->
-        <div class="notification-indicator" *ngIf="!notification.read">
-          <div class="unread-dot"></div>
-        </div>
-      </div>
-    </button>
-  </div>
-
-  <mat-divider *ngIf="notifications.length > 0"></mat-divider>
-
-  <!-- Footer - View All -->
-  <div class="notification-footer" *ngIf="notifications.length > 0">
-    <button mat-menu-item (click)="viewAllNotifications()" class="view-all-button">
-      <mat-icon>open_in_new</mat-icon>
-      View all notifications
-    </button>
-  </div>
+    <div class="notification-footer">
+      <button mat-menu-item (click)="viewAllNotifications()" class="view-all-button">
+        <mat-icon>open_in_new</mat-icon>
+        View all notifications
+      </button>
+    </div>
+  }
 </mat-menu>
