@@ -107,6 +107,16 @@ export interface BulkOperation {
   data?: any;
 }
 
+export interface PlatformUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'driver' | 'carrier' | 'attorney' | 'admin' | 'operator' | 'paralegal';
+  status: 'active' | 'suspended' | 'pending';
+  createdAt: string;
+  lastLogin?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -458,11 +468,38 @@ export class AdminService {
   }
 
   exportCases(caseIds: string[], format: 'csv' | 'pdf' | 'xlsx'): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/admin/export`, 
+    return this.http.post(`${this.apiUrl}/admin/export`,
       { caseIds, format },
       { responseType: 'blob' }
     ).pipe(
       catchError(() => of(new Blob(['Mock export data'], { type: 'text/csv' })))
     );
+  }
+
+  // ============================================
+  // User Management
+  // ============================================
+
+  getAllUsers(role?: string, status?: string): Observable<{ users: PlatformUser[] }> {
+    const params: Record<string, string> = {};
+    if (role) params['role'] = role;
+    if (status) params['status'] = status;
+    return this.http.get<{ users: PlatformUser[] }>(`${this.apiUrl}/admin/users`, { params });
+  }
+
+  inviteUser(email: string, role: PlatformUser['role']): Observable<{ user: PlatformUser }> {
+    return this.http.post<{ user: PlatformUser }>(`${this.apiUrl}/admin/users/invite`, { email, role });
+  }
+
+  changeUserRole(userId: string, role: PlatformUser['role']): Observable<{ user: Pick<PlatformUser, 'id' | 'role'> }> {
+    return this.http.patch<{ user: Pick<PlatformUser, 'id' | 'role'> }>(`${this.apiUrl}/admin/users/${userId}/role`, { role });
+  }
+
+  suspendUser(userId: string): Observable<{ user: Pick<PlatformUser, 'id' | 'status'> }> {
+    return this.http.patch<{ user: Pick<PlatformUser, 'id' | 'status'> }>(`${this.apiUrl}/admin/users/${userId}/suspend`, {});
+  }
+
+  unsuspendUser(userId: string): Observable<{ user: Pick<PlatformUser, 'id' | 'status'> }> {
+    return this.http.patch<{ user: Pick<PlatformUser, 'id' | 'status'> }>(`${this.apiUrl}/admin/users/${userId}/unsuspend`, {});
   }
 }
