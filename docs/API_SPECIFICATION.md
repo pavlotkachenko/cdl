@@ -877,11 +877,7 @@ Project Status Assessment
   Sprint 010 (admin completion) is tech debt cleanup — worthwhile for maintainability but not a user-visible MVP blocker. You could skip it for now, do the landing
   page + UX polish sprints, and come back to it.
 
-  Recommendation: After Sprint 010, run a focused "Launch Gate" sprint targeting the roadmap's 7 launch gates (landing page, Lighthouse score, WCAG audit, payment
-  flow in test mode, error scenario coverage). That puts you at a releasable MVP.
+  Recommendation: After Sprint 010, run a focused "Launch Gate" sprint targeting the roadmap's 7 launch gates (landing page, Lighthouse score, WCAG audit, payment flow in test mode, error scenario coverage). That puts you at a releasable MVP.
 
-  Ready to proceed with Sprint 010 whenever you are.
 
-  - Sprint 014: Real-time notifications via Socket.io (bell icon, unread count, live updates)
-  - Sprint 014: PWA offline support (service worker, manifest, offline page)
-  - Sprint 014: Operator dashboard enhancements (bulk actions, case assignment workflow)
+  Ready for Sprint 019 (Carrier Fleet Analytics) or Sprint 020 (Admin User Management) — your call.

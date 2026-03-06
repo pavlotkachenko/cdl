@@ -11,10 +11,7 @@
                [class.active]="i === currentSlideIndex()"
                [class]="slide.image">
             <div class="slide-content">
-              <h1 class="hero-title" [innerHTML]="slide.title"></h1>
-              @if (slide.subtitle) {
-                <p class="hero-subtitle">{{ slide.subtitle }}</p>
-              }
+              <h1 class="hero-title">{{ slide.line1 }}<br aria-hidden="true">{{ slide.line2 }}</h1>
             </div>
           </div>
         }
@@ -30,6 +27,7 @@
         @for (slide of heroSlides; track slide.image; let i = $index) {
           <span class="pagination-dot"
                 role="tab"
+                [attr.aria-label]="'Slide ' + (i + 1) + ' of ' + heroSlides.length"
                 [attr.aria-selected]="i === currentSlideIndex()"
                 [class.active]="i === currentSlideIndex()"
                 (click)="currentSlideIndex.set(i)"
@@ -214,6 +212,7 @@
         @for (page of testimonialPages; track page; let i = $index) {
           <span class="pagination-dot"
                 role="tab"
+                [attr.aria-label]="'Testimonial page ' + (i + 1) + ' of ' + testimonialPages.length"
                 [class.active]="i === currentTestimonialIndex()"
                 [attr.aria-selected]="i === currentTestimonialIndex()"
                 (click)="currentTestimonialIndex.set(i)"
