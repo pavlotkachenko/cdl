@@ -73,6 +73,9 @@ import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loa
           <button mat-raised-button (click)="navigateToCases()">
             <mat-icon>folder_open</mat-icon> View Cases
           </button>
+          <button mat-raised-button color="accent" (click)="navigateToAnalytics()">
+            <mat-icon>bar_chart</mat-icon> Fleet Analytics
+          </button>
           <button mat-stroked-button (click)="navigateToProfile()">
             <mat-icon>business</mat-icon> Company Profile
           </button>
@@ -145,5 +148,6 @@ export class CarrierDashboardComponent implements OnInit {
 
   navigateToDrivers(): void { this.router.navigate(['/carrier/drivers']); }
   navigateToCases(): void { this.router.navigate(['/carrier/cases']); }
+  navigateToAnalytics(): void { this.router.navigate(['/carrier/analytics']); }
   navigateToProfile(): void { this.router.navigate(['/carrier/profile']); }
 }

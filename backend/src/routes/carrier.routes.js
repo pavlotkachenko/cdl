@@ -14,5 +14,7 @@ router.get('/me/drivers', authenticate, carrierController.getDrivers);
 router.post('/me/drivers', authenticate, carrierController.addDriver);
 router.delete('/me/drivers/:driverId', authenticate, carrierController.removeDriver);
 router.get('/me/cases', authenticate, carrierController.getCases);
+router.get('/me/analytics', authenticate, carrierController.getAnalytics);
+router.get('/me/export', authenticate, carrierController.exportCases);
 
 module.exports = router;

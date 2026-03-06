@@ -31,6 +31,10 @@ const routes: Routes = [
       {
         path: 'profile',
         component: CarrierProfileComponent
+      },
+      {
+        path: 'analytics',
+        loadComponent: () => import('./analytics/carrier-analytics.component').then(m => m.CarrierAnalyticsComponent)
       }
     ]
   }
