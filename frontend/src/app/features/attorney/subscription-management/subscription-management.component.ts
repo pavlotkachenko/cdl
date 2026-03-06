@@ -4,18 +4,18 @@ import {
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { UpperCasePipe } from '@angular/common';
+import { UpperCasePipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import {
-  SubscriptionService, Subscription, SubscriptionPlan, CheckoutResult,
+  SubscriptionService, Subscription, SubscriptionPlan, CheckoutResult, BillingInvoice,
 } from '../../../services/subscription.service';
 
 @Component({
   selector: 'app-subscription-management',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [UpperCasePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [UpperCasePipe, CurrencyPipe, DatePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="sub-page">
       <h1>Subscription</h1>
@@ -33,11 +33,16 @@ import {
                     {{ subscription()!.status | uppercase }}
                   </p>
                 </div>
-                @if (subscription()!.status === 'active' || subscription()!.status === 'trialing') {
-                  <button mat-stroked-button color="warn" (click)="cancelSubscription()">
-                    Cancel Plan
+                <div class="plan-actions">
+                  <button mat-stroked-button (click)="openBillingPortal()" aria-label="Manage billing in Stripe portal">
+                    <mat-icon aria-hidden="true">open_in_new</mat-icon> Manage Billing
                   </button>
-                }
+                  @if (subscription()!.status === 'active' || subscription()!.status === 'trialing') {
+                    <button mat-stroked-button color="warn" (click)="cancelSubscription()">
+                      Cancel Plan
+                    </button>
+                  }
+                </div>
               </div>
               @if (subscription()!.cancel_at_period_end) {
                 <p class="cancel-notice">
@@ -80,6 +85,43 @@ import {
             }
           </div>
         }
+
+        @if (invoices().length > 0) {
+          <h2>Billing History</h2>
+          <mat-card class="invoices-card">
+            <mat-card-content>
+              <table class="invoice-table" aria-label="Billing history">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Invoice</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (inv of invoices(); track inv.id) {
+                    <tr>
+                      <td>{{ inv.date | date:'mediumDate' }}</td>
+                      <td>{{ inv.amount | currency:inv.currency.toUpperCase() }}</td>
+                      <td class="inv-status">{{ inv.status | uppercase }}</td>
+                      <td>
+                        @if (inv.pdf_url) {
+                          <a [href]="inv.pdf_url" target="_blank" rel="noopener noreferrer"
+                             aria-label="Download invoice PDF">PDF</a>
+                        }
+                        @if (inv.hosted_url) {
+                          <a [href]="inv.hosted_url" target="_blank" rel="noopener noreferrer"
+                             aria-label="View invoice online" class="hosted-link">View</a>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        }
       }
     </div>
   `,
@@ -89,7 +131,8 @@ import {
     h2 { margin: 24px 0 12px; font-size: 1.1rem; }
     .loading { display: flex; justify-content: center; padding: 48px; }
     .current-plan { margin-bottom: 8px; }
-    .plan-row { display: flex; justify-content: space-between; align-items: center; }
+    .plan-row { display: flex; justify-content: space-between; align-items: flex-start; }
+    .plan-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
     .plan-name { margin: 0; font-size: 1.1rem; font-weight: 600; }
     .plan-status { margin: 4px 0 0; font-size: 0.75rem; font-weight: 600; }
     .status-active { color: #388e3c; }
@@ -110,6 +153,14 @@ import {
     .features li { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
     .features mat-icon { font-size: 14px; width: 14px; height: 14px; color: #388e3c; }
     .current-badge { font-size: 0.75rem; font-weight: 600; color: #1976d2; margin: 0; }
+    .invoices-card { margin-top: 4px; }
+    .invoice-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .invoice-table th { text-align: left; padding: 8px 12px; font-weight: 600;
+      border-bottom: 2px solid #e0e0e0; color: #555; }
+    .invoice-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+    .invoice-table a { color: #1976d2; text-decoration: none; margin-right: 8px; }
+    .invoice-table a:hover { text-decoration: underline; }
+    .inv-status { font-size: 0.75rem; font-weight: 600; color: #388e3c; }
   `],
 })
 export class SubscriptionManagementComponent implements OnInit {
@@ -119,6 +170,7 @@ export class SubscriptionManagementComponent implements OnInit {
   loading = signal(true);
   subscription = signal<Subscription | null>(null);
   plans = signal<SubscriptionPlan[]>([]);
+  invoices = signal<BillingInvoice[]>([]);
 
   ngOnInit(): void {
     this.loadAll();
@@ -127,11 +179,11 @@ export class SubscriptionManagementComponent implements OnInit {
   private loadAll(): void {
     this.loading.set(true);
     this.subscriptionService.getCurrentSubscription().subscribe({
-      next: (s) => { this.subscription.set(s); this.loadPlans(); },
+      next: (s) => { this.subscription.set(s); this.loadPlansAndInvoices(); },
       error: (err) => {
         if (err.status === 404) {
           this.subscription.set(null);
-          this.loadPlans();
+          this.loadPlansAndInvoices();
         } else {
           this.loading.set(false);
           this.snackBar.open('Failed to load subscription.', 'Close', { duration: 3000 });
@@ -140,13 +192,23 @@ export class SubscriptionManagementComponent implements OnInit {
     });
   }
 
-  private loadPlans(): void {
+  private loadPlansAndInvoices(): void {
     this.subscriptionService.getPlans().subscribe({
-      next: (p) => { this.plans.set(p); this.loading.set(false); },
+      next: (p) => {
+        this.plans.set(p);
+        this.loadInvoices();
+      },
       error: () => {
         this.plans.set([]);
         this.loading.set(false);
       },
+    });
+  }
+
+  private loadInvoices(): void {
+    this.subscriptionService.getInvoices().subscribe({
+      next: (inv) => { this.invoices.set(inv); this.loading.set(false); },
+      error: () => { this.invoices.set([]); this.loading.set(false); },
     });
   }
 
@@ -159,6 +221,15 @@ export class SubscriptionManagementComponent implements OnInit {
 
   isCurrentPlan(plan: SubscriptionPlan): boolean {
     return plan.id === this.subscription()?.plan_name;
+  }
+
+  openBillingPortal(): void {
+    this.subscriptionService.getBillingPortalUrl().subscribe({
+      next: ({ url }) => { window.open(url, '_blank', 'noopener,noreferrer'); },
+      error: () => {
+        this.snackBar.open('Failed to open billing portal.', 'Close', { duration: 3000 });
+      },
+    });
   }
 
   selectPlan(plan: SubscriptionPlan): void {

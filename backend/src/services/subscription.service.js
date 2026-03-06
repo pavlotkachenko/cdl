@@ -120,15 +120,79 @@ const createCheckoutSession = async (userId, priceId, successUrl, cancelUrl) => 
   }
 
   // Paid plan — redirect to Stripe Checkout
+  // subscription_data.metadata propagates userId/planId to the resulting subscription object
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
     metadata: { userId, planId: plan.id },
+    subscription_data: { metadata: { userId, planId: plan.id } },
   });
 
   return { url: session.url };
+};
+
+/**
+ * Create a Stripe Billing Portal session so the customer can manage their subscription.
+ * When Stripe is not configured, returns the fallback return URL directly.
+ */
+const createBillingPortalSession = async (userId, returnUrl) => {
+  const appUrl = process.env.APP_URL || 'http://localhost:4200';
+  const fallbackUrl = returnUrl || `${appUrl}/attorney/subscription`;
+
+  if (!stripe) {
+    return { url: fallbackUrl };
+  }
+
+  const { data: user, error: userErr } = await supabase
+    .from('users').select('email').eq('id', userId).single();
+  if (userErr || !user) throw new Error('User not found');
+
+  // Find or create Stripe customer by email
+  const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+  let customerId;
+  if (customers.data.length > 0) {
+    customerId = customers.data[0].id;
+  } else {
+    const customer = await stripe.customers.create({ email: user.email, metadata: { userId } });
+    customerId = customer.id;
+  }
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: fallbackUrl,
+  });
+
+  return { url: session.url };
+};
+
+/**
+ * Retrieve the last 10 Stripe invoices for a user.
+ * Returns [] when Stripe is not configured or user has no Stripe customer record.
+ */
+const getInvoices = async (userId) => {
+  if (!stripe) return [];
+
+  const { data: user, error } = await supabase
+    .from('users').select('email').eq('id', userId).single();
+  if (error || !user) return [];
+
+  const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+  if (customers.data.length === 0) return [];
+
+  const customerId = customers.data[0].id;
+  const invoices = await stripe.invoices.list({ customer: customerId, limit: 10 });
+
+  return invoices.data.map(inv => ({
+    id: inv.id,
+    amount: inv.amount_paid / 100,
+    currency: inv.currency,
+    status: inv.status,
+    date: new Date(inv.created * 1000).toISOString(),
+    pdf_url: inv.invoice_pdf,
+    hosted_url: inv.hosted_invoice_url,
+  }));
 };
 
 /**
@@ -192,6 +256,41 @@ const handleWebhookEvent = async (event) => {
       break;
     }
 
+    case 'customer.subscription.updated': {
+      // subscription_data.metadata set during checkout propagates userId/planId here
+      const sub = event.data.object;
+      const { userId, planId } = sub.metadata || {};
+      if (!userId) break;
+
+      const plan = PLANS.find(p => p.id === planId);
+      const end = new Date(sub.current_period_end * 1000);
+
+      await supabase.from('subscriptions').update({
+        status: sub.cancel_at_period_end ? 'canceling' : sub.status,
+        ...(plan && { plan_name: plan.id, price_per_month: plan.price }),
+        end_date: end.toISOString().split('T')[0],
+      }).eq('user_id', userId).in('status', ['active', 'trialing', 'past_due', 'canceling']);
+      break;
+    }
+
+    case 'invoice.paid': {
+      const invoice = event.data.object;
+      if (!invoice.subscription) break;
+
+      // subscription_details.metadata carries the subscription's metadata (userId, planId)
+      const { userId } = invoice.subscription_details?.metadata || {};
+      if (!userId) break;
+
+      const periodEnd = invoice.lines?.data?.[0]?.period?.end;
+      const end = periodEnd ? new Date(periodEnd * 1000) : null;
+
+      await supabase.from('subscriptions').update({
+        status: 'active',
+        ...(end && { end_date: end.toISOString().split('T')[0] }),
+      }).eq('user_id', userId).in('status', ['active', 'trialing', 'past_due', 'canceling']);
+      break;
+    }
+
     case 'customer.subscription.deleted':
       console.log('[SubscriptionService] Stripe subscription deleted:', event.data.object.id);
       break;
@@ -212,6 +311,8 @@ module.exports = {
   getPlans,
   getCurrentSubscription,
   createCheckoutSession,
+  createBillingPortalSession,
+  getInvoices,
   cancelSubscription,
   handleWebhookEvent,
 };

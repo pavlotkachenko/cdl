@@ -55,6 +55,34 @@ exports.createCheckoutSession = async (req, res) => {
   }
 };
 
+exports.createBillingPortalSession = async (req, res) => {
+  const appUrl = process.env.APP_URL || 'http://localhost:4200';
+  const returnUrl = req.body.return_url || `${appUrl}/attorney/subscription`;
+
+  try {
+    const result = await subscriptionService.createBillingPortalSession(req.user.id, returnUrl);
+    res.json(result);
+  } catch (err) {
+    console.error('[SubscriptionController] createBillingPortalSession:', err.message);
+    const status = err.message === 'User not found' ? 404 : 500;
+    res.status(status).json({
+      error: { code: 'PORTAL_ERROR', message: err.message },
+    });
+  }
+};
+
+exports.getInvoices = async (req, res) => {
+  try {
+    const invoices = await subscriptionService.getInvoices(req.user.id);
+    res.json({ invoices });
+  } catch (err) {
+    console.error('[SubscriptionController] getInvoices:', err.message);
+    res.status(500).json({
+      error: { code: 'SERVER_ERROR', message: 'Failed to retrieve invoices' },
+    });
+  }
+};
+
 exports.cancelSubscription = async (req, res) => {
   try {
     const sub = await subscriptionService.cancelSubscription(req.params.id, req.user.id);
