@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, signal, computed, ChangeDetectionStrategy, inject,
+  Component, OnInit, DestroyRef, signal, computed, ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -216,10 +216,11 @@ type StatusFilter = 'new' | 'under_review' | 'waiting_for_driver';
     .assign-actions { display: flex; gap: 8px; align-items: center; padding-top: 8px; }
   `],
 })
-export class OperatorDashboardComponent implements OnInit, OnDestroy {
+export class OperatorDashboardComponent implements OnInit {
   private caseService = inject(CaseService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   readonly STATUS_TABS: { value: StatusFilter; label: string }[] = [
     { value: 'new', label: 'New' },
@@ -258,16 +259,11 @@ export class OperatorDashboardComponent implements OnInit, OnDestroy {
 
   readonly COLUMNS = ['case_number', 'customer_name', 'violation_type', 'state', 'age', 'actions'];
 
-  private refreshInterval: ReturnType<typeof setInterval> | null = null;
-
   ngOnInit(): void {
     this.load();
     this.loadAttorneys();
-    this.refreshInterval = setInterval(() => this.load(), 60_000);
-  }
-
-  ngOnDestroy(): void {
-    if (this.refreshInterval) clearInterval(this.refreshInterval);
+    const interval = setInterval(() => this.load(), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(interval));
   }
 
   load(): void {

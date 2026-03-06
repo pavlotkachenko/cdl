@@ -1,6 +1,5 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { ParalegalDashboardComponent } from './dashboard/paralegal-dashboard.component';
 import { LayoutComponent } from '../../core/layout/layout.component';
 
 const routes: Routes = [
@@ -15,7 +14,7 @@ const routes: Routes = [
       },
       {
         path: 'dashboard',
-        component: ParalegalDashboardComponent
+        loadComponent: () => import('./dashboard/paralegal-dashboard.component').then(m => m.ParalegalDashboardComponent)
       }
     ]
   }
