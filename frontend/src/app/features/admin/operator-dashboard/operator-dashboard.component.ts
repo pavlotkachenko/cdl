@@ -1,301 +1,285 @@
-/**
- * Operator Dashboard Component - Workload overview and case management
- * Location: frontend/src/app/features/admin/operator-dashboard/operator-dashboard.component.ts
- */
-
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatDialog } from '@angular/material/dialog';
+import {
+  Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef,
+  ChangeDetectionStrategy, inject, signal, computed,
+} from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SelectionModel } from '@angular/cdk/collections';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { Chart, ChartConfiguration } from 'chart.js/auto';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Subscription } from 'rxjs';
+import { Chart, registerables } from 'chart.js/auto';
 
-import { DashboardService, WorkloadStats, CaseQueueItem, SuggestedAttorney } from '../../../core/services/dashboard.service';
+import {
+  DashboardService, WorkloadStats, CaseQueueItem, SuggestedAttorney,
+} from '../../../core/services/dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
+
+type Priority = 'high' | 'medium' | 'low' | '';
 
 @Component({
   selector: 'app-operator-dashboard',
-  standalone: true,
-  templateUrl: './operator-dashboard.component.html',
-  styleUrls: ['./operator-dashboard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
-    FormsModule,
-    MatTableModule,
-    MatSortModule,
-    MatPaginatorModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatMenuModule,
-    MatCheckboxModule,
-    MatChipsModule,
-    MatDividerModule,
-    MatProgressSpinnerModule,
-  ]
-})
-export class OperatorDashboardComponent implements OnInit, OnDestroy {
-  @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+    MatCardModule, MatButtonModule, MatIconModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatChipsModule, MatProgressSpinnerModule,
+  ],
+  template: `
+    <div class="operator-dashboard">
+      <div class="page-header">
+        <h1>Operator Dashboard</h1>
+        <button mat-raised-button color="primary" (click)="refresh()">
+          <mat-icon>refresh</mat-icon> Refresh
+        </button>
+      </div>
 
-  // Workload stats
-  workloadStats: WorkloadStats | null = null;
-  
-  // Case queue table
-  displayedColumns: string[] = [
-    'select',
-    'caseId',
-    'driverName',
-    'violationType',
-    'violationDate',
-    'violationState',
-    'priority',
-    'status',
-    'createdAt',
-    'actions'
-  ];
-  dataSource = new MatTableDataSource<CaseQueueItem>([]);
-  selection = new SelectionModel<CaseQueueItem>(true, []);
-  
-  // Filters
-  filterStatus = '';
-  filterPriority = '';
-  filterState = '';
-  searchText = '';
-  
-  // Charts
+      @if (workloadStats()) {
+        <div class="stats-grid">
+          <mat-card><mat-card-content>
+            <p class="stat-label">New Cases</p>
+            <p class="stat-value">{{ workloadStats()!.newCases }}</p>
+          </mat-card-content></mat-card>
+          <mat-card><mat-card-content>
+            <p class="stat-label">Assigned</p>
+            <p class="stat-value">{{ workloadStats()!.assignedCases }}</p>
+          </mat-card-content></mat-card>
+          <mat-card><mat-card-content>
+            <p class="stat-label">In Progress</p>
+            <p class="stat-value">{{ workloadStats()!.inProgressCases }}</p>
+          </mat-card-content></mat-card>
+          <mat-card><mat-card-content>
+            <p class="stat-label">Resolved</p>
+            <p class="stat-value">{{ workloadStats()!.resolvedCases }}</p>
+          </mat-card-content></mat-card>
+        </div>
+      }
+
+      <div class="charts-row">
+        <mat-card>
+          <mat-card-header><mat-card-title>Case Status</mat-card-title></mat-card-header>
+          <mat-card-content><canvas #statusChart></canvas></mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header><mat-card-title>Violation Types</mat-card-title></mat-card-header>
+          <mat-card-content><canvas #violationChart></canvas></mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header><mat-card-title>Attorney Workload</mat-card-title></mat-card-header>
+          <mat-card-content><canvas #workloadChart></canvas></mat-card-content>
+        </mat-card>
+      </div>
+
+      <mat-card class="queue-card">
+        <mat-card-header>
+          <mat-card-title>Case Queue</mat-card-title>
+          <div class="queue-filters">
+            <mat-form-field appearance="outline">
+              <mat-label>Search</mat-label>
+              <input matInput [value]="searchText()"
+                (input)="searchText.set($any($event.target).value)"
+                placeholder="Driver, case, state…">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <mat-select [value]="filterStatus()" (selectionChange)="filterStatus.set($event.value)">
+                <mat-option value="">All</mat-option>
+                <mat-option value="new">New</mat-option>
+                <mat-option value="assigned">Assigned</mat-option>
+                <mat-option value="in_progress">In Progress</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Priority</mat-label>
+              <mat-select [value]="filterPriority()" (selectionChange)="filterPriority.set($event.value)">
+                <mat-option value="">All</mat-option>
+                <mat-option value="high">High</mat-option>
+                <mat-option value="medium">Medium</mat-option>
+                <mat-option value="low">Low</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button mat-stroked-button (click)="clearFilters()">Clear</button>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          @if (loading()) {
+            <div class="loading-center"><mat-spinner diameter="40"></mat-spinner></div>
+          }
+          @if (!loading()) {
+            @if (filteredQueue().length === 0) {
+              <div class="empty-state">
+                <mat-icon>inbox</mat-icon>
+                <p>No cases in queue</p>
+              </div>
+            }
+            @for (item of filteredQueue(); track item.caseId) {
+              <div class="queue-row">
+                <div class="case-info">
+                  <span class="case-id">{{ item.caseId }}</span>
+                  <span class="driver-name">{{ item.driverName }}</span>
+                  <span class="violation">{{ item.violationType }}</span>
+                  <span class="state">{{ item.violationState }}</span>
+                </div>
+                <div class="case-meta">
+                  <mat-chip [color]="getPriorityColor(item.priority)" highlighted>
+                    {{ item.priority }}
+                  </mat-chip>
+                  <mat-chip>{{ item.status }}</mat-chip>
+                </div>
+                <div class="case-actions">
+                  <button mat-stroked-button (click)="autoAssignCase(item)">
+                    <mat-icon>auto_fix_high</mat-icon> Auto-Assign
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  `,
+})
+export class OperatorDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('statusChart') statusChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('violationChart') violationChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('workloadChart') workloadChartRef!: ElementRef<HTMLCanvasElement>;
+
+  private readonly dashboardService = inject(DashboardService);
+  private readonly authService = inject(AuthService);
+  private readonly snackBar = inject(MatSnackBar);
+
+  workloadStats = signal<WorkloadStats | null>(null);
+  caseQueue = signal<CaseQueueItem[]>([]);
+  loading = signal(false);
+
+  searchText = signal('');
+  filterStatus = signal('');
+  filterPriority = signal<Priority>('');
+
+  filteredQueue = computed(() => {
+    let list = this.caseQueue();
+    const text = this.searchText().toLowerCase();
+    const status = this.filterStatus();
+    const priority = this.filterPriority();
+    if (text) {
+      list = list.filter(c =>
+        c.driverName?.toLowerCase().includes(text) ||
+        c.caseId?.toLowerCase().includes(text) ||
+        c.violationState?.toLowerCase().includes(text)
+      );
+    }
+    if (status) list = list.filter(c => c.status === status);
+    if (priority) list = list.filter(c => c.priority === priority);
+    return list;
+  });
+
   private statusChart: Chart | null = null;
   private violationChart: Chart | null = null;
   private workloadChart: Chart | null = null;
-  
-  // Loading states
-  loading = false;
-  bulkAssigning = false;
-  
-  // Suggested attorneys cache
-  suggestedAttorneysCache: Map<string, SuggestedAttorney[]> = new Map();
-  
-  private destroy$ = new Subject<void>();
-
-  constructor(
-    private dashboardService: DashboardService,
-    private authService: AuthService,
-    private dialog: MatDialog
-  ) {}
+  private subs: Subscription[] = [];
 
   ngOnInit(): void {
     this.loadDashboardData();
-    this.initializeCharts();
-    
-    // Subscribe to real-time updates
-    this.dashboardService.workload$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(stats => {
-        this.workloadStats = stats;
+
+    this.subs.push(
+      this.dashboardService.workload$.subscribe(stats => {
+        this.workloadStats.set(stats);
         this.updateCharts();
-      });
-    
-    this.dashboardService.queue$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(cases => {
-        this.dataSource.data = cases;
-      });
+      }),
+      this.dashboardService.queue$.subscribe(cases => {
+        this.caseQueue.set(cases);
+      }),
+    );
+  }
+
+  ngAfterViewInit(): void {
+    this.initCharts();
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    
-    // Cleanup charts
-    if (this.statusChart) this.statusChart.destroy();
-    if (this.violationChart) this.violationChart.destroy();
-    if (this.workloadChart) this.workloadChart.destroy();
+    this.subs.forEach(s => s.unsubscribe());
+    this.statusChart?.destroy();
+    this.violationChart?.destroy();
+    this.workloadChart?.destroy();
   }
 
-  /**
-   * Load all dashboard data
-   */
   loadDashboardData(): void {
-    this.loading = true;
-    const currentUser = this.authService.currentUserValue;
-    
-    this.dashboardService.getWorkloadStats(currentUser?.id).subscribe({
+    this.loading.set(true);
+    const userId = this.authService.currentUserValue?.id;
+
+    this.dashboardService.getWorkloadStats(userId).subscribe({
       next: (stats) => {
-        this.workloadStats = stats;
+        this.workloadStats.set(stats);
         this.updateCharts();
       },
-      error: (error) => {
-        console.error('Error loading workload stats:', error);
-      }
     });
-    
-    this.dashboardService.getCaseQueue({
-      status: 'new',
-      limit: 100
-    }).subscribe({
+
+    this.dashboardService.getCaseQueue({ status: 'new', limit: 100 }).subscribe({
       next: (response) => {
-        this.dataSource.data = response.cases;
-        this.dataSource.sort = this.sort;
-        this.dataSource.paginator = this.paginator;
-        this.loading = false;
+        this.caseQueue.set(response.cases);
+        this.loading.set(false);
       },
-      error: (error) => {
-        console.error('Error loading case queue:', error);
-        this.loading = false;
-      }
+      error: () => this.loading.set(false),
     });
   }
 
-  /**
-   * Initialize Chart.js charts
-   */
-  initializeCharts(): void {
-    // Status Distribution Chart
-    const statusCtx = document.getElementById('statusChart') as HTMLCanvasElement;
+  private initCharts(): void {
+    const statusCtx = this.statusChartRef?.nativeElement;
     if (statusCtx) {
       this.statusChart = new Chart(statusCtx, {
         type: 'doughnut',
         data: {
           labels: ['New', 'Assigned', 'In Progress', 'Resolved'],
-          datasets: [{
-            data: [0, 0, 0, 0],
-            backgroundColor: [
-              '#4CAF50',
-              '#2196F3',
-              '#FF9800',
-              '#9C27B0'
-            ]
-          }]
+          datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'] }],
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom'
-            },
-            title: {
-              display: true,
-              text: 'Case Status Distribution'
-            }
-          }
-        }
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' }, title: { display: true, text: 'Case Status Distribution' } },
+        },
       });
     }
 
-    // Violation Type Chart
-    const violationCtx = document.getElementById('violationChart') as HTMLCanvasElement;
+    const violationCtx = this.violationChartRef?.nativeElement;
     if (violationCtx) {
       this.violationChart = new Chart(violationCtx, {
         type: 'bar',
-        data: {
-          labels: [],
-          datasets: [{
-            label: 'Violations by Type',
-            data: [],
-            backgroundColor: '#3f51b5'
-          }]
-        },
+        data: { labels: [], datasets: [{ label: 'Violations by Type', data: [], backgroundColor: '#3f51b5' }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Violation Type Distribution'
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
-        }
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, title: { display: true, text: 'Violation Type Distribution' } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
       });
     }
 
-    // Attorney Workload Chart
-    const workloadCtx = document.getElementById('workloadChart') as HTMLCanvasElement;
+    const workloadCtx = this.workloadChartRef?.nativeElement;
     if (workloadCtx) {
       this.workloadChart = new Chart(workloadCtx, {
         type: 'bar',
-        data: {
-          labels: [],
-          datasets: [{
-            label: 'Active Cases',
-            data: [],
-            backgroundColor: '#009688'
-          }]
-        },
+        data: { labels: [], datasets: [{ label: 'Active Cases', data: [], backgroundColor: '#009688' }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          indexAxis: 'y',
-          plugins: {
-            legend: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Attorney Workload'
-            }
-          },
-          scales: {
-            x: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
-        }
+          responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+          plugins: { legend: { display: false }, title: { display: true, text: 'Attorney Workload' } },
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
       });
     }
   }
 
-  /**
-   * Update charts with fresh data
-   */
-  updateCharts(): void {
-    if (!this.workloadStats) return;
+  private updateCharts(): void {
+    const stats = this.workloadStats();
+    if (!stats || !this.statusChart) return;
 
-    // Update status chart
-    if (this.statusChart) {
-      this.statusChart.data.datasets[0].data = [
-        this.workloadStats.newCases,
-        this.workloadStats.assignedCases,
-        this.workloadStats.inProgressCases,
-        this.workloadStats.resolvedCases
-      ];
-      this.statusChart.update();
-    }
+    this.statusChart.data.datasets[0].data = [
+      stats.newCases, stats.assignedCases, stats.inProgressCases, stats.resolvedCases,
+    ];
+    this.statusChart.update();
 
-    // Fetch and update violation distribution
     this.dashboardService.getViolationTypeDistribution(30).subscribe({
       next: (data) => {
         if (this.violationChart && data) {
@@ -303,10 +287,9 @@ export class OperatorDashboardComponent implements OnInit, OnDestroy {
           this.violationChart.data.datasets[0].data = data.values;
           this.violationChart.update();
         }
-      }
+      },
     });
 
-    // Fetch and update attorney workload
     this.dashboardService.getAttorneyWorkloadDistribution().subscribe({
       next: (data) => {
         if (this.workloadChart && data) {
@@ -314,175 +297,39 @@ export class OperatorDashboardComponent implements OnInit, OnDestroy {
           this.workloadChart.data.datasets[0].data = data.map((a: any) => a.caseCount);
           this.workloadChart.update();
         }
-      }
-    });
-  }
-
-  /**
-   * Apply filters to case queue
-   */
-  applyFilters(): void {
-    this.loading = true;
-    this.dashboardService.getCaseQueue({
-      status: this.filterStatus || undefined,
-      priority: this.filterPriority || undefined,
-      state: this.filterState || undefined,
-      search: this.searchText || undefined,
-      limit: 100
-    }).subscribe({
-      next: (response) => {
-        this.dataSource.data = response.cases;
-        this.loading = false;
       },
-      error: (error) => {
-        console.error('Error applying filters:', error);
-        this.loading = false;
-      }
     });
   }
 
-  /**
-   * Clear all filters
-   */
-  clearFilters(): void {
-    this.filterStatus = '';
-    this.filterPriority = '';
-    this.filterState = '';
-    this.searchText = '';
-    this.applyFilters();
-  }
-
-  /**
-   * Get suggested attorneys for a case
-   */
-  async getSuggestedAttorneys(caseId: string): Promise<SuggestedAttorney[]> {
-    // Check cache first
-    if (this.suggestedAttorneysCache.has(caseId)) {
-      return this.suggestedAttorneysCache.get(caseId)!;
-    }
-
-    return new Promise((resolve, reject) => {
-      this.dashboardService.getSuggestedAttorneys(caseId).subscribe({
-        next: (attorneys) => {
-          this.suggestedAttorneysCache.set(caseId, attorneys);
-          resolve(attorneys);
-        },
-        error: (error) => {
-          console.error('Error getting suggested attorneys:', error);
-          reject(error);
-        }
-      });
-    });
-  }
-
-  /**
-   * Assign case to specific attorney
-   */
-  assignCase(caseItem: CaseQueueItem, attorneyId: string): void {
-    this.dashboardService.assignCase(caseItem.caseId, attorneyId).subscribe({
-      next: () => {
-        // Remove from queue
-        this.dataSource.data = this.dataSource.data.filter(c => c.caseId !== caseItem.caseId);
-        this.loadDashboardData(); // Refresh stats
-      },
-      error: (error) => {
-        console.error('Error assigning case:', error);
-        alert('Failed to assign case. Please try again.');
-      }
-    });
-  }
-
-  /**
-   * Auto-assign case to best attorney
-   */
-  autoAssignCase(caseItem: CaseQueueItem): void {
-    this.dashboardService.autoAssignCase(caseItem.caseId).subscribe({
+  autoAssignCase(item: CaseQueueItem): void {
+    this.dashboardService.autoAssignCase(item.caseId).subscribe({
       next: (result) => {
-        // Remove from queue
-        this.dataSource.data = this.dataSource.data.filter(c => c.caseId !== caseItem.caseId);
-        this.loadDashboardData(); // Refresh stats
-        alert(`Case assigned to ${result.assignedAttorney.name} (Score: ${result.assignedAttorney.score})`);
-      },
-      error: (error) => {
-        console.error('Error auto-assigning case:', error);
-        alert('Failed to auto-assign case. Please try again.');
-      }
-    });
-  }
-
-  /**
-   * Bulk assign selected cases
-   */
-  bulkAssignCases(attorneyId?: string): void {
-    const selectedCases = this.selection.selected;
-    
-    if (selectedCases.length === 0) {
-      alert('Please select cases to assign.');
-      return;
-    }
-
-    const caseIds = selectedCases.map(c => c.caseId);
-    this.bulkAssigning = true;
-
-    this.dashboardService.bulkAssignCases(caseIds, attorneyId, !attorneyId).subscribe({
-      next: (result) => {
-        this.bulkAssigning = false;
-        this.selection.clear();
-        
-        // Remove successfully assigned cases from queue
-        const assignedIds = result.results
-          .filter(r => r.success)
-          .map(r => r.caseId);
-        
-        this.dataSource.data = this.dataSource.data.filter(
-          c => !assignedIds.includes(c.caseId)
+        this.caseQueue.update(q => q.filter(c => c.caseId !== item.caseId));
+        this.loadDashboardData();
+        this.snackBar.open(
+          `Case assigned to ${result.assignedAttorney.name} (Score: ${result.assignedAttorney.score})`,
+          'Close', { duration: 4000 }
         );
-        
-        this.loadDashboardData(); // Refresh stats
-        alert(`Assigned ${result.assigned} cases successfully. ${result.failed} failed.`);
       },
-      error: (error) => {
-        console.error('Error bulk assigning cases:', error);
-        this.bulkAssigning = false;
-        alert('Failed to bulk assign cases. Please try again.');
-      }
+      error: () => this.snackBar.open('Failed to auto-assign case', 'Close', { duration: 3000 }),
     });
   }
 
-  /**
-   * Check if all rows are selected
-   */
-  isAllSelected(): boolean {
-    const numSelected = this.selection.selected.length;
-    const numRows = this.dataSource.data.length;
-    return numSelected === numRows;
+  clearFilters(): void {
+    this.searchText.set('');
+    this.filterStatus.set('');
+    this.filterPriority.set('');
   }
 
-  /**
-   * Toggle all rows selection
-   */
-  masterToggle(): void {
-    this.isAllSelected()
-      ? this.selection.clear()
-      : this.dataSource.data.forEach(row => this.selection.select(row));
+  refresh(): void {
+    this.loadDashboardData();
   }
 
-  /**
-   * Get priority badge color
-   */
   getPriorityColor(priority: string): string {
     switch (priority) {
       case 'high': return 'warn';
       case 'medium': return 'accent';
-      case 'low': return 'primary';
-      default: return '';
+      default: return 'primary';
     }
-  }
-
-  /**
-   * Refresh dashboard
-   */
-  refresh(): void {
-    this.loadDashboardData();
   }
 }

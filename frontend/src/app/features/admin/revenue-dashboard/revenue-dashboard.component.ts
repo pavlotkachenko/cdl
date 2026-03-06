@@ -1,5 +1,7 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef,
+  ChangeDetectionStrategy, inject, signal,
+} from '@angular/core';
 import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
@@ -8,137 +10,170 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
 import {
-  RevenueService,
-  RevenueMetrics,
-  RevenueByDate,
-  RevenueByMethod,
-  RevenueByAttorney,
-  DateRange
+  RevenueService, RevenueMetrics, RevenueByDate, RevenueByMethod, RevenueByAttorney, DateRange,
 } from '../../../services/revenue.service';
-import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
+import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-revenue-dashboard',
-  standalone: true,
-  templateUrl: './revenue-dashboard.component.html',
-  styleUrls: ['./revenue-dashboard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatDatepickerModule,
+    MatCardModule, MatIconModule, MatButtonModule,
+    MatFormFieldModule, MatInputModule,
+    MatDatepickerModule, MatNativeDateModule,
     MatProgressSpinnerModule,
   ],
+  template: `
+    <div class="revenue-dashboard">
+      <div class="page-header">
+        <h1>Revenue Dashboard</h1>
+        <div class="header-actions" [formGroup]="dateRangeForm">
+          <mat-form-field appearance="outline">
+            <mat-label>Start Date</mat-label>
+            <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+            <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>End Date</mat-label>
+            <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+            <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="onDateRangeChange()">Apply</button>
+          <button mat-stroked-button (click)="exportToCsv()">
+            <mat-icon>download</mat-icon> Export CSV
+          </button>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-center"><mat-spinner diameter="48"></mat-spinner></div>
+      }
+
+      @if (metrics(); as m) {
+        <div class="metrics-grid">
+          <mat-card><mat-card-content>
+            <p class="metric-label">Total Revenue</p>
+            <p class="metric-value">{{ formatCurrency(m.total_revenue) }}</p>
+          </mat-card-content></mat-card>
+          <mat-card><mat-card-content>
+            <p class="metric-label">Transactions</p>
+            <p class="metric-value">{{ m.total_transactions }}</p>
+          </mat-card-content></mat-card>
+          <mat-card><mat-card-content>
+            <p class="metric-label">Avg Transaction</p>
+            <p class="metric-value">{{ formatCurrency(m.average_transaction) }}</p>
+          </mat-card-content></mat-card>
+          <mat-card><mat-card-content>
+            <p class="metric-label">Success Rate</p>
+            <p class="metric-value">{{ formatPercentage(m.success_rate) }}</p>
+          </mat-card-content></mat-card>
+        </div>
+      }
+
+      <div class="charts-grid">
+        <mat-card>
+          <mat-card-header><mat-card-title>Revenue Over Time</mat-card-title></mat-card-header>
+          <mat-card-content><canvas #revenueChart></canvas></mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header><mat-card-title>Revenue by Method</mat-card-title></mat-card-header>
+          <mat-card-content><canvas #methodChart></canvas></mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header><mat-card-title>Top Attorneys by Revenue</mat-card-title></mat-card-header>
+          <mat-card-content><canvas #attorneyChart></canvas></mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  `,
 })
-export class RevenueDashboardComponent implements OnInit {
-  metrics: RevenueMetrics | null = null;
-  loading = false;
+export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('revenueChart') revenueChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('methodChart') methodChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('attorneyChart') attorneyChartRef!: ElementRef<HTMLCanvasElement>;
 
-  // Charts
-  revenueChart: Chart | null = null;
-  methodChart: Chart | null = null;
-  attorneyChart: Chart | null = null;
+  private readonly revenueService = inject(RevenueService);
+  private readonly snackBar = inject(MatSnackBar);
 
-  // Date Range Form
+  metrics = signal<RevenueMetrics | null>(null);
+  loading = signal(false);
+
+  private revenueChart: Chart | null = null;
+  private methodChart: Chart | null = null;
+  private attorneyChart: Chart | null = null;
+  private viewReady = false;
+
   dateRangeForm = new FormGroup({
     startDate: new FormControl(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
-    endDate: new FormControl(new Date())
+    endDate: new FormControl(new Date()),
   });
-
-  constructor(
-    private revenueService: RevenueService,
-    private snackBar: MatSnackBar
-  ) {}
 
   ngOnInit(): void {
     this.loadDashboardData();
   }
 
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+  }
+
   loadDashboardData(): void {
-    this.loading = true;
+    this.loading.set(true);
     const dateRange = this.getDateRange();
 
-    // Load all data concurrently
     Promise.all([
       this.loadMetrics(dateRange),
       this.loadRevenueOverTime(dateRange),
       this.loadRevenueByMethod(dateRange),
-      this.loadRevenueByAttorney(dateRange)
+      this.loadRevenueByAttorney(dateRange),
     ]).then(() => {
-      this.loading = false;
-    }).catch(error => {
-      console.error('Error loading dashboard data:', error);
-      this.loading = false;
+      this.loading.set(false);
+    }).catch(() => {
+      this.loading.set(false);
       this.snackBar.open('Error loading dashboard data', 'Close', { duration: 3000 });
     });
   }
 
   private getDateRange(): DateRange {
-    const startDate = this.dateRangeForm.value.startDate;
-    const endDate = this.dateRangeForm.value.endDate;
-    
+    const { startDate, endDate } = this.dateRangeForm.value;
     return {
       start_date: startDate ? startDate.toISOString() : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      end_date: endDate ? endDate.toISOString() : new Date().toISOString()
+      end_date: endDate ? endDate.toISOString() : new Date().toISOString(),
     };
   }
 
   private async loadMetrics(dateRange: DateRange): Promise<void> {
-    try {
-      this.metrics = await this.revenueService.getRevenueMetrics(dateRange).toPromise() ?? null;
-    } catch (error) {
-      console.error('Error loading metrics:', error);
-      throw error;
-    }
+    this.metrics.set(await this.revenueService.getRevenueMetrics(dateRange).toPromise() ?? null);
   }
 
   private async loadRevenueOverTime(dateRange: DateRange): Promise<void> {
-    try {
-      const data = await this.revenueService.getDailyRevenue(dateRange).toPromise();
-      this.createRevenueChart(data || []);
-    } catch (error) {
-      console.error('Error loading revenue over time:', error);
-      throw error;
-    }
+    const data = await this.revenueService.getDailyRevenue(dateRange).toPromise();
+    this.createRevenueChart(data ?? []);
   }
 
   private async loadRevenueByMethod(dateRange: DateRange): Promise<void> {
-    try {
-      const data = await this.revenueService.getRevenueByMethod(dateRange).toPromise();
-      this.createMethodChart(data || []);
-    } catch (error) {
-      console.error('Error loading revenue by method:', error);
-      throw error;
-    }
+    const data = await this.revenueService.getRevenueByMethod(dateRange).toPromise();
+    this.createMethodChart(data ?? []);
   }
 
   private async loadRevenueByAttorney(dateRange: DateRange): Promise<void> {
-    try {
-      const data = await this.revenueService.getRevenueByAttorney(dateRange).toPromise();
-      this.createAttorneyChart(data || []);
-    } catch (error) {
-      console.error('Error loading revenue by attorney:', error);
-      throw error;
-    }
+    const data = await this.revenueService.getRevenueByAttorney(dateRange).toPromise();
+    this.createAttorneyChart(data ?? []);
   }
 
   private createRevenueChart(data: RevenueByDate[]): void {
-    const ctx = document.getElementById('revenueChart') as HTMLCanvasElement;
+    const ctx = this.revenueChartRef?.nativeElement;
     if (!ctx) return;
-
-    if (this.revenueChart) {
-      this.revenueChart.destroy();
-    }
-
-    const config: ChartConfiguration = {
+    this.revenueChart?.destroy();
+    this.revenueChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: data.map(d => new Date(d.date).toLocaleDateString()),
@@ -148,143 +183,80 @@ export class RevenueDashboardComponent implements OnInit {
           borderColor: '#2196f3',
           backgroundColor: 'rgba(33, 150, 243, 0.1)',
           fill: true,
-          tension: 0.4
-        }]
+          tension: 0.4,
+        }],
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: true,
-            position: 'top'
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                return `Revenue: $${(context.parsed.y ?? 0).toFixed(2)}`;
-              }
-            }
-          }
+          tooltip: { callbacks: { label: (ctx) => `Revenue: $${(ctx.parsed.y ?? 0).toFixed(2)}` } },
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: (value) => `$${value}`
-            }
-          }
-        }
-      }
-    };
-
-    this.revenueChart = new Chart(ctx, config);
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => `$${v}` } } },
+      },
+    });
   }
 
   private createMethodChart(data: RevenueByMethod[]): void {
-    const ctx = document.getElementById('methodChart') as HTMLCanvasElement;
+    const ctx = this.methodChartRef?.nativeElement;
     if (!ctx) return;
-
-    if (this.methodChart) {
-      this.methodChart.destroy();
-    }
-
-    const config: ChartConfiguration = {
+    this.methodChart?.destroy();
+    this.methodChart = new Chart(ctx, {
       type: 'pie',
       data: {
         labels: data.map(d => d.method),
         datasets: [{
           data: data.map(d => d.revenue / 100),
-          backgroundColor: [
-            '#2196f3',
-            '#4caf50',
-            '#ff9800',
-            '#f44336',
-            '#9c27b0',
-            '#00bcd4'
-          ]
-        }]
+          backgroundColor: ['#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0', '#00bcd4'],
+        }],
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: true,
-            position: 'right'
-          },
+          legend: { position: 'right' },
           tooltip: {
             callbacks: {
-              label: (context) => {
-                const label = context.label || '';
-                const value = context.parsed;
-                const percentage = data[context.dataIndex].percentage;
-                return `${label}: $${value.toFixed(2)} (${percentage.toFixed(1)}%)`;
-              }
-            }
-          }
-        }
-      }
-    };
-
-    this.methodChart = new Chart(ctx, config);
+              label: (ctx) =>
+                `${ctx.label}: $${ctx.parsed.toFixed(2)} (${data[ctx.dataIndex].percentage.toFixed(1)}%)`,
+            },
+          },
+        },
+      },
+    });
   }
 
   private createAttorneyChart(data: RevenueByAttorney[]): void {
-    const ctx = document.getElementById('attorneyChart') as HTMLCanvasElement;
+    const ctx = this.attorneyChartRef?.nativeElement;
     if (!ctx) return;
-
-    if (this.attorneyChart) {
-      this.attorneyChart.destroy();
-    }
-
-    // Sort by revenue and take top 10
-    const sortedData = [...data].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-
-    const config: ChartConfiguration = {
+    const sorted = [...data].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+    this.attorneyChart?.destroy();
+    this.attorneyChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: sortedData.map(d => d.attorney_name),
+        labels: sorted.map(d => d.attorney_name),
         datasets: [{
           label: 'Revenue',
-          data: sortedData.map(d => d.revenue / 100),
+          data: sorted.map(d => d.revenue / 100),
           backgroundColor: '#4caf50',
           borderColor: '#388e3c',
-          borderWidth: 1
-        }]
+          borderWidth: 1,
+        }],
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (context) => {
-                const attorney = sortedData[context.dataIndex];
-                return [
-                  `Revenue: $${(context.parsed.x ?? 0).toFixed(2)}`,
-                  `Transactions: ${attorney.transactions}`
-                ];
-              }
-            }
-          }
+              label: (ctx) => [
+                `Revenue: $${(ctx.parsed.x ?? 0).toFixed(2)}`,
+                `Transactions: ${sorted[ctx.dataIndex].transactions}`,
+              ],
+            },
+          },
         },
-        scales: {
-          x: {
-            beginAtZero: true,
-            ticks: {
-              callback: (value) => `$${value}`
-            }
-          }
-        }
-      }
-    };
-
-    this.attorneyChart = new Chart(ctx, config);
+        scales: { x: { beginAtZero: true, ticks: { callback: (v) => `$${v}` } } },
+      },
+    });
   }
 
   onDateRangeChange(): void {
@@ -292,8 +264,7 @@ export class RevenueDashboardComponent implements OnInit {
   }
 
   exportToCsv(): void {
-    const dateRange = this.getDateRange();
-    this.revenueService.exportToCsv(dateRange).subscribe({
+    this.revenueService.exportToCsv(this.getDateRange()).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -303,18 +274,12 @@ export class RevenueDashboardComponent implements OnInit {
         window.URL.revokeObjectURL(url);
         this.snackBar.open('Report exported successfully', 'Close', { duration: 3000 });
       },
-      error: (error) => {
-        console.error('Error exporting report:', error);
-        this.snackBar.open('Error exporting report', 'Close', { duration: 3000 });
-      }
+      error: () => this.snackBar.open('Error exporting report', 'Close', { duration: 3000 }),
     });
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
   }
 
   formatPercentage(value: number): string {
@@ -322,14 +287,8 @@ export class RevenueDashboardComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
-    if (this.revenueChart) {
-      this.revenueChart.destroy();
-    }
-    if (this.methodChart) {
-      this.methodChart.destroy();
-    }
-    if (this.attorneyChart) {
-      this.attorneyChart.destroy();
-    }
+    this.revenueChart?.destroy();
+    this.methodChart?.destroy();
+    this.attorneyChart?.destroy();
   }
 }
