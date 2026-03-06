@@ -1,35 +1,43 @@
-<!-- Header (now imported as standalone component) -->
+<!-- Header -->
 <app-landing-header></app-landing-header>
 
 <!-- Hero Section with Carousel -->
 <section class="hero-section">
   <div class="hero-carousel">
     <div class="carousel-container">
-      <div class="carousel-slides" [style.transform]="'translateX(-' + (currentSlideIndex * 100) + '%)'">
-        <div *ngFor="let slide of heroSlides; let i = index" 
-             class="carousel-slide"
-             [class.active]="i === currentSlideIndex"
-             [ngClass]="slide.image">
-          <div class="slide-content">
-            <h1 class="hero-title" [innerHTML]="slide.title"></h1>
-            <p *ngIf="slide.subtitle" class="hero-subtitle">{{ slide.subtitle }}</p>
+      <div class="carousel-slides" [style.transform]="'translateX(-' + (currentSlideIndex() * 100) + '%)'">
+        @for (slide of heroSlides; track slide.image; let i = $index) {
+          <div class="carousel-slide"
+               [class.active]="i === currentSlideIndex()"
+               [class]="slide.image">
+            <div class="slide-content">
+              <h1 class="hero-title" [innerHTML]="slide.title"></h1>
+              @if (slide.subtitle) {
+                <p class="hero-subtitle">{{ slide.subtitle }}</p>
+              }
+            </div>
           </div>
-        </div>
+        }
       </div>
     </div>
 
     <!-- Carousel Navigation -->
     <div class="carousel-nav">
-      <button class="carousel-arrow" (click)="prevSlide()">
+      <button class="carousel-arrow" (click)="prevSlide()" aria-label="Previous slide">
         <mat-icon>chevron_left</mat-icon>
       </button>
-      <div class="carousel-pagination">
-        <span *ngFor="let slide of heroSlides; let i = index"
-              class="pagination-dot"
-              [class.active]="i === currentSlideIndex"
-              (click)="currentSlideIndex = i"></span>
+      <div class="carousel-pagination" role="tablist" aria-label="Slide navigation">
+        @for (slide of heroSlides; track slide.image; let i = $index) {
+          <span class="pagination-dot"
+                role="tab"
+                [attr.aria-selected]="i === currentSlideIndex()"
+                [class.active]="i === currentSlideIndex()"
+                (click)="currentSlideIndex.set(i)"
+                (keydown.enter)="currentSlideIndex.set(i)"
+                tabindex="0"></span>
+        }
       </div>
-      <button class="carousel-arrow" (click)="nextSlide()">
+      <button class="carousel-arrow" (click)="nextSlide()" aria-label="Next slide">
         <mat-icon>chevron_right</mat-icon>
       </button>
     </div>
@@ -46,7 +54,15 @@
         </div>
         <div class="stat-item">
           <p class="stat-number">10.5K</p>
-          <p class="stat-label">Customer review</p>
+          <p class="stat-label">Customer reviews</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-number">50</p>
+          <p class="stat-label">States covered</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-number">100%</p>
+          <p class="stat-label">Resolution rate</p>
         </div>
       </div>
     </div>
@@ -56,19 +72,31 @@
 <!-- Services Section -->
 <section id="services" class="services-section">
   <div class="container">
-    <h2 class="section-title services-title">Services for {{ currentServiceView === 'drivers' ? 'Drivers' : 'Carriers' }}</h2>
+    <h2 class="section-title services-title">
+      Services for {{ currentServiceView() === 'drivers' ? 'Drivers' : 'Carriers' }}
+    </h2>
 
-    <div class="service-switcher">
-      <button class="switcher-option" [class.active]="currentServiceView === 'drivers'" (click)="currentServiceView = 'drivers'">Drivers</button>
-      <button class="switcher-option" [class.active]="currentServiceView === 'carriers'" (click)="currentServiceView = 'carriers'">Carriers</button>
+    <div class="service-switcher" role="tablist">
+      <button class="switcher-option"
+              role="tab"
+              [class.active]="currentServiceView() === 'drivers'"
+              [attr.aria-selected]="currentServiceView() === 'drivers'"
+              (click)="currentServiceView.set('drivers')">Drivers</button>
+      <button class="switcher-option"
+              role="tab"
+              [class.active]="currentServiceView() === 'carriers'"
+              [attr.aria-selected]="currentServiceView() === 'carriers'"
+              (click)="currentServiceView.set('carriers')">Carriers</button>
     </div>
 
     <div class="services-grid">
-      <div *ngFor="let service of activeServices" class="service-card">
-        <img [src]="'assets/icons/' + service.icon + '.svg'" [alt]="service.title" class="service-icon">
-        <h3 class="service-title">{{ service.title }}</h3>
-        <p class="service-description">{{ service.description }}</p>
-      </div>
+      @for (service of activeServices(); track service.title) {
+        <div class="service-card">
+          <img [src]="'assets/icons/' + service.icon + '.svg'" [alt]="service.title" class="service-icon">
+          <h3 class="service-title">{{ service.title }}</h3>
+          <p class="service-description">{{ service.description }}</p>
+        </div>
+      }
     </div>
   </div>
 </section>
@@ -81,20 +109,23 @@
       <div class="work-steps-inner">
         <h2 class="section-title work-title">How we work</h2>
         <div class="steps-container">
-          <div *ngFor="let step of activeWorkSteps; let i = index; let last = last"
-               class="step-item">
-            <div class="step-indicator">
-              <div class="step-circle"></div>
-              <div *ngIf="!last" class="step-line"></div>
-            </div>
-            <div class="step-content">
-              <div class="step-header">
-                <img [src]="'assets/icons/' + step.svgIcon + '.svg'" [alt]="step.title" class="step-icon">
-                <h3>{{ step.title }}</h3>
+          @for (step of activeWorkSteps(); track step.title; let i = $index; let last = $last) {
+            <div class="step-item">
+              <div class="step-indicator">
+                <div class="step-circle"></div>
+                @if (!last) {
+                  <div class="step-line"></div>
+                }
               </div>
-              <p>{{ step.description }}</p>
+              <div class="step-content">
+                <div class="step-header">
+                  <img [src]="'assets/icons/' + step.svgIcon + '.svg'" [alt]="step.title" class="step-icon">
+                  <h3>{{ step.title }}</h3>
+                </div>
+                <p>{{ step.description }}</p>
+              </div>
             </div>
-          </div>
+          }
         </div>
       </div>
     </div>
@@ -138,10 +169,12 @@
         <h4>Other benefits in working with us:</h4>
 
         <div class="benefits-cards">
-          <div *ngFor="let benefit of benefits" class="benefit-card">
-            <img [src]="'assets/icons/' + benefit.svgIcon + '.svg'" [alt]="benefit.title" class="benefit-icon">
-            <p>{{ benefit.title }}</p>
-          </div>
+          @for (benefit of benefits; track benefit.title) {
+            <div class="benefit-card">
+              <img [src]="'assets/icons/' + benefit.svgIcon + '.svg'" [alt]="benefit.title" class="benefit-icon">
+              <p>{{ benefit.title }}</p>
+            </div>
+          }
         </div>
       </div>
     </div>
@@ -154,35 +187,78 @@
     <h2 class="section-title testimonials-title">Satisfied Clients</h2>
 
     <div class="testimonials-grid">
-      <div *ngFor="let testimonial of visibleTestimonials" class="testimonial-card">
-        <div class="testimonial-bubble">
-          <p>{{ testimonial.text }}</p>
-        </div>
-        <div class="testimonial-author">
-          <div class="author-avatar">
-            @if (testimonial.image) {
-              <img [src]="testimonial.image" [alt]="testimonial.name" (error)="onImageError($event)">
-            } @else {
-              <span class="initials">{{ getInitials(testimonial.name) }}</span>
-            }
+      @for (testimonial of visibleTestimonials(); track testimonial.name) {
+        <div class="testimonial-card">
+          <div class="testimonial-bubble">
+            <p>{{ testimonial.text }}</p>
           </div>
-          <p class="author-name">{{ testimonial.name }}</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">
+              @if (testimonial.image) {
+                <img [src]="testimonial.image" [alt]="testimonial.name" (error)="onImageError($event)">
+              } @else {
+                <span class="initials">{{ getInitials(testimonial.name) }}</span>
+              }
+            </div>
+            <p class="author-name">{{ testimonial.name }}</p>
+          </div>
         </div>
-      </div>
+      }
     </div>
 
     <div class="testimonials-nav">
-      <button class="testimonial-arrow" (click)="prevTestimonial()">
+      <button class="testimonial-arrow" (click)="prevTestimonial()" aria-label="Previous testimonials">
         <mat-icon>chevron_left</mat-icon>
       </button>
-      <div class="testimonial-pagination">
-        <span *ngFor="let page of [].constructor(testimonialPageCount); let i = index"
-              class="pagination-dot"
-              [class.active]="i === currentTestimonialIndex"
-              (click)="currentTestimonialIndex = i"></span>
+      <div class="testimonial-pagination" role="tablist" aria-label="Testimonial pages">
+        @for (page of testimonialPages; track page; let i = $index) {
+          <span class="pagination-dot"
+                role="tab"
+                [class.active]="i === currentTestimonialIndex()"
+                [attr.aria-selected]="i === currentTestimonialIndex()"
+                (click)="currentTestimonialIndex.set(i)"
+                (keydown.enter)="currentTestimonialIndex.set(i)"
+                tabindex="0"></span>
+        }
       </div>
-      <button class="testimonial-arrow" (click)="nextTestimonial()">
+      <button class="testimonial-arrow" (click)="nextTestimonial()" aria-label="Next testimonials">
         <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section id="faq" class="faq-section">
+  <div class="container">
+    <h2 class="section-title faq-title">Frequently Asked Questions</h2>
+    <p class="section-subtitle">Everything you need to know about CDL ticket management</p>
+
+    <div class="faq-list" role="list">
+      @for (item of faqItems; track item.question; let i = $index) {
+        <div class="faq-item" role="listitem">
+          <button class="faq-question"
+                  [attr.aria-expanded]="openFaqIndex() === i"
+                  [attr.aria-controls]="'faq-answer-' + i"
+                  (click)="toggleFaq(i)">
+            <span>{{ item.question }}</span>
+            <mat-icon class="faq-icon" [class.faq-icon--open]="openFaqIndex() === i">
+              expand_more
+            </mat-icon>
+          </button>
+          @if (openFaqIndex() === i) {
+            <div class="faq-answer" [id]="'faq-answer-' + i" role="region">
+              <p>{{ item.answer }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="faq-cta">
+      <p>Still have questions?</p>
+      <button mat-flat-button color="accent" (click)="navigateToSubmit()">
+        Contact Us
       </button>
     </div>
   </div>
@@ -193,22 +269,22 @@
   <div class="container">
     <h2 class="section-title">Submit Your Request</h2>
     <p class="section-subtitle">Get an answer in 1 hour</p>
-    
+
     <div class="contact-grid">
       <!-- Left Side - Form -->
       <div class="contact-form">
-        <!-- Success State -->
-        <div *ngIf="submitSuccess" class="submit-success">
-          <mat-icon class="success-icon">check_circle</mat-icon>
-          <h3>Request Submitted!</h3>
-          <p>We will review your request and contact you within 1 hour.</p>
-          <button mat-flat-button color="accent" (click)="submitSuccess = false">
-            Submit Another Request
-          </button>
-        </div>
-
-        <!-- Form -->
-        <div *ngIf="!submitSuccess">
+        @if (submitSuccess()) {
+          <!-- Success State -->
+          <div class="submit-success">
+            <mat-icon class="success-icon">check_circle</mat-icon>
+            <h3>Request Submitted!</h3>
+            <p>We will review your request and contact you within 1 hour.</p>
+            <button mat-flat-button color="accent" (click)="submitSuccess.set(false)">
+              Submit Another Request
+            </button>
+          </div>
+        } @else {
+          <!-- Form -->
           <p class="form-info">
             Fields marked with star (*) are required. The more descriptive you'll be the faster
             and more accurate answer you will get. Attach all the documents you think might be useful.
@@ -218,86 +294,108 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Name *</mat-label>
               <input matInput placeholder="Your name" formControlName="customer_name">
-              <mat-error *ngIf="submitForm.get('customer_name')?.hasError('required')">Name is required</mat-error>
+              @if (submitForm.get('customer_name')?.hasError('required')) {
+                <mat-error>Name is required</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>E-mail *</mat-label>
               <input matInput type="email" placeholder="info&#64;gmail.com" formControlName="email">
-              <mat-error *ngIf="submitForm.get('email')?.hasError('required')">Email is required</mat-error>
-              <mat-error *ngIf="submitForm.get('email')?.hasError('email')">Enter a valid email</mat-error>
+              @if (submitForm.get('email')?.hasError('required')) {
+                <mat-error>Email is required</mat-error>
+              }
+              @if (submitForm.get('email')?.hasError('email')) {
+                <mat-error>Enter a valid email</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Phone *</mat-label>
               <input matInput type="tel" placeholder="+1 (000) 000-00-00" formControlName="driver_phone">
-              <mat-error *ngIf="submitForm.get('driver_phone')?.hasError('required')">Phone is required</mat-error>
+              @if (submitForm.get('driver_phone')?.hasError('required')) {
+                <mat-error>Phone is required</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Describe your request *</mat-label>
               <textarea matInput rows="5" placeholder="Describe your request..." formControlName="violation_details"></textarea>
-              <mat-error *ngIf="submitForm.get('violation_details')?.hasError('required')">Description is required</mat-error>
+              @if (submitForm.get('violation_details')?.hasError('required')) {
+                <mat-error>Description is required</mat-error>
+              }
             </mat-form-field>
 
             <div class="file-upload">
               <label>Upload File</label>
-              <div class="upload-zone" (click)="triggerFileInput()">
+              <div class="upload-zone" (click)="triggerFileInput()" role="button" tabindex="0"
+                   (keydown.enter)="triggerFileInput()" aria-label="Upload supporting documents">
                 <mat-icon>cloud_upload</mat-icon>
                 <p>Drag and Drop or <span class="upload-link">Choose file</span> to upload</p>
-                <input type="file" multiple hidden #fileInput (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
+                <input type="file" multiple hidden #fileInput (change)="onFileSelected($event)"
+                       accept=".pdf,.jpg,.jpeg,.png" aria-label="File upload input">
               </div>
-              <div *ngIf="uploadedFiles.length > 0" class="uploaded-files">
-                <div *ngFor="let file of uploadedFiles; let i = index" class="uploaded-file">
-                  <mat-icon>insert_drive_file</mat-icon>
-                  <span>{{ file.name }} ({{ getFileSize(file.size) }})</span>
-                  <button mat-icon-button type="button" (click)="removeFile(i)">
-                    <mat-icon>close</mat-icon>
-                  </button>
+              @if (uploadedFiles().length > 0) {
+                <div class="uploaded-files">
+                  @for (file of uploadedFiles(); track file.name; let i = $index) {
+                    <div class="uploaded-file">
+                      <mat-icon>insert_drive_file</mat-icon>
+                      <span>{{ file.name }} ({{ getFileSize(file.size) }})</span>
+                      <button mat-icon-button type="button" (click)="removeFile(i)"
+                              [attr.aria-label]="'Remove ' + file.name">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                  }
                 </div>
-              </div>
+              }
             </div>
 
-            <button mat-flat-button color="accent" type="submit" class="submit-form-button" [disabled]="submitting">
-              <span *ngIf="!submitting">Submit</span>
-              <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
+            <button mat-flat-button color="accent" type="submit" class="submit-form-button"
+                    [disabled]="submitting()">
+              @if (!submitting()) {
+                Submit
+              } @else {
+                <mat-spinner diameter="20"></mat-spinner>
+              }
             </button>
           </form>
-        </div>
+        }
       </div>
 
       <!-- Right Side - Contact Info -->
       <div class="contact-info">
         <h3>Contact us</h3>
-        
+
         <div class="contact-details">
           <a href="mailto:office@cdl-advisor.com" class="contact-item">
             <mat-icon>email</mat-icon>
-            <span>office@cdl-advisor.com</span>
+            <span>office&#64;cdl-advisor.com</span>
           </a>
-          
+
           <a href="tel:+18669311192" class="contact-item">
             <mat-icon>phone</mat-icon>
             <span>+1 866-931-1192</span>
           </a>
-          
-          <a href="https://www.instagram.com/cdladvisor/" target="_blank" class="contact-item">
+
+          <a href="https://www.instagram.com/cdladvisor/" target="_blank" rel="noopener noreferrer"
+             class="contact-item">
             <mat-icon>tag</mat-icon>
-            <span>@cdl-advisor</span>
+            <span>&#64;cdl-advisor</span>
           </a>
-          
-          <a href="https://www.facebook.com/people/CDL-Advisor/100063653768052" 
-             target="_blank" class="contact-item">
-            <mat-icon>facebook</mat-icon>
-            <span>CDL - Advisor</span>
+
+          <a href="https://www.facebook.com/people/CDL-Advisor/100063653768052"
+             target="_blank" rel="noopener noreferrer" class="contact-item">
+            <mat-icon>group</mat-icon>
+            <span>CDL Advisor on Facebook</span>
           </a>
         </div>
-        
+
         <p class="contact-note">For general inquiries</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Footer (now imported as standalone component) -->
+<!-- Footer -->
 <app-landing-footer></app-landing-footer>
