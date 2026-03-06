@@ -37,6 +37,16 @@ export interface CheckoutResult {
   subscription?: Subscription;
 }
 
+export interface BillingInvoice {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  date: string;
+  pdf_url: string | null;
+  hosted_url: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SubscriptionService {
   private http = inject(HttpClient);
@@ -66,6 +76,16 @@ export class SubscriptionService {
     ).pipe(
       map(r => r.subscription),
       tap(s => this.currentSubscription$.next(s)),
+    );
+  }
+
+  getBillingPortalUrl(): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>(`${this.apiUrl}/portal`, {});
+  }
+
+  getInvoices(): Observable<BillingInvoice[]> {
+    return this.http.get<{ invoices: BillingInvoice[] }>(`${this.apiUrl}/invoices`).pipe(
+      map(r => r.invoices),
     );
   }
 

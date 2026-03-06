@@ -19,6 +19,8 @@ router.use(authenticate);
 
 router.get('/current', subscriptionController.getCurrentSubscription);
 router.post('/checkout', subscriptionController.createCheckoutSession);
+router.post('/portal', subscriptionController.createBillingPortalSession);
+router.get('/invoices', subscriptionController.getInvoices);
 router.post('/:id/cancel', subscriptionController.cancelSubscription);
 
 module.exports = router;
