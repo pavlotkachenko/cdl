@@ -21,13 +21,24 @@ This skill runs **once per user story** from the Product Brief, in the dependenc
 
 ### Step 1: Story Confirmation (Product Manager)
 
-Confirm which story from the Product Brief is being implemented:
+**HARD GATE — verify the sprint story file exists on disk before writing a single line of code:**
 
-1. Reference the story number, title, and acceptance criteria
+```bash
+ls sprints/ | sort | tail -1   # confirm sprint folder exists
+ls sprints/sprint_XXX/         # confirm individual story files exist
+```
+
+- Sprint folder missing → **STOP. Run `decompose-requirement` first**, create the sprint folder and story files, then return here.
+- Sprint folder exists but contains only an overview (no `story-<PREFIX>-N-*.md` files) → **STOP. Create the missing story files** from the product brief, then return here.
+- Only continue once the specific story file for the current work exists on disk.
+
+Once confirmed:
+
+1. Reference the story number, title, and acceptance criteria from the file
 2. Verify prerequisites (dependent stories) are already completed
 3. Check `docs/HARD_BUGS_REGISTRY.md` for related known issues
 
-**Output:** Confirmed story scope with acceptance criteria
+**Output:** Confirmed story scope with acceptance criteria — story file path stated explicitly
 
 ### Step 2: Architecture Design (Architect)
 

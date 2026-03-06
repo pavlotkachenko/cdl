@@ -18,4 +18,14 @@ export class UserPreferencesService {
   updateSmsOptIn(value: boolean): Observable<{ preferences: UserPreferences }> {
     return this.http.patch<{ preferences: UserPreferences }>(this.apiUrl, { sms_opt_in: value });
   }
+
+  /**
+   * Register a OneSignal push notification player ID for the current user.
+   */
+  savePushToken(pushToken: string): Observable<{ success: boolean }> {
+    return this.http.patch<{ success: boolean }>(
+      `${environment.apiUrl}/users/me/push-token`,
+      { push_token: pushToken },
+    );
+  }
 }
