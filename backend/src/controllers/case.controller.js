@@ -8,6 +8,7 @@ const { supabase, supabaseAdmin, executeQuery } = require('../config/supabase');
 const { validationResult } = require('express-validator');
 const emailService = require('../services/email.service');
 const smsService = require('../services/sms.service');
+const oneSignalService = require('../services/onesignal.service');
 
 /**
  * PUBLIC SUBMIT
@@ -136,6 +137,14 @@ exports.createCase = async (req, res) => {
         caseNumber: newCase.case_number || newCase.id,
       }).catch(err => console.error('[createCase] SMS failed:', err));
     }
+
+    // Non-blocking push notification to driver
+    oneSignalService.notifyUser(
+      driver_id,
+      'Case Submitted',
+      `Your ticket case ${newCase.case_number || newCase.id} has been received.`,
+      { caseId: newCase.id },
+    ).catch(err => console.error('[createCase] Push failed:', err));
 
     res.status(201).json({
       message: 'Case submitted successfully',
@@ -531,6 +540,23 @@ exports.assignToAttorney = async (req, res) => {
       }).catch(err => console.error('[assignToAttorney] SMS failed:', err));
     }
 
+    // Non-blocking push: notify attorney + driver
+    oneSignalService.notifyUser(
+      attorney_id,
+      'New Case Assigned',
+      `Case ${data.case_number} has been assigned to you.`,
+      { caseId: id },
+    ).catch(err => console.error('[assignToAttorney] Push (attorney) failed:', err));
+
+    if (data.driver_id) {
+      oneSignalService.notifyUser(
+        data.driver_id,
+        'Attorney Matched',
+        `An attorney has been matched to your case ${data.case_number}.`,
+        { caseId: id },
+      ).catch(err => console.error('[assignToAttorney] Push (driver) failed:', err));
+    }
+
     res.json({
       message: 'Case assigned to attorney successfully',
       case: data
@@ -614,6 +640,16 @@ exports.changeStatus = async (req, res) => {
         newStatus: status,
         caseNumber: data.case_number || id,
       }).catch(err => console.error('[changeStatus] SMS failed:', err));
+    }
+
+    // Non-blocking push notification to driver on status change
+    if (data.driver_id) {
+      oneSignalService.notifyUser(
+        data.driver_id,
+        'Case Status Updated',
+        `Your case ${data.case_number} status changed to: ${status.replace(/_/g, ' ')}.`,
+        { caseId: id, status },
+      ).catch(err => console.error('[changeStatus] Push failed:', err));
     }
 
     // Log activity

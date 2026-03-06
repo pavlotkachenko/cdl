@@ -1,177 +1,139 @@
-// ============================================
-// Notification Preferences Component
-// Location: frontend/src/app/features/driver/settings/notification-preferences/notification-preferences.component.ts
-// ============================================
-
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-
-// Angular Material
+import {
+  Component, OnInit, signal, inject, ChangeDetectionStrategy,
+} from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-// Services
-import { NotificationService, NotificationPreferences } from '../../../../core/services/notification.service';
+import { UserPreferencesService } from '../../../../core/services/user-preferences.service';
+
+const PUSH_DISMISSED_KEY = 'cdl_push_prompt_dismissed';
 
 @Component({
   selector: 'app-notification-preferences',
-  standalone: true,
-  templateUrl: './notification-preferences.component.html',
-  styleUrls: ['./notification-preferences.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatSlideToggleModule,
-    MatButtonModule,
-    MatIconModule,
-    MatDividerModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatSnackBarModule,
-    MatTooltipModule
-  ]
+    ReactiveFormsModule, MatCardModule, MatSlideToggleModule,
+    MatButtonModule, MatIconModule,
+  ],
+  template: `
+    <div class="prefs-page">
+      <h1>Notification Preferences</h1>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <mat-card class="prefs-card">
+          <mat-card-content>
+            <h2>SMS Notifications</h2>
+            <div class="toggle-row">
+              <div>
+                <p class="toggle-label">Case status updates via SMS</p>
+                <p class="toggle-hint">Receive text messages when your case status changes.</p>
+              </div>
+              <mat-slide-toggle formControlName="smsOptIn" aria-label="SMS notifications"></mat-slide-toggle>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="prefs-card">
+          <mat-card-content>
+            <h2>Push Notifications</h2>
+            <div class="toggle-row">
+              <div>
+                <p class="toggle-label">Browser push notifications</p>
+                <p class="toggle-hint">
+                  Status: <strong>{{ pushStatus() }}</strong>
+                </p>
+              </div>
+              @if (canRequestPush()) {
+                <button mat-stroked-button type="button" (click)="enablePush()"
+                        aria-label="Enable push notifications">
+                  <mat-icon aria-hidden="true">notifications</mat-icon> Enable
+                </button>
+              } @else if (pushStatus() === 'granted') {
+                <mat-icon class="granted-icon" aria-label="Push notifications enabled">check_circle</mat-icon>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : 'Save Preferences' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  `,
+  styles: [`
+    .prefs-page { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
+    h1 { margin: 0 0 20px; font-size: 1.4rem; }
+    h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 600; }
+    .prefs-card { margin-bottom: 16px; }
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .toggle-label { margin: 0; font-weight: 500; font-size: 0.9rem; }
+    .toggle-hint { margin: 2px 0 0; font-size: 0.8rem; color: #666; }
+    .granted-icon { color: #388e3c; font-size: 28px; width: 28px; height: 28px; }
+    .actions { margin-top: 8px; }
+  `],
 })
 export class NotificationPreferencesComponent implements OnInit {
-  preferencesForm!: FormGroup;
-  saving = false;
+  private preferencesService = inject(UserPreferencesService);
+  private snackBar = inject(MatSnackBar);
+  private fb = inject(FormBuilder);
 
-  constructor(
-    private fb: FormBuilder,
-    private notificationService: NotificationService,
-    private snackBar: MatSnackBar
-  ) {}
+  form!: FormGroup;
+  saving = signal(false);
+
+  pushStatus = signal<string>('not-supported');
+  canRequestPush = signal(false);
 
   ngOnInit(): void {
-    this.initializeForm();
-    this.loadPreferences();
+    this.form = this.fb.group({ smsOptIn: [false] });
+    this.checkPushStatus();
   }
 
-  private initializeForm(): void {
-    this.preferencesForm = this.fb.group({
-      // In-App Notifications
-      inApp: this.fb.group({
-        caseUpdates: [true],
-        comments: [true],
-        documents: [true],
-        courtDates: [true],
-        attorneyMessages: [true],
-        system: [true]
-      }),
-      // Email Notifications
-      email: this.fb.group({
-        caseUpdates: [true],
-        comments: [false],
-        documents: [true],
-        courtDates: [true],
-        attorneyMessages: [true],
-        weeklyDigest: [true]
-      }),
-      // SMS Notifications
-      sms: this.fb.group({
-        courtDateReminders: [true],
-        urgentUpdates: [true],
-        reminderDaysBefore: [7]
-      }),
-      // General Settings
-      sound: [true],
-      browserNotifications: [true]
-    });
+  private checkPushStatus(): void {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      this.pushStatus.set('not-supported');
+      return;
+    }
+    this.pushStatus.set(Notification.permission);
+    this.canRequestPush.set(Notification.permission !== 'granted');
   }
 
-  private loadPreferences(): void {
-    this.notificationService.getPreferences().subscribe({
-      next: (preferences) => {
-        this.preferencesForm.patchValue(preferences);
-      },
-      error: (error) => {
-        console.error('Failed to load preferences:', error);
+  enablePush(): void {
+    if (!('Notification' in window)) return;
+    Notification.requestPermission().then(permission => {
+      this.pushStatus.set(permission);
+      this.canRequestPush.set(permission !== 'granted');
+      if (permission === 'granted') {
+        localStorage.setItem(PUSH_DISMISSED_KEY, '1');
+        const token = `web_${Date.now()}`;
+        this.preferencesService.savePushToken(token).subscribe({
+          next: () => this.snackBar.open('Push notifications enabled!', 'Close', { duration: 3000 }),
+          error: () => this.snackBar.open('Failed to register device.', 'Close', { duration: 3000 }),
+        });
+      } else {
+        this.snackBar.open('Push notifications were not enabled.', 'Close', { duration: 3000 });
       }
     });
   }
 
-  savePreferences(): void {
-    if (this.preferencesForm.invalid) return;
-
-    this.saving = true;
-    const preferences: NotificationPreferences = this.preferencesForm.value;
-
-    this.notificationService.savePreferences(preferences).subscribe({
+  save(): void {
+    this.saving.set(true);
+    const { smsOptIn } = this.form.value;
+    this.preferencesService.updateSmsOptIn(smsOptIn).subscribe({
       next: () => {
-        this.saving = false;
-        this.snackBar.open('Notification preferences saved successfully!', 'Close', {
-          duration: 3000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top'
-        });
+        this.saving.set(false);
+        this.snackBar.open('Preferences saved!', 'Close', { duration: 3000 });
       },
-      error: (error) => {
-        this.saving = false;
-        console.error('Failed to save preferences:', error);
-        this.snackBar.open('Failed to save preferences', 'Close', {
-          duration: 3000
-        });
-      }
+      error: () => {
+        this.saving.set(false);
+        this.snackBar.open('Failed to save preferences.', 'Close', { duration: 3000 });
+      },
     });
-  }
-
-  resetToDefaults(): void {
-    if (confirm('Reset all notification preferences to defaults?')) {
-      this.notificationService.getPreferences().subscribe({
-        next: (defaults) => {
-          this.preferencesForm.patchValue(defaults);
-          this.savePreferences();
-        }
-      });
-    }
-  }
-
-  testNotification(): void {
-    this.snackBar.open('Test notification sent! Check your notification bell.', 'Close', {
-      duration: 3000,
-      horizontalPosition: 'end',
-      verticalPosition: 'top'
-    });
-
-    // In production, this would trigger a real test notification
-    console.log('Test notification would be sent here');
-  }
-
-  requestBrowserPermission(): void {
-    if ('Notification' in window) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          this.snackBar.open('Browser notifications enabled!', 'Close', {
-            duration: 3000
-          });
-          this.preferencesForm.patchValue({ browserNotifications: true });
-        } else {
-          this.snackBar.open('Browser notifications permission denied', 'Close', {
-            duration: 3000
-          });
-          this.preferencesForm.patchValue({ browserNotifications: false });
-        }
-      });
-    }
-  }
-
-  get browserNotificationStatus(): string {
-    if (!('Notification' in window)) {
-      return 'not-supported';
-    }
-    return Notification.permission;
-  }
-
-  get canEnableBrowserNotifications(): boolean {
-    return this.browserNotificationStatus === 'default' || 
-           this.browserNotificationStatus === 'denied';
   }
 }

@@ -80,4 +80,40 @@ router.patch('/me/preferences',
   }
 );
 
+/**
+ * PATCH /api/users/me/push-token
+ * Register or update the OneSignal push token for the current user.
+ */
+router.patch('/me/push-token',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { push_token } = req.body;
+
+      if (!push_token || typeof push_token !== 'string') {
+        return res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: 'push_token must be a non-empty string' },
+        });
+      }
+
+      const { error } = await supabase
+        .from('users')
+        .update({ push_token })
+        .eq('id', req.user.id);
+
+      if (error) {
+        console.error('[PATCH /me/push-token] DB error:', error.message);
+        return res.status(500).json({
+          error: { code: 'SERVER_ERROR', message: 'Failed to save push token' },
+        });
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[PATCH /me/push-token]', err.message);
+      res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
+    }
+  }
+);
+
 module.exports = router;

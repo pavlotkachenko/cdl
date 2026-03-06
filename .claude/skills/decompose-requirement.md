@@ -75,14 +75,39 @@ Show the full product brief to the user and ask:
 
 **Wait for user approval before passing to the Architect.**
 
+### Step 7: Write Sprint Files (Mandatory — do this immediately after approval)
+
+Once the user approves the product brief:
+
+1. **Determine the next sprint number:**
+   ```bash
+   ls sprints/ | sort | tail -1
+   # Increment by 1 → sprint_XXX
+   ```
+
+2. **Create the sprint folder and files:**
+   - `sprints/sprint_XXX/story-sprint-overview.md` — sprint goal, story index table, Definition of Done, dependencies
+   - One `sprints/sprint_XXX/story-<PREFIX>-<N>-<title>.md` per story in the product brief
+
+   **File naming rules:**
+   - Sprint prefix: 2–3 uppercase letters that abbreviate the feature (e.g., `PP` for Payment Plans, `LH` for Launch Hardening, `CA` for Carrier Analytics)
+   - Story file name: `story-<PREFIX>-<N>-<short-title>.md` (e.g., `story-PP-1-backend.md`)
+
+3. **Each story file MUST contain:**
+   - Story title, sprint number, priority, status (`TODO`)
+   - User story (As / I want / So that)
+   - Scope: what files to create or modify (specific paths)
+   - Acceptance criteria (checkboxes)
+   - Test Coverage Matrix (source file → expected test file, `❌ create` or `❌ update`)
+
+**This step is not optional.** A sprint with no story files on disk is incomplete. The `implement-feature` pipeline requires the story file to exist before work begins.
+
 ## Output
 
-A complete Product Brief following the format defined in `.claude/agents/product-manager.md`, containing:
-- Requirement tracing
-- Numbered user stories with acceptance criteria
-- Implementation order (batched by dependencies)
-- Out-of-scope list
-- Risks and open questions
+1. A Product Brief presented to the user (in conversation)
+2. **Physical files written to disk:**
+   - `sprints/sprint_XXX/story-sprint-overview.md`
+   - `sprints/sprint_XXX/story-<PREFIX>-<N>-<title>.md` (one per story)
 
 ## Connection to Other Skills
 
