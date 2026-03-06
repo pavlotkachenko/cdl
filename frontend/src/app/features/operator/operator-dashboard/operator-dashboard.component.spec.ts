@@ -104,13 +104,13 @@ describe('OperatorDashboardComponent', () => {
   // openAssign / cancelAssign
   // ----------------------------------------------------------------
   it('openAssign() sets selectedCaseId and resets form', () => {
-    component.selectedAttorneyId = 'old-id';
-    component.attorneyPrice = '999';
+    component.selectedAttorneyId.set('old-id');
+    component.attorneyPrice.set('999');
     component.openAssign('case-1');
 
     expect(component.selectedCaseId()).toBe('case-1');
-    expect(component.selectedAttorneyId).toBe('');
-    expect(component.attorneyPrice).toBe('');
+    expect(component.selectedAttorneyId()).toBe('');
+    expect(component.attorneyPrice()).toBe('');
   });
 
   it('cancelAssign() clears selectedCaseId', () => {
@@ -124,8 +124,8 @@ describe('OperatorDashboardComponent', () => {
   // ----------------------------------------------------------------
   it('confirmAssign() calls assignToAttorney and reloads on success', () => {
     component.openAssign('case-1');
-    component.selectedAttorneyId = 'a1';
-    component.attorneyPrice = '450';
+    component.selectedAttorneyId.set('a1');
+    component.attorneyPrice.set('450');
 
     component.confirmAssign();
 
@@ -141,8 +141,8 @@ describe('OperatorDashboardComponent', () => {
 
   it('confirmAssign() shows error snackbar on price invalid', () => {
     component.openAssign('case-1');
-    component.selectedAttorneyId = 'a1';
-    component.attorneyPrice = '-100';
+    component.selectedAttorneyId.set('a1');
+    component.attorneyPrice.set('-100');
 
     component.confirmAssign();
 
@@ -162,8 +162,8 @@ describe('OperatorDashboardComponent', () => {
   it('confirmAssign() shows error snackbar when service fails', () => {
     caseServiceSpy.assignToAttorney.mockReturnValue(throwError(() => new Error('Failed')));
     component.openAssign('case-1');
-    component.selectedAttorneyId = 'a1';
-    component.attorneyPrice = '450';
+    component.selectedAttorneyId.set('a1');
+    component.attorneyPrice.set('450');
 
     component.confirmAssign();
 

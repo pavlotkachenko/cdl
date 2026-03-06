@@ -182,4 +182,21 @@ export class AuthService {
       })
     );
   }
+
+  updateProfile(data: { name?: string; phone?: string }): Observable<{ user: User }> {
+    return this.http.put<{ user: User }>(`${this.apiUrl}/users/profile`, data).pipe(
+      tap(response => {
+        const updated = { ...this.currentUserSubject.value!, ...response.user };
+        this.currentUserSubject.next(updated);
+        localStorage.setItem('currentUser', JSON.stringify(updated));
+      })
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/users/change-password`,
+      { currentPassword, newPassword },
+    );
+  }
 }

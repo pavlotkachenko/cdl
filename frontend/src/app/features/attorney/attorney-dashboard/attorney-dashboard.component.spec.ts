@@ -1,158 +1,107 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
-import {
-  AttorneyDashboardComponent,
-  KanbanCase,
-} from './attorney-dashboard.component';
+import { vi, describe, it, expect } from 'vitest';
 
-// -----------------------------------------------------------------------
-// Direct unit tests — no TestBed needed for pure logic methods
-// -----------------------------------------------------------------------
+import { AttorneyDashboardComponent } from './attorney-dashboard.component';
+import { AttorneyService, AttorneyCase } from '../../../core/services/attorney.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-function makeComponent() {
-  const caseServiceSpy = {
-    getMyCases: vi.fn().mockReturnValue(of({ data: [] })),
-    updateCase: vi.fn().mockReturnValue(of({})),
-    acceptCase: vi.fn().mockReturnValue(of({})),
-    declineCase: vi.fn().mockReturnValue(of({})),
+const PENDING: AttorneyCase = {
+  id: 'c1', case_number: 'CASE-001', status: 'assigned_to_attorney',
+  violation_type: 'Speeding', state: 'TX', driver_name: 'Alice', created_at: '2026-01-01',
+};
+const ACTIVE: AttorneyCase = {
+  id: 'c2', case_number: 'CASE-002', status: 'send_info_to_attorney',
+  violation_type: 'Overweight', state: 'CA', driver_name: 'Bob', created_at: '2026-01-02',
+};
+const RESOLVED: AttorneyCase = {
+  id: 'c3', case_number: 'CASE-003', status: 'closed',
+  violation_type: 'Log Book', state: 'FL', driver_name: 'Carol', created_at: '2026-01-03',
+};
+
+function makeServiceSpy(cases = [PENDING, ACTIVE, RESOLVED]) {
+  return {
+    getMyCases: vi.fn().mockReturnValue(of({ cases })),
+    acceptCase: vi.fn().mockReturnValue(of(null)),
+    declineCase: vi.fn().mockReturnValue(of(null)),
   };
-  const authServiceSpy = { currentUserValue: { id: 'u1', role: 'attorney' } };
-  const dialogSpy = { open: vi.fn() };
-  const routerSpy = { navigate: vi.fn() };
-
-  const component = new AttorneyDashboardComponent(
-    caseServiceSpy as any,
-    authServiceSpy as any,
-    dialogSpy as any,
-    routerSpy as any,
-  );
-
-  return { component, caseServiceSpy, routerSpy };
 }
 
-describe('AttorneyDashboardComponent (unit)', () => {
-  // -------------------------------------------------------------------
-  // getPriorityColor()
-  // -------------------------------------------------------------------
-  it('getPriorityColor returns red for high priority', () => {
-    const { component } = makeComponent();
-    expect(component.getPriorityColor('high')).toBe('#f44336');
+async function setup(spy = makeServiceSpy()) {
+  await TestBed.configureTestingModule({
+    imports: [AttorneyDashboardComponent, NoopAnimationsModule],
+    providers: [
+      { provide: AttorneyService, useValue: spy },
+      provideRouter([]),
+    ],
+  }).compileComponents();
+
+  const fixture = TestBed.createComponent(AttorneyDashboardComponent);
+  const snackBar = fixture.debugElement.injector.get(MatSnackBar);
+  vi.spyOn(snackBar, 'open').mockReturnValue(null as any);
+  fixture.detectChanges();
+  return { fixture, component: fixture.componentInstance, spy, snackBar };
+}
+
+describe('AttorneyDashboardComponent', () => {
+  it('loads cases on init and shows pending tab by default', async () => {
+    const { fixture, component } = await setup();
+    expect(component.cases().length).toBe(3);
+    expect(component.activeTab()).toBe('pending');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('CASE-001');
   });
 
-  it('getPriorityColor returns orange for medium priority', () => {
-    const { component } = makeComponent();
-    expect(component.getPriorityColor('medium')).toBe('#ff9800');
+  it('pendingCases computed filters assigned_to_attorney only', async () => {
+    const { component } = await setup();
+    expect(component.pendingCases().length).toBe(1);
+    expect(component.pendingCases()[0].id).toBe('c1');
   });
 
-  it('getPriorityColor returns green for low priority', () => {
-    const { component } = makeComponent();
-    expect(component.getPriorityColor('low')).toBe('#4caf50');
+  it('activeCases computed filters working statuses', async () => {
+    const { component } = await setup();
+    expect(component.activeCases().length).toBe(1);
+    expect(component.activeCases()[0].id).toBe('c2');
   });
 
-  it('getPriorityColor returns grey for unknown priority', () => {
-    const { component } = makeComponent();
-    expect(component.getPriorityColor('unknown')).toBe('#9e9e9e');
+  it('resolvedCases computed filters closed/resolved', async () => {
+    const { component } = await setup();
+    expect(component.resolvedCases().length).toBe(1);
+    expect(component.resolvedCases()[0].id).toBe('c3');
   });
 
-  // -------------------------------------------------------------------
-  // populateKanbanBoard()
-  // -------------------------------------------------------------------
-  it('populateKanbanBoard distributes assigned cases into "new" column', () => {
-    const { component } = makeComponent();
-    component.populateKanbanBoard([
-      { caseId: 'c1', driverName: 'John', violationType: 'Speeding', violationDate: '2026-01-01', status: 'assigned' },
-    ]);
-    const newCol = component.kanbanColumns.find(c => c.id === 'new');
-    expect(newCol!.cases).toHaveLength(1);
-    expect(newCol!.cases[0].caseId).toBe('c1');
-  });
-
-  it('populateKanbanBoard distributes reviewing cases into "reviewing" column', () => {
-    const { component } = makeComponent();
-    component.populateKanbanBoard([
-      { caseId: 'c2', driverName: 'Jane', violationType: 'HOS', violationDate: '2026-01-01', status: 'reviewing' },
-    ]);
-    const col = component.kanbanColumns.find(c => c.id === 'reviewing');
-    expect(col!.cases).toHaveLength(1);
-  });
-
-  it('populateKanbanBoard resets columns before repopulating', () => {
-    const { component } = makeComponent();
-    // Add something to a column first
-    component.kanbanColumns[0].cases.push({ caseId: 'old' } as KanbanCase);
-    component.populateKanbanBoard([]);
-    expect(component.kanbanColumns.every(c => c.cases.length === 0)).toBe(true);
-  });
-
-  // -------------------------------------------------------------------
-  // openCaseDetails()
-  // -------------------------------------------------------------------
-  it('openCaseDetails navigates to /attorney/cases/:caseId', () => {
-    const { component, routerSpy } = makeComponent();
-    component.openCaseDetails({ caseId: 'case-1' } as KanbanCase);
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/attorney/cases', 'case-1']);
-  });
-
-  // -------------------------------------------------------------------
-  // toggleTemplatesSidebar()
-  // -------------------------------------------------------------------
-  it('toggleTemplatesSidebar flips showTemplatesSidebar', () => {
-    const { component } = makeComponent();
-    expect(component.showTemplatesSidebar).toBe(true);
-    component.toggleTemplatesSidebar();
-    expect(component.showTemplatesSidebar).toBe(false);
-    component.toggleTemplatesSidebar();
-    expect(component.showTemplatesSidebar).toBe(true);
-  });
-
-  // -------------------------------------------------------------------
-  // loadPendingCases()
-  // -------------------------------------------------------------------
-  it('loadPendingCases filters cases with assigned_to_attorney status', () => {
-    const { component, caseServiceSpy } = makeComponent();
-    caseServiceSpy.getMyCases.mockReturnValue(
-      of({
-        data: [
-          { id: 'c1', status: 'assigned_to_attorney' },
-          { id: 'c2', status: 'reviewing' },
-        ],
-      }),
-    );
-    component.ngOnInit();
-    expect(component.pendingCases).toHaveLength(1);
-    expect(component.pendingCases[0].id).toBe('c1');
-    component.ngOnDestroy();
-  });
-
-  // -------------------------------------------------------------------
-  // acceptCase() / declineCase()
-  // -------------------------------------------------------------------
-  it('acceptCase calls caseService.acceptCase and removes case from pendingCases', () => {
-    const { component, caseServiceSpy } = makeComponent();
-    caseServiceSpy.getMyCases.mockReturnValue(of({ data: [{ id: 'c1', status: 'assigned_to_attorney' }] }));
-    component.ngOnInit();
+  it('acceptCase() calls service, shows snackBar, and reloads', async () => {
+    const { component, spy, snackBar } = await setup();
     component.acceptCase('c1');
-    expect(caseServiceSpy.acceptCase).toHaveBeenCalledWith('c1');
-    expect(component.pendingCases.find((c: any) => c.id === 'c1')).toBeUndefined();
-    component.ngOnDestroy();
+    expect(spy.acceptCase).toHaveBeenCalledWith('c1');
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'Case accepted — now active in your queue.', 'Close', expect.any(Object),
+    );
+    expect(spy.getMyCases).toHaveBeenCalledTimes(2);
   });
 
-  it('declineCase calls caseService.declineCase and removes case from pendingCases', () => {
-    const { component, caseServiceSpy } = makeComponent();
-    caseServiceSpy.getMyCases.mockReturnValue(of({ data: [{ id: 'c2', status: 'assigned_to_attorney' }] }));
-    component.ngOnInit();
-    component.declineCase('c2');
-    expect(caseServiceSpy.declineCase).toHaveBeenCalledWith('c2');
-    expect(component.pendingCases.find((c: any) => c.id === 'c2')).toBeUndefined();
-    component.ngOnDestroy();
+  it('declineCase() removes case from list and shows snackBar', async () => {
+    const { component, spy, snackBar } = await setup();
+    component.declineCase('c1');
+    expect(component.cases().find(c => c.id === 'c1')).toBeUndefined();
+    expect(snackBar.open).toHaveBeenCalledWith('Case declined.', 'Close', expect.any(Object));
   });
 
-  it('declineCase clears processingCaseId on error', () => {
-    const { component, caseServiceSpy } = makeComponent();
-    caseServiceSpy.getMyCases.mockReturnValue(of({ data: [] }));
-    caseServiceSpy.declineCase.mockReturnValue(throwError(() => new Error('fail')));
-    component.ngOnInit();
-    component.declineCase('c3');
-    expect(component.processingCaseId).toBeNull();
-    component.ngOnDestroy();
+  it('shows snackBar on acceptCase error', async () => {
+    const spy = makeServiceSpy();
+    spy.acceptCase.mockReturnValue(throwError(() => new Error('fail')));
+    const { component, snackBar } = await setup(spy);
+    component.acceptCase('c1');
+    expect(snackBar.open).toHaveBeenCalledWith('Failed to accept case.', 'Close', expect.any(Object));
+  });
+
+  it('shows snackBar when loadCases fails', async () => {
+    const spy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
+    const { snackBar } = await setup(spy as any);
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'Failed to load cases. Please try again.', 'Close', expect.any(Object),
+    );
   });
 });

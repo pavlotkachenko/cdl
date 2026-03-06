@@ -15,18 +15,13 @@ import { DocumentsComponent } from './documents/documents.component';
 //import { MessagesComponent } from './features/driver/messages/messages.component';
 
 
-// ============================================
-// AuthGuard DISABLED - Import commented out
-// ============================================
-// import { AuthGuard } from '../../core/guards/auth.guard';
+import { AuthGuard } from '../../core/guards/auth.guard';
 
 const routes: Routes = [
   {
     path: '',
     component: LayoutComponent,
-    // ============================================
-    // canActivate: [AuthGuard],  // ← AUTH DISABLED
-    // ============================================
+    canActivate: [AuthGuard],
     children: [
       {
         path: '',
