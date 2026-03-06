@@ -6,8 +6,10 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SlicePipe } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CarrierService, FleetCase } from '../../../core/services/carrier.service';
 
@@ -21,10 +23,18 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
 @Component({
   selector: 'app-carrier-cases',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SlicePipe, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule, MatProgressSpinnerModule],
+  imports: [
+    SlicePipe, MatCardModule, MatButtonModule, MatIconModule,
+    MatChipsModule, MatCheckboxModule, MatProgressSpinnerModule,
+  ],
   template: `
     <div class="cases-page">
-      <h1>Fleet Cases</h1>
+      <div class="page-header">
+        <h1>Fleet Cases</h1>
+        <button mat-stroked-button (click)="goToImport()" aria-label="Bulk import cases from CSV">
+          <mat-icon aria-hidden="true">upload_file</mat-icon> Import CSV
+        </button>
+      </div>
 
       <div class="filter-chips" role="group" aria-label="Filter cases">
         @for (f of filters; track f.value) {
@@ -34,6 +44,21 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
           </button>
         }
       </div>
+
+      @if (selectedIds().size > 0) {
+        <div class="bulk-bar" role="toolbar" aria-label="Bulk actions">
+          <span class="selected-count">{{ selectedIds().size }} selected</span>
+          <button mat-raised-button color="warn" [disabled]="archiving()"
+                  (click)="bulkArchive()" aria-label="Archive selected cases">
+            @if (archiving()) {
+              <mat-spinner diameter="16" aria-label="Archiving"></mat-spinner>
+            } @else {
+              Archive Selected
+            }
+          </button>
+          <button mat-stroked-button (click)="clearSelection()">Cancel</button>
+        </div>
+      }
 
       @if (loading()) {
         <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
@@ -45,11 +70,17 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
       } @else {
         <div class="case-list" role="list">
           @for (c of filteredCases(); track c.id) {
-            <mat-card class="case-card" role="listitem" (click)="viewCase(c.id)"
-                      style="cursor:pointer" [attr.aria-label]="'View case ' + c.case_number">
+            <mat-card class="case-card" role="listitem">
               <mat-card-content>
                 <div class="case-row">
-                  <div class="case-main">
+                  <mat-checkbox
+                    [checked]="selectedIds().has(c.id)"
+                    (change)="toggleSelect(c.id)"
+                    [attr.aria-label]="'Select case ' + c.case_number">
+                  </mat-checkbox>
+                  <div class="case-main" (click)="viewCase(c.id)" style="cursor:pointer; flex:1"
+                       [attr.aria-label]="'View case ' + c.case_number" role="button" tabindex="0"
+                       (keydown.enter)="viewCase(c.id)">
                     <p class="case-number">{{ c.case_number }}</p>
                     <p class="driver-name">{{ c.driver_name }}</p>
                   </div>
@@ -70,17 +101,21 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
     </div>
   `,
   styles: [`
-    .cases-page { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
-    h1 { margin: 0 0 16px; font-size: 1.4rem; }
-    .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .cases-page { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 1.4rem; }
+    .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .active-filter { background: #1976d2; color: #fff; }
+    .bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      background: #e3f2fd; border-radius: 6px; margin-bottom: 12px; }
+    .selected-count { font-size: 0.9rem; font-weight: 600; flex: 1; }
     .loading { display: flex; justify-content: center; padding: 32px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px;
       padding: 32px; color: #999; text-align: center; }
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; }
     .case-list { display: flex; flex-direction: column; gap: 10px; }
     .case-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-    .case-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .case-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .case-number { margin: 0; font-weight: 600; font-size: 0.9rem; }
     .driver-name { margin: 2px 0 0; font-size: 0.85rem; color: #555; }
     .case-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
@@ -92,11 +127,14 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
 })
 export class CarrierCasesComponent implements OnInit {
   private carrierService = inject(CarrierService);
+  private snackBar = inject(MatSnackBar);
   private router = inject(Router);
 
   cases = signal<FleetCase[]>([]);
   loading = signal(true);
+  archiving = signal(false);
   activeFilter = signal<CaseFilter>('all');
+  selectedIds = signal<Set<string>>(new Set());
 
   filters: { value: CaseFilter; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -121,7 +159,42 @@ export class CarrierCasesComponent implements OnInit {
     });
   }
 
-  setFilter(f: CaseFilter): void { this.activeFilter.set(f); }
+  setFilter(f: CaseFilter): void {
+    this.activeFilter.set(f);
+    this.clearSelection();
+  }
+
+  toggleSelect(id: string): void {
+    this.selectedIds.update(set => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  clearSelection(): void { this.selectedIds.set(new Set()); }
+
+  bulkArchive(): void {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0) return;
+    this.archiving.set(true);
+    this.carrierService.bulkArchive(ids).subscribe({
+      next: ({ archived }) => {
+        this.archiving.set(false);
+        this.cases.update(list => list.map(c =>
+          ids.includes(c.id) ? { ...c, status: 'closed' } : c,
+        ));
+        this.clearSelection();
+        this.snackBar.open(`${archived} case${archived !== 1 ? 's' : ''} archived.`, 'Close', { duration: 3000 });
+      },
+      error: () => {
+        this.archiving.set(false);
+        this.snackBar.open('Failed to archive cases.', 'Close', { duration: 3000 });
+      },
+    });
+  }
+
+  goToImport(): void { this.router.navigate(['/carrier/bulk-import']); }
 
   viewCase(id: string): void { this.router.navigate(['/driver/cases', id]); }
 }

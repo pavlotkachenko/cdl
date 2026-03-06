@@ -16,5 +16,8 @@ router.delete('/me/drivers/:driverId', authenticate, carrierController.removeDri
 router.get('/me/cases', authenticate, carrierController.getCases);
 router.get('/me/analytics', authenticate, carrierController.getAnalytics);
 router.get('/me/export', authenticate, carrierController.exportCases);
+router.post('/me/bulk-import', authenticate, carrierController.bulkImport);
+router.post('/me/cases/bulk-archive', authenticate, carrierController.bulkArchive);
+router.get('/me/compliance-report', authenticate, carrierController.getComplianceReport);
 
 module.exports = router;

@@ -35,6 +35,29 @@ export interface CarrierProfile {
   notify_on_new_ticket: boolean;
 }
 
+export interface BulkImportResult {
+  results: {
+    imported: number;
+    errors: { row: number; message: string }[];
+  };
+}
+
+export interface ComplianceReportRow {
+  case_number: string;
+  driver_name: string;
+  cdl_number: string;
+  violation_type: string;
+  state: string;
+  status: string;
+  incident_date: string;
+  attorney_name: string;
+}
+
+export interface ComplianceReport {
+  report: ComplianceReportRow[];
+  generated_at: string;
+}
+
 export interface FleetAnalytics {
   casesByMonth: { month: string; count: number }[];
   violationBreakdown: { type: string; count: number; pct: number }[];
@@ -87,5 +110,21 @@ export class CarrierService {
 
   exportCsv(): Observable<Blob> {
     return this.http.get(`${this.api}/export?format=csv`, { responseType: 'blob' });
+  }
+
+  bulkImport(csv: string): Observable<BulkImportResult> {
+    return this.http.post<BulkImportResult>(`${this.api}/bulk-import`, { csv });
+  }
+
+  bulkArchive(caseIds: string[]): Observable<{ archived: number }> {
+    return this.http.post<{ archived: number }>(`${this.api}/cases/bulk-archive`, { case_ids: caseIds });
+  }
+
+  getComplianceReport(from?: string, to?: string): Observable<ComplianceReport> {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    return this.http.get<ComplianceReport>(`${this.api}/compliance-report${qs ? '?' + qs : ''}`);
   }
 }
