@@ -2,9 +2,11 @@
  * SMS Service — Twilio transactional messages
  * All functions are non-blocking: they catch errors, log, and never rethrow.
  * Guard every send with the TWILIO_ACCOUNT_SID env-var check.
+ * Respects per-user quiet hours (skips send, does NOT queue for later).
  */
 
 const FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
+const { isQuietHours } = require('./notification.utils');
 
 let twilio = null;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
@@ -13,9 +15,10 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
 
 /**
  * Send a raw SMS message.
- * @param {{ to: string, body: string }} params
+ * @param {{ to: string, body: string, userId?: string }} params
+ *   userId — when provided, quiet hours are checked before sending.
  */
-const sendSms = async ({ to, body }) => {
+const sendSms = async ({ to, body, userId }) => {
   if (!twilio) {
     console.warn('[SmsService] Twilio not configured — skipping SMS');
     return;
@@ -23,6 +26,10 @@ const sendSms = async ({ to, body }) => {
   if (!to) {
     console.warn('[SmsService] No phone number provided — skipping SMS');
     return;
+  }
+  if (userId && await isQuietHours(userId)) {
+    console.info(`[SmsService] Quiet hours active for user ${userId} — skipping SMS`);
+    return { skipped: 'quiet_hours' };
   }
   try {
     await twilio.messages.create({ from: FROM_NUMBER, to, body });
@@ -66,9 +73,22 @@ const sendStatusChangeSms = async ({ phone, newStatus, caseNumber }) => {
   });
 };
 
+/**
+ * Send payment installment reminder SMS.
+ * @param {{ phone: string, amount: number, dueDate: string, installmentNum: number, totalInstallments: number }} params
+ */
+const sendPaymentReminderSms = async ({ phone, amount, dueDate, installmentNum, totalInstallments }) => {
+  const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  await sendSms({
+    to: phone,
+    body: `CDL Ticket Reminder: Payment #${installmentNum} of ${totalInstallments} (${formatted}) is due on ${dueDate}. Reply STOP to opt out.`,
+  });
+};
+
 module.exports = {
   sendSms,
   sendCaseSubmissionSms,
   sendAttorneyAssignedSms,
   sendStatusChangeSms,
+  sendPaymentReminderSms,
 };

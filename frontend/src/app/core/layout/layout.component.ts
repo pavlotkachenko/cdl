@@ -22,6 +22,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 // Components
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
+import { LanguageSwitcherComponent } from '../../shared/components/language-switcher/language-switcher.component';
 
 // Services - ADD THIS
 import { AuthService } from '../services/auth.service';
@@ -42,7 +43,8 @@ import { AuthService } from '../services/auth.service';
     MatDividerModule,
     MatTooltipModule,
     SidebarComponent,
-    NotificationBellComponent
+    NotificationBellComponent,
+    LanguageSwitcherComponent,
   ]
 })
 export class LayoutComponent implements OnInit, OnDestroy {
@@ -58,6 +60,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // User info
   userName = 'John Doe';
   userEmail = 'john.doe@example.com';
+  userRole = '';
 
   // Current year for footer
   currentYear = new Date().getFullYear();
@@ -132,6 +135,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         const user = JSON.parse(storedUser);
         this.userName = user.name || 'John Doe';
         this.userEmail = user.email || 'john.doe@example.com';
+        this.userRole = user.role || '';
       } catch (e) {
         console.error('Error parsing user data:', e);
       }

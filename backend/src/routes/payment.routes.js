@@ -30,4 +30,8 @@ router.get('/:id', paymentController.getPayment);
 // Refund routes
 router.post('/:id/refund', paymentController.processRefund);
 
+// Installment payment plan routes
+router.get('/plan-options/:caseId', paymentController.getPaymentPlanOptions);
+router.post('/create-plan', paymentController.createPaymentPlan);
+
 module.exports = router;

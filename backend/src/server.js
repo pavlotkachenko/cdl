@@ -37,6 +37,9 @@ const invoiceRoutes = require('./routes/invoice.routes');
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
 
+// Import cron jobs
+const { startPaymentRemindersJob } = require('./jobs/payment-reminders.job');
+
 // Create Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -204,6 +207,9 @@ app.use(errorHandler);
 // ============================================
 // START SERVER
 // ============================================
+
+// Start scheduled jobs
+startPaymentRemindersJob();
 
 server.listen(PORT, () => {
   console.log(`

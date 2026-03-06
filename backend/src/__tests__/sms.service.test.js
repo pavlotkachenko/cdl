@@ -18,12 +18,18 @@ process.env.TWILIO_ACCOUNT_SID = 'ACtest';
 process.env.TWILIO_AUTH_TOKEN   = 'authtest';
 process.env.TWILIO_FROM_NUMBER  = '+10000000000';
 
+jest.mock('../services/notification.utils', () => ({
+  isQuietHours: jest.fn().mockResolvedValue(false),
+}));
+
 const {
   sendSms,
   sendCaseSubmissionSms,
   sendAttorneyAssignedSms,
   sendStatusChangeSms,
+  sendPaymentReminderSms,
 } = require('../services/sms.service');
+const { isQuietHours } = require('../services/notification.utils');
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -113,5 +119,57 @@ describe('sendStatusChangeSms()', () => {
         body: expect.stringContaining('CASE-003'),
       }),
     );
+  });
+});
+
+// ── Quiet hours (NH-1) ────────────────────────────────────────────────────────
+
+describe('sendSms() quiet hours', () => {
+  it('skips send and returns { skipped } when quiet hours active', async () => {
+    isQuietHours.mockResolvedValueOnce(true);
+    const result = await sendSms({ to: '+15555551234', body: 'Hello', userId: 'u-1' });
+    expect(result).toEqual({ skipped: 'quiet_hours' });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('sends normally when userId provided but not quiet hours', async () => {
+    isQuietHours.mockResolvedValueOnce(false);
+    await sendSms({ to: '+15555551234', body: 'Hello', userId: 'u-1' });
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
+  it('sends normally when no userId provided (no quiet hours check)', async () => {
+    await sendSms({ to: '+15555551234', body: 'Hello' });
+    expect(isQuietHours).not.toHaveBeenCalled();
+    expect(mockCreate).toHaveBeenCalled();
+  });
+});
+
+// ── sendPaymentReminderSms (PP-3) ─────────────────────────────────────────────
+
+describe('sendPaymentReminderSms()', () => {
+  it('sends reminder SMS including amount and due date', async () => {
+    await sendPaymentReminderSms({
+      phone: '+15555551234',
+      amount: 125.00,
+      dueDate: '2025-02-15',
+      installmentNum: 2,
+      totalInstallments: 4,
+    });
+    const body = mockCreate.mock.calls[0][0].body;
+    expect(body).toContain('125');
+    expect(body).toContain('2025-02-15');
+  });
+
+  it('includes installment progress in reminder SMS', async () => {
+    await sendPaymentReminderSms({
+      phone: '+15555551234',
+      amount: 50.00,
+      dueDate: '2025-03-01',
+      installmentNum: 1,
+      totalInstallments: 2,
+    });
+    const body = mockCreate.mock.calls[0][0].body;
+    expect(body).toMatch(/1.*(of|\/|out of).*2/i);
   });
 });

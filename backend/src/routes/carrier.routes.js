@@ -19,5 +19,6 @@ router.get('/me/export', authenticate, carrierController.exportCases);
 router.post('/me/bulk-import', authenticate, carrierController.bulkImport);
 router.post('/me/cases/bulk-archive', authenticate, carrierController.bulkArchive);
 router.get('/me/compliance-report', authenticate, carrierController.getComplianceReport);
+router.get('/me/csa-score', authenticate, carrierController.getCsaScore);
 
 module.exports = router;

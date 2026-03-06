@@ -58,6 +58,13 @@ export interface ComplianceReport {
   generated_at: string;
 }
 
+export interface CsaScoreResponse {
+  csaScore: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  openViolations: number;
+  breakdown: { hos: number; maintenance: number; speeding_major: number; speeding_minor: number; other: number };
+}
+
 export interface FleetAnalytics {
   casesByMonth: { month: string; count: number }[];
   violationBreakdown: { type: string; count: number; pct: number }[];
@@ -126,5 +133,9 @@ export class CarrierService {
     if (to) params.set('to', to);
     const qs = params.toString();
     return this.http.get<ComplianceReport>(`${this.api}/compliance-report${qs ? '?' + qs : ''}`);
+  }
+
+  getCsaScore(): Observable<CsaScoreResponse> {
+    return this.http.get<CsaScoreResponse>(`${this.api}/csa-score`);
   }
 }

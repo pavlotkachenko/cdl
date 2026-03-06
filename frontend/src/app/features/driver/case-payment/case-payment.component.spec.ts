@@ -57,12 +57,21 @@ describe('CasePaymentComponent', () => {
     TestBed.resetTestingModule();
   });
 
+  const MOCK_PLAN_OPTIONS = {
+    data: {
+      twoWeek:   { label: '2-week', weeks: 2, installments: 2, weeklyAmount: 87.50 },
+      fourWeek:  { label: '4-week', weeks: 4, installments: 4, weeklyAmount: 43.75, popular: true },
+      eightWeek: { label: '8-week', weeks: 8, installments: 8, weeklyAmount: 21.88 },
+    }
+  };
+
   /**
-   * Trigger ngOnInit + ngAfterViewInit, then flush all three requests that
+   * Trigger ngOnInit + ngAfterViewInit, then flush all four requests that
    * a successful initialisation produces:
-   *   1. GET  /api/cases/:id          (case load)
-   *   2. GET  /api/payments/config    (Stripe publishable key)
-   *   3. POST /api/cases/:id/payments (payment intent creation)
+   *   1. GET  /api/cases/:id                     (case load)
+   *   2. GET  /api/payments/config               (Stripe publishable key)
+   *   3. GET  /api/payments/plan-options/:id     (payment plan options)
+   *   4. POST /api/cases/:id/payments            (payment intent creation)
    */
   function flushInit(caseData = MOCK_CASE) {
     fixture.detectChanges(); // triggers ngOnInit + ngAfterViewInit
@@ -71,8 +80,9 @@ describe('CasePaymentComponent', () => {
     controller.expectOne(`${API}/cases/${CASE_ID}`).flush({ case: caseData });
     controller.expectOne(`${API}/payments/config`).flush({ publishableKey: 'pk_test_xxx' });
 
-    fixture.detectChanges(); // processes case response → createPaymentIntent() queues POST
+    fixture.detectChanges(); // processes case response → loadPlanOptions() + createPaymentIntent() queued
 
+    controller.expectOne(`${API}/payments/plan-options/${CASE_ID}`).flush(MOCK_PLAN_OPTIONS);
     controller.expectOne(`${API}/cases/${CASE_ID}/payments`).flush(MOCK_INTENT);
     fixture.detectChanges();
   }
@@ -126,5 +136,54 @@ describe('CasePaymentComponent', () => {
     expect(component.stripeReady()).toBe(false);
     await component.pay();
     expect(component.paying()).toBe(false);
+  });
+
+  // ── Payment plan tests (PP-2) ───────────────────────────────────────────────
+
+  it('defaults selectedPlan to "4" (4-week most popular)', () => {
+    fixture.detectChanges();
+    controller.expectOne(`${API}/cases/${CASE_ID}`).flush({ case: MOCK_CASE });
+    controller.expectOne(`${API}/payments/config`).flush({ publishableKey: 'pk_test_xxx' });
+    fixture.detectChanges();
+    controller.expectOne(`${API}/payments/plan-options/${CASE_ID}`).flush(MOCK_PLAN_OPTIONS);
+    controller.expectOne(`${API}/cases/${CASE_ID}/payments`).flush(MOCK_INTENT);
+    fixture.detectChanges();
+
+    expect(component.selectedPlan()).toBe('4');
+  });
+
+  it('selectPlan() changes selected plan', () => {
+    flushInit();
+    component.selectPlan('full');
+    expect(component.selectedPlan()).toBe('full');
+
+    component.selectPlan('2');
+    expect(component.selectedPlan()).toBe('2');
+  });
+
+  it('payButtonLabel() returns "Pay $350.00" when full plan selected', () => {
+    flushInit();
+    component.selectPlan('full');
+    expect(component.payButtonLabel()).toContain('$350.00');
+  });
+
+  it('payButtonLabel() returns weekly amount for installment plan', () => {
+    flushInit();
+    component.selectPlan('4');
+    const label = component.payButtonLabel();
+    expect(label).toContain('/week');
+  });
+
+  it('loadingPlans becomes false after plan options load', () => {
+    flushInit();
+    expect(component.loadingPlans()).toBe(false);
+  });
+
+  it('planOptions signal is populated from API response', () => {
+    flushInit();
+    expect(component.planOptions().length).toBe(3);
+    expect(component.planOptions()[0].weeks).toBe(2);
+    expect(component.planOptions()[1].weeks).toBe(4);
+    expect(component.planOptions()[2].weeks).toBe(8);
   });
 });

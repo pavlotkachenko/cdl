@@ -9,6 +9,7 @@ const { validationResult } = require('express-validator');
 const emailService = require('../services/email.service');
 const smsService = require('../services/sms.service');
 const oneSignalService = require('../services/onesignal.service');
+const assignmentService = require('../services/assignment.service');
 
 /**
  * PUBLIC SUBMIT
@@ -1201,9 +1202,12 @@ exports.declineCase = async (req, res) => {
       return res.status(400).json({ error: 'Case is not awaiting attorney acceptance' });
     }
 
+    // Track declining attorney in the array before clearing assignment
+    const declinedBy = [...(caseData.declined_by_attorney_ids || []), req.user.id];
+
     const { data, error } = await supabase
       .from('cases')
-      .update({ status: 'new', assigned_attorney_id: null })
+      .update({ status: 'new', assigned_attorney_id: null, declined_by_attorney_ids: declinedBy })
       .eq('id', id)
       .select()
       .single();
@@ -1211,6 +1215,18 @@ exports.declineCase = async (req, res) => {
     if (error) throw error;
 
     await logActivity(id, req.user.id, 'Attorney declined case', reason ? { reason } : null);
+
+    // Auto re-offer to next best attorney (non-blocking)
+    assignmentService.autoAssign(id, null, declinedBy).then(async (result) => {
+      if (result) {
+        await logActivity(id, null, `Case re-offered to attorney ${result.assignedAttorney.name} after decline`);
+        await oneSignalService.notifyUser(
+          result.assignedAttorney.userId,
+          'New Case Available',
+          'A case matching your profile is available. Tap to review.'
+        );
+      }
+    }).catch(err => console.error('[declineCase] Auto re-offer failed:', err.message));
 
     res.json({ message: 'Case declined successfully', case: data });
   } catch (error) {

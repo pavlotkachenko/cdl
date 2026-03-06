@@ -1,8 +1,10 @@
 /**
  * Sprint 029 PN-1 — OneSignal Service Tests
+ * Sprint 033 NH-1 — Quiet hours enforcement
  */
 
 jest.mock('../config/supabase', () => ({ supabase: { from: jest.fn() } }));
+jest.mock('../services/notification.utils', () => ({ isQuietHours: jest.fn().mockResolvedValue(false) }));
 
 function buildChain(supabase, result = { data: null, error: null }) {
   const chain = {};
@@ -107,5 +109,41 @@ describe('notifyUser', () => {
     expect(global.fetch).toHaveBeenCalled();
     const body = JSON.parse(global.fetch.mock.calls[0][1].body);
     expect(body.include_player_ids).toContain('player_tok_abc');
+  });
+});
+
+// ─── notifyUser quiet hours (NH-1) ────────────────────────────────────────────
+
+describe('notifyUser() quiet hours', () => {
+  it('skips notification and returns { skipped } during quiet hours', async () => {
+    const { isQuietHours } = require('../services/notification.utils');
+    isQuietHours.mockResolvedValueOnce(true);
+
+    const { supabase } = require('../config/supabase');
+    buildChain(supabase, { data: { push_token: 'player_tok_abc' }, error: null });
+
+    const { notifyUser } = require('../services/onesignal.service');
+    const result = await notifyUser('u1', 'Title', 'Body');
+    expect(result).toEqual({ skipped: 'quiet_hours' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('sends notification when quiet hours are not active', async () => {
+    process.env.ONESIGNAL_APP_ID = 'app_123';
+    process.env.ONESIGNAL_API_KEY = 'key_abc';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ id: 'n2' }),
+    });
+
+    const { isQuietHours } = require('../services/notification.utils');
+    isQuietHours.mockResolvedValueOnce(false);
+
+    const { supabase } = require('../config/supabase');
+    buildChain(supabase, { data: { push_token: 'player_tok_xyz' }, error: null });
+
+    const { notifyUser } = require('../services/onesignal.service');
+    await notifyUser('u1', 'Alert', 'Everything is fine');
+    expect(global.fetch).toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 import { CarrierDashboardComponent } from './carrier-dashboard.component';
-import { CarrierService, FleetStats } from '../../../core/services/carrier.service';
+import { CarrierService, FleetStats, CsaScoreResponse } from '../../../core/services/carrier.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 const MOCK_STATS: FleetStats = {
@@ -15,8 +15,18 @@ const MOCK_STATS: FleetStats = {
   resolvedCases: 8,
 };
 
-function makeCarrierServiceSpy(stats = MOCK_STATS) {
-  return { getStats: vi.fn().mockReturnValue(of(stats)) };
+const MOCK_CSA: CsaScoreResponse = {
+  csaScore: 42,
+  riskLevel: 'medium',
+  openViolations: 3,
+  breakdown: { hos: 1, logbook: 0, maintenance: 1, vehicle: 0, speeding_major: 0, speeding_minor: 1 },
+};
+
+function makeCarrierServiceSpy(stats = MOCK_STATS, csa = MOCK_CSA) {
+  return {
+    getStats: vi.fn().mockReturnValue(of(stats)),
+    getCsaScore: vi.fn().mockReturnValue(of(csa)),
+  };
 }
 
 function makeAuthServiceSpy(name = 'ACME Trucking') {
@@ -74,9 +84,36 @@ describe('CarrierDashboardComponent', () => {
   });
 
   it('shows error message on stats load failure', async () => {
-    const spy = { getStats: vi.fn().mockReturnValue(throwError(() => new Error('network'))) };
+    const spy = {
+      getStats: vi.fn().mockReturnValue(throwError(() => new Error('network'))),
+      getCsaScore: vi.fn().mockReturnValue(of(MOCK_CSA)),
+    };
     const { fixture } = await setup(spy as any);
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Failed to load fleet stats');
+  });
+
+  // ── CSA Score widget (CS-1) ─────────────────────────────────────────────────
+
+  it('csaData signal is populated from getCsaScore()', async () => {
+    const { component } = await setup();
+    expect(component.csaData().csaScore).toBe(42);
+    expect(component.csaData().riskLevel).toBe('medium');
+  });
+
+  it('renders CSA score number in template', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('42');
+  });
+
+  it('still loads when getCsaScore errors (graceful degradation)', async () => {
+    const spy = {
+      getStats: vi.fn().mockReturnValue(of(MOCK_STATS)),
+      getCsaScore: vi.fn().mockReturnValue(throwError(() => new Error('csa error'))),
+    };
+    const { component } = await setup(spy as any);
+    // csaData should retain default value (score 0)
+    expect(component.csaData().csaScore).toBe(0);
   });
 });

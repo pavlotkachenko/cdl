@@ -1,0 +1,122 @@
+{
+  "COMMON": {
+    "LOADING": "Cargando…",
+    "RETRY": "Reintentar",
+    "BACK": "Atrás",
+    "SAVE": "Guardar",
+    "CANCEL": "Cancelar",
+    "CLOSE": "Cerrar",
+    "SUBMIT": "Enviar",
+    "NEXT": "Siguiente",
+    "DONE": "Listo",
+    "ERROR": "Algo salió mal. Por favor inténtalo de nuevo.",
+    "NO_DATA": "No hay datos disponibles."
+  },
+  "NAV": {
+    "DASHBOARD": "Inicio",
+    "MY_CASES": "Mis Casos",
+    "NOTIFICATIONS": "Notificaciones",
+    "PROFILE": "Perfil",
+    "LOGOUT": "Cerrar Sesión"
+  },
+  "SUBMIT_TICKET": {
+    "TITLE": "Enviar Multa",
+    "STEP_PHOTO": "Tomar Foto",
+    "STEP_REVIEW": "Revisar Detalles",
+    "STEP_CONFIRM": "Confirmar",
+    "TAKE_PHOTO": "Tomar una Foto",
+    "UPLOAD_PHOTO": "Subir desde Galería",
+    "PROCESSING": "Leyendo tu multa…",
+    "REVIEW_TITLE": "Revisar Detalles de la Multa",
+    "TICKET_NUMBER": "Número de Multa",
+    "VIOLATION_TYPE": "Tipo de Infracción",
+    "STATE": "Estado",
+    "COURT_DATE": "Fecha de Audiencia",
+    "FINE_AMOUNT": "Monto de la Multa",
+    "SUBMIT_BTN": "Enviar Multa",
+    "SUCCESS": "¡Lo recibimos! Pronto tendrás noticias de nosotros.",
+    "ERROR_UPLOAD": "Error al subir la multa. Por favor inténtalo de nuevo.",
+    "ERROR_OCR": "No se pudo leer la multa automáticamente. Por favor completa los campos."
+  },
+  "CASE_STATUS": {
+    "SUBMITTED": "Enviado",
+    "ATTORNEY_ASSIGNED": "Abogado Asignado",
+    "IN_PROGRESS": "En Proceso",
+    "COURT_SCHEDULED": "Audiencia Programada",
+    "RESOLVED": "Resuelto",
+    "CLOSED": "Cerrado",
+    "NEW": "Nuevo",
+    "LABEL": "Estado"
+  },
+  "CASE_LIST": {
+    "TITLE": "Mis Casos",
+    "EMPTY": "Aún no tienes casos.",
+    "EMPTY_CTA": "Envía tu primera multa",
+    "FILTER_ALL": "Todos",
+    "FILTER_ACTIVE": "Activos",
+    "FILTER_RESOLVED": "Resueltos"
+  },
+  "CASE_DETAIL": {
+    "ATTORNEY": "Abogado",
+    "VIOLATION": "Infracción",
+    "COURT_DATE": "Fecha de Audiencia",
+    "LAST_UPDATED": "Última actualización",
+    "SEND_MESSAGE": "Mensaje al Abogado",
+    "PAY_NOW": "Pagar Ahora"
+  },
+  "ATTORNEY_SELECTION": {
+    "TITLE": "Elige tu Abogado",
+    "RECOMMENDED": "RECOMENDADO",
+    "WIN_RATE": "Ganó el {{rate}}% de casos como el tuyo",
+    "CHOOSE": "Elegir Abogado",
+    "CONFIRM": "Confirmar Selección",
+    "CONFIRM_MSG": "Seleccionaste a {{name}}",
+    "NEXT_PAYMENT": "Siguiente: Pago"
+  },
+  "PAYMENT": {
+    "TITLE": "Pagar Honorarios del Abogado",
+    "TOTAL": "Total",
+    "PAY_NOW": "Pagar Ahora",
+    "PAYMENT_PLAN": "Plan de Pagos",
+    "CHOOSE_OPTION": "Elige la Opción de Pago",
+    "MOST_POPULAR": "Más Popular",
+    "WEEK": "semana",
+    "PAYMENTS": "pagos",
+    "PAY_BTN": "Pagar {{amount}}",
+    "PAY_WEEK_BTN": "Pagar {{amount}}/semana",
+    "PROCESSING": "Procesando…",
+    "SUCCESS": "¡Pago confirmado!",
+    "SUCCESS_PLAN": "¡Plan de pagos creado! Primer pago procesado.",
+    "SCHEDULE_TITLE": "Calendario de Pagos",
+    "TRUST": "Sin cargos ocultos. Pago seguro vía Stripe.",
+    "ERROR_LOAD": "Error al cargar los detalles del caso.",
+    "ERROR_PAYMENT": "Pago fallido. Por favor inténtalo de nuevo.",
+    "ERROR_PLAN": "Error al crear el plan de pagos."
+  },
+  "MESSAGING": {
+    "PLACEHOLDER": "Escribe un mensaje…",
+    "SEND": "Enviar",
+    "ATTORNEY_LABEL": "Abogado",
+    "YOU_LABEL": "Tú",
+    "EMPTY": "Sin mensajes aún. ¡Di hola!"
+  },
+  "NOTIFICATIONS": {
+    "TITLE": "Notificaciones",
+    "EMPTY": "Sin notificaciones.",
+    "MARK_READ": "Marcar todo como leído"
+  },
+  "DRIVER_DASHBOARD": {
+    "GREETING_MORNING": "Buenos días",
+    "GREETING_AFTERNOON": "Buenas tardes",
+    "GREETING_EVENING": "Buenas noches",
+    "ACTIVE_CASES": "Casos Activos",
+    "PENDING": "Pendientes",
+    "RESOLVED": "Resueltos",
+    "SUBMIT_TICKET": "Enviar Nueva Multa",
+    "VIEW_CASES": "Ver Todos los Casos"
+  },
+  "LANG": {
+    "EN": "English",
+    "ES": "Español"
+  }
+}

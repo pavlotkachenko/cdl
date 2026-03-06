@@ -22,6 +22,9 @@
         <mat-icon>search</mat-icon>
       </button>
 
+      <!-- Language switcher (driver role only) -->
+      @if (userRole === 'driver') { <app-language-switcher></app-language-switcher> }
+
       <!-- Notification Bell -->
       <app-notification-bell></app-notification-bell>
 

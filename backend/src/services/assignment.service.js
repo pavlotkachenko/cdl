@@ -161,9 +161,10 @@ const rankAttorneys = async (caseId) => {
  * Auto-assign case to highest-scoring attorney
  * @param {string} caseId - Case UUID
  * @param {string} assignedBy - User ID of person performing assignment
- * @returns {Promise<Object>} Assignment result
+ * @param {string[]} excludeAttorneyIds - Attorney IDs to skip (previously declined)
+ * @returns {Promise<Object|null>} Assignment result, or null if no eligible attorney found
  */
-const autoAssign = async (caseId, assignedBy = null) => {
+const autoAssign = async (caseId, assignedBy = null, excludeAttorneyIds = []) => {
   try {
     // Get ranked attorneys
     const rankedAttorneys = await rankAttorneys(caseId);
@@ -172,13 +173,15 @@ const autoAssign = async (caseId, assignedBy = null) => {
       throw new Error('No eligible attorneys found');
     }
 
-    // Filter out unavailable attorneys
+    // Filter out unavailable attorneys and previously-declined attorneys
     const availableAttorneys = rankedAttorneys.filter(
-      attorney => attorney.availabilityStatus !== 'unavailable'
+      attorney =>
+        attorney.availabilityStatus !== 'unavailable' &&
+        !excludeAttorneyIds.includes(attorney.userId)
     );
 
     if (availableAttorneys.length === 0) {
-      throw new Error('No available attorneys found');
+      return null; // No eligible attorney — caller handles gracefully
     }
 
     // Select highest-scoring available attorney

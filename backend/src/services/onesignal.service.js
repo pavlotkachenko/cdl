@@ -5,6 +5,7 @@
  */
 
 const { supabase } = require('../config/supabase');
+const { isQuietHours } = require('./notification.utils');
 
 const ONESIGNAL_URL = 'https://onesignal.com/api/v1/notifications';
 
@@ -47,10 +48,14 @@ const sendPushNotification = async (playerIds, heading, content, data = {}) => {
 
 /**
  * Lookup a user's stored push_token and send them a push notification.
- * Silently skips if the user has no push_token registered.
+ * Silently skips if the user has no push_token registered or is in quiet hours.
  */
 const notifyUser = async (userId, heading, content, extraData = {}) => {
   try {
+    if (await isQuietHours(userId)) {
+      console.info(`[OneSignalService] Quiet hours active for user ${userId} — skipping push`);
+      return { skipped: 'quiet_hours' };
+    }
     const { data: user } = await supabase
       .from('users').select('push_token').eq('id', userId).single();
     if (!user?.push_token) return;

@@ -309,6 +309,103 @@ const getStripeConfig = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────
+// PAYMENT PLANS — weekly installment plans for case fees
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Get payment plan options for a case.
+ * GET /api/payments/plan-options/:caseId
+ */
+const getPaymentPlanOptions = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { data: caseRow, error } = await supabase
+      .from('cases').select('attorney_price').eq('id', caseId).single();
+    if (error || !caseRow) return res.status(404).json({ success: false, message: 'Case not found' });
+
+    const total = parseFloat(caseRow.attorney_price || 0);
+    const round25 = (n) => Math.ceil(n * 4) / 4; // round up to nearest $0.25
+
+    res.json({
+      success: true,
+      data: {
+        caseId,
+        totalAmount: total,
+        payNow: { label: 'Pay Now', amount: total, weeks: 0, installments: 1 },
+        twoWeek: { label: '2 weeks', weeklyAmount: round25(total / 2), weeks: 2, installments: 2 },
+        fourWeek: { label: '4 weeks', weeklyAmount: round25(total / 4), weeks: 4, installments: 4, popular: true },
+        eightWeek: { label: '8 weeks', weeklyAmount: round25(total / 8), weeks: 8, installments: 8 },
+      }
+    });
+  } catch (err) {
+    console.error('getPaymentPlanOptions error:', err);
+    res.status(500).json({ success: false, message: 'Failed to load plan options' });
+  }
+};
+
+/**
+ * Create an installment plan and charge first installment immediately.
+ * POST /api/payments/create-plan
+ * Body: { caseId, weeks: 2|4|8, paymentMethodId }
+ */
+const createPaymentPlan = async (req, res) => {
+  try {
+    const { caseId, weeks, paymentMethodId } = req.body;
+    const userId = req.user.id;
+
+    if (![2, 4, 8].includes(Number(weeks))) {
+      return res.status(400).json({ success: false, message: 'weeks must be 2, 4, or 8' });
+    }
+
+    const { data: caseRow, error: caseErr } = await supabase
+      .from('cases').select('attorney_price, case_number').eq('id', caseId).single();
+    if (caseErr || !caseRow) return res.status(404).json({ success: false, message: 'Case not found' });
+
+    const total = parseFloat(caseRow.attorney_price || 0);
+    const weekly = Math.ceil((total / weeks) * 4) / 4;
+
+    // Create first PaymentIntent via Stripe
+    let firstIntentId = null;
+    if (stripe && paymentMethodId) {
+      const intent = await stripe.paymentIntents.create({
+        amount: Math.round(weekly * 100),
+        currency: 'usd',
+        payment_method: paymentMethodId,
+        confirm: true,
+        metadata: { caseId, userId, installment: 1, weeks: String(weeks) },
+        automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      });
+      firstIntentId = intent.id;
+    }
+
+    // Insert plan row
+    const { data: plan, error: planErr } = await supabase
+      .from('case_installment_plans')
+      .insert({ case_id: caseId, user_id: userId, total_amount: total, weeks, weekly_amount: weekly, payments_completed: 1 })
+      .select().single();
+    if (planErr) throw planErr;
+
+    // Build installment schedule (first already paid)
+    const today = new Date();
+    const scheduleRows = Array.from({ length: weeks }, (_, i) => ({
+      plan_id: plan.id,
+      installment_num: i + 1,
+      amount: weekly,
+      due_date: new Date(today.getTime() + i * 7 * 86400000).toISOString().slice(0, 10),
+      status: i === 0 ? 'paid' : 'pending',
+      stripe_payment_intent_id: i === 0 ? firstIntentId : null,
+      paid_at: i === 0 ? new Date().toISOString() : null,
+    }));
+    await supabase.from('case_installment_schedule').insert(scheduleRows);
+
+    res.status(201).json({ success: true, data: { planId: plan.id, weeks, weeklyAmount: weekly, schedule: scheduleRows } });
+  } catch (err) {
+    console.error('createPaymentPlan error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to create payment plan' });
+  }
+};
+
 module.exports = {
   createPaymentIntent,
   confirmPayment,
@@ -318,5 +415,7 @@ module.exports = {
   processRefund,
   handleWebhook,
   getPaymentStats,
-  getStripeConfig
+  getStripeConfig,
+  getPaymentPlanOptions,
+  createPaymentPlan,
 };

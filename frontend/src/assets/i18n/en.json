@@ -1,0 +1,122 @@
+{
+  "COMMON": {
+    "LOADING": "Loading…",
+    "RETRY": "Retry",
+    "BACK": "Back",
+    "SAVE": "Save",
+    "CANCEL": "Cancel",
+    "CLOSE": "Close",
+    "SUBMIT": "Submit",
+    "NEXT": "Next",
+    "DONE": "Done",
+    "ERROR": "Something went wrong. Please try again.",
+    "NO_DATA": "No data available."
+  },
+  "NAV": {
+    "DASHBOARD": "Dashboard",
+    "MY_CASES": "My Cases",
+    "NOTIFICATIONS": "Notifications",
+    "PROFILE": "Profile",
+    "LOGOUT": "Log Out"
+  },
+  "SUBMIT_TICKET": {
+    "TITLE": "Submit Ticket",
+    "STEP_PHOTO": "Take Photo",
+    "STEP_REVIEW": "Review Details",
+    "STEP_CONFIRM": "Confirm",
+    "TAKE_PHOTO": "Take a Photo",
+    "UPLOAD_PHOTO": "Upload from Gallery",
+    "PROCESSING": "Reading your ticket…",
+    "REVIEW_TITLE": "Review Ticket Details",
+    "TICKET_NUMBER": "Ticket Number",
+    "VIOLATION_TYPE": "Violation Type",
+    "STATE": "State",
+    "COURT_DATE": "Court Date",
+    "FINE_AMOUNT": "Fine Amount",
+    "SUBMIT_BTN": "Submit Ticket",
+    "SUCCESS": "We got it! You'll hear from us soon.",
+    "ERROR_UPLOAD": "Failed to upload ticket. Please try again.",
+    "ERROR_OCR": "Could not read ticket automatically. Please fill in the fields."
+  },
+  "CASE_STATUS": {
+    "SUBMITTED": "Submitted",
+    "ATTORNEY_ASSIGNED": "Attorney Assigned",
+    "IN_PROGRESS": "In Progress",
+    "COURT_SCHEDULED": "Court Scheduled",
+    "RESOLVED": "Resolved",
+    "CLOSED": "Closed",
+    "NEW": "New",
+    "LABEL": "Status"
+  },
+  "CASE_LIST": {
+    "TITLE": "My Cases",
+    "EMPTY": "You have no cases yet.",
+    "EMPTY_CTA": "Submit your first ticket",
+    "FILTER_ALL": "All",
+    "FILTER_ACTIVE": "Active",
+    "FILTER_RESOLVED": "Resolved"
+  },
+  "CASE_DETAIL": {
+    "ATTORNEY": "Attorney",
+    "VIOLATION": "Violation",
+    "COURT_DATE": "Court Date",
+    "LAST_UPDATED": "Last updated",
+    "SEND_MESSAGE": "Message Attorney",
+    "PAY_NOW": "Pay Now"
+  },
+  "ATTORNEY_SELECTION": {
+    "TITLE": "Choose Your Attorney",
+    "RECOMMENDED": "RECOMMENDED",
+    "WIN_RATE": "Won {{rate}}% of cases like yours",
+    "CHOOSE": "Choose Attorney",
+    "CONFIRM": "Confirm Selection",
+    "CONFIRM_MSG": "You selected {{name}}",
+    "NEXT_PAYMENT": "Next: Payment"
+  },
+  "PAYMENT": {
+    "TITLE": "Pay Attorney Fee",
+    "TOTAL": "Total",
+    "PAY_NOW": "Pay Now",
+    "PAYMENT_PLAN": "Payment Plan",
+    "CHOOSE_OPTION": "Choose Payment Option",
+    "MOST_POPULAR": "Most Popular",
+    "WEEK": "week",
+    "PAYMENTS": "payments",
+    "PAY_BTN": "Pay {{amount}}",
+    "PAY_WEEK_BTN": "Pay {{amount}}/week",
+    "PROCESSING": "Processing…",
+    "SUCCESS": "Payment confirmed!",
+    "SUCCESS_PLAN": "Payment plan created! First payment processed.",
+    "SCHEDULE_TITLE": "Payment Schedule",
+    "TRUST": "No hidden fees. Secure payment via Stripe.",
+    "ERROR_LOAD": "Failed to load case details.",
+    "ERROR_PAYMENT": "Payment failed. Please try again.",
+    "ERROR_PLAN": "Failed to create payment plan."
+  },
+  "MESSAGING": {
+    "PLACEHOLDER": "Type a message…",
+    "SEND": "Send",
+    "ATTORNEY_LABEL": "Attorney",
+    "YOU_LABEL": "You",
+    "EMPTY": "No messages yet. Say hello!"
+  },
+  "NOTIFICATIONS": {
+    "TITLE": "Notifications",
+    "EMPTY": "No notifications.",
+    "MARK_READ": "Mark all as read"
+  },
+  "DRIVER_DASHBOARD": {
+    "GREETING_MORNING": "Good morning",
+    "GREETING_AFTERNOON": "Good afternoon",
+    "GREETING_EVENING": "Good evening",
+    "ACTIVE_CASES": "Active Cases",
+    "PENDING": "Pending",
+    "RESOLVED": "Resolved",
+    "SUBMIT_TICKET": "Submit New Ticket",
+    "VIEW_CASES": "View All Cases"
+  },
+  "LANG": {
+    "EN": "English",
+    "ES": "Español"
+  }
+}

@@ -596,6 +596,80 @@ const exportCases = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/csa-score
+// Returns a CSA impact score (0–100) derived from open violations.
+// ─────────────────────────────────────────────
+const VIOLATION_WEIGHTS = {
+  hos: 3,         // Hours of Service
+  logbook: 3,
+  maintenance: 2,
+  vehicle: 2,
+  speeding_major: 2,  // 11+ mph over
+  speeding_minor: 1,  // 1-10 mph over
+  default: 1,
+};
+
+const getViolationWeight = (violationType = '') => {
+  const vt = violationType.toLowerCase();
+  if (vt.includes('hos') || vt.includes('hours of service')) return VIOLATION_WEIGHTS.hos;
+  if (vt.includes('logbook')) return VIOLATION_WEIGHTS.logbook;
+  if (vt.includes('maintenance') || vt.includes('vehicle')) return VIOLATION_WEIGHTS.maintenance;
+  if (vt.includes('speed') || vt.includes('speeding')) {
+    // Try to extract mph value from string like "speeding 15 mph over"
+    const match = vt.match(/(\d+)\s*mph/);
+    if (match && parseInt(match[1]) >= 11) return VIOLATION_WEIGHTS.speeding_major;
+    return VIOLATION_WEIGHTS.speeding_minor;
+  }
+  return VIOLATION_WEIGHTS.default;
+};
+
+const getCsaScore = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  try {
+    const result = await pool.query(
+      `SELECT violation_type, status FROM cases WHERE carrier_id = $1`,
+      [carrierId]
+    );
+
+    const cases = result.rows;
+    const openStatuses = ['new', 'assigned_to_attorney', 'in_progress', 'court_scheduled'];
+
+    let weightedSum = 0;
+    const breakdown = { hos: 0, maintenance: 0, speeding_major: 0, speeding_minor: 0, other: 0 };
+
+    for (const c of cases) {
+      if (!openStatuses.includes(c.status)) continue;
+      const weight = getViolationWeight(c.violation_type);
+      weightedSum += weight;
+
+      const vt = (c.violation_type || '').toLowerCase();
+      if (vt.includes('hos') || vt.includes('hours') || vt.includes('logbook')) breakdown.hos++;
+      else if (vt.includes('maintenance') || vt.includes('vehicle')) breakdown.maintenance++;
+      else if (vt.includes('speed')) {
+        const match = vt.match(/(\d+)\s*mph/);
+        if (match && parseInt(match[1]) >= 11) breakdown.speeding_major++;
+        else breakdown.speeding_minor++;
+      } else {
+        breakdown.other++;
+      }
+    }
+
+    // Normalise: assume max expected weighted score of 50 → 100 scale
+    const MAX_EXPECTED = 50;
+    const csaScore = Math.min(100, Math.round((weightedSum / MAX_EXPECTED) * 100));
+    const riskLevel = csaScore < 34 ? 'low' : csaScore < 67 ? 'medium' : 'high';
+    const openViolations = Object.values(breakdown).reduce((a, b) => a + b, 0);
+
+    res.json({ csaScore, riskLevel, openViolations, breakdown });
+  } catch (err) {
+    console.error('getCsaScore error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to calculate CSA score' } });
+  }
+};
+
 module.exports = {
   register,
   getProfile,
@@ -610,4 +684,5 @@ module.exports = {
   bulkImport,
   bulkArchive,
   getComplianceReport,
+  getCsaScore,
 };
