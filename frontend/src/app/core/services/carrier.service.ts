@@ -35,6 +35,16 @@ export interface CarrierProfile {
   notify_on_new_ticket: boolean;
 }
 
+export interface FleetAnalytics {
+  casesByMonth: { month: string; count: number }[];
+  violationBreakdown: { type: string; count: number; pct: number }[];
+  successRate: number;
+  avgResolutionDays: number;
+  atRiskDrivers: { id: string; name: string; openCases: number; riskLevel: 'green' | 'yellow' | 'red' }[];
+  estimatedSavings: number;
+  totalCases: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CarrierService {
   private http = inject(HttpClient);
@@ -69,5 +79,13 @@ export class CarrierService {
 
   updateProfile(data: Partial<CarrierProfile>): Observable<{ carrier: CarrierProfile }> {
     return this.http.put<{ carrier: CarrierProfile }>(this.api, data);
+  }
+
+  getAnalytics(): Observable<FleetAnalytics> {
+    return this.http.get<FleetAnalytics>(`${this.api}/analytics`);
+  }
+
+  exportCsv(): Observable<Blob> {
+    return this.http.get(`${this.api}/export?format=csv`, { responseType: 'blob' });
   }
 }

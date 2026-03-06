@@ -51,9 +51,12 @@ import { CarrierService, FleetDriver } from '../../../core/services/carrier.serv
                   </div>
                 </div>
                 <div class="driver-meta">
-                  <span class="case-badge" [class.has-cases]="driver.openCases > 0">
-                    {{ driver.openCases }} open {{ driver.openCases === 1 ? 'case' : 'cases' }}
-                  </span>
+                  @if (driver.openCases > 0) {
+                    <span [class]="'case-badge risk-' + (driver.openCases >= 3 ? 'red' : 'yellow')"
+                          [attr.aria-label]="driver.full_name + ': ' + driver.openCases + ' open cases'">
+                      {{ driver.openCases }} open {{ driver.openCases === 1 ? 'case' : 'cases' }}
+                    </span>
+                  }
                   <button mat-icon-button color="warn" (click)="removeDriver(driver.id)"
                           [attr.aria-label]="'Remove ' + driver.full_name">
                     <mat-icon>delete_outline</mat-icon>
@@ -105,8 +108,9 @@ import { CarrierService, FleetDriver } from '../../../core/services/carrier.serv
     .driver-name { margin: 0; font-weight: 500; }
     .driver-cdl { margin: 2px 0 0; font-size: 0.8rem; color: #666; }
     .driver-meta { display: flex; align-items: center; gap: 8px; }
-    .case-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: #e0e0e0; }
-    .case-badge.has-cases { background: #fff3e0; color: #e65100; }
+    .case-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    .risk-yellow { background: #fff3e0; color: #e65100; }
+    .risk-red { background: #ffebee; color: #c62828; }
     .add-form { display: flex; flex-direction: column; gap: 8px; }
   `],
 })

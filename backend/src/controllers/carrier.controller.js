@@ -336,6 +336,126 @@ const getCases = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/analytics
+// ─────────────────────────────────────────────
+const getAnalytics = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const OPEN_STATUSES = "('new','reviewed','waiting_for_driver','pay_attorney','assigned_to_attorney','send_info_to_attorney','call_court','check_with_manager')";
+  const RESOLVED_STATUSES = "('closed','resolved')";
+
+  try {
+    const [monthlyResult, violationResult, resolutionResult, atRiskResult] = await Promise.all([
+      pool.query(
+        `SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YYYY') AS month,
+                DATE_TRUNC('month', created_at) AS month_date,
+                COUNT(*) AS count
+         FROM cases WHERE carrier_id = $1
+           AND created_at >= NOW() - INTERVAL '6 months'
+         GROUP BY DATE_TRUNC('month', created_at)
+         ORDER BY DATE_TRUNC('month', created_at)`,
+        [carrierId]
+      ),
+      pool.query(
+        `SELECT COALESCE(violation_type, 'Other') AS type, COUNT(*) AS count
+         FROM cases WHERE carrier_id = $1
+         GROUP BY violation_type
+         ORDER BY count DESC
+         LIMIT 6`,
+        [carrierId]
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS total_resolved,
+                COUNT(CASE WHEN status = 'resolved' THEN 1 END) AS won,
+                COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 86400), 0) AS avg_days
+         FROM cases WHERE carrier_id = $1 AND status IN ${RESOLVED_STATUSES}`,
+        [carrierId]
+      ),
+      pool.query(
+        `SELECT d.id, d.full_name AS name, COUNT(c.id) AS open_cases
+         FROM drivers d
+         JOIN cases c ON c.driver_id = d.id
+         WHERE d.carrier_id = $1 AND c.status IN ${OPEN_STATUSES}
+         GROUP BY d.id, d.full_name
+         ORDER BY open_cases DESC
+         LIMIT 3`,
+        [carrierId]
+      ),
+    ]);
+
+    const totalResolved = parseInt(resolutionResult.rows[0]?.total_resolved ?? 0, 10);
+    const won = parseInt(resolutionResult.rows[0]?.won ?? 0, 10);
+    const avgDays = parseFloat(resolutionResult.rows[0]?.avg_days ?? 0);
+
+    const violations = violationResult.rows.map(r => ({ type: r.type, count: parseInt(r.count, 10) }));
+    const totalViolations = violations.reduce((sum, v) => sum + v.count, 0);
+    const violationBreakdown = violations.map(v => ({
+      type: v.type,
+      count: v.count,
+      pct: totalViolations > 0 ? Math.round((v.count / totalViolations) * 100) : 0,
+    }));
+
+    const atRiskDrivers = atRiskResult.rows.map(r => {
+      const openCases = parseInt(r.open_cases, 10);
+      return {
+        id: r.id,
+        name: r.name,
+        openCases,
+        riskLevel: openCases >= 5 ? 'red' : openCases >= 2 ? 'yellow' : 'green',
+      };
+    });
+
+    res.json({
+      casesByMonth: monthlyResult.rows.map(r => ({ month: r.month, count: parseInt(r.count, 10) })),
+      violationBreakdown,
+      successRate: totalResolved > 0 ? Math.round((won / totalResolved) * 100) : 0,
+      avgResolutionDays: Math.round(avgDays),
+      atRiskDrivers,
+      estimatedSavings: totalResolved * 300,
+      totalCases: totalViolations,
+    });
+  } catch (err) {
+    console.error('getAnalytics error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch analytics' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/export
+// ─────────────────────────────────────────────
+const exportCases = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  try {
+    const result = await pool.query(
+      `SELECT c.case_number, d.full_name AS driver_name, c.violation_type, c.state, c.status,
+              TO_CHAR(c.created_at, 'YYYY-MM-DD') AS date
+       FROM cases c
+       JOIN drivers d ON d.id = c.driver_id
+       WHERE c.carrier_id = $1
+       ORDER BY c.created_at DESC`,
+      [carrierId]
+    );
+
+    const headers = 'Case #,Driver,Violation,State,Status,Date\n';
+    const rows = result.rows.map(r =>
+      [r.case_number, r.driver_name, r.violation_type ?? '', r.state ?? '', r.status, r.date]
+        .map(v => `"${String(v).replace(/"/g, '""')}"`)
+        .join(',')
+    ).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="fleet-report.csv"');
+    res.send(headers + rows);
+  } catch (err) {
+    console.error('exportCases error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to export cases' } });
+  }
+};
+
 module.exports = {
   register,
   getProfile,
@@ -345,4 +465,6 @@ module.exports = {
   addDriver,
   removeDriver,
   getCases,
+  getAnalytics,
+  exportCases,
 };
