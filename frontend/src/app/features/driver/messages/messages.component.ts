@@ -1,335 +1,255 @@
-// ============================================
-// Messages Component
-// Location: frontend/src/app/features/driver/messages/messages.component.ts
-// ============================================
-
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  Component, OnInit, inject, signal, computed, ChangeDetectionStrategy,
+} from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { trigger, transition, style, animate } from '@angular/animations';
-
-// Angular Material
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatBadgeModule } from '@angular/material/badge';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatChipsModule } from '@angular/material/chips';
 
-import {
-  Conversation,
-  Message,
-  QuickQuestion,
-  MessagingService
-} from './messaging.service';
+import { MessagingService, Conversation, Message } from '../../../core/services/messaging.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-messages',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
-    MatListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
-    MatMenuModule,
+    MatCardModule, MatButtonModule, MatIconModule,
+    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
     MatBadgeModule,
-    MatTooltipModule,
-    MatDividerModule,
-    MatChipsModule,
   ],
-  templateUrl: './messages.component.html',
-  styleUrls: ['./messages.component.scss'],
-  animations: [
-    trigger('slideIn', [
-      transition(':enter', [
-        style({ transform: 'translateY(100%)', opacity: 0 }),
-        animate('200ms ease-out', style({ transform: 'translateY(0)', opacity: 1 }))
-      ]),
-      transition(':leave', [
-        animate('200ms ease-in', style({ transform: 'translateY(100%)', opacity: 0 }))
-      ])
-    ])
-  ]
+  template: `
+    <div class="messages-page">
+
+      <!-- Conversation list -->
+      @if (!selectedConv()) {
+        <header class="page-header">
+          <mat-icon aria-hidden="true">chat</mat-icon>
+          <h1>Messages</h1>
+        </header>
+
+        @if (loadingConvs()) {
+          <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+        } @else if (convError()) {
+          <div class="error-state" role="alert">
+            <p>{{ convError() }}</p>
+            <button mat-raised-button color="primary" (click)="loadConversations()">Retry</button>
+          </div>
+        } @else if (conversations().length === 0) {
+          <div class="empty-state">
+            <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
+            <p>No conversations yet.</p>
+          </div>
+        } @else {
+          <div class="conv-list" role="list">
+            @for (c of conversations(); track c.id) {
+              <mat-card class="conv-item" role="listitem" (click)="selectConversation(c)"
+                        [class.unread]="c.unreadCount > 0">
+                <mat-card-content>
+                  <div class="conv-info">
+                    <mat-icon aria-hidden="true">person</mat-icon>
+                    <div>
+                      <p class="conv-name">{{ otherPartyName(c) }}</p>
+                      @if (c.lastMessage) {
+                        <p class="conv-preview">{{ c.lastMessage }}</p>
+                      }
+                    </div>
+                  </div>
+                  @if (c.unreadCount > 0) {
+                    <span class="unread-badge" [attr.aria-label]="c.unreadCount + ' unread messages'">
+                      {{ c.unreadCount }}
+                    </span>
+                  }
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
+        }
+      }
+
+      <!-- Message thread -->
+      @if (selectedConv()) {
+        <header class="thread-header">
+          <button mat-icon-button (click)="closeThread()" aria-label="Back to conversations">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <h2>{{ otherPartyName(selectedConv()!) }}</h2>
+        </header>
+
+        @if (loadingMsgs()) {
+          <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+        } @else {
+          <div class="message-thread" role="log" aria-live="polite">
+            @if (messages().length === 0) {
+              <p class="empty-thread">No messages yet. Say hello!</p>
+            }
+            @for (m of messages(); track m.id) {
+              <div [class]="'bubble ' + (isMyMessage(m) ? 'mine' : 'theirs')"
+                   [attr.aria-label]="(isMyMessage(m) ? 'You' : otherPartyName(selectedConv()!)) + ': ' + m.content">
+                {{ m.content }}
+              </div>
+            }
+            @if (typingIndicator()) {
+              <div class="bubble theirs typing" aria-live="polite">Typing…</div>
+            }
+          </div>
+
+          <form [formGroup]="msgForm" (ngSubmit)="sendMessage()" class="send-row">
+            <mat-form-field appearance="outline" class="msg-field">
+              <mat-label>Message</mat-label>
+              <input matInput formControlName="content" placeholder="Type a message…"
+                     autocomplete="off" (keydown.enter)="$event.preventDefault(); sendMessage()">
+            </mat-form-field>
+            <button mat-fab color="primary" type="submit" [disabled]="sending()"
+                    aria-label="Send message">
+              @if (sending()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>send</mat-icon>
+              }
+            </button>
+          </form>
+        }
+      }
+    </div>
+  `,
+  styles: [`
+    .messages-page { max-width: 640px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; height: calc(100vh - 80px); }
+    .page-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .page-header h1 { margin: 0; font-size: 1.4rem; }
+    .thread-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .thread-header h2 { margin: 0; font-size: 1.1rem; }
+    .loading { display: flex; justify-content: center; padding: 32px; }
+    .error-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; color: #c62828; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px; color: #999; text-align: center; }
+    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; }
+
+    .conv-list { display: flex; flex-direction: column; gap: 8px; }
+    .conv-item { cursor: pointer; transition: box-shadow 0.2s; }
+    .conv-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .conv-item.unread { border-left: 3px solid #1976d2; }
+    .conv-item mat-card-content { display: flex; justify-content: space-between; align-items: center; }
+    .conv-info { display: flex; align-items: center; gap: 12px; }
+    .conv-name { margin: 0; font-weight: 500; font-size: 0.95rem; }
+    .conv-preview { margin: 2px 0 0; font-size: 0.8rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    .unread-badge { background: #1976d2; color: #fff; border-radius: 12px; padding: 2px 7px; font-size: 0.72rem; font-weight: 700; }
+
+    .message-thread { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px 0 12px; min-height: 200px; max-height: calc(100vh - 260px); }
+    .empty-thread { color: #999; text-align: center; font-size: 0.85rem; padding: 24px 0; }
+    .bubble { padding: 10px 14px; border-radius: 18px; max-width: 75%; font-size: 0.9rem; line-height: 1.4; word-break: break-word; }
+    .bubble.mine { background: #1976d2; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .bubble.theirs { background: #f0f0f0; color: #222; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .bubble.typing { font-style: italic; color: #888; }
+
+    .send-row { display: flex; align-items: flex-start; gap: 8px; padding-top: 8px; }
+    .msg-field { flex: 1; }
+  `],
 })
-export class MessagesComponent implements OnInit, OnDestroy {
-  @ViewChild('messageContainer') messageContainer!: ElementRef;
-  @ViewChild('fileInput') fileInput!: ElementRef;
+export class MessagesComponent implements OnInit {
+  private messagingService = inject(MessagingService);
+  private authService      = inject(AuthService);
+  private route            = inject(ActivatedRoute);
+  private fb               = inject(FormBuilder);
 
-  conversations: Conversation[] = [];
-  messages: Message[] = [];
-  quickQuestions: QuickQuestion[] = [];
-  selectedConversation: Conversation | null = null;
+  conversations   = signal<Conversation[]>([]);
+  messages        = signal<Message[]>([]);
+  selectedConv    = signal<Conversation | null>(null);
+  loadingConvs    = signal(true);
+  loadingMsgs     = signal(false);
+  sending         = signal(false);
+  convError       = signal('');
+  typingIndicator = signal(false);
 
-  searchForm: FormGroup;
-  messageForm: FormGroup;
+  currentUserId = computed(() => this.authService.currentUserValue?.id ?? '');
 
-  loading = true;
-  loadingMessages = false;
-  sendingMessage = false;
-  showQuickQuestions = false;
-  otherUserTyping = false;
-  isOnline = false;
-  selectedFile: File | null = null;
-
-  currentUserId = 'driver-1'; // TODO: Get from auth service
-
-  private subscriptions = new Subscription();
-
-  constructor(
-    private fb: FormBuilder,
-    private messagingService: MessagingService,
-    private route: ActivatedRoute
-  ) {
-    this.searchForm = this.fb.group({ query: [''] });
-    this.messageForm = this.fb.group({ message: [''] });
-  }
+  msgForm = this.fb.group({ content: ['', Validators.required] });
 
   ngOnInit(): void {
     this.loadConversations();
-    this.loadQuickQuestions();
-    this.setupRealTimeListeners();
+    // Subscribe to real-time events
+    this.messagingService.newMessage$.subscribe(msg => {
+      if (this.selectedConv()?.id === msg.conversationId) {
+        this.messages.update(list => [...list, msg]);
+      }
+      // Update unread count on conversation list
+      this.conversations.update(list =>
+        list.map(c => c.id === msg.conversationId && c.id !== this.selectedConv()?.id
+          ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: msg.content }
+          : c),
+      );
+    });
+    this.messagingService.typing$.subscribe(e => {
+      if (this.selectedConv()?.id === e.conversationId) {
+        this.typingIndicator.set(true);
+        setTimeout(() => this.typingIndicator.set(false), 3000);
+      }
+    });
+  }
 
-    // Check for conversationId route param
-    const conversationId = this.route.snapshot.paramMap.get('conversationId');
-    if (conversationId) {
-      this.loadConversations().add(() => {
-        const conv = this.conversations.find(c => c.id === conversationId);
-        if (conv) {
-          this.selectConversation(conv);
+  loadConversations(): void {
+    this.loadingConvs.set(true);
+    this.convError.set('');
+    this.messagingService.getConversations().subscribe({
+      next: (list) => {
+        this.conversations.set(list);
+        this.loadingConvs.set(false);
+        // Auto-select if route param present
+        const id = this.route.snapshot.paramMap.get('conversationId');
+        if (id) {
+          const found = list.find(c => c.id === id);
+          if (found) this.selectConversation(found);
         }
-      });
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
-    if (this.selectedConversation) {
-      this.messagingService.leaveConversation(this.selectedConversation.id);
-    }
-  }
-
-  loadConversations() {
-    this.loading = true;
-    const sub = this.messagingService.getConversations().subscribe({
-      next: (response) => {
-        this.conversations = response.conversations;
-        this.loading = false;
       },
-      error: (error) => {
-        console.error('Error loading conversations:', error);
-        this.loading = false;
-      }
+      error: () => { this.convError.set('Failed to load conversations.'); this.loadingConvs.set(false); },
     });
-    this.subscriptions.add(sub);
-    return sub;
   }
 
-  loadMessages(conversationId: string): void {
-    this.loadingMessages = true;
-    const sub = this.messagingService.getMessages(conversationId).subscribe({
-      next: (response) => {
-        this.messages = response.messages;
-        this.loadingMessages = false;
-        this.scrollToBottom();
-      },
-      error: (error) => {
-        console.error('Error loading messages:', error);
-        this.loadingMessages = false;
-      }
+  selectConversation(conv: Conversation): void {
+    if (this.selectedConv()) this.messagingService.leaveConversation(this.selectedConv()!.id);
+    this.selectedConv.set(conv);
+    this.loadingMsgs.set(true);
+    this.messagingService.joinConversation(conv.id);
+    this.messagingService.markAsRead(conv.id).subscribe();
+    this.conversations.update(list =>
+      list.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c),
+    );
+    this.messagingService.getMessages(conv.id).subscribe({
+      next: (msgs) => { this.messages.set(msgs); this.loadingMsgs.set(false); },
+      error: ()     => { this.loadingMsgs.set(false); },
     });
-    this.subscriptions.add(sub);
   }
 
-  loadQuickQuestions(): void {
-    const sub = this.messagingService.getQuickQuestions().subscribe({
-      next: (response) => {
-        this.quickQuestions = response.quickQuestions;
-      },
-      error: (error) => {
-        console.error('Error loading quick questions:', error);
-      }
-    });
-    this.subscriptions.add(sub);
-  }
-
-  selectConversation(conversation: Conversation): void {
-    // Leave previous conversation
-    if (this.selectedConversation) {
-      this.messagingService.leaveConversation(this.selectedConversation.id);
-    }
-
-    this.selectedConversation = conversation;
-    this.isOnline = conversation.isOnline;
-    this.loadMessages(conversation.id);
-    this.messagingService.joinConversation(conversation.id);
-    this.messagingService.markAsRead(conversation.id).subscribe();
-    conversation.unreadCount = 0;
+  closeThread(): void {
+    if (this.selectedConv()) this.messagingService.leaveConversation(this.selectedConv()!.id);
+    this.selectedConv.set(null);
+    this.messages.set([]);
   }
 
   sendMessage(): void {
-    const content = this.messageForm.get('message')?.value?.trim();
-
-    if (!content && !this.selectedFile) return;
-    if (!this.selectedConversation) return;
-
-    this.sendingMessage = true;
-    const conversationId = this.selectedConversation.id;
-
-    const obs = this.selectedFile
-      ? this.messagingService.sendMessageWithFile(conversationId, this.selectedFile, content)
-      : this.messagingService.sendMessage(conversationId, content);
-
-    obs.subscribe({
-      next: (response) => {
-        this.messageForm.reset();
-        this.selectedFile = null;
-        this.sendingMessage = false;
-        this.scrollToBottom();
+    const content = this.msgForm.value.content?.trim();
+    if (!content || !this.selectedConv()) return;
+    this.sending.set(true);
+    this.messagingService.sendMessage(this.selectedConv()!.id, content).subscribe({
+      next: (msg) => {
+        this.messages.update(list => [...list, msg]);
+        this.msgForm.reset();
+        this.sending.set(false);
       },
-      error: (error) => {
-        console.error('Error sending message:', error);
-        this.sendingMessage = false;
-      }
+      error: () => this.sending.set(false),
     });
   }
 
-  sendQuickQuestion(question: string): void {
-    this.messageForm.patchValue({ message: question });
-    this.showQuickQuestions = false;
-    this.sendMessage();
+  otherPartyName(conv: Conversation): string {
+    const uid = this.currentUserId();
+    return conv.driverId === uid ? (conv.attorney?.name ?? 'Attorney') : (conv.driver?.name ?? 'Driver');
   }
 
-  generateVideoLink(platform: 'zoom' | 'meet'): void {
-    if (!this.selectedConversation) return;
-
-    this.messagingService.generateVideoLink(this.selectedConversation.id, platform).subscribe({
-      next: (response) => {
-        // Send the video link as a message
-        const linkMessage = `Join the ${platform === 'zoom' ? 'Zoom' : 'Google Meet'} call: ${response.videoLink.link}`;
-        this.messageForm.patchValue({ message: linkMessage });
-        this.sendMessage();
-      },
-      error: (error) => {
-        console.error('Error generating video link:', error);
-      }
-    });
-  }
-
-  private setupRealTimeListeners(): void {
-    // New messages
-    const msgSub = this.messagingService.newMessage$.subscribe((message: Message) => {
-      if (this.selectedConversation && message.conversationId === this.selectedConversation.id) {
-        this.messages.push(message);
-        this.scrollToBottom();
-      }
-
-      // Update conversation list
-      const conv = this.conversations.find(c => c.id === message.conversationId);
-      if (conv) {
-        conv.lastMessage = message.content || '';
-        conv.lastMessageAt = message.createdAt;
-        if (!this.selectedConversation || message.conversationId !== this.selectedConversation.id) {
-          conv.unreadCount++;
-        }
-      }
-    });
-    this.subscriptions.add(msgSub);
-
-    // Typing indicator
-    const typingSub = this.messagingService.typing$.subscribe((event) => {
-      if (this.selectedConversation && event.conversationId === this.selectedConversation.id) {
-        this.otherUserTyping = true;
-        setTimeout(() => { this.otherUserTyping = false; }, 3000);
-      }
-    });
-    this.subscriptions.add(typingSub);
-  }
-
-  // ============================================
-  // UI Helper Methods
-  // ============================================
-
-  isMyMessage(message: Message): boolean {
-    return message.senderId === this.currentUserId;
-  }
-
-  getOtherUser() {
-    if (!this.selectedConversation) return null;
-    return this.selectedConversation.driverId === this.currentUserId
-      ? this.selectedConversation.attorney
-      : this.selectedConversation.driver;
-  }
-
-  toggleQuickQuestions(): void {
-    this.showQuickQuestions = !this.showQuickQuestions;
-  }
-
-  triggerFileInput(): void {
-    this.fileInput.nativeElement.click();
-  }
-
-  onFileSelect(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.selectedFile = input.files[0];
-    }
-  }
-
-  removeSelectedFile(): void {
-    this.selectedFile = null;
-    if (this.fileInput) {
-      this.fileInput.nativeElement.value = '';
-    }
-  }
-
-  formatTime(date: Date): string {
-    if (!date) return '';
-    const d = new Date(date);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return d.toLocaleDateString();
-  }
-
-  formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  }
-
-  getFileIcon(fileType: string): string {
-    if (fileType.startsWith('image/')) return 'image';
-    if (fileType === 'application/pdf') return 'picture_as_pdf';
-    if (fileType.startsWith('video/')) return 'videocam';
-    return 'insert_drive_file';
-  }
-
-  private scrollToBottom(): void {
-    setTimeout(() => {
-      if (this.messageContainer) {
-        const el = this.messageContainer.nativeElement;
-        el.scrollTop = el.scrollHeight;
-      }
-    }, 100);
+  isMyMessage(msg: Message): boolean {
+    return msg.senderId === this.currentUserId();
   }
 }
