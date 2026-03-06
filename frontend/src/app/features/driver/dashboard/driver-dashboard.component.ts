@@ -139,7 +139,7 @@ const STATUS_CLASSES: Record<string, string> = {
 
   styles: [`
     .dash-page { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
-    .dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
     .dash-header h1 { margin: 0; font-size: 1.4rem; }
     .welcome { margin: 4px 0 0; font-size: 0.9rem; color: #666; }
     .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }

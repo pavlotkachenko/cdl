@@ -47,19 +47,19 @@ import { AuthService } from '../../../core/services/auth.service';
             <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="edit-form">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>First Name</mat-label>
-                <input matInput formControlName="firstName" />
+                <input matInput formControlName="firstName" type="text" autocomplete="given-name" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Last Name</mat-label>
-                <input matInput formControlName="lastName" />
+                <input matInput formControlName="lastName" type="text" autocomplete="family-name" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Email</mat-label>
-                <input matInput formControlName="email" type="email" />
+                <input matInput formControlName="email" type="email" inputmode="email" autocomplete="email" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Phone</mat-label>
-                <input matInput formControlName="phone" />
+                <input matInput formControlName="phone" type="tel" inputmode="tel" autocomplete="tel" />
               </mat-form-field>
               <button mat-raised-button color="primary" type="submit" [disabled]="savingProfile()">
                 @if (savingProfile()) { Saving... } @else { Save Changes }

@@ -77,4 +77,11 @@ describe('CarrierProfileComponent', () => {
     component.save();
     expect(spy.updateProfile).not.toHaveBeenCalled();
   });
+
+  it('phone input has type=tel for mobile numeric keyboard', async () => {
+    const { fixture } = await setup();
+    const phoneInput: HTMLInputElement | null = fixture.nativeElement.querySelector('input[formcontrolname="phone_number"]');
+    expect(phoneInput).toBeTruthy();
+    expect(phoneInput?.type).toBe('tel');
+  });
 });

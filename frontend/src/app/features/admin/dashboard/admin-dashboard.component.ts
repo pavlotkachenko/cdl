@@ -151,7 +151,7 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     .admin-dash { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .page-header h1 { margin: 0; font-size: 1.4rem; }
-    .quick-actions { display: flex; gap: 8px; }
+    .quick-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .stat-card mat-card-content { padding: 12px 16px; }
     .stat-lbl { margin: 0; font-size: 0.72rem; color: #888; text-transform: uppercase; }
