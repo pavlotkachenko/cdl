@@ -423,6 +423,146 @@ const getAnalytics = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
+// POST /api/carriers/me/bulk-import
+// Body: { csv: string }
+// CSV columns (header row required): cdl_number,violation_type,state[,incident_date]
+// ─────────────────────────────────────────────
+const bulkImport = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { csv } = req.body;
+  if (!csv || typeof csv !== 'string') {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: 'csv field is required' } });
+  }
+
+  const lines = csv.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: 'CSV must have a header row and at least one data row' } });
+  }
+
+  const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const requiredCols = ['cdl_number', 'violation_type', 'state'];
+  const missingCols = requiredCols.filter(c => !header.includes(c));
+  if (missingCols.length > 0) {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: `Missing required columns: ${missingCols.join(', ')}` } });
+  }
+
+  const col = (name) => header.indexOf(name);
+  const dataRows = lines.slice(1).map((line, i) => {
+    const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    return {
+      rowNum: i + 2,
+      cdl_number: vals[col('cdl_number')] || '',
+      violation_type: vals[col('violation_type')] || '',
+      state: vals[col('state')] || '',
+    };
+  }).filter(r => r.cdl_number || r.violation_type);
+
+  if (dataRows.length === 0) {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: 'No valid data rows found' } });
+  }
+
+  try {
+    const cdlNumbers = [...new Set(dataRows.map(r => r.cdl_number).filter(Boolean))];
+    const driversResult = await pool.query(
+      'SELECT id, cdl_number FROM drivers WHERE carrier_id = $1 AND cdl_number = ANY($2)',
+      [carrierId, cdlNumbers],
+    );
+    const driverMap = Object.fromEntries(driversResult.rows.map(d => [d.cdl_number, d.id]));
+
+    let imported = 0;
+    const errors = [];
+
+    for (const row of dataRows) {
+      if (!row.cdl_number || !row.violation_type || !row.state) {
+        errors.push({ row: row.rowNum, message: 'cdl_number, violation_type, and state are required' });
+        continue;
+      }
+      const driverId = driverMap[row.cdl_number];
+      if (!driverId) {
+        errors.push({ row: row.rowNum, message: `Driver with CDL "${row.cdl_number}" not found in your fleet` });
+        continue;
+      }
+      const caseNum = `CDL-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      await pool.query(
+        `INSERT INTO cases (case_number, driver_id, carrier_id, violation_type, state, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())`,
+        [caseNum, driverId, carrierId, row.violation_type, row.state],
+      );
+      imported++;
+    }
+
+    res.json({ results: { imported, errors } });
+  } catch (err) {
+    console.error('bulkImport error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to import cases' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// POST /api/carriers/me/cases/bulk-archive
+// Body: { case_ids: string[] }
+// ─────────────────────────────────────────────
+const bulkArchive = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { case_ids } = req.body;
+  if (!Array.isArray(case_ids) || case_ids.length === 0) {
+    return res.status(400).json({ error: { code: 'VALIDATION', message: 'case_ids must be a non-empty array' } });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE cases SET status = 'closed', updated_at = NOW()
+       WHERE id = ANY($1) AND carrier_id = $2
+       RETURNING id`,
+      [case_ids, carrierId],
+    );
+    res.json({ archived: result.rows.length });
+  } catch (err) {
+    console.error('bulkArchive error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to archive cases' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/compliance-report
+// Query: from (YYYY-MM-DD), to (YYYY-MM-DD)
+// ─────────────────────────────────────────────
+const getComplianceReport = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { from, to } = req.query;
+  const params = [carrierId];
+  let dateClause = '';
+  if (from) { params.push(from); dateClause += ` AND c.created_at >= $${params.length}`; }
+  if (to) { params.push(to); dateClause += ` AND c.created_at <= $${params.length}`; }
+
+  try {
+    const result = await pool.query(
+      `SELECT c.case_number, d.full_name AS driver_name, d.cdl_number,
+              c.violation_type, c.state, c.status,
+              TO_CHAR(c.created_at, 'YYYY-MM-DD') AS incident_date,
+              COALESCE(u.name, '') AS attorney_name
+       FROM cases c
+       JOIN drivers d ON d.id = c.driver_id
+       LEFT JOIN attorneys a ON a.id = c.attorney_id
+       LEFT JOIN users u ON u.id = a.user_id
+       WHERE c.carrier_id = $1 ${dateClause}
+       ORDER BY d.full_name, c.created_at DESC`,
+      params,
+    );
+    res.json({ report: result.rows, generated_at: new Date().toISOString() });
+  } catch (err) {
+    console.error('getComplianceReport error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to generate compliance report' } });
+  }
+};
+
+// ─────────────────────────────────────────────
 // GET /api/carriers/me/export
 // ─────────────────────────────────────────────
 const exportCases = async (req, res) => {
@@ -467,4 +607,7 @@ module.exports = {
   getCases,
   getAnalytics,
   exportCases,
+  bulkImport,
+  bulkArchive,
+  getComplianceReport,
 };

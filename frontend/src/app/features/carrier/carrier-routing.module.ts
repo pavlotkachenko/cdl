@@ -35,6 +35,14 @@ const routes: Routes = [
       {
         path: 'analytics',
         loadComponent: () => import('./analytics/carrier-analytics.component').then(m => m.CarrierAnalyticsComponent)
+      },
+      {
+        path: 'bulk-import',
+        loadComponent: () => import('./bulk-import/bulk-import.component').then(m => m.BulkImportComponent)
+      },
+      {
+        path: 'compliance-report',
+        loadComponent: () => import('./compliance-report/compliance-report.component').then(m => m.ComplianceReportComponent)
       }
     ]
   }
