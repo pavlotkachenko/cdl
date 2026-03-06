@@ -13,6 +13,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AdminService, Case, StaffMember } from '../../../core/services/admin.service';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 
 type StatusFilter = Case['status'] | 'all';
 type PriorityFilter = Case['priority'] | 'all';
@@ -33,6 +35,7 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatDividerModule,
+    ErrorStateComponent, SkeletonLoaderComponent,
   ],
   template: `
     <div class="case-mgmt">
@@ -74,7 +77,9 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
       </div>
 
       @if (loading()) {
-        <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
+        <app-skeleton-loader [rows]="5" [height]="90"></app-skeleton-loader>
+      } @else if (error()) {
+        <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadData()"></app-error-state>
       } @else if (filteredCases().length === 0) {
         <p class="empty" role="status">No cases match the current filters.</p>
       } @else {
@@ -120,7 +125,6 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     .page-header h1 { margin: 0; font-size: 1.4rem; }
     .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
     .search-field { flex: 1; min-width: 200px; }
-    .loading { display: flex; justify-content: center; padding: 48px; }
     .empty, .result-count { color: #999; font-size: 0.85rem; margin: 8px 0; }
     .result-count { color: #555; }
     .case-card { margin-bottom: 10px; }
@@ -153,6 +157,7 @@ export class CaseManagementComponent implements OnInit {
   cases = signal<Case[]>([]);
   staff = signal<StaffMember[]>([]);
   loading = signal(false);
+  error = signal('');
   searchTerm = signal('');
   statusFilter = signal<StatusFilter>('all');
   priorityFilter = signal<PriorityFilter>('all');
@@ -206,9 +211,10 @@ export class CaseManagementComponent implements OnInit {
 
   loadData(): void {
     this.loading.set(true);
+    this.error.set('');
     this.adminService.getAllCases().subscribe({
       next: (cases) => { this.cases.set(cases); this.loading.set(false); },
-      error: () => this.loading.set(false),
+      error: () => { this.error.set('Failed to load cases. Please try again.'); this.loading.set(false); },
     });
     this.adminService.getAllStaff().subscribe({
       next: (staff) => this.staff.set(staff.filter(s => s.role === 'attorney')),

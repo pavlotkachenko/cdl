@@ -9,11 +9,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { CarrierService, FleetStats } from '../../../core/services/carrier.service';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-carrier-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, ErrorStateComponent, SkeletonLoaderComponent],
   template: `
     <div class="dashboard">
       <header class="dash-header">
@@ -22,9 +24,11 @@ import { CarrierService, FleetStats } from '../../../core/services/carrier.servi
       </header>
 
       @if (loading()) {
-        <div class="loading"><mat-spinner diameter="48"></mat-spinner></div>
+        <app-skeleton-loader [rows]="4" [height]="80"></app-skeleton-loader>
+        <div class="skeleton-spacer"></div>
+        <app-skeleton-loader [rows]="3" [height]="44"></app-skeleton-loader>
       } @else if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
+        <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadData()"></app-error-state>
       } @else {
         <div class="risk-banner" [class]="'risk-' + riskLevel()">
           <mat-icon aria-hidden="true">{{ riskLevel() === 'green' ? 'check_circle' : riskLevel() === 'yellow' ? 'warning' : 'error' }}</mat-icon>
@@ -81,8 +85,7 @@ import { CarrierService, FleetStats } from '../../../core/services/carrier.servi
     .dash-header { margin-bottom: 20px; }
     .dash-header h1 { margin: 0; font-size: 1.4rem; }
     .sub { color: #666; margin: 4px 0 0; font-size: 0.875rem; }
-    .loading { display: flex; justify-content: center; padding: 48px; }
-    .error { color: #d32f2f; text-align: center; padding: 24px; }
+    .skeleton-spacer { height: 20px; }
     .risk-banner { display: flex; align-items: center; gap: 10px; padding: 12px 16px;
       border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
     .risk-green { background: #e8f5e9; color: #2e7d32; }

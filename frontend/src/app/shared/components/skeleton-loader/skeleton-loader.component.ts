@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 @Component({
   selector: 'app-skeleton-loader',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="skeleton-wrapper">
-      @for (item of rows(); track $index) {
+      @for (item of rowArray(); track $index) {
         <div class="skeleton-row" [style.height.px]="height()">
           <div class="skeleton-shimmer"></div>
         </div>
@@ -50,4 +50,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class SkeletonLoaderComponent {
   rows = input<number>(3);
   height = input<number>(80);
+  rowArray = computed(() => Array.from({ length: this.rows() }));
 }

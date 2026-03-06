@@ -100,4 +100,24 @@ describe('CaseManagementComponent', () => {
     expect(component.getStatusLabel('pending_court')).toBe('Pending Court');
     expect(component.getStatusLabel('resolved')).toBe('Resolved');
   });
+
+  it('sets error signal when getAllCases fails', async () => {
+    const spy = makeServiceSpy();
+    spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
+    const { component, fixture } = await setup(spy);
+    expect(component.error()).toBe('Failed to load cases. Please try again.');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Failed to load cases. Please try again.');
+  });
+
+  it('clears error on retry and reloads', async () => {
+    const spy = makeServiceSpy();
+    spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
+    const { component } = await setup(spy);
+    expect(component.error()).toBeTruthy();
+    spy.getAllCases.mockReturnValue(of(MOCK_CASES));
+    component.loadData();
+    expect(component.error()).toBe('');
+    expect(component.cases().length).toBe(2);
+  });
 });
