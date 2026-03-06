@@ -159,4 +159,81 @@ describe('CarrierAnalyticsComponent', () => {
     component.goBack();
     expect(router.navigate).toHaveBeenCalledWith(['/carrier/dashboard']);
   });
+
+  // ------------------------------------------------------------------
+  // LH-3/LH-4 — Empty states + extended coverage
+  // ------------------------------------------------------------------
+
+  it('shows zero-data full-page empty state when totalCases is 0', () => {
+    flush({ ...MOCK_ANALYTICS, totalCases: 0 });
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.zero-state')).toBeTruthy();
+    expect(el.querySelector('.kpi-grid')).toBeNull();
+  });
+
+  it('shows chart empty state when casesByMonth is empty', () => {
+    flush({ ...MOCK_ANALYTICS, casesByMonth: [] });
+    const el: HTMLElement = fixture.nativeElement;
+    const chartEmpties = el.querySelectorAll('.chart-empty');
+    expect(chartEmpties.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows chart empty state when violationBreakdown is empty', () => {
+    flush({ ...MOCK_ANALYTICS, violationBreakdown: [] });
+    const el: HTMLElement = fixture.nativeElement;
+    const chartEmpties = el.querySelectorAll('.chart-empty');
+    expect(chartEmpties.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('hides at-risk drivers section when array is empty', () => {
+    flush({ ...MOCK_ANALYTICS, atRiskDrivers: [] });
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('At-Risk Drivers');
+  });
+
+  it('barHeight returns 0 when maxMonthCount is 0', () => {
+    flush({ ...MOCK_ANALYTICS, casesByMonth: [] });
+    expect(component.barHeight(0)).toBe(0);
+  });
+
+  it('barHeight scales correctly against max', () => {
+    flush({ ...MOCK_ANALYTICS, casesByMonth: [{ month: 'Jan', count: 10 }] });
+    expect(component.maxMonthCount()).toBe(10);
+    expect(component.barHeight(5)).toBe(50);
+    expect(component.barHeight(10)).toBe(100);
+  });
+
+  it('exportCsv sets exporting to true during request', () => {
+    flush();
+    component.exportCsv();
+    expect(component.exporting()).toBe(true);
+    http.expectOne(`${BASE}/export?format=csv`).flush(new Blob(['csv']));
+    fixture.detectChanges();
+    expect(component.exporting()).toBe(false);
+  });
+
+  it('loading resets to false after data loads', () => {
+    flush();
+    expect(component.loading()).toBe(false);
+  });
+
+  it('data defaults to zero values before load', () => {
+    fixture.detectChanges();
+    // Before flush: loading is true, data has defaults
+    expect(component.loading()).toBe(true);
+    expect(component.data().totalCases).toBe(0);
+    http.expectOne(`${BASE}/analytics`).flush(MOCK_ANALYTICS);
+  });
+
+  it('does not show KPI grid while loading', () => {
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.kpi-grid')).toBeNull();
+    http.expectOne(`${BASE}/analytics`).flush(MOCK_ANALYTICS);
+  });
+
+  it('renders correct estimatedSavings value', () => {
+    flush();
+    expect(component.data().estimatedSavings).toBe(2700);
+  });
 });

@@ -8,6 +8,7 @@ const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Import Socket.io setup
@@ -57,15 +58,40 @@ app.use(helmet({
 }));
 
 // CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:4200',
+  'http://host.docker.internal:4200',
+];
+if (process.env.PRODUCTION_URL) allowedOrigins.push(process.env.PRODUCTION_URL);
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:4200',
-    'http://host.docker.internal:4200',
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Rate limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later.' } },
+});
+
+const publicSubmitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many submissions, please try again later.' } },
+});
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -112,14 +138,15 @@ app.get('/api/health', (req, res) => {
 // ============================================
 
 // Authentication
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 
 // Messaging
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/quick-questions', quickQuestionsRoutes);
 
-// Case Management
+// Case Management — public-submit has its own tighter limiter
+app.use('/api/cases/public-submit', publicSubmitLimiter);
 app.use('/api/cases', caseRoutes);
 
 // User Management

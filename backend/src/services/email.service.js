@@ -188,8 +188,126 @@ const sendCaseStatusEmail = async ({ name, email, caseId, newStatus }) => {
   }
 };
 
+/**
+ * Send case submission confirmation email.
+ * Sent to the submitter (driver or public visitor) after a case is created.
+ *
+ * @param {{ name: string, email: string, caseId: string, caseNumber?: string }} params
+ * @returns {Promise<void>}
+ */
+const sendCaseSubmissionEmail = async ({ name, email, caseId, caseNumber }) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('[EmailService] SENDGRID_API_KEY not set — skipping case submission email');
+    return;
+  }
+
+  const ref = caseNumber || caseId;
+  const statusUrl = `${APP_URL}/driver/tickets/${caseId}`;
+
+  const msg = {
+    to: email,
+    from: FROM_EMAIL,
+    subject: `Case Received — CDL Ticket Management`,
+    text: [
+      `Hi ${name},`,
+      '',
+      `We've received your case (Ref: ${ref}).`,
+      'Our team will review it shortly and assign a specialist.',
+      '',
+      `Track your case: ${statusUrl}`,
+      '',
+      '— The CDL Ticket Management Team',
+    ].join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1976d2;">Case Received!</h2>
+        <p>Hi ${name},</p>
+        <p>We've received your case (Ref: <strong>${ref}</strong>).</p>
+        <p>Our team will review it shortly and assign a specialist to help defend your CDL.</p>
+        <p style="margin: 32px 0;">
+          <a href="${statusUrl}"
+             style="background-color: #1976d2; color: #ffffff; padding: 12px 24px;
+                    text-decoration: none; border-radius: 4px; font-weight: bold;">
+            Track Your Case
+          </a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+        <p style="color: #999; font-size: 12px;">CDL Ticket Management — Protecting CDL Drivers Nationwide</p>
+      </div>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+  } catch (err) {
+    console.error('[EmailService] Failed to send case submission email:', err?.response?.body || err.message);
+  }
+};
+
+/**
+ * Send attorney assignment notification email.
+ * Sent to the attorney when they are assigned to a case.
+ *
+ * @param {{ name: string, email: string, caseId: string, caseNumber?: string, driverName?: string }} params
+ * @returns {Promise<void>}
+ */
+const sendAttorneyAssignmentEmail = async ({ name, email, caseId, caseNumber, driverName }) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('[EmailService] SENDGRID_API_KEY not set — skipping attorney assignment email');
+    return;
+  }
+
+  const ref = caseNumber || caseId;
+  const caseUrl = `${APP_URL}/attorney/cases/${caseId}`;
+  const driverLine = driverName ? `<p>Driver: <strong>${driverName}</strong></p>` : '';
+
+  const msg = {
+    to: email,
+    from: FROM_EMAIL,
+    subject: `New Case Assignment — CDL Ticket Management`,
+    text: [
+      `Hi ${name},`,
+      '',
+      `You have been assigned a new case (Ref: ${ref}).`,
+      driverName ? `Driver: ${driverName}` : '',
+      '',
+      `Review the case: ${caseUrl}`,
+      '',
+      'Please log in to review the details and accept or decline the assignment.',
+      '',
+      '— The CDL Ticket Management Team',
+    ].filter(Boolean).join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1976d2;">New Case Assignment</h2>
+        <p>Hi ${name},</p>
+        <p>You have been assigned a new case (Ref: <strong>${ref}</strong>).</p>
+        ${driverLine}
+        <p>Please review the details and accept or decline the assignment.</p>
+        <p style="margin: 32px 0;">
+          <a href="${caseUrl}"
+             style="background-color: #1976d2; color: #ffffff; padding: 12px 24px;
+                    text-decoration: none; border-radius: 4px; font-weight: bold;">
+            View Case
+          </a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+        <p style="color: #999; font-size: 12px;">CDL Ticket Management — Protecting CDL Drivers Nationwide</p>
+      </div>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+  } catch (err) {
+    console.error('[EmailService] Failed to send attorney assignment email:', err?.response?.body || err.message);
+  }
+};
+
 module.exports = {
   sendRegistrationEmail,
   sendPaymentConfirmationEmail,
   sendCaseStatusEmail,
+  sendCaseSubmissionEmail,
+  sendAttorneyAssignmentEmail,
 };

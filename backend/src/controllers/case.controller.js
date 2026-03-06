@@ -6,6 +6,7 @@
 
 const { supabase, supabaseAdmin, executeQuery } = require('../config/supabase');
 const { validationResult } = require('express-validator');
+const emailService = require('../services/email.service');
 
 /**
  * PUBLIC SUBMIT
@@ -37,6 +38,14 @@ exports.publicSubmit = async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Non-blocking confirmation email
+    emailService.sendCaseSubmissionEmail({
+      name: customer_name,
+      email,
+      caseId: newCase.id,
+      caseNumber: newCase.case_number,
+    }).catch(err => console.error('[publicSubmit] Email failed:', err));
 
     res.status(201).json({
       message: 'Request submitted successfully',
@@ -101,10 +110,24 @@ exports.createCase = async (req, res) => {
     
     // AUTO-ASSIGN to operator based on state (AI assignment)
     await autoAssignToOperator(newCase.id, state);
-    
+
     // Log activity
     await logActivity(newCase.id, driver_id, 'Case created');
-    
+
+    // Non-blocking confirmation email — fetch driver profile separately
+    supabase.from('users').select('full_name, email').eq('id', driver_id).single()
+      .then(({ data: driver }) => {
+        if (driver) {
+          emailService.sendCaseSubmissionEmail({
+            name: driver.full_name || customer_name,
+            email: driver.email,
+            caseId: newCase.id,
+            caseNumber: newCase.case_number,
+          }).catch(err => console.error('[createCase] Email failed:', err));
+        }
+      })
+      .catch(() => {});
+
     res.status(201).json({
       message: 'Case submitted successfully',
       case: newCase
@@ -428,7 +451,7 @@ exports.assignToAttorney = async (req, res) => {
     // Verify attorney exists
     const { data: attorney, error: attError } = await supabase
       .from('users')
-      .select('id, full_name, role')
+      .select('id, full_name, email, role')
       .eq('id', attorney_id)
       .eq('role', 'attorney')
       .single();
@@ -478,7 +501,18 @@ exports.assignToAttorney = async (req, res) => {
       req.user.id,
       `Assigned to attorney ${attorney.full_name} with price $${attorney_price}`
     );
-    
+
+    // Non-blocking email to attorney
+    if (attorney.email) {
+      emailService.sendAttorneyAssignmentEmail({
+        name: attorney.full_name,
+        email: attorney.email,
+        caseId: id,
+        caseNumber: data.case_number,
+        driverName: data.customer_name,
+      }).catch(err => console.error('[assignToAttorney] Email failed:', err));
+    }
+
     res.json({
       message: 'Case assigned to attorney successfully',
       case: data
