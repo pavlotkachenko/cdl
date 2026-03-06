@@ -37,10 +37,17 @@ export interface CourtDate {
   notes?: string;
 }
 
+export interface AttorneyRating {
+  attorney_id: string;
+  average_score: number | null;
+  total_ratings: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AttorneyService {
   private http = inject(HttpClient);
   private api = `${environment.apiUrl}/cases`;
+  private ratingsApi = `${environment.apiUrl}/ratings`;
 
   getMyCases(): Observable<{ cases: AttorneyCase[] }> {
     return this.http.get<{ cases: AttorneyCase[] }>(`${this.api}/my-cases`);
@@ -86,5 +93,9 @@ export class AttorneyService {
     const formData = new FormData();
     formData.append('document', file);
     return this.http.post<{ document: CaseDocument }>(`${this.api}/${caseId}/documents`, formData);
+  }
+
+  getMyRating(): Observable<AttorneyRating> {
+    return this.http.get<AttorneyRating>(`${this.ratingsApi}/me`);
   }
 }

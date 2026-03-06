@@ -304,10 +304,63 @@ const sendAttorneyAssignmentEmail = async ({ name, email, caseId, caseNumber, dr
   }
 };
 
+/**
+ * Send an invoice email after attorney fee payment is confirmed.
+ *
+ * @param {{ name: string, email: string, invoiceNumber: string, amount: number, caseId: string }} params
+ */
+const sendInvoiceEmail = async ({ name, email, invoiceNumber, amount, caseId }) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('[EmailService] SENDGRID_API_KEY not set — skipping invoice email');
+    return;
+  }
+
+  const caseUrl = `${APP_URL}/driver/tickets/${caseId}`;
+  const formattedAmount = typeof amount === 'number' ? amount.toFixed(2) : amount;
+
+  const msg = {
+    to: email,
+    from: FROM_EMAIL,
+    subject: `Invoice ${invoiceNumber} — CDL Ticket Management`,
+    text: [
+      `Hi ${name},`,
+      '',
+      `Your invoice ${invoiceNumber} for $${formattedAmount} is available.`,
+      '',
+      `View your case: ${caseUrl}`,
+      '',
+      '— The CDL Ticket Management Team',
+    ].join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1976d2;">Invoice Ready</h2>
+        <p>Hi ${name},</p>
+        <p>Invoice <strong>${invoiceNumber}</strong> for <strong>$${formattedAmount}</strong> is now available for your case.</p>
+        <p style="margin: 32px 0;">
+          <a href="${caseUrl}"
+             style="background-color: #1976d2; color: #ffffff; padding: 12px 24px;
+                    text-decoration: none; border-radius: 4px; font-weight: bold;">
+            View Case & Invoice
+          </a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+        <p style="color: #999; font-size: 12px;">CDL Ticket Management — Protecting CDL Drivers Nationwide</p>
+      </div>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+  } catch (err) {
+    console.error('[EmailService] Failed to send invoice email:', err?.response?.body || err.message);
+  }
+};
+
 module.exports = {
   sendRegistrationEmail,
   sendPaymentConfirmationEmail,
   sendCaseStatusEmail,
   sendCaseSubmissionEmail,
   sendAttorneyAssignmentEmail,
+  sendInvoiceEmail,
 };

@@ -4,7 +4,9 @@
 // ============================================
 
 const paymentService = require('../services/payment.service');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const emailService = require('../services/email.service');
+const { supabase } = require('../config/supabase');
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 /**
  * Create payment intent
@@ -67,6 +69,29 @@ const confirmPayment = async (req, res) => {
     }
 
     const payment = await paymentService.confirmPayment(paymentIntentId);
+
+    // Non-blocking invoice email to driver after payment confirmation
+    if (payment?.ticketId && payment?.userId) {
+      supabase
+        .from('cases').select('case_number, customer_name, attorney_price, driver_id')
+        .eq('id', payment.ticketId).single()
+        .then(({ data: caseRow }) => {
+          if (!caseRow) return;
+          return supabase.from('users').select('email, full_name').eq('id', caseRow.driver_id).single()
+            .then(({ data: driver }) => {
+              if (!driver) return;
+              const invoiceNumber = `INV-${(caseRow.case_number || payment.ticketId).toString().slice(0, 8).toUpperCase()}`;
+              emailService.sendInvoiceEmail({
+                name: driver.full_name || caseRow.customer_name,
+                email: driver.email,
+                invoiceNumber,
+                amount: parseFloat(caseRow.attorney_price || 0),
+                caseId: payment.ticketId,
+              }).catch(err => console.error('[confirmPayment] Invoice email failed:', err));
+            });
+        })
+        .catch(err => console.error('[confirmPayment] Invoice lookup failed:', err));
+    }
 
     res.json({
       success: true,
