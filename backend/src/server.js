@@ -31,6 +31,8 @@ const operatorRoutes = require('./routes/operator.routes');
 const carrierRoutes = require('./routes/carrier.routes');
 const driverRoutes  = require('./routes/driver.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
+const ratingRoutes = require('./routes/rating.routes');
+const invoiceRoutes = require('./routes/invoice.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -180,6 +182,8 @@ app.use('/api/drivers',  driverRoutes);
 
 // Subscriptions
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // ============================================
 // ERROR HANDLING

@@ -21,11 +21,14 @@ const RESOLVED: AttorneyCase = {
   violation_type: 'Log Book', state: 'FL', driver_name: 'Carol', created_at: '2026-01-03',
 };
 
+const MOCK_RATING = { attorney_id: 'att1', average_score: 4.5, total_ratings: 2 };
+
 function makeServiceSpy(cases = [PENDING, ACTIVE, RESOLVED]) {
   return {
     getMyCases: vi.fn().mockReturnValue(of({ cases })),
     acceptCase: vi.fn().mockReturnValue(of(null)),
     declineCase: vi.fn().mockReturnValue(of(null)),
+    getMyRating: vi.fn().mockReturnValue(of(MOCK_RATING)),
   };
 }
 
@@ -98,7 +101,10 @@ describe('AttorneyDashboardComponent', () => {
   });
 
   it('sets error signal when loadCases fails', async () => {
-    const spy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
+    const spy = {
+      getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))),
+      getMyRating: vi.fn().mockReturnValue(of(null)),
+    };
     const { component, fixture } = await setup(spy as any);
     expect(component.error()).toBe('Failed to load cases. Please try again.');
     const el: HTMLElement = fixture.nativeElement;
@@ -106,7 +112,10 @@ describe('AttorneyDashboardComponent', () => {
   });
 
   it('clears error and reloads on retry', async () => {
-    const failSpy = { getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))) };
+    const failSpy = {
+      getMyCases: vi.fn().mockReturnValue(throwError(() => new Error('net'))),
+      getMyRating: vi.fn().mockReturnValue(of(null)),
+    };
     const { component, spy: s } = await setup(failSpy as any);
     expect(component.error()).toBeTruthy();
     // Restore success response and retry
@@ -114,5 +123,26 @@ describe('AttorneyDashboardComponent', () => {
     component.loadCases();
     expect(component.error()).toBe('');
     expect(component.cases().length).toBe(1);
+  });
+
+  // ── RT-3: Attorney rating display ─────────────────────────────────────────
+
+  it('loads and displays attorney rating on init (RT-3)', async () => {
+    const { component } = await setup();
+    expect(component.rating()).toEqual(MOCK_RATING);
+  });
+
+  it('shows average score in the dashboard header', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('4.5 / 5');
+    expect(el.textContent).toContain('2 reviews');
+  });
+
+  it('hides rating section when getMyRating fails', async () => {
+    const spy = makeServiceSpy();
+    spy.getMyRating.mockReturnValue(throwError(() => new Error('unauthorized')));
+    const { component } = await setup(spy);
+    expect(component.rating()).toBeNull();
   });
 });

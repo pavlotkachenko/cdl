@@ -10,7 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 
-import { AttorneyService, AttorneyCase } from '../../../core/services/attorney.service';
+import { AttorneyService, AttorneyCase, AttorneyRating } from '../../../core/services/attorney.service';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 
@@ -31,7 +31,16 @@ const ACTIVE_STATUSES = new Set([
   template: `
     <div class="dashboard">
       <header class="dash-header">
-        <h1>My Cases</h1>
+        <div>
+          <h1>My Cases</h1>
+          @if (rating()?.average_score !== null && rating()?.average_score !== undefined) {
+            <p class="rating-summary" aria-label="Your average rating">
+              <mat-icon class="star-icon" aria-hidden="true">star</mat-icon>
+              {{ rating()!.average_score }} / 5
+              <span class="rating-count">({{ rating()!.total_ratings }} {{ rating()!.total_ratings === 1 ? 'review' : 'reviews' }})</span>
+            </p>
+          }
+        </div>
         <button mat-icon-button (click)="loadCases()" aria-label="Refresh cases">
           <mat-icon>refresh</mat-icon>
         </button>
@@ -115,8 +124,11 @@ const ACTIVE_STATUSES = new Set([
   `,
   styles: [`
     .dashboard { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
-    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
     .dash-header h1 { margin: 0; font-size: 1.4rem; }
+    .rating-summary { margin: 4px 0 0; display: flex; align-items: center; gap: 4px; font-size: 0.85rem; color: #555; }
+    .star-icon { font-size: 16px; width: 16px; height: 16px; color: #f9a825; }
+    .rating-count { color: #999; font-size: 0.8rem; }
     .stat-row { display: flex; gap: 12px; margin-bottom: 20px; }
     .stat-chip { display: flex; flex-direction: column; align-items: center; padding: 10px 20px;
       border-radius: 8px; min-width: 80px; }
@@ -151,6 +163,7 @@ export class AttorneyDashboardComponent implements OnInit {
   error = signal('');
   activeTab = signal<TabId>('pending');
   processingId = signal<string | null>(null);
+  rating = signal<AttorneyRating | null>(null);
 
   pendingCases = computed(() => this.cases().filter(c => c.status === 'assigned_to_attorney'));
   activeCases = computed(() => this.cases().filter(c => ACTIVE_STATUSES.has(c.status)));
@@ -171,6 +184,10 @@ export class AttorneyDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCases();
+    this.attorneyService.getMyRating().subscribe({
+      next: (r) => this.rating.set(r),
+      error: () => { /* rating is optional — fail silently */ },
+    });
   }
 
   loadCases(): void {
