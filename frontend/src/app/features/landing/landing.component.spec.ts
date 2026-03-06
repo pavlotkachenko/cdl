@@ -154,4 +154,29 @@ describe('LandingComponent', () => {
     component.ngOnDestroy();
     expect(clearSpy).toHaveBeenCalled();
   });
+
+  it('hero slides use line1/line2 text fields — no innerHTML binding', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const h1 = el.querySelector('.hero-title');
+    expect(h1).not.toBeNull();
+    expect(h1!.textContent).toContain(component.heroSlides[0].line1);
+    expect(h1!.textContent).toContain(component.heroSlides[0].line2);
+  });
+
+  it('carousel pagination dots have aria-label with slide number', () => {
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const dots = el.querySelectorAll('.carousel-pagination .pagination-dot');
+    expect(dots.length).toBe(component.heroSlides.length);
+    expect(dots[0].getAttribute('aria-label')).toBe('Slide 1 of 5');
+    expect(dots[4].getAttribute('aria-label')).toBe('Slide 5 of 5');
+  });
+
+  it('testimonial pagination dots have aria-label', () => {
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const dots = el.querySelectorAll('.testimonial-pagination .pagination-dot');
+    expect(dots.length).toBeGreaterThan(0);
+    expect(dots[0].getAttribute('aria-label')).toContain('Testimonial page 1');
+  });
 });

@@ -10,8 +10,10 @@ vi.mock('@stripe/stripe-js', () => ({
   loadStripe: vi.fn().mockResolvedValue(null),
 }));
 
+import { environment } from '../../../../environments/environment';
+
 const CASE_ID = 'case-42';
-const API = 'http://localhost:3000/api';
+const API = environment.apiUrl;
 
 const MOCK_CASE = {
   case_number: 'CDL-001',

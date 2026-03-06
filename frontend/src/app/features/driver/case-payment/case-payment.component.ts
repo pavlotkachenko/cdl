@@ -7,6 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { CurrencyPipe } from '@angular/common';
+import { environment } from '../../../../environments/environment';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -131,7 +132,7 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
   private snackBar = inject(MatSnackBar);
 
-  private readonly apiUrl = 'http://localhost:3000/api';
+  private readonly apiUrl = environment.apiUrl;
 
   caseId = signal('');
   caseNumber = signal('');

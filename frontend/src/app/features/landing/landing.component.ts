@@ -54,11 +54,11 @@ export class LandingComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   readonly heroSlides = [
-    { title: 'We are #1 advisor<br>in the trucking industry', subtitle: '', image: 'card-panel-1' },
-    { title: '100% tickets<br>resolution rate', subtitle: '', image: 'card-panel-2' },
-    { title: 'Safety consulting<br>for trucking companies', subtitle: '', image: 'card-panel-3' },
-    { title: 'Services<br>for drivers', subtitle: '', image: 'card-panel-4' },
-    { title: 'We are proud<br>of our team', subtitle: '', image: 'card-panel-5' },
+    { line1: 'We are #1 advisor', line2: 'in the trucking industry', image: 'card-panel-1' },
+    { line1: '100% tickets', line2: 'resolution rate', image: 'card-panel-2' },
+    { line1: 'Safety consulting', line2: 'for trucking companies', image: 'card-panel-3' },
+    { line1: 'Services', line2: 'for drivers', image: 'card-panel-4' },
+    { line1: 'We are proud', line2: 'of our team', image: 'card-panel-5' },
   ];
 
   readonly driverServices = [

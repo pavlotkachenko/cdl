@@ -5,15 +5,8 @@
 
 <!-- Main router outlet - all routes render here -->
 
-<!-- <app-header *ngIf="!isLandingPage"></app-header> -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
 
-<router-outlet></router-outlet>
-
-<!-- <app-footer *ngIf="!isLandingPage"></app-footer> -->
-
-<!-- Optional: Add a global loading indicator -->
-<!-- <div *ngIf="loading" class="global-loader">
-  <mat-spinner diameter="50"></mat-spinner>
-</div> -->
-
-<!-- Optional: Add global notifications/toasts here -->
+<main id="main-content">
+  <router-outlet></router-outlet>
+</main>
