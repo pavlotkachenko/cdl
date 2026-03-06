@@ -6,7 +6,6 @@ import { TicketsComponent } from './tickets/tickets.component';
 import { ProfileComponent } from './profile/profile.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { NotificationPreferencesComponent } from './settings/notification-preferences/notification-preferences.component';
-import { AnalyticsComponent } from './analytics/analytics.component';
 import { LayoutComponent } from '../../core/layout/layout.component';
 import { CaseDetailComponent } from './case-detail/case-detail.component';
 import { HelpComponent } from './help/help.component';
@@ -65,7 +64,7 @@ const routes: Routes = [
       },
       {
         path: 'analytics',
-        component: AnalyticsComponent
+        loadComponent: () => import('./analytics/analytics.component').then(m => m.AnalyticsComponent)
       },
       // === MERGED MESSAGES ROUTES ===
       {
