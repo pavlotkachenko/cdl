@@ -100,6 +100,11 @@ export const routes: Routes = [
     component: TermsComponent
   },
 
+  {
+    path: 'offline',
+    loadComponent: () => import('./features/offline/offline.component').then(m => m.OfflineComponent)
+  },
+
   // Placeholder routes (optional)
   {
     path: 'cookies',

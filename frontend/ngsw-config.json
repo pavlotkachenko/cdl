@@ -3,12 +3,14 @@
   "index": "/index.html",
   "assetGroups": [
     {
-      "name": "app",
+      "name": "app-shell",
       "installMode": "prefetch",
+      "updateMode": "prefetch",
       "resources": {
         "files": [
           "/favicon.ico",
           "/index.html",
+          "/manifest.webmanifest",
           "/*.css",
           "/*.js"
         ]
@@ -28,16 +30,37 @@
   ],
   "dataGroups": [
     {
-      "name": "api-cache",
+      "name": "api-freshness",
       "urls": [
-        "/api/**"
+        "/api/notifications/**",
+        "/api/cases/**/status"
       ],
       "cacheConfig": {
         "strategy": "freshness",
+        "maxSize": 50,
+        "maxAge": "5m",
+        "timeout": "3s"
+      }
+    },
+    {
+      "name": "api-performance",
+      "urls": [
+        "/api/cases/**",
+        "/api/carriers/**",
+        "/api/users/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
         "maxSize": 100,
-        "maxAge": "1h",
+        "maxAge": "10m",
         "timeout": "10s"
       }
     }
+  ],
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**"
   ]
 }
