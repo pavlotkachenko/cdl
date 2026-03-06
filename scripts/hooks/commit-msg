@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# commit-msg hook — Sprint Story Mandate
+#
+# Blocks any commit whose message matches feat(sprint-NNN) or feat(sprint_NNN)
+# unless the corresponding sprints/sprint_NNN/ folder exists AND contains at
+# least one individual story file (story-<PREFIX>-N-*.md).
+#
+# Install (from repo root):
+#   cp scripts/hooks/commit-msg .git/hooks/commit-msg
+#   chmod +x .git/hooks/commit-msg
+# Or run:
+#   bash scripts/install-hooks.sh
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Match feat(sprint-NNN), feat(sprint_NNN), feat(sprint-NNN), etc.
+if echo "$COMMIT_MSG" | grep -qiE 'feat\(sprint[-_]?[0-9]{3}\)'; then
+  SPRINT_NUM=$(echo "$COMMIT_MSG" | grep -oiE 'sprint[-_]?([0-9]{3})' | grep -oE '[0-9]{3}' | head -1)
+  SPRINT_DIR="sprints/sprint_${SPRINT_NUM}"
+
+  # Gate 1: sprint folder must exist
+  if [ ! -d "$SPRINT_DIR" ]; then
+    echo ""
+    echo "❌  COMMIT BLOCKED — Sprint Story Mandate"
+    echo ""
+    echo "    Sprint folder missing: $SPRINT_DIR"
+    echo ""
+    echo "    Fix: run decompose-requirement first, then create:"
+    echo "      $SPRINT_DIR/story-sprint-overview.md"
+    echo "      $SPRINT_DIR/story-<PREFIX>-N-<title>.md  (one per story)"
+    echo ""
+    exit 1
+  fi
+
+  # Gate 2: at least one individual story file must exist (not just the overview)
+  STORY_COUNT=$(find "$SPRINT_DIR" -maxdepth 1 -name "story-*.md" \
+    ! -name "story-sprint-overview.md" 2>/dev/null | wc -l | tr -d ' ')
+
+  if [ "$STORY_COUNT" -eq 0 ]; then
+    echo ""
+    echo "❌  COMMIT BLOCKED — Sprint Story Mandate"
+    echo ""
+    echo "    $SPRINT_DIR/ exists but has no individual story files."
+    echo ""
+    echo "    Fix: create story files before committing:"
+    echo "      $SPRINT_DIR/story-<PREFIX>-N-<title>.md  (one per story)"
+    echo ""
+    exit 1
+  fi
+fi
+
+exit 0
