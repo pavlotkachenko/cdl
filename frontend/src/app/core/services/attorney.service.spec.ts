@@ -72,4 +72,49 @@ describe('AttorneyService', () => {
     expect(req.request.body.comment).toBe('Scheduled for March');
     req.flush(null);
   });
+
+  it('getCaseNotes() calls GET /:id/notes', () => {
+    const notes = [{ id: 'n1', content: 'Review done.', created_at: '2026-01-02' }];
+    service.getCaseNotes('c1').subscribe(r => {
+      expect(r.notes.length).toBe(1);
+      expect(r.notes[0].id).toBe('n1');
+    });
+    controller.expectOne(`${API}/c1/notes`).flush({ notes });
+  });
+
+  it('addNote() calls POST /:id/notes with content', () => {
+    service.addNote('c1', 'Reviewed evidence').subscribe();
+    const req = controller.expectOne(`${API}/c1/notes`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body.content).toBe('Reviewed evidence');
+    req.flush({ note: { id: 'n2', content: 'Reviewed evidence', created_at: '2026-01-03' } });
+  });
+
+  it('getCourtDate() calls GET /:id/court-date', () => {
+    const courtDate = { id: 'cd1', court_date: '2026-04-15', location: 'Travis County' };
+    service.getCourtDate('c1').subscribe(r => {
+      expect(r.court_date?.court_date).toBe('2026-04-15');
+    });
+    controller.expectOne(`${API}/c1/court-date`).flush({ court_date: courtDate });
+  });
+
+  it('setCourtDate() calls POST /:id/court-date with date and location', () => {
+    service.setCourtDate('c1', '2026-06-01', 'Travis County').subscribe();
+    const req = controller.expectOne(`${API}/c1/court-date`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body.court_date).toBe('2026-06-01');
+    expect(req.request.body.location).toBe('Travis County');
+    req.flush(null);
+  });
+
+  it('uploadDocument() calls POST /:id/documents with FormData', () => {
+    const file = new File(['content'], 'ticket.pdf', { type: 'application/pdf' });
+    service.uploadDocument('c1', file).subscribe(r => {
+      expect(r.document.file_name).toBe('ticket.pdf');
+    });
+    const req = controller.expectOne(`${API}/c1/documents`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBe(true);
+    req.flush({ document: { id: 'd1', file_name: 'ticket.pdf', file_type: 'application/pdf', file_size: 7, uploaded_at: '2026-01-01' } });
+  });
 });

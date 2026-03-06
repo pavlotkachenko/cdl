@@ -11,8 +11,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
-import { AttorneyService, AttorneyCase, CaseDocument } from '../../../core/services/attorney.service';
+import {
+  AttorneyService, AttorneyCase, CaseDocument, CaseNote, CourtDate,
+} from '../../../core/services/attorney.service';
 
 @Component({
   selector: 'app-attorney-case-detail',
@@ -20,7 +23,7 @@ import { AttorneyService, AttorneyCase, CaseDocument } from '../../../core/servi
   imports: [
     MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatDividerModule, MatProgressSpinnerModule,
-    MatSelectModule, MatFormFieldModule,
+    MatSelectModule, MatFormFieldModule, MatInputModule,
   ],
   template: `
     <div class="detail-page">
@@ -34,6 +37,7 @@ import { AttorneyService, AttorneyCase, CaseDocument } from '../../../core/servi
       @if (loading()) {
         <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
       } @else if (caseData()) {
+        <!-- Case info card -->
         <mat-card>
           <mat-card-content>
             <div class="case-meta">
@@ -81,25 +85,110 @@ import { AttorneyService, AttorneyCase, CaseDocument } from '../../../core/servi
           </mat-card-content>
         </mat-card>
 
-        @if (documents().length > 0) {
-          <mat-card class="docs-card">
-            <mat-card-header><mat-card-title>Documents</mat-card-title></mat-card-header>
-            <mat-card-content>
+        <!-- Court Date card -->
+        <mat-card class="court-card">
+          <mat-card-header>
+            <mat-card-title>Court Date</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (courtDate()) {
+              <div class="court-display">
+                <mat-icon aria-hidden="true">event</mat-icon>
+                <span class="court-date-value">{{ formatDate(courtDate()!.court_date) }}</span>
+                @if (courtDate()!.location) {
+                  <span class="court-location">· {{ courtDate()!.location }}</span>
+                }
+              </div>
+            }
+            <div class="court-input-row">
+              <mat-form-field appearance="outline" class="date-field">
+                <mat-label>Set Court Date</mat-label>
+                <input matInput type="date"
+                       [value]="courtDateInput()"
+                       (input)="courtDateInput.set($any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="location-field">
+                <mat-label>Location</mat-label>
+                <input matInput
+                       [value]="courtLocation()"
+                       (input)="courtLocation.set($any($event.target).value)"
+                       placeholder="Courthouse name" />
+              </mat-form-field>
+              <button mat-raised-button color="primary"
+                      (click)="saveCourtDate()"
+                      [disabled]="!courtDateInput() || settingCourtDate()">
+                Save
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Documents card -->
+        <mat-card class="docs-card">
+          <mat-card-header>
+            <mat-card-title>Documents</mat-card-title>
+            <div class="card-actions">
+              <input #fileInput type="file" hidden
+                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                     (change)="onFileSelected($event)" />
+              <button mat-stroked-button (click)="fileInput.click()" [disabled]="uploading()">
+                <mat-icon>upload</mat-icon>
+                {{ uploading() ? 'Uploading...' : 'Upload' }}
+              </button>
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            @if (documents().length === 0) {
+              <p class="empty-msg">No documents yet.</p>
+            } @else {
               @for (doc of documents(); track doc.id) {
                 <div class="doc-row">
                   <mat-icon aria-hidden="true">{{ getFileIcon(doc.file_type) }}</mat-icon>
                   <span class="doc-name">{{ doc.file_name }}</span>
                 </div>
               }
-            </mat-card-content>
-          </mat-card>
-        }
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Case Notes card -->
+        <mat-card class="notes-card">
+          <mat-card-header>
+            <mat-card-title>Case Notes</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="note-input-row">
+              <mat-form-field appearance="outline" class="note-field">
+                <mat-label>Add a note...</mat-label>
+                <textarea matInput rows="2"
+                          [value]="newNote()"
+                          (input)="newNote.set($any($event.target).value)"
+                          aria-label="Case note text"></textarea>
+              </mat-form-field>
+              <button mat-raised-button color="primary"
+                      (click)="saveNote()"
+                      [disabled]="!newNote().trim() || addingNote()">
+                Add
+              </button>
+            </div>
+            @if (notes().length === 0) {
+              <p class="empty-msg">No notes yet.</p>
+            } @else {
+              @for (note of notes(); track note.id) {
+                <div class="note-item">
+                  <p class="note-content">{{ note.content }}</p>
+                  <span class="note-date">{{ formatDate(note.created_at) }}</span>
+                </div>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
       }
     </div>
   `,
   styles: [`
-    .detail-page { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
-    .detail-header { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+    .detail-page { max-width: 600px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+    .detail-header { display: flex; align-items: center; gap: 8px; }
     .detail-header h1 { margin: 0; font-size: 1.4rem; }
     .loading { display: flex; justify-content: center; padding: 48px; }
     .case-meta { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
@@ -111,9 +200,21 @@ import { AttorneyService, AttorneyCase, CaseDocument } from '../../../core/servi
     .accept-row { display: flex; gap: 12px; padding-top: 16px; }
     .status-update { display: flex; gap: 12px; align-items: flex-start; padding-top: 12px; }
     .status-field { flex: 1; }
-    .docs-card { margin-top: 16px; }
+    .card-actions { margin-left: auto; }
+    .court-display { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #1976d2; }
+    .court-date-value { font-weight: 600; }
+    .court-location { color: #666; }
+    .court-input-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .date-field { flex: 1; min-width: 140px; }
+    .location-field { flex: 2; min-width: 160px; }
     .doc-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
     .doc-name { font-size: 0.85rem; }
+    .note-input-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+    .note-field { flex: 1; }
+    .note-item { border-left: 3px solid #1976d2; padding: 6px 10px; margin: 6px 0; background: #f5f5f5; border-radius: 0 4px 4px 0; }
+    .note-content { margin: 0 0 2px; font-size: 0.9rem; }
+    .note-date { font-size: 0.72rem; color: #999; }
+    .empty-msg { color: #999; font-size: 0.85rem; margin: 8px 0; }
   `],
 })
 export class AttorneyCaseDetailComponent implements OnInit {
@@ -129,6 +230,20 @@ export class AttorneyCaseDetailComponent implements OnInit {
   processing = signal(false);
   selectedStatus = signal('');
 
+  // Notes
+  notes = signal<CaseNote[]>([]);
+  newNote = signal('');
+  addingNote = signal(false);
+
+  // Court date
+  courtDate = signal<CourtDate | null>(null);
+  courtDateInput = signal('');
+  courtLocation = signal('');
+  settingCourtDate = signal(false);
+
+  // Upload
+  uploading = signal(false);
+
   readonly UPDATABLE_STATUSES = [
     { value: 'send_info_to_attorney', label: 'Working on case' },
     { value: 'waiting_for_driver', label: 'Need info from driver' },
@@ -142,6 +257,8 @@ export class AttorneyCaseDetailComponent implements OnInit {
     this.caseId.set(id);
     this.loadCase();
     this.loadDocuments();
+    this.loadNotes();
+    this.loadCourtDate();
   }
 
   private loadCase(): void {
@@ -155,6 +272,20 @@ export class AttorneyCaseDetailComponent implements OnInit {
   private loadDocuments(): void {
     this.attorneyService.getDocuments(this.caseId()).subscribe({
       next: (r) => this.documents.set(r.documents ?? []),
+      error: () => {},
+    });
+  }
+
+  private loadNotes(): void {
+    this.attorneyService.getCaseNotes(this.caseId()).subscribe({
+      next: (r) => this.notes.set(r.notes ?? []),
+      error: () => {},
+    });
+  }
+
+  private loadCourtDate(): void {
+    this.attorneyService.getCourtDate(this.caseId()).subscribe({
+      next: (r) => this.courtDate.set(r.court_date),
       error: () => {},
     });
   }
@@ -205,6 +336,58 @@ export class AttorneyCaseDetailComponent implements OnInit {
     });
   }
 
+  saveNote(): void {
+    const content = this.newNote().trim();
+    if (!content) return;
+    this.addingNote.set(true);
+    this.attorneyService.addNote(this.caseId(), content).subscribe({
+      next: (r) => {
+        this.notes.update(notes => [r.note, ...notes]);
+        this.newNote.set('');
+        this.addingNote.set(false);
+      },
+      error: () => {
+        this.snackBar.open('Failed to add note.', 'Close', { duration: 3000 });
+        this.addingNote.set(false);
+      },
+    });
+  }
+
+  saveCourtDate(): void {
+    if (!this.courtDateInput()) return;
+    this.settingCourtDate.set(true);
+    this.attorneyService.setCourtDate(this.caseId(), this.courtDateInput(), this.courtLocation() || undefined).subscribe({
+      next: () => {
+        this.courtDate.set({ court_date: this.courtDateInput(), location: this.courtLocation() || undefined });
+        this.snackBar.open('Court date saved.', 'Close', { duration: 3000 });
+        this.settingCourtDate.set(false);
+      },
+      error: () => {
+        this.snackBar.open('Failed to save court date.', 'Close', { duration: 3000 });
+        this.settingCourtDate.set(false);
+      },
+    });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.uploading.set(true);
+    this.attorneyService.uploadDocument(this.caseId(), file).subscribe({
+      next: (r) => {
+        this.documents.update(docs => [...docs, r.document]);
+        this.snackBar.open('Document uploaded.', 'Close', { duration: 3000 });
+        this.uploading.set(false);
+        input.value = '';
+      },
+      error: () => {
+        this.snackBar.open('Failed to upload document.', 'Close', { duration: 3000 });
+        this.uploading.set(false);
+      },
+    });
+  }
+
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       new: 'New',
@@ -225,6 +408,12 @@ export class AttorneyCaseDetailComponent implements OnInit {
     if (fileType?.includes('pdf')) return 'picture_as_pdf';
     if (fileType?.includes('image')) return 'image';
     return 'insert_drive_file';
+  }
+
+  formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   goBack(): void {
