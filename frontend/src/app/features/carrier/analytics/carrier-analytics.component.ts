@@ -39,6 +39,15 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
           <p>{{ error() }}</p>
           <button mat-raised-button color="primary" (click)="loadData()">Retry</button>
         </div>
+      } @else if (data().totalCases === 0) {
+        <!-- Zero-data full-page empty state -->
+        <div class="zero-state" role="status">
+          <mat-icon aria-hidden="true">analytics</mat-icon>
+          <h2>No fleet data yet</h2>
+          <p>Analytics will appear here once your drivers submit their first cases.</p>
+          <button mat-raised-button color="primary" (click)="goBack()">Go to Dashboard</button>
+        </div>
+
       } @else {
 
         <!-- KPI Cards -->
@@ -74,7 +83,10 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
           <mat-card-content>
             <h2 class="section-title">Cases — Last 6 Months</h2>
             @if (data().casesByMonth.length === 0) {
-              <p class="empty">No data yet.</p>
+              <div class="chart-empty" role="status">
+                <mat-icon aria-hidden="true">bar_chart</mat-icon>
+                <p>No monthly data yet</p>
+              </div>
             } @else {
               <div class="bar-chart" role="img" [attr.aria-label]="'Monthly case trend chart'">
                 @for (m of data().casesByMonth; track m.month) {
@@ -94,7 +106,10 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
           <mat-card-content>
             <h2 class="section-title">Violation Types</h2>
             @if (data().violationBreakdown.length === 0) {
-              <p class="empty">No data yet.</p>
+              <div class="chart-empty" role="status">
+                <mat-icon aria-hidden="true">gavel</mat-icon>
+                <p>No violations recorded</p>
+              </div>
             } @else {
               <div class="violation-list">
                 @for (v of data().violationBreakdown; track v.type) {
@@ -157,7 +172,13 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
     /* Charts */
     .chart-card { margin-bottom: 16px; }
     .section-title { font-size: 1rem; font-weight: 600; margin: 0 0 16px; }
-    .empty { color: #999; font-size: 0.85rem; }
+    .zero-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 24px; color: #999; text-align: center; }
+    .zero-state mat-icon { font-size: 56px; width: 56px; height: 56px; color: #ccc; }
+    .zero-state h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #555; }
+    .zero-state p { margin: 0; font-size: 0.9rem; max-width: 300px; }
+    .chart-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px; color: #bbb; }
+    .chart-empty mat-icon { font-size: 32px; width: 32px; height: 32px; }
+    .chart-empty p { margin: 0; font-size: 0.85rem; color: #999; }
 
     /* Bar chart */
     .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; padding-bottom: 24px; position: relative; }

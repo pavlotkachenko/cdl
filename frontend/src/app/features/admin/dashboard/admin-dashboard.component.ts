@@ -103,7 +103,12 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
           </mat-card-header>
           <mat-card-content>
             @if (recentCases().length === 0) {
-              <p class="empty">No cases found.</p>
+              <div class="empty-state" role="status">
+                <mat-icon aria-hidden="true">folder_open</mat-icon>
+                <p class="empty-title">No cases yet</p>
+                <p class="empty-hint">Cases submitted by drivers will appear here.</p>
+                <button mat-stroked-button color="primary" (click)="viewAllCases()">View All Cases</button>
+              </div>
             } @else {
               @for (c of recentCases(); track c.id) {
                 <div class="case-row"
@@ -165,7 +170,10 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     .section-card { margin-bottom: 16px; }
     mat-card-header { display: flex; justify-content: space-between; align-items: center; }
     .card-action { margin-left: auto; }
-    .empty { color: #999; text-align: center; padding: 24px 0; margin: 0; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; color: #999; text-align: center; }
+    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; color: #ccc; }
+    .empty-title { margin: 4px 0 0; font-size: 1rem; font-weight: 500; color: #666; }
+    .empty-hint { margin: 0; font-size: 0.82rem; color: #999; }
     .case-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; cursor: pointer; }
     .case-row:hover { background: #f5f5f5; border-radius: 4px; }
     .case-row:focus-visible { outline: 2px solid #1976d2; border-radius: 4px; }

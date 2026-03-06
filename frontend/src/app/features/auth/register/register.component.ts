@@ -1,14 +1,12 @@
-// ============================================
-// REGISTER COMPONENT - Complete Implementation
-// Location: frontend/src/app/features/auth/register/register.component.ts
-// ============================================
-
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
-
-// Angular Material
+import {
+  Component, OnInit, ChangeDetectionStrategy, inject, signal, computed, DestroyRef,
+} from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  FormBuilder, FormGroup, Validators, ReactiveFormsModule,
+  AbstractControl, ValidationErrors,
+} from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -18,19 +16,40 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-// Services
 import { AuthService } from '../../../core/services/auth.service';
+
+function passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
+  const password = control.value;
+  if (!password) return null;
+  const valid =
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  return valid ? null : { passwordStrength: true };
+}
+
+function passwordMatchValidator(form: AbstractControl): ValidationErrors | null {
+  const pw = form.get('password')?.value;
+  const confirm = form.get('confirmPassword')?.value;
+  if (!pw || !confirm) return null;
+  return pw === confirm ? null : { passwordMismatch: true };
+}
+
+const ROLE_DASHBOARDS: Record<string, string[]> = {
+  carrier:   ['/carrier/dashboard'],
+  attorney:  ['/attorney/dashboard'],
+  admin:     ['/admin/dashboard'],
+  paralegal: ['/paralegal/dashboard'],
+};
 
 @Component({
   selector: 'app-register',
-  standalone: true,
-  templateUrl: './register.component.html',
-  styleUrls: ['./register.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
-    RouterModule,
+    RouterLink,
     ReactiveFormsModule,
     MatCardModule,
     MatFormFieldModule,
@@ -41,292 +60,292 @@ import { AuthService } from '../../../core/services/auth.service';
     MatCheckboxModule,
     MatSelectModule,
     MatProgressBarModule,
-    MatSnackBarModule
-  ]
+  ],
+  template: `
+    <div class="register-container">
+      <mat-card class="register-card">
+        <mat-card-header>
+          <mat-card-title><h1>Create Account</h1></mat-card-title>
+          <mat-card-subtitle>Join CDL Ticket Management</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (errorMessage()) {
+            <div class="error-alert" role="alert">
+              <mat-icon aria-hidden="true">error</mat-icon>
+              <span>{{ errorMessage() }}</span>
+            </div>
+          }
+
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Full Name</mat-label>
+              <input matInput type="text" formControlName="name"
+                     placeholder="John Doe" autocomplete="name" />
+              <mat-icon matPrefix>person</mat-icon>
+              @if (getErrorMessage('name')) {
+                <mat-error>{{ getErrorMessage('name') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email Address</mat-label>
+              <input matInput type="email" formControlName="email"
+                     placeholder="your.email@example.com" autocomplete="email" />
+              <mat-icon matPrefix>email</mat-icon>
+              @if (getErrorMessage('email')) {
+                <mat-error>{{ getErrorMessage('email') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Phone Number (Optional)</mat-label>
+              <input matInput type="tel" inputmode="tel" formControlName="phone"
+                     placeholder="+1234567890" autocomplete="tel" />
+              <mat-icon matPrefix>phone</mat-icon>
+              @if (getErrorMessage('phone')) {
+                <mat-error>{{ getErrorMessage('phone') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>CDL Number (Optional)</mat-label>
+              <input matInput type="text" inputmode="numeric" formControlName="cdlNumber"
+                     placeholder="Enter your CDL number" autocomplete="off" />
+              <mat-icon matPrefix>badge</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input matInput [type]="hidePassword() ? 'password' : 'text'"
+                     formControlName="password" placeholder="Create a strong password"
+                     autocomplete="new-password" />
+              <mat-icon matPrefix>lock</mat-icon>
+              <button mat-icon-button matSuffix type="button"
+                      (click)="hidePassword.set(!hidePassword())"
+                      [attr.aria-label]="'Toggle password visibility'">
+                <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (getErrorMessage('password')) {
+                <mat-error>{{ getErrorMessage('password') }}</mat-error>
+              }
+            </mat-form-field>
+
+            @if (registerForm.get('password')?.value) {
+              <div class="password-strength">
+                <div class="strength-label">
+                  Password Strength:
+                  <span [class]="'strength-' + passwordStrengthColor()">
+                    {{ passwordStrengthLabel() }}
+                  </span>
+                </div>
+                <mat-progress-bar mode="determinate"
+                  [value]="passwordStrength()"
+                  [color]="passwordStrengthColor()">
+                </mat-progress-bar>
+              </div>
+            }
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Confirm Password</mat-label>
+              <input matInput [type]="hideConfirmPassword() ? 'password' : 'text'"
+                     formControlName="confirmPassword" placeholder="Re-enter your password"
+                     autocomplete="new-password" />
+              <mat-icon matPrefix>lock</mat-icon>
+              <button mat-icon-button matSuffix type="button"
+                      (click)="hideConfirmPassword.set(!hideConfirmPassword())"
+                      [attr.aria-label]="'Toggle confirm password visibility'">
+                <mat-icon>{{ hideConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (getErrorMessage('confirmPassword')) {
+                <mat-error>{{ getErrorMessage('confirmPassword') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="terms-checkbox">
+              <mat-checkbox formControlName="acceptTerms">
+                I agree to the
+                <a href="/terms" target="_blank">Terms and Conditions</a>
+                and
+                <a href="/privacy" target="_blank">Privacy Policy</a>
+              </mat-checkbox>
+              @if (hasError('acceptTerms', 'required') && registerForm.get('acceptTerms')?.touched) {
+                <mat-error>You must accept the terms and conditions</mat-error>
+              }
+            </div>
+
+            <button mat-raised-button color="primary" type="submit"
+                    class="full-width submit-button"
+                    [disabled]="loading() || registerForm.invalid">
+              @if (loading()) {
+                <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                Creating account...
+              } @else {
+                Create Account
+              }
+            </button>
+          </form>
+
+          <div class="login-link">
+            <p>Already have an account? <a routerLink="/login">Sign in</a></p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  `,
+  styles: [`
+    .register-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #1dad8c 0%, #0f8a6f 100%); padding: 20px; }
+    .register-card { width: 100%; max-width: 550px; padding: 20px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    mat-card-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
+    mat-card-title h1 { margin: 0; font-size: 28px; font-weight: 600; color: #333; text-align: center; }
+    mat-card-subtitle { font-size: 14px; color: #666; margin-top: 8px; text-align: center; }
+    mat-card-content { padding: 0; }
+    .error-alert { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 20px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px; color: #c62828; }
+    .full-width { width: 100%; margin-bottom: 4px; }
+    .password-strength { margin-bottom: 16px; }
+    .strength-label { font-size: 12px; color: #666; margin-bottom: 6px; }
+    .strength-warn { color: #f44336; font-weight: 600; }
+    .strength-accent { color: #ff9800; font-weight: 600; }
+    .strength-primary { color: #4caf50; font-weight: 600; }
+    .terms-checkbox { margin-bottom: 20px; }
+    .terms-checkbox a { color: #1dad8c; text-decoration: none; }
+    .submit-button { height: 48px; font-size: 16px; margin-bottom: 16px; }
+    .button-spinner { display: inline-block; margin-right: 8px; }
+    .login-link { text-align: center; margin-top: 16px; color: #666; font-size: 14px; }
+    .login-link a { color: #1dad8c; text-decoration: none; font-weight: 600; }
+  `],
 })
 export class RegisterComponent implements OnInit {
-  registerForm!: FormGroup;
-  loading = false;
-  hidePassword = true;
-  hideConfirmPassword = true;
-  errorMessage = '';
-  passwordStrength: number = 0;
-  passwordStrengthLabel: string = '';
-  role: string = 'driver';
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-    private snackBar: MatSnackBar,
-    private route: ActivatedRoute
-  ) {}
+  role = '';
+  registerForm!: FormGroup;
+
+  loading = signal(false);
+  errorMessage = signal('');
+  hidePassword = signal(true);
+  hideConfirmPassword = signal(true);
+
+  private passwordValue = signal('');
+
+  readonly passwordStrength = computed(() => {
+    const pw = this.passwordValue();
+    if (!pw) return 0;
+    let s = 0;
+    if (pw.length >= 8) s += 20;
+    if (/[a-z]/.test(pw)) s += 15;
+    if (/[A-Z]/.test(pw)) s += 15;
+    if (/[0-9]/.test(pw)) s += 15;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pw)) s += 20;
+    if (pw.length >= 12) s += 15;
+    return Math.min(s, 100);
+  });
+
+  readonly passwordStrengthLabel = computed(() => {
+    const s = this.passwordStrength();
+    if (!s) return '';
+    if (s < 40) return 'Weak';
+    if (s < 70) return 'Medium';
+    return 'Strong';
+  });
+
+  readonly passwordStrengthColor = computed(() => {
+    const s = this.passwordStrength();
+    if (s < 40) return 'warn';
+    if (s < 70) return 'accent';
+    return 'primary';
+  });
 
   ngOnInit(): void {
-    // Read role from route data (set by /signup/driver or /signup/carrier)
     this.role = this.route.snapshot.data['role'] || 'driver';
 
-    // Redirect if already authenticated
     if (this.authService.isAuthenticated()) {
       this.navigateByRole(this.role);
       return;
     }
 
-    // Initialize reactive form with validators
-    this.registerForm = this.formBuilder.group({
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
-      cdlNumber: [''],
-      password: ['', [
-        Validators.required,
-        Validators.minLength(8),
-        this.passwordStrengthValidator
-      ]],
+    this.registerForm = this.fb.group({
+      name:            ['', [Validators.required, Validators.minLength(2)]],
+      email:           ['', [Validators.required, Validators.email]],
+      phone:           ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
+      cdlNumber:       [''],
+      password:        ['', [Validators.required, Validators.minLength(8), passwordStrengthValidator]],
       confirmPassword: ['', [Validators.required]],
-      acceptTerms: [false, [Validators.requiredTrue]]
-    }, {
-      validators: this.passwordMatchValidator
-    });
+      acceptTerms:     [false, [Validators.requiredTrue]],
+    }, { validators: passwordMatchValidator });
 
-    // Watch password field for strength calculation
-    this.registerForm.get('password')?.valueChanges.subscribe(password => {
-      this.calculatePasswordStrength(password);
-    });
+    this.registerForm.get('password')?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(pw => this.passwordValue.set(pw ?? ''));
   }
 
-  // ============================================
-  // Submit registration form
-  // ============================================
   onSubmit(): void {
-    // Mark all fields as touched to show validation errors
     if (this.registerForm.invalid) {
-      Object.keys(this.registerForm.controls).forEach(key => {
-        this.registerForm.get(key)?.markAsTouched();
-      });
+      Object.keys(this.registerForm.controls).forEach(k =>
+        this.registerForm.get(k)?.markAsTouched()
+      );
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     const { name, email, phone, cdlNumber, password } = this.registerForm.value;
 
-    // Call auth service register
-    this.authService.register({
-      name,
-      email,
-      phone: phone || undefined,
-      cdlNumber: cdlNumber || undefined,
-      password,
-      role: this.role
-    }).subscribe({
-      next: (response: any) => {
-        console.log('✅ Registration successful:', response);
-        this.loading = false;
-
-        // Show success message
-        this.snackBar.open('Registration successful! Welcome to CDL Ticket Management.', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-          panelClass: ['success-snackbar']
-        });
-
-        // Redirect to role-appropriate dashboard
-        this.navigateByRole(response?.user?.role || this.role);
-      },
-      error: (error: any) => {
-        console.error('❌ Registration error:', error);
-        this.loading = false;
-
-        // Handle different error scenarios
-        if (error.status === 409) {
-          this.errorMessage = 'Email already exists. Please use a different email.';
-        } else if (error.status === 400) {
-          this.errorMessage = error.error?.message || 'Invalid registration data. Please check your inputs.';
-        } else if (error.status === 0) {
-          this.errorMessage = 'Cannot connect to server. Please try again later.';
-        } else {
-          this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
-        }
-
-        // Show error snackbar
-        this.snackBar.open(this.errorMessage, 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
-        });
-      }
-    });
+    this.authService.register({ name, email, phone: phone || undefined, cdlNumber: cdlNumber || undefined, password, role: this.role })
+      .subscribe({
+        next: (response: any) => {
+          this.loading.set(false);
+          this.snackBar.open('Registration successful! Welcome to CDL Ticket Management.', 'Close', { duration: 5000 });
+          this.navigateByRole(response?.user?.role || this.role);
+        },
+        error: (error: any) => {
+          this.loading.set(false);
+          const msg =
+            error.status === 409 ? 'Email already exists. Please use a different email.' :
+            error.status === 400 ? (error.error?.message || 'Invalid registration data.') :
+            error.status === 0  ? 'Cannot connect to server. Please try again later.' :
+            (error.error?.message || 'Registration failed. Please try again.');
+          this.errorMessage.set(msg);
+          this.snackBar.open(msg, 'Close', { duration: 5000 });
+        },
+      });
   }
 
-  // ============================================
-  // Navigate to role-appropriate dashboard
-  // ============================================
-  private navigateByRole(role: string): void {
-    switch (role) {
-      case 'carrier': this.router.navigate(['/carrier/dashboard']); break;
-      case 'attorney': this.router.navigate(['/attorney/dashboard']); break;
-      case 'admin': this.router.navigate(['/admin/dashboard']); break;
-      case 'paralegal': this.router.navigate(['/paralegal/dashboard']); break;
-      default: this.router.navigate(['/driver/dashboard']);
-    }
-  }
-
-  // ============================================
-  // Password strength validator
-  // ============================================
-  private passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.value;
-    
-    if (!password) {
-      return null;
-    }
-
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumeric = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    const passwordValid = hasUpperCase && hasLowerCase && hasNumeric && hasSpecialChar;
-
-    return passwordValid ? null : { passwordStrength: true };
-  }
-
-  // ============================================
-  // Password match validator
-  // ============================================
-  private passwordMatchValidator(form: AbstractControl): ValidationErrors | null {
-    const password = form.get('password')?.value;
-    const confirmPassword = form.get('confirmPassword')?.value;
-
-    if (!password || !confirmPassword) {
-      return null;
-    }
-
-    return password === confirmPassword ? null : { passwordMismatch: true };
-  }
-
-  // ============================================
-  // Calculate password strength (0-100)
-  // ============================================
-  private calculatePasswordStrength(password: string): void {
-    if (!password) {
-      this.passwordStrength = 0;
-      this.passwordStrengthLabel = '';
-      return;
-    }
-
-    let strength = 0;
-    const checks = {
-      length: password.length >= 8,
-      lowercase: /[a-z]/.test(password),
-      uppercase: /[A-Z]/.test(password),
-      numeric: /[0-9]/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-      longLength: password.length >= 12
-    };
-
-    // Calculate strength
-    if (checks.length) strength += 20;
-    if (checks.lowercase) strength += 15;
-    if (checks.uppercase) strength += 15;
-    if (checks.numeric) strength += 15;
-    if (checks.special) strength += 20;
-    if (checks.longLength) strength += 15;
-
-    this.passwordStrength = Math.min(strength, 100);
-
-    // Set label
-    if (this.passwordStrength < 40) {
-      this.passwordStrengthLabel = 'Weak';
-    } else if (this.passwordStrength < 70) {
-      this.passwordStrengthLabel = 'Medium';
-    } else {
-      this.passwordStrengthLabel = 'Strong';
-    }
-  }
-
-  // ============================================
-  // Get password strength color
-  // ============================================
-  getPasswordStrengthColor(): string {
-    if (this.passwordStrength < 40) return 'warn';
-    if (this.passwordStrength < 70) return 'accent';
-    return 'primary';
-  }
-
-  // ============================================
-  // Toggle password visibility
-  // ============================================
-  togglePasswordVisibility(field: 'password' | 'confirmPassword'): void {
-    if (field === 'password') {
-      this.hidePassword = !this.hidePassword;
-    } else {
-      this.hideConfirmPassword = !this.hideConfirmPassword;
-    }
-  }
-
-  // ============================================
-  // Form validation helpers
-  // ============================================
   getErrorMessage(field: string): string {
-    const control = this.registerForm.get(field);
-    
-    if (!control || !control.touched) {
-      return '';
-    }
-
-    if (control.hasError('required')) {
-      return `${this.getFieldName(field)} is required`;
-    }
-
-    if (control.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-
+    const control = this.registerForm?.get(field);
+    if (!control?.touched) return '';
+    if (control.hasError('required')) return `${this.fieldLabel(field)} is required`;
+    if (control.hasError('email')) return 'Please enter a valid email address';
     if (control.hasError('minlength')) {
-      const minLength = control.errors?.['minlength'].requiredLength;
-      return `${this.getFieldName(field)} must be at least ${minLength} characters`;
+      const min = control.errors?.['minlength'].requiredLength;
+      return `${this.fieldLabel(field)} must be at least ${min} characters`;
     }
-
-    if (control.hasError('pattern')) {
-      if (field === 'phone') {
-        return 'Please enter a valid phone number';
-      }
-    }
-
-    if (control.hasError('passwordStrength')) {
-      return 'Password must contain uppercase, lowercase, number, and special character';
-    }
-
-    if (field === 'confirmPassword' && this.registerForm.hasError('passwordMismatch')) {
-      return 'Passwords do not match';
-    }
-
+    if (control.hasError('pattern') && field === 'phone') return 'Please enter a valid phone number';
+    if (control.hasError('passwordStrength')) return 'Password must contain uppercase, lowercase, number, and special character';
+    if (field === 'confirmPassword' && this.registerForm.hasError('passwordMismatch')) return 'Passwords do not match';
     return '';
   }
 
-  private getFieldName(field: string): string {
-    const fieldNames: { [key: string]: string } = {
-      name: 'Name',
-      email: 'Email',
-      phone: 'Phone',
-      cdlNumber: 'CDL Number',
-      password: 'Password',
-      confirmPassword: 'Confirm Password',
-      acceptTerms: 'Terms and Conditions'
-    };
-    return fieldNames[field] || field;
+  hasError(field: string, error: string): boolean {
+    const control = this.registerForm?.get(field);
+    return !!(control?.hasError(error) && control.touched);
   }
 
-  // ============================================
-  // Check if field has error
-  // ============================================
-  hasError(field: string, error: string): boolean {
-    const control = this.registerForm.get(field);
-    return !!(control && control.hasError(error) && control.touched);
+  private fieldLabel(field: string): string {
+    const labels: Record<string, string> = {
+      name: 'Name', email: 'Email', phone: 'Phone',
+      cdlNumber: 'CDL Number', password: 'Password', confirmPassword: 'Confirm Password',
+    };
+    return labels[field] ?? field;
+  }
+
+  private navigateByRole(role: string): void {
+    this.router.navigate(ROLE_DASHBOARDS[role] ?? ['/driver/dashboard']);
   }
 }
