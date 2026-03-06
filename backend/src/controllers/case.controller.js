@@ -7,6 +7,7 @@
 const { supabase, supabaseAdmin, executeQuery } = require('../config/supabase');
 const { validationResult } = require('express-validator');
 const emailService = require('../services/email.service');
+const smsService = require('../services/sms.service');
 
 /**
  * PUBLIC SUBMIT
@@ -127,6 +128,14 @@ exports.createCase = async (req, res) => {
         }
       })
       .catch(() => {});
+
+    // Non-blocking SMS confirmation
+    if (driver_phone) {
+      smsService.sendCaseSubmissionSms({
+        phone: driver_phone,
+        caseNumber: newCase.case_number || newCase.id,
+      }).catch(err => console.error('[createCase] SMS failed:', err));
+    }
 
     res.status(201).json({
       message: 'Case submitted successfully',
@@ -513,6 +522,15 @@ exports.assignToAttorney = async (req, res) => {
       }).catch(err => console.error('[assignToAttorney] Email failed:', err));
     }
 
+    // Non-blocking SMS to driver
+    if (data.driver_phone) {
+      smsService.sendAttorneyAssignedSms({
+        phone: data.driver_phone,
+        attorneyName: attorney.full_name,
+        caseNumber: data.case_number || id,
+      }).catch(err => console.error('[assignToAttorney] SMS failed:', err));
+    }
+
     res.json({
       message: 'Case assigned to attorney successfully',
       case: data
@@ -589,13 +607,22 @@ exports.changeStatus = async (req, res) => {
       );
     }
     
+    // Non-blocking SMS to driver on status change
+    if (data.driver_phone) {
+      smsService.sendStatusChangeSms({
+        phone: data.driver_phone,
+        newStatus: status,
+        caseNumber: data.case_number || id,
+      }).catch(err => console.error('[changeStatus] SMS failed:', err));
+    }
+
     // Log activity
-    const activityMessage = comment 
+    const activityMessage = comment
       ? `Status changed to ${status}: ${comment}`
       : `Status changed to ${status}`;
-    
+
     await logActivity(id, req.user.id, activityMessage);
-    
+
     // Emit real-time update to case room
     const io = req.app.get('io');
     if (io) {

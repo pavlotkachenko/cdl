@@ -30,6 +30,7 @@ const assignmentRoutes = require('./routes/assignment.routes');
 const operatorRoutes = require('./routes/operator.routes');
 const carrierRoutes = require('./routes/carrier.routes');
 const driverRoutes  = require('./routes/driver.routes');
+const subscriptionRoutes = require('./routes/subscription.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -176,6 +177,9 @@ app.use('/api/operator', operatorRoutes);
 // Carrier fleet management
 app.use('/api/carriers', carrierRoutes);
 app.use('/api/drivers',  driverRoutes);
+
+// Subscriptions
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // ============================================
 // ERROR HANDLING

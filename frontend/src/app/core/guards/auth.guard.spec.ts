@@ -11,8 +11,12 @@ import {
   attorneyGuard,
   operatorGuard,
   carrierGuard,
+  subscriptionGuard,
 } from './auth.guard';
 import { AuthService } from '../services/auth.service';
+import { SubscriptionService } from '../../services/subscription.service';
+import { of, throwError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 function runGuard(
   guard: (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => unknown,
@@ -213,6 +217,52 @@ describe('Auth Guards — Sprint 004', () => {
         ['/login'],
         { queryParams: { returnUrl: '/carrier/dashboard' } }
       );
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // subscriptionGuard
+  // ----------------------------------------------------------------
+  describe('subscriptionGuard', () => {
+    let subStub: { getCurrentSubscription: ReturnType<typeof vi.fn> };
+
+    beforeEach(() => {
+      subStub = { getCurrentSubscription: vi.fn() };
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: AuthService, useValue: authStub },
+          { provide: Router, useValue: routerStub },
+          { provide: SubscriptionService, useValue: subStub },
+        ],
+      });
+    });
+
+    async function runSubGuard() {
+      return firstValueFrom(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        runGuard(subscriptionGuard, {}, {}) as any,
+      ) as Promise<boolean>;
+    }
+
+    it('returns true when active subscription is found', async () => {
+      subStub.getCurrentSubscription.mockReturnValue(of({ id: 's1', status: 'active' }));
+      expect(await runSubGuard()).toBe(true);
+    });
+
+    it('navigates to /attorney/subscription and returns false on 404', async () => {
+      subStub.getCurrentSubscription.mockReturnValue(throwError(() => ({ status: 404 })));
+      expect(await runSubGuard()).toBe(false);
+      expect(routerStub.navigate).toHaveBeenCalledWith(['/attorney/subscription']);
+    });
+
+    it('returns true (fail open) on non-404 server error', async () => {
+      subStub.getCurrentSubscription.mockReturnValue(throwError(() => ({ status: 500 })));
+      expect(await runSubGuard()).toBe(true);
+    });
+
+    it('returns true when subscription is in trialing status', async () => {
+      subStub.getCurrentSubscription.mockReturnValue(of({ id: 's2', status: 'trialing' }));
+      expect(await runSubGuard()).toBe(true);
     });
   });
 });

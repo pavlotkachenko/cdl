@@ -9,7 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import {
-  SubscriptionService, Subscription, SubscriptionPlan,
+  SubscriptionService, Subscription, SubscriptionPlan, CheckoutResult,
 } from '../../../services/subscription.service';
 
 @Component({
@@ -59,7 +59,7 @@ import {
                 <mat-card-content>
                   <p class="plan-card-name">{{ plan.name }}</p>
                   <p class="plan-price">
-                    \${{ plan.price / 100 }}<span class="interval">/{{ plan.interval }}</span>
+                    \${{ plan.price }}<span class="interval">/{{ plan.interval }}</span>
                   </p>
                   <ul class="features" aria-label="Plan features">
                     @for (f of plan.features; track f) {
@@ -153,23 +153,27 @@ export class SubscriptionManagementComponent implements OnInit {
   currentPlanName(): string {
     const sub = this.subscription();
     if (!sub) return 'No Plan';
-    const match = this.plans().find(p => p.price_id === sub.stripe_price_id);
-    return match?.name ?? 'Unknown Plan';
+    const match = this.plans().find(p => p.id === sub.plan_name);
+    return match?.name ?? sub.plan_name ?? 'Unknown Plan';
   }
 
   isCurrentPlan(plan: SubscriptionPlan): boolean {
-    return plan.price_id === this.subscription()?.stripe_price_id;
+    return plan.id === this.subscription()?.plan_name;
   }
 
   selectPlan(plan: SubscriptionPlan): void {
-    if (!this.subscription()) {
-      this.snackBar.open('Please contact support to subscribe.', 'Close', { duration: 4000 });
-      return;
-    }
     if (!confirm(`Switch to ${plan.name}?`)) return;
     this.loading.set(true);
-    this.subscriptionService.updateSubscription(this.subscription()!.id, plan.price_id).subscribe({
-      next: (s) => { this.subscription.set(s); this.loading.set(false); },
+    this.subscriptionService.createCheckoutSession(plan.price_id).subscribe({
+      next: (result: CheckoutResult) => {
+        if (result.subscription) {
+          this.subscription.set(result.subscription);
+          this.loading.set(false);
+          this.snackBar.open(`Switched to ${plan.name}!`, 'Close', { duration: 3000 });
+        } else if (result.url) {
+          window.location.href = result.url;
+        }
+      },
       error: () => {
         this.loading.set(false);
         this.snackBar.open('Failed to change plan.', 'Close', { duration: 3000 });
