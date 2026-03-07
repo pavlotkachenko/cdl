@@ -1,0 +1,8 @@
+name,email,phone,cdl_number,state
+Alice Johnson,alice.johnson@carrier-test.com,+12025550001,CDL100001,TX
+Bob Smith,bob.smith@carrier-test.com,+12025550002,CDL100002,CA
+Carol White,carol.white@carrier-test.com,+12025550003,CDL100003,FL
+David Brown,david.brown@carrier-test.com,+12025550004,CDL100004,NY
+Eve Davis,eve.davis@carrier-test.com,+12025550005,CDL100005,IL
+missing_cdl_user,missing@carrier-test.com,+12025550006,,TX
+no_email_user,,+12025550007,CDL100007,OH
