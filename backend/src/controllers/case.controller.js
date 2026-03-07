@@ -10,6 +10,7 @@ const emailService = require('../services/email.service');
 const smsService = require('../services/sms.service');
 const oneSignalService = require('../services/onesignal.service');
 const assignmentService = require('../services/assignment.service');
+const webhookService = require('../services/webhook.service');
 
 /**
  * PUBLIC SUBMIT
@@ -380,11 +381,15 @@ exports.updateCase = async (req, res) => {
       { fields_updated: Object.keys(updates) }
     );
     
+    if (updates.status && data.carrier_id) {
+      webhookService.dispatch(data.carrier_id, 'case.status_changed', { caseId: id, status: updates.status });
+    }
+
     res.json({
       message: 'Case updated successfully',
       case: data
     });
-    
+
   } catch (error) {
     console.error('Update case error:', error);
     res.status(500).json({ error: 'Failed to update case' });
@@ -1168,6 +1173,10 @@ exports.acceptCase = async (req, res) => {
       );
     }
 
+    if (data.carrier_id) {
+      webhookService.dispatch(data.carrier_id, 'case.status_changed', { caseId: id, caseNumber: caseData.case_number, status: 'send_info_to_attorney' });
+    }
+
     res.json({ message: 'Case accepted successfully', case: data });
   } catch (error) {
     console.error('Accept case error:', error);
@@ -1227,6 +1236,10 @@ exports.declineCase = async (req, res) => {
         );
       }
     }).catch(err => console.error('[declineCase] Auto re-offer failed:', err.message));
+
+    if (data.carrier_id) {
+      webhookService.dispatch(data.carrier_id, 'case.status_changed', { caseId: id, caseNumber: caseData.case_number, status: 'new' });
+    }
 
     res.json({ message: 'Case declined successfully', case: data });
   } catch (error) {

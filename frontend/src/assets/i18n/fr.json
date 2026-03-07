@@ -1,0 +1,123 @@
+{
+  "COMMON": {
+    "LOADING": "Chargement…",
+    "RETRY": "Réessayer",
+    "BACK": "Retour",
+    "SAVE": "Enregistrer",
+    "CANCEL": "Annuler",
+    "CLOSE": "Fermer",
+    "SUBMIT": "Envoyer",
+    "NEXT": "Suivant",
+    "DONE": "Terminé",
+    "ERROR": "Une erreur s'est produite. Veuillez réessayer.",
+    "NO_DATA": "Aucune donnée disponible."
+  },
+  "NAV": {
+    "DASHBOARD": "Tableau de bord",
+    "MY_CASES": "Mes dossiers",
+    "NOTIFICATIONS": "Notifications",
+    "PROFILE": "Profil",
+    "LOGOUT": "Déconnexion"
+  },
+  "SUBMIT_TICKET": {
+    "TITLE": "Soumettre une contravention",
+    "STEP_PHOTO": "Prendre une photo",
+    "STEP_REVIEW": "Vérifier les détails",
+    "STEP_CONFIRM": "Confirmer",
+    "TAKE_PHOTO": "Prendre une photo",
+    "UPLOAD_PHOTO": "Télécharger depuis la galerie",
+    "PROCESSING": "Lecture de votre contravention…",
+    "REVIEW_TITLE": "Vérifier les détails de la contravention",
+    "TICKET_NUMBER": "Numéro de contravention",
+    "VIOLATION_TYPE": "Type d'infraction",
+    "STATE": "État",
+    "COURT_DATE": "Date d'audience",
+    "FINE_AMOUNT": "Montant de l'amende",
+    "SUBMIT_BTN": "Soumettre la contravention",
+    "SUCCESS": "Reçu ! Nous vous contacterons bientôt.",
+    "ERROR_UPLOAD": "Échec du téléchargement. Veuillez réessayer.",
+    "ERROR_OCR": "Impossible de lire la contravention automatiquement. Veuillez remplir les champs."
+  },
+  "CASE_STATUS": {
+    "SUBMITTED": "Soumis",
+    "ATTORNEY_ASSIGNED": "Avocat assigné",
+    "IN_PROGRESS": "En cours",
+    "COURT_SCHEDULED": "Audience planifiée",
+    "RESOLVED": "Résolu",
+    "CLOSED": "Clôturé",
+    "NEW": "Nouveau",
+    "LABEL": "Statut"
+  },
+  "CASE_LIST": {
+    "TITLE": "Mes dossiers",
+    "EMPTY": "Vous n'avez pas encore de dossiers.",
+    "EMPTY_CTA": "Soumettre votre première contravention",
+    "FILTER_ALL": "Tous",
+    "FILTER_ACTIVE": "Actifs",
+    "FILTER_RESOLVED": "Résolus"
+  },
+  "CASE_DETAIL": {
+    "ATTORNEY": "Avocat",
+    "VIOLATION": "Infraction",
+    "COURT_DATE": "Date d'audience",
+    "LAST_UPDATED": "Dernière mise à jour",
+    "SEND_MESSAGE": "Contacter l'avocat",
+    "PAY_NOW": "Payer maintenant"
+  },
+  "ATTORNEY_SELECTION": {
+    "TITLE": "Choisir votre avocat",
+    "RECOMMENDED": "RECOMMANDÉ",
+    "WIN_RATE": "Gagné {{rate}}% de dossiers similaires",
+    "CHOOSE": "Choisir l'avocat",
+    "CONFIRM": "Confirmer la sélection",
+    "CONFIRM_MSG": "Vous avez sélectionné {{name}}",
+    "NEXT_PAYMENT": "Suivant : Paiement"
+  },
+  "PAYMENT": {
+    "TITLE": "Payer les honoraires",
+    "TOTAL": "Total",
+    "PAY_NOW": "Payer maintenant",
+    "PAYMENT_PLAN": "Plan de paiement",
+    "CHOOSE_OPTION": "Choisir une option de paiement",
+    "MOST_POPULAR": "Le plus populaire",
+    "WEEK": "semaine",
+    "PAYMENTS": "paiements",
+    "PAY_BTN": "Payer {{amount}}",
+    "PAY_WEEK_BTN": "Payer {{amount}}/semaine",
+    "PROCESSING": "Traitement en cours…",
+    "SUCCESS": "Paiement confirmé !",
+    "SUCCESS_PLAN": "Plan de paiement créé ! Premier paiement effectué.",
+    "SCHEDULE_TITLE": "Calendrier des paiements",
+    "TRUST": "Aucuns frais cachés. Paiement sécurisé via Stripe.",
+    "ERROR_LOAD": "Échec du chargement des détails du dossier.",
+    "ERROR_PAYMENT": "Paiement échoué. Veuillez réessayer.",
+    "ERROR_PLAN": "Échec de la création du plan de paiement."
+  },
+  "MESSAGING": {
+    "PLACEHOLDER": "Saisir un message…",
+    "SEND": "Envoyer",
+    "ATTORNEY_LABEL": "Avocat",
+    "YOU_LABEL": "Vous",
+    "EMPTY": "Aucun message. Dites bonjour !"
+  },
+  "NOTIFICATIONS": {
+    "TITLE": "Notifications",
+    "EMPTY": "Aucune notification.",
+    "MARK_READ": "Tout marquer comme lu"
+  },
+  "DRIVER_DASHBOARD": {
+    "GREETING_MORNING": "Bonjour",
+    "GREETING_AFTERNOON": "Bon après-midi",
+    "GREETING_EVENING": "Bonsoir",
+    "ACTIVE_CASES": "Dossiers actifs",
+    "PENDING": "En attente",
+    "RESOLVED": "Résolus",
+    "SUBMIT_TICKET": "Soumettre une contravention",
+    "VIEW_CASES": "Voir tous les dossiers"
+  },
+  "LANG": {
+    "EN": "English",
+    "ES": "Español",
+    "FR": "Français"
+  }
+}

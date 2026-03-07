@@ -13,7 +13,10 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 const ROLE_DASHBOARDS: Record<string, string> = {
   admin: '/admin/dashboard',
@@ -47,6 +50,7 @@ const ROLE_DASHBOARDS: Record<string, string> = {
 export class LoginComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
@@ -58,9 +62,14 @@ export class LoginComponent implements OnInit, OnDestroy {
   });
 
   loading = false;
+  biometricLoading = false;
   hidePassword = true;
   errorMessage = '';
   returnUrl = '';
+
+  get biometricEnrolled(): boolean {
+    return localStorage.getItem('webauthn_enrolled') === 'true';
+  }
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
@@ -138,6 +147,33 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   loginWithFacebook(): void {
     this.snackBar.open('Facebook login coming soon!', 'Close', { duration: 3000 });
+  }
+
+  async loginWithBiometric(): Promise<void> {
+    const email = this.loginForm.value.email;
+    if (!email) {
+      this.snackBar.open('Enter your email first, then tap the biometric button.', 'Close', { duration: 3000 });
+      return;
+    }
+    this.biometricLoading = true;
+    try {
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+      const base = `${environment.apiUrl}/auth/webauthn`;
+      const options = await firstValueFrom(
+        this.http.post<any>(`${base}/auth/options`, { email })
+      );
+      const response = await startAuthentication({ optionsJSON: options });
+      const result = await firstValueFrom(
+        this.http.post<{ token: string; user: any }>(`${base}/auth/verify`, { email, response })
+      );
+      localStorage.setItem('token', result.token);
+      localStorage.setItem('currentUser', JSON.stringify(result.user));
+      this.biometricLoading = false;
+      this.redirectBasedOnRole();
+    } catch {
+      this.biometricLoading = false;
+      this.snackBar.open('Biometric login failed. Try your password.', 'Close', { duration: 4000 });
+    }
   }
 
   getErrorMessage(field: string): string {

@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { sendRegistrationEmail } = require('../services/email.service');
+const pdfService = require('../services/pdf.service');
 
 const validateCarrierRegistration = (data) => {
   const errors = [];
@@ -670,6 +671,47 @@ const getCsaScore = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/compliance-report/pdf
+// Query: from (YYYY-MM-DD), to (YYYY-MM-DD)
+// ─────────────────────────────────────────────
+const downloadComplianceReport = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  const { from, to } = req.query;
+  const params = [carrierId];
+  let dateClause = '';
+  if (from) { params.push(from); dateClause += ` AND c.created_at >= $${params.length}`; }
+  if (to) { params.push(to); dateClause += ` AND c.created_at <= $${params.length}`; }
+
+  try {
+    const result = await pool.query(
+      `SELECT c.case_number, d.full_name AS driver_name, d.cdl_number,
+              c.violation_type, c.state, c.status,
+              TO_CHAR(c.created_at, 'YYYY-MM-DD') AS incident_date,
+              COALESCE(u.name, '') AS attorney_name
+       FROM cases c
+       JOIN drivers d ON d.id = c.driver_id
+       LEFT JOIN attorneys a ON a.id = c.attorney_id
+       LEFT JOIN users u ON u.id = a.user_id
+       WHERE c.carrier_id = $1 ${dateClause}
+       ORDER BY d.full_name, c.created_at DESC`,
+      params,
+    );
+
+    const pdfBuffer = await pdfService.generateComplianceReport(result.rows, from || null, to || null);
+    const filename = `compliance-${new Date().toISOString().slice(0, 10)}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('downloadComplianceReport error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to generate PDF' } });
+  }
+};
+
 module.exports = {
   register,
   getProfile,
@@ -684,5 +726,6 @@ module.exports = {
   bulkImport,
   bulkArchive,
   getComplianceReport,
+  downloadComplianceReport,
   getCsaScore,
 };

@@ -43,6 +43,10 @@ const routes: Routes = [
       {
         path: 'compliance-report',
         loadComponent: () => import('./compliance-report/compliance-report.component').then(m => m.ComplianceReportComponent)
+      },
+      {
+        path: 'webhooks',
+        loadComponent: () => import('./webhooks/webhook-management.component').then(m => m.WebhookManagementComponent)
       }
     ]
   }

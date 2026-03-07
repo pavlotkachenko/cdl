@@ -14,6 +14,7 @@ const LANG_KEY = 'cdl_lang';
       aria-label="Select language" class="lang-toggle">
       <mat-button-toggle value="en">🇺🇸 EN</mat-button-toggle>
       <mat-button-toggle value="es">🇲🇽 ES</mat-button-toggle>
+      <mat-button-toggle value="fr">🇫🇷 FR</mat-button-toggle>
     </mat-button-toggle-group>
   `,
   styles: [`
@@ -27,7 +28,7 @@ export class LanguageSwitcherComponent implements OnInit {
 
   ngOnInit(): void {
     const saved = localStorage.getItem(LANG_KEY);
-    if (saved && (saved === 'en' || saved === 'es')) {
+    if (saved && (saved === 'en' || saved === 'es' || saved === 'fr')) {
       this.translate.use(saved);
       this.currentLang.set(saved);
     }

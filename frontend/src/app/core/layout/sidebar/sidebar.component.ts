@@ -96,6 +96,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'Documents', icon: 'folder', link: '/carrier/documents' },
     { name: 'Analytics', icon: 'bar_chart', link: '/carrier/analytics' },
     { name: 'Payments', icon: 'payment', link: '/carrier/payments' },
+    { name: 'Webhooks', icon: 'webhook', link: '/carrier/webhooks' },
     { name: 'Notifications', icon: 'notifications', link: '/carrier/notifications', badge: 0 },
     { name: 'Settings', icon: 'settings', link: '/carrier/settings' }
   ];

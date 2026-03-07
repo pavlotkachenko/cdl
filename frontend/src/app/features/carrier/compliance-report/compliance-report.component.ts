@@ -1,6 +1,7 @@
 import {
   Component, OnInit, signal, inject, ChangeDetectionStrategy,
 } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 
 import { CarrierService, ComplianceReportRow } from '../../../core/services/carrier.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-compliance-report',
@@ -40,6 +42,11 @@ import { CarrierService, ComplianceReportRow } from '../../../core/services/carr
               Generate
             </button>
             @if (report().length > 0) {
+              <button mat-stroked-button (click)="downloadPdf()" [disabled]="downloadingPdf()"
+                      aria-label="Download PDF report">
+                <mat-icon aria-hidden="true">download</mat-icon>
+                {{ downloadingPdf() ? 'Downloading…' : 'Download PDF' }}
+              </button>
               <button mat-stroked-button (click)="printReport()" aria-label="Print report">
                 <mat-icon aria-hidden="true">print</mat-icon> Print
               </button>
@@ -135,12 +142,14 @@ import { CarrierService, ComplianceReportRow } from '../../../core/services/carr
 })
 export class ComplianceReportComponent implements OnInit {
   private carrierService = inject(CarrierService);
+  private http = inject(HttpClient);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
 
   fromDate = '';
   toDate = '';
   loading = signal(false);
+  downloadingPdf = signal(false);
   report = signal<ComplianceReportRow[]>([]);
   generatedAt = signal<string | null>(null);
   generated = signal(false);
@@ -162,6 +171,31 @@ export class ComplianceReportComponent implements OnInit {
       error: () => {
         this.loading.set(false);
         this.snackBar.open('Failed to generate report.', 'Close', { duration: 3000 });
+      },
+    });
+  }
+
+  downloadPdf(): void {
+    this.downloadingPdf.set(true);
+    const params: Record<string, string> = {};
+    if (this.fromDate) params['from'] = this.fromDate;
+    if (this.toDate) params['to'] = this.toDate;
+    const qs = new URLSearchParams(params).toString();
+    const url = `${environment.apiUrl}/carriers/me/compliance-report/pdf${qs ? '?' + qs : ''}`;
+
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objUrl;
+        a.download = `compliance-${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(objUrl);
+        this.downloadingPdf.set(false);
+      },
+      error: () => {
+        this.downloadingPdf.set(false);
+        this.snackBar.open('Failed to download PDF.', 'Close', { duration: 3000 });
       },
     });
   }

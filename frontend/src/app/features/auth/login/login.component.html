@@ -93,6 +93,21 @@
       <mat-divider class="divider"></mat-divider>
       <p class="divider-text">OR</p>
 
+      <!-- Biometric Login (shown only when enrolled) -->
+      <div *ngIf="biometricEnrolled" class="social-login">
+        <button
+          mat-stroked-button
+          type="button"
+          class="full-width social-button"
+          (click)="loginWithBiometric()"
+          [disabled]="biometricLoading || loading"
+        >
+          <mat-icon>fingerprint</mat-icon>
+          <span *ngIf="!biometricLoading">Sign in with biometrics</span>
+          <span *ngIf="biometricLoading">Verifying…</span>
+        </button>
+      </div>
+
       <!-- Social Login -->
       <div class="social-login">
         <button

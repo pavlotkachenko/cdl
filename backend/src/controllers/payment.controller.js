@@ -7,6 +7,7 @@ const paymentService = require('../services/payment.service');
 const emailService = require('../services/email.service');
 const { supabase } = require('../config/supabase');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+const webhookService = require('../services/webhook.service');
 
 /**
  * Create payment intent
@@ -398,6 +399,14 @@ const createPaymentPlan = async (req, res) => {
       paid_at: i === 0 ? new Date().toISOString() : null,
     }));
     await supabase.from('case_installment_schedule').insert(scheduleRows);
+
+    // Dispatch webhook (non-blocking) — fetch carrier_id from case
+    supabase.from('cases').select('carrier_id').eq('id', caseId).single()
+      .then(({ data: c }) => {
+        if (c?.carrier_id) {
+          webhookService.dispatch(c.carrier_id, 'payment.received', { caseId, planId: plan.id, weeklyAmount: weekly, weeks });
+        }
+      }).catch(() => {});
 
     res.status(201).json({ success: true, data: { planId: plan.id, weeks, weeklyAmount: weekly, schedule: scheduleRows } });
   } catch (err) {

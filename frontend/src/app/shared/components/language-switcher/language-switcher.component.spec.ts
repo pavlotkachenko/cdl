@@ -51,11 +51,10 @@ describe('LanguageSwitcherComponent', () => {
     expect(spy.use).toHaveBeenCalledWith('es');
   });
 
-  it('ignores invalid values in localStorage', async () => {
-    localStorage.setItem('cdl_lang', 'fr');
+  it('ignores truly invalid values in localStorage', async () => {
+    localStorage.setItem('cdl_lang', 'de');
     const spy = makeTranslateSpy('en');
     const { component } = await setup(spy);
-    // 'fr' is not 'en' or 'es', so it should be ignored
     expect(component.currentLang()).toBe('en');
     expect(spy.use).not.toHaveBeenCalled();
   });
@@ -83,5 +82,28 @@ describe('LanguageSwitcherComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('EN');
     expect(el.textContent).toContain('ES');
+  });
+
+  // Sprint 036 FR-1 — French language tests
+  it('restores "fr" from localStorage on init', async () => {
+    localStorage.setItem('cdl_lang', 'fr');
+    const spy = makeTranslateSpy('en');
+    const { component } = await setup(spy);
+    expect(component.currentLang()).toBe('fr');
+    expect(spy.use).toHaveBeenCalledWith('fr');
+  });
+
+  it('renders FR toggle button', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('FR');
+  });
+
+  it('switchLang("fr") activates French and persists to localStorage', async () => {
+    const { component, translateSpy } = await setup();
+    component.switchLang('fr');
+    expect(translateSpy.use).toHaveBeenCalledWith('fr');
+    expect(component.currentLang()).toBe('fr');
+    expect(localStorage.getItem('cdl_lang')).toBe('fr');
   });
 });

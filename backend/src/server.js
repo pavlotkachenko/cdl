@@ -33,6 +33,8 @@ const driverRoutes  = require('./routes/driver.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
 const ratingRoutes = require('./routes/rating.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
+const webhookRoutes = require('./routes/webhook.routes');
+const webauthnRoutes = require('./routes/webauthn.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -187,6 +189,8 @@ app.use('/api/drivers',  driverRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/auth/webauthn', webauthnRoutes);
 
 // ============================================
 // ERROR HANDLING

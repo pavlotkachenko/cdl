@@ -13,6 +13,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { environment } from '../../../../environments/environment';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface CaseInvoice {
   invoice_number: string;
@@ -45,9 +47,9 @@ interface CaseInvoice {
           @if (invoice()!.attorney_name) {
             <p class="inv-attorney">Attorney: {{ invoice()!.attorney_name }}</p>
           }
-          <button mat-stroked-button (click)="printInvoice()" class="print-btn"
-                  aria-label="Print or save invoice">
-            <mat-icon aria-hidden="true">print</mat-icon> Download Invoice
+          <button mat-stroked-button (click)="downloadPdf()" class="print-btn"
+                  aria-label="Download invoice as PDF">
+            <mat-icon aria-hidden="true">download</mat-icon> Download PDF
           </button>
         </mat-card-content>
       </mat-card>
@@ -84,7 +86,42 @@ export class CaseInvoiceSectionComponent implements OnInit {
     });
   }
 
-  printInvoice(): void {
-    window.print();
+  downloadPdf(): void {
+    const inv = this.invoice();
+    if (!inv) return;
+
+    const doc = new jsPDF();
+    const issuedDate = new Date(inv.issued_at).toLocaleDateString('en-US', { dateStyle: 'long' });
+    const amountFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: inv.currency.toUpperCase() }).format(inv.amount);
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CDL Ticket Management', 14, 20);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Invoice', 14, 28);
+
+    // Invoice meta
+    doc.setFontSize(10);
+    doc.text(`Invoice #: ${inv.invoice_number}`, 14, 40);
+    doc.text(`Issued: ${issuedDate}`, 14, 47);
+    doc.text(`Status: ${inv.status.toUpperCase()}`, 14, 54);
+
+    // Table
+    autoTable(doc, {
+      startY: 64,
+      head: [['Case #', 'Driver', 'Attorney', 'Amount']],
+      body: [[
+        inv.case_number,
+        inv.customer_name,
+        inv.attorney_name ?? '—',
+        amountFormatted,
+      ]],
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [25, 118, 210] },
+    });
+
+    doc.save(`invoice-${inv.invoice_number}.pdf`);
   }
 }
