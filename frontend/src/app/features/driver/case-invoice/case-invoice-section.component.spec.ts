@@ -4,6 +4,16 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { vi, describe, it, expect, afterEach } from 'vitest';
 
+vi.mock('jspdf', () => ({
+  default: class MockJsPDF {
+    setFontSize() {}
+    setFont() {}
+    text() {}
+    save = vi.fn();
+  },
+}));
+vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
+
 import { CaseInvoiceSectionComponent } from './case-invoice-section.component';
 import { environment } from '../../../../environments/environment';
 
@@ -49,7 +59,7 @@ describe('CaseInvoiceSectionComponent (IN-2)', () => {
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('INV-CDL-001');
-    expect(el.textContent).toContain('Download Invoice');
+    expect(el.textContent).toContain('Download PDF');
   });
 
   it('hides invoice section when API returns error (no invoice)', async () => {
@@ -62,14 +72,10 @@ describe('CaseInvoiceSectionComponent (IN-2)', () => {
     expect(el.querySelector('.inv-card')).toBeNull();
   });
 
-  it('printInvoice() calls window.print()', async () => {
+  it('downloadPdf() does not throw when invoice is loaded', async () => {
     const { component, httpMock } = await setup();
     const req = httpMock.expectOne(`${environment.apiUrl}/invoices/case/c1`);
     req.flush({ invoice: MOCK_INVOICE });
-
-    const printSpy = vi.spyOn(window, 'print').mockReturnValue(undefined);
-    component.printInvoice();
-    expect(printSpy).toHaveBeenCalled();
-    printSpy.mockRestore();
+    expect(() => component.downloadPdf()).not.toThrow();
   });
 });

@@ -19,7 +19,7 @@ const MOCK_CSA: CsaScoreResponse = {
   csaScore: 42,
   riskLevel: 'medium',
   openViolations: 3,
-  breakdown: { hos: 1, logbook: 0, maintenance: 1, vehicle: 0, speeding_major: 0, speeding_minor: 1 },
+  breakdown: { hos: 1, maintenance: 1, speeding_major: 0, speeding_minor: 1, other: 0 },
 };
 
 function makeCarrierServiceSpy(stats = MOCK_STATS, csa = MOCK_CSA) {
