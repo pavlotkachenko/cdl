@@ -27,8 +27,41 @@ declare namespace Cypress {
      * Clear all auth state from localStorage.
      */
     clearAuth(): Chainable<void>;
+
+    /**
+     * Log in via the real API and write tokens to localStorage.
+     */
+    loginViaApi(email: string, password: string): Chainable<void>;
+
+    /**
+     * Log in as a fixed staging account for the given role.
+     * Roles: driver | carrier | attorney | admin | operator | paralegal
+     */
+    loginAs(role: StagingRole): Chainable<void>;
+
+    /**
+     * Make an authenticated API request using the token stored in localStorage.
+     */
+    apiRequest(method: string, path: string, body?: object): Chainable<Cypress.Response<any>>;
+
+    /**
+     * Create a case via the API and return the case object.
+     */
+    createCase(fields?: Partial<CreateCaseData>): Chainable<Cypress.Response<any>>;
+
+    /**
+     * Create a webhook via the API and return the webhook record.
+     */
+    createWebhook(url: string, events: string[]): Chainable<Cypress.Response<any>>;
+
+    /**
+     * Read the JWT token from localStorage.
+     */
+    getToken(): Chainable<string>;
   }
 }
+
+type StagingRole = 'driver' | 'carrier' | 'attorney' | 'admin' | 'operator' | 'paralegal';
 
 interface RegistrationFormData {
   name: string;
@@ -48,7 +81,27 @@ interface ApiRegisterData {
   role?: 'driver' | 'carrier';
 }
 
+interface CreateCaseData {
+  customer_name: string;
+  customer_type: string;
+  state: string;
+  violation_type: string;
+  violation_date: string;
+  violation_details: string;
+}
+
 const DEFAULT_PASSWORD = 'Test@1234Secure';
+
+const STAGING_CREDENTIALS: Record<StagingRole, string> = {
+  driver: 'driver@test.com',
+  carrier: 'carrier@test.com',
+  attorney: 'attorney@test.com',
+  admin: 'admin@test.com',
+  operator: 'operator@test.com',
+  paralegal: 'paralegal@test.com',
+};
+
+const STAGING_PASSWORD = 'Test1234!';
 
 // ---------------------------------------------------------------------------
 // Commands
@@ -110,4 +163,61 @@ Cypress.Commands.add('registerViaApi', (data: ApiRegisterData) => {
     body: data,
     failOnStatusCode: false,
   });
+});
+
+Cypress.Commands.add('loginViaApi', (email: string, password: string) => {
+  const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3000';
+  cy.request({
+    method: 'POST',
+    url: `${apiUrl}/api/auth/signin`,
+    body: { email, password },
+    failOnStatusCode: false,
+  }).then((resp) => {
+    expect(resp.status, `loginViaApi(${email}) should succeed`).to.equal(200);
+    cy.window().then((win) => {
+      win.localStorage.setItem('token', resp.body.token);
+      if (resp.body.refreshToken) {
+        win.localStorage.setItem('refreshToken', resp.body.refreshToken);
+      }
+      win.localStorage.setItem('currentUser', JSON.stringify(resp.body.user));
+    });
+  });
+});
+
+Cypress.Commands.add('loginAs', (role: StagingRole) => {
+  const email = STAGING_CREDENTIALS[role];
+  cy.loginViaApi(email, STAGING_PASSWORD);
+});
+
+Cypress.Commands.add('getToken', () => {
+  return cy.window().then((win) => win.localStorage.getItem('token') as string);
+});
+
+Cypress.Commands.add('apiRequest', (method: string, path: string, body?: object) => {
+  const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3000';
+  return cy.getToken().then((token) => {
+    return cy.request({
+      method,
+      url: `${apiUrl}/api${path}`,
+      body,
+      headers: { Authorization: `Bearer ${token}` },
+      failOnStatusCode: false,
+    });
+  });
+});
+
+Cypress.Commands.add('createCase', (fields: Partial<CreateCaseData> = {}) => {
+  const defaults: CreateCaseData = {
+    customer_name: 'Test Driver',
+    customer_type: 'subscriber_driver',
+    state: 'TX',
+    violation_type: 'speeding',
+    violation_date: new Date().toISOString(),
+    violation_details: 'Automated test case',
+  };
+  return cy.apiRequest('POST', '/cases', { ...defaults, ...fields });
+});
+
+Cypress.Commands.add('createWebhook', (url: string, events: string[]) => {
+  return cy.apiRequest('POST', '/webhooks', { url, events });
 });
