@@ -8,6 +8,8 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
+import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { TranslateHttpLoader, provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 // Корневые компоненты и модули
 import { AppComponent } from './app.component';
@@ -18,7 +20,6 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { routes } from './app.routes';
 import { LandingFooterComponent } from './features/landing/components/landing-footer/landing-footer.component';
 import { LandingHeaderComponent } from './features/landing/components/landing-header/landing-header.component';
-
 
 @NgModule({
   declarations: [
@@ -31,15 +32,21 @@ import { LandingHeaderComponent } from './features/landing/components/landing-he
     SharedModule,
     LandingFooterComponent,
     LandingHeaderComponent,
+    TranslateModule.forRoot({
+      defaultLanguage: 'en',
+      loader: { provide: TranslateLoader, useClass: TranslateHttpLoader },
+    }),
     // Настраиваем маршрутизацию напрямую через константу routes
-    RouterModule.forRoot(routes, { 
+    RouterModule.forRoot(routes, {
       // useHash помогает избежать проблем с 404 при перезагрузке страницы на dev-сервере
-     //  useHash: true, 
+     //  useHash: true,
       // Автоматическая прокрутка страницы вверх при переходе между маршрутами
-      scrollPositionRestoration: 'top' 
+      scrollPositionRestoration: 'top'
     })
   ],
-  providers: [ {
+  providers: [
+    provideTranslateHttpLoader({ prefix: './assets/i18n/', suffix: '.json' }),
+    {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
       multi: true

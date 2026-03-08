@@ -3,6 +3,7 @@ import { Observable, fromEvent, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { io, Socket } from 'socket.io-client';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class SocketService implements OnDestroy {
@@ -16,7 +17,8 @@ export class SocketService implements OnDestroy {
     const token = this.authService.getToken?.() || localStorage.getItem('token');
     if (!token) return;
 
-    this.socket = io('http://localhost:3000', {
+    const wsUrl = environment.wsUrl || window.location.origin;
+    this.socket = io(wsUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,

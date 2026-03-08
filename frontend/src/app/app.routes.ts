@@ -9,7 +9,7 @@ import { RegisterComponent } from './features/auth/register/register.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 import { RoleSelectComponent } from './features/auth/role-select/role-select.component';
-import { authGuard } from './core/guards/auth.guard';
+import { authGuard, adminGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // Landing page (public - no auth required)
@@ -59,10 +59,10 @@ export const routes: Routes = [
     loadChildren: () => import('./features/driver/driver.module').then(m => m.DriverModule)
   },
 
-  // Admin routes
+  // Admin routes (restricted to admin role)
   {
     path: 'admin',
-    canActivate: [authGuard],
+    canActivate: [adminGuard],
     loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule)
   },
 

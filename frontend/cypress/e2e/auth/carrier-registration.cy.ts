@@ -30,23 +30,27 @@ describe('Carrier Registration', () => {
       expect(resp.body).to.have.property('token');
     });
 
+    // Verify login API response shape directly (avoids page-navigation race with cy.intercept)
+    const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3000';
+    cy.request({
+      method: 'POST',
+      url: `${apiUrl}/api/auth/signin`,
+      body: { email: uniqueEmail, password: STRONG_PASSWORD },
+      failOnStatusCode: false,
+    }).then((resp) => {
+      expect(resp.status).to.equal(200);
+      expect(resp.body.user).to.have.property('role', 'carrier');
+      expect(resp.body.user).to.have.property('name', 'E2E Test Carrier LLC');
+    });
+
     // Now log in as the carrier through the UI
     cy.clearAuth();
     cy.visit('/login');
-
     cy.fillLoginForm(uniqueEmail, STRONG_PASSWORD);
-
-    cy.intercept('POST', '**/api/auth/signin').as('loginRequest');
     cy.get('button[type="submit"]').click();
 
-    cy.wait('@loginRequest').then((interception) => {
-      expect(interception.response!.statusCode).to.equal(200);
-      expect(interception.response!.body.user).to.have.property('role', 'carrier');
-      expect(interception.response!.body.user).to.have.property('name', 'E2E Test Carrier LLC');
-    });
-
-    // Carrier is redirected to driver dashboard (carriers share the driver layout)
-    cy.url().should('include', '/driver/dashboard');
+    // Carrier is redirected to carrier dashboard
+    cy.url({ timeout: 15000 }).should('include', '/carrier/dashboard');
 
     // Verify auth state in localStorage
     cy.window().then((win) => {

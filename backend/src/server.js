@@ -68,7 +68,9 @@ app.use(helmet({
 // CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:4200',
+  'http://localhost:9000',
   'http://host.docker.internal:4200',
+  'http://host.docker.internal:9000',
 ];
 if (process.env.PRODUCTION_URL) allowedOrigins.push(process.env.PRODUCTION_URL);
 
@@ -193,10 +195,33 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/auth/webauthn', webauthnRoutes);
 
 // ============================================
+// PRODUCTION STATIC FILE SERVING
+// ============================================
+
+if (process.env.NODE_ENV === 'production') {
+  const path = require('path');
+  const frontendPath = path.join(__dirname, '..', 'public');
+
+  app.use(express.static(frontendPath, {
+    maxAge: '1y',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html') || filePath.includes('ngsw')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    }
+  }));
+
+  // Angular client-side routing fallback
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
+// ============================================
 // ERROR HANDLING
 // ============================================
 
-// 404 handler
+// 404 handler (API routes only in production, all routes in development)
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not Found',

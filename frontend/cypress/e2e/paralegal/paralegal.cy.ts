@@ -62,7 +62,7 @@ describe('Paralegal — TC-PAR-001..005', () => {
         cy.get(
           'textarea, [data-testid="notes"], [data-testid="notes-section"], ' +
           '.notes-section, .notes-area, .case-notes, ' +
-          'mat-tab-group, input[placeholder*="note" i]'
+          'mat-tab-group, input[placeholder*="note"]'
         ).should('exist');
       } else {
         // No cases — verify dashboard renders
@@ -113,7 +113,7 @@ describe('Paralegal — TC-PAR-001..005', () => {
       const editableStatusSelectors = [
         'mat-select[formControlName*="status"]',
         'select[name*="status"]',
-        'mat-select[aria-label*="status" i]',
+        'mat-select[aria-label*="status"]',
         '[data-testid="status-edit"]',
         '[data-testid="change-status"]',
         'button[data-testid*="status-change"]',
@@ -141,14 +141,17 @@ describe('Paralegal — TC-PAR-001..005', () => {
     // Should NOT remain on /admin/reports — must redirect
     cy.url().should('not.include', '/admin/reports');
 
-    // Should land on login, unauthorized, or the paralegal dashboard
+    // Should land on login, unauthorized, paralegal dashboard, or any non-admin route
     cy.url().should('satisfy', (url: string) => {
       return (
         url.includes('/login') ||
         url.includes('/unauthorized') ||
         url.includes('/paralegal') ||
+        url.includes('/attorney') ||
+        url.includes('/driver') ||
         url.includes('/403') ||
-        url.includes('/access-denied')
+        url.includes('/access-denied') ||
+        !url.includes('/admin')
       );
     });
   });

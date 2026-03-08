@@ -41,11 +41,12 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Get user from Supabase
+    // Get user from Supabase (support both 'id', 'sub', and 'userId' JWT payload fields)
+    const userId = decoded.id || decoded.sub || decoded.userId;
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', decoded.id || decoded.sub)
+      .eq('id', userId)
       .single();
 
     if (error || !user) {
@@ -55,8 +56,8 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Check if user is active
-    if (!user.is_active) {
+    // Check if user is explicitly suspended (is_active === false; undefined/null means active)
+    if (user.is_active === false) {
       return res.status(403).json({
         error: 'Forbidden',
         message: 'User account is inactive'
@@ -116,13 +117,14 @@ const optionalAuth = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+      const userId = decoded.id || decoded.sub || decoded.userId;
       const { data: user } = await supabase
         .from('users')
         .select('*')
-        .eq('id', decoded.id || decoded.sub)
+        .eq('id', userId)
         .single();
 
-      if (user && user.is_active) {
+      if (user && user.is_active !== false) {
         req.user = user;
       }
     } catch (error) {

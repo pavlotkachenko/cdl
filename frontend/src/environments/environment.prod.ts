@@ -7,8 +7,9 @@ export const environment = {
   production: true,
   
   // Backend API Configuration
-  apiUrl: 'https://api.cdlticket.com/api',
-  wsUrl: 'wss://api.cdlticket.com',
+  // Relative URL — in production the backend serves the frontend (same origin)
+  apiUrl: '/api',
+  wsUrl: '',  // Empty = derive from window.location.origin at runtime
   
   // Feature Flags
   useMockData: false,
