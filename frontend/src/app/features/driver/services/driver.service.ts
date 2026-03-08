@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Observable, of, delay } from 'rxjs';
-import { DashboardStats } from '../dashboard/driver-dashboard.component';
+
+export interface DashboardStats {
+  total: number;
+  active: number;
+  pending: number;
+  resolved: number;
+  rejected: number;
+}
 
 export interface User {
   id: string;

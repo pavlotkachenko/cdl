@@ -43,7 +43,7 @@ export interface Case {
 })
 export class CaseService {
   // API URL - will use environment variable or fallback to localhost
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = '/api';
 
   // Mock data for development (until backend is ready)
   private mockCases: Case[] = [

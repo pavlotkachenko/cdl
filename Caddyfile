@@ -1,0 +1,10 @@
+:80 {
+    reverse_proxy app:3000
+
+    # WebSocket support for Socket.io
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket app:3000
+}

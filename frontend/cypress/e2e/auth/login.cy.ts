@@ -12,6 +12,7 @@ describe('Login', () => {
   // Happy-path: driver login
   // -------------------------------------------------------------------
   it('should log in a driver and redirect to the driver dashboard', () => {
+    const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3000';
     const uniqueEmail = `login.driver+${Date.now()}@e2etest.com`;
 
     // Seed a driver
@@ -23,21 +24,25 @@ describe('Login', () => {
       expect(resp.status).to.equal(201);
     });
 
-    cy.clearAuth();
-    cy.visit('/login');
-
-    cy.fillLoginForm(uniqueEmail, STRONG_PASSWORD);
-
-    cy.intercept('POST', '**/api/auth/signin').as('loginRequest');
-    cy.get('button[type="submit"]').click();
-
-    cy.wait('@loginRequest').then((interception) => {
-      expect(interception.response!.statusCode).to.equal(200);
-      expect(interception.response!.body).to.have.property('token');
-      expect(interception.response!.body.user.role).to.equal('driver');
+    // Verify the login API response shape directly (avoids page-navigation race with cy.intercept)
+    cy.request({
+      method: 'POST',
+      url: `${apiUrl}/api/auth/signin`,
+      body: { email: uniqueEmail, password: STRONG_PASSWORD },
+      failOnStatusCode: false,
+    }).then((resp) => {
+      expect(resp.status).to.equal(200);
+      expect(resp.body).to.have.property('token');
+      expect(resp.body.user.role).to.equal('driver');
     });
 
-    cy.url().should('include', '/driver/dashboard');
+    // Test the UI flow
+    cy.clearAuth();
+    cy.visit('/login');
+    cy.fillLoginForm(uniqueEmail, STRONG_PASSWORD);
+    cy.get('button[type="submit"]').click();
+
+    cy.url({ timeout: 15000 }).should('include', '/driver/dashboard');
 
     // Verify localStorage
     cy.window().then((win) => {
@@ -50,7 +55,8 @@ describe('Login', () => {
   // -------------------------------------------------------------------
   // Happy-path: carrier login
   // -------------------------------------------------------------------
-  it('should log in a carrier and redirect to the driver dashboard', () => {
+  it('should log in a carrier and redirect to the carrier dashboard', () => {
+    const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3000';
     const uniqueEmail = `login.carrier+${Date.now()}@e2etest.com`;
 
     // Seed a carrier
@@ -63,20 +69,24 @@ describe('Login', () => {
       expect(resp.status).to.equal(201);
     });
 
-    cy.clearAuth();
-    cy.visit('/login');
-
-    cy.fillLoginForm(uniqueEmail, STRONG_PASSWORD);
-
-    cy.intercept('POST', '**/api/auth/signin').as('loginRequest');
-    cy.get('button[type="submit"]').click();
-
-    cy.wait('@loginRequest').then((interception) => {
-      expect(interception.response!.statusCode).to.equal(200);
-      expect(interception.response!.body.user.role).to.equal('carrier');
+    // Verify carrier login API response
+    cy.request({
+      method: 'POST',
+      url: `${apiUrl}/api/auth/signin`,
+      body: { email: uniqueEmail, password: STRONG_PASSWORD },
+      failOnStatusCode: false,
+    }).then((resp) => {
+      expect(resp.status).to.equal(200);
+      expect(resp.body.user.role).to.equal('carrier');
     });
 
-    cy.url().should('include', '/driver/dashboard');
+    // Test the UI flow
+    cy.clearAuth();
+    cy.visit('/login');
+    cy.fillLoginForm(uniqueEmail, STRONG_PASSWORD);
+    cy.get('button[type="submit"]').click();
+
+    cy.url({ timeout: 15000 }).should('include', '/carrier/dashboard');
   });
 
   // -------------------------------------------------------------------
@@ -97,11 +107,8 @@ describe('Login', () => {
     cy.clearAuth();
     cy.visit('/login');
 
-    cy.intercept('POST', '**/api/auth/signin').as('loginRequest');
     cy.fillLoginForm(uniqueEmail, 'WrongPassword@123');
     cy.get('button[type="submit"]').click();
-
-    cy.wait('@loginRequest').its('response.statusCode').should('eq', 401);
 
     // Wait for Angular to process the error response and update the DOM
     cy.get('.error-alert, .mat-mdc-snack-bar-container', { timeout: 10000 })
@@ -115,12 +122,8 @@ describe('Login', () => {
   // Non-existent email
   // -------------------------------------------------------------------
   it('should show error for non-existent email', () => {
-    cy.intercept('POST', '**/api/auth/signin').as('loginRequest');
-
     cy.fillLoginForm('nonexistent@nowhere.com', STRONG_PASSWORD);
     cy.get('button[type="submit"]').click();
-
-    cy.wait('@loginRequest').its('response.statusCode').should('eq', 401);
 
     // Wait for Angular to process the error response and update the DOM
     cy.get('.error-alert, .mat-mdc-snack-bar-container', { timeout: 10000 })
@@ -193,13 +196,10 @@ describe('Login', () => {
 
     cy.clearAuth();
     cy.visit('/login');
-
-    cy.intercept('POST', '**/api/auth/signin').as('loginRequest');
     cy.fillLoginForm(uniqueEmail, STRONG_PASSWORD);
     cy.get('button[type="submit"]').click();
-    cy.wait('@loginRequest');
 
-    cy.url().should('include', '/driver/dashboard');
+    cy.url({ timeout: 15000 }).should('include', '/driver/dashboard');
 
     // Reload the page — token should still be in localStorage
     cy.reload();

@@ -1,1 +1,5 @@
 frontend/*.pdf
+claude-progress.txt
+
+# Docker
+docker-compose.override.yml

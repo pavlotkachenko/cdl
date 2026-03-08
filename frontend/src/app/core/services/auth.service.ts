@@ -37,7 +37,7 @@ interface RegisterData {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = '/api';
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -154,7 +154,18 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp && Date.now() / 1000 > payload.exp) {
+        this.logout();
+        return false;
+      }
+    } catch {
+      // Unparseable token — treat as present but don't reject
+    }
+    return true;
   }
 
   hasRole(role: UserRole): boolean {

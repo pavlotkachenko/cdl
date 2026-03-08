@@ -46,7 +46,7 @@ describe('Operator — TC-OPR-001..007', () => {
         $body.find('button').filter(':contains("Assign")').length > 0 ||
         $body.find('[data-testid*="auto-assign"]').length > 0 ||
         $body.find('[data-testid*="assign"]').length > 0 ||
-        $body.find('button[aria-label*="assign" i]').length > 0;
+        $body.find('button[aria-label*="assign"]').length > 0;
 
       // Soft assertion — if auto-assign button isn't present, at minimum the page renders
       cy.get('app-operator-dashboard, mat-card, main').should('exist');
@@ -185,7 +185,7 @@ describe('Operator — TC-OPR-001..007', () => {
 
     cy.get('body').then(($body) => {
       const hasMessaging =
-        $body.find('textarea, input[placeholder*="message" i]').length > 0 ||
+        $body.find('textarea, input[placeholder*="message"]').length > 0 ||
         $body.find('button').filter(':contains("Template")').length > 0 ||
         $body.find('[data-testid*="template"], [data-testid*="message"]').length > 0 ||
         $body.find('.message-template, .templates, .messages-container').length > 0 ||
@@ -208,10 +208,10 @@ describe('Operator — TC-OPR-001..007', () => {
     // Open an attorney selector if available
     cy.get('body').then(($body) => {
       const selectorTriggers = [
-        'mat-select[aria-label*="attorney" i]',
-        'mat-select[placeholder*="attorney" i]',
+        'mat-select[aria-label*="attorney"]',
+        'mat-select[placeholder*="attorney"]',
         '[data-testid*="attorney-select"]',
-        'button[aria-label*="attorney" i]',
+        'button[aria-label*="attorney"]',
       ];
 
       for (const sel of selectorTriggers) {

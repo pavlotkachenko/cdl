@@ -59,7 +59,7 @@ describe('i18n — TC-I18N-001..004', () => {
       // Look for a language toggle or switcher button
       const langButtonSelectors = [
         'button[data-testid*="lang"]',
-        'button[aria-label*="language" i]',
+        'button[aria-label*="language"]',
         '[data-testid="lang-toggle"]',
         '[data-testid="language-switcher"]',
         '.lang-toggle',

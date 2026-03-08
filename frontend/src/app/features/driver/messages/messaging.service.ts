@@ -7,6 +7,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
+import { environment } from '../../../../environments/environment';
 
 // ============================================
 // Type Definitions
@@ -107,7 +108,7 @@ export interface TypingEvent {
 })
 export class MessagingService {
   private socket!: Socket;
-  private apiUrl = 'http://localhost:3000/api'; // Update with your API URL
+  private apiUrl = '/api'; // Update with your API URL
 
   // Subjects for real-time events
   newMessage$ = new Subject<Message>();
@@ -121,7 +122,8 @@ export class MessagingService {
 
   private initializeSocket(): void {
     // Initialize socket connection
-    this.socket = io('http://localhost:3000', {
+    const wsUrl = environment.wsUrl || window.location.origin;
+    this.socket = io(wsUrl, {
       auth: {
         token: localStorage.getItem('token')
       }

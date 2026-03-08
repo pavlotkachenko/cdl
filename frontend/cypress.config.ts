@@ -12,5 +12,13 @@ export default defineConfig({
     responseTimeout: 10000,
     video: false,
     screenshotOnRunFailure: true,
+    setupNodeEvents(on) {
+      on('task', {
+        log(message: string) {
+          console.log(message);
+          return null;
+        },
+      });
+    },
   },
 });

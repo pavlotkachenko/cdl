@@ -7,7 +7,9 @@ export const environment = {
   production: false,
   
   // Backend API Configuration
-  apiUrl: 'http://localhost:3000/api',
+  // Uses relative /api path so ng serve proxy can forward to the real backend
+  // regardless of whether running on host or inside Docker Cypress containers.
+  apiUrl: '/api',
   wsUrl: 'http://localhost:3000',
   
   // Feature Flags

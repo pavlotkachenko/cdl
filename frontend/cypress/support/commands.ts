@@ -112,11 +112,10 @@ Cypress.Commands.add('getFormControl', (name: string) => {
 });
 
 Cypress.Commands.add('clearAuth', () => {
-  cy.window().then((win) => {
-    win.localStorage.removeItem('token');
-    win.localStorage.removeItem('refreshToken');
-    win.localStorage.removeItem('currentUser');
-  });
+  // Clear any cached Cypress sessions so the next loginAs() re-establishes auth
+  cy.clearAllSessionStorage();
+  cy.clearLocalStorage();
+  cy.clearCookies();
 });
 
 Cypress.Commands.add('fillRegistrationForm', (overrides: Partial<RegistrationFormData> = {}) => {
@@ -167,26 +166,55 @@ Cypress.Commands.add('registerViaApi', (data: ApiRegisterData) => {
 
 Cypress.Commands.add('loginViaApi', (email: string, password: string) => {
   const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3000';
-  cy.request({
-    method: 'POST',
-    url: `${apiUrl}/api/auth/signin`,
-    body: { email, password },
-    failOnStatusCode: false,
-  }).then((resp) => {
-    expect(resp.status, `loginViaApi(${email}) should succeed`).to.equal(200);
-    cy.window().then((win) => {
-      win.localStorage.setItem('token', resp.body.token);
-      if (resp.body.refreshToken) {
-        win.localStorage.setItem('refreshToken', resp.body.refreshToken);
+  // Retry up to 3 times with a wait on 429 (rate-limited) responses
+  const attemptLogin = (attemptsLeft: number): void => {
+    cy.request({
+      method: 'POST',
+      url: `${apiUrl}/api/auth/signin`,
+      body: { email, password },
+      failOnStatusCode: false,
+    }).then((resp) => {
+      if (resp.status === 429 && attemptsLeft > 0) {
+        cy.log(`loginViaApi(${email}): rate limited (429), waiting 10s before retry (${attemptsLeft} attempts left)`);
+        cy.wait(10000);
+        attemptLogin(attemptsLeft - 1);
+        return;
       }
-      win.localStorage.setItem('currentUser', JSON.stringify(resp.body.user));
+      expect(resp.status, `loginViaApi(${email}) should succeed`).to.equal(200);
+      cy.window().then((win) => {
+        win.localStorage.setItem('token', resp.body.token);
+        if (resp.body.refreshToken) {
+          win.localStorage.setItem('refreshToken', resp.body.refreshToken);
+        }
+        win.localStorage.setItem('currentUser', JSON.stringify(resp.body.user));
+      });
     });
-  });
+  };
+  attemptLogin(3);
 });
 
 Cypress.Commands.add('loginAs', (role: StagingRole) => {
   const email = STAGING_CREDENTIALS[role];
-  cy.loginViaApi(email, STAGING_PASSWORD);
+  // cy.session() handles localStorage origin correctly: it captures the
+  // storage state after setup and restores it before each test that needs it.
+  cy.session(
+    `role-${role}`,
+    () => {
+      // Visit the app root first to establish the correct storage origin
+      cy.visit('/');
+      cy.loginViaApi(email, STAGING_PASSWORD);
+    },
+    {
+      validate() {
+        // Confirm the token is still present (re-login if expired/cleared)
+        cy.window()
+          .its('localStorage')
+          .invoke('getItem', 'token')
+          .should('exist');
+      },
+      cacheAcrossSpecs: false,
+    }
+  );
 });
 
 Cypress.Commands.add('getToken', () => {

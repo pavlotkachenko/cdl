@@ -289,3 +289,54 @@ Every code change must be evaluated against:
 - **PR requirements:** All 4 quality gates passed, description includes what/why/how
 - **Never force-push to main**
 - **Never commit `.env` files, `node_modules/`, or build artifacts**
+
+---
+
+## 10. Session Protocol
+
+Claude Code sessions use automated hooks and a progress file to maintain continuity and enforce quality gates at runtime.
+
+### On Session Start
+
+1. Read `claude-progress.txt` (if it exists) to understand what was done previously
+2. Read the latest sprint overview in `sprints/sprint_XXX/story-sprint-overview.md`
+3. Run `git log --oneline -10` to see recent commits
+4. Check `git status` for any uncommitted work
+
+### During Session
+
+- The **Stop hook** (`.claude/hooks/verify-before-stop.sh`) automatically runs when Claude tries to finish. It checks for unchecked acceptance criteria in active sprint stories and runs both backend and frontend test suites. If checks fail, Claude is prompted to continue working.
+- The **PreToolUse hook** (`.claude/hooks/block-sensitive-files.sh`) automatically blocks writes to `.env`, lock files, `supabase_schema.sql`, `node_modules/`, and `.git/`. This prevents accidental modification of sensitive files.
+- Use `bash .claude/scripts/verify-story.sh <story-file>` to verify a story meets the Definition of Done before marking it complete.
+
+### On Session End
+
+1. Update `claude-progress.txt` with a summary of work done, current state, and next steps
+2. Commit work with a descriptive conventional commit message
+3. Ensure all tests pass before stopping
+
+### On Context Compaction
+
+When the conversation approaches context limits and compaction occurs, update `claude-progress.txt` with current state before compaction if possible, so context is not lost.
+
+### Progress File Format (`claude-progress.txt`)
+
+```
+## Last Updated: <ISO timestamp>
+## Branch: <current git branch>
+## Sprint: <sprint number and theme>
+
+### Completed This Session
+- <bullet list of what was done>
+
+### In Progress
+- <what's currently being worked on, including file paths>
+
+### Next Steps
+- <what needs to happen next>
+
+### Blockers
+- <anything preventing progress>
+```
+
+This file is gitignored (session-local state only). Each new session reads it for orientation, then overwrites it with current state at session end.
