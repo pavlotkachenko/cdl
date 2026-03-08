@@ -1,0 +1,26 @@
+[20:21:14]  Verifying Cypress can run /root/.cache/Cypress/15.11.0/Cypress [started]
+[20:21:16]  Verifying Cypress can run /root/.cache/Cypress/15.11.0/Cypress [COMPLETED]
+
+DevTools listening on ws://127.0.0.1:41497/devtools/browser/d6526b40-4a59-4218-ab16-96b255573267
+[35m[95mWarning:[39m[35m The [33mallowCypressEnv[39m[35m configuration option is enabled. This allows any browser code to read values from [33mCypress.env()[39m[35m. This is insecure and will be removed in a future major version.[39m
+[35m[39m
+[35m1. Replace [33mCypress.env()[39m[35m calls with [33mcy.env()[39m[35m (for sensitive values) or [33mCypress.expose()[39m[35m (for public configuration)[39m
+[35m2. Set [33mallowCypressEnv: false[39m[35m in your Cypress configuration to disable [33mCypress.env()[39m[35m[39m
+[35m[39m
+[35mLearn more: https://on.cypress.io/cypress-env-migration[39m
+[35m[39m
+[33mCypress could not verify that this server is running:[39m
+[33m[39m
+[33m[90m  > [33m[94mhttp://host.docker.internal:4200[33m[39m
+[33m[39m
+[33mWe are verifying this server because it has been configured as your [33mbaseUrl[33m.[39m
+[33m[39m
+[33mCypress automatically waits until your server is accessible before running tests.[39m
+[33m[39m
+[33m[90mWe will try connecting to it 3 more times...[33m[39m
+[33m[90mWe will try connecting to it 2 more times...[33m[39m
+[33m[90mWe will try connecting to it 1 more time...[33m[39m
+[33m[90m[33m[39m
+[31mCypress failed to verify that your server is running.[39m
+[31m[39m
+[31mPlease start this server and then run Cypress again.[39m
