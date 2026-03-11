@@ -4,17 +4,17 @@
   <!-- Hero Section -->
   <div class="help-hero">
     <div class="hero-content">
-      <h1>How can we help you?</h1>
-      <p>Get answers to your questions and learn how to make the most of CDL Ticket Management</p>
-      
+      <h1>{{ 'HELP.HERO_TITLE' | translate }}</h1>
+      <p>{{ 'HELP.HERO_SUBTITLE' | translate }}</p>
+
       <!-- Search Bar -->
       <div class="search-bar">
         <mat-form-field appearance="outline" class="search-field">
           <mat-icon matPrefix>search</mat-icon>
-          <input 
-            matInput 
+          <input
+            matInput
             [(ngModel)]="searchQuery"
-            placeholder="Search for help articles, FAQs, guides..."
+            [placeholder]="'HELP.SEARCH_PLACEHOLDER' | translate"
             (input)="selectCategory('all')">
         </mat-form-field>
       </div>
@@ -23,17 +23,17 @@
 
   <!-- Support Categories -->
   <div class="support-categories">
-    <h2>Browse by Category</h2>
+    <h2>{{ 'HELP.BROWSE_CATEGORY' | translate }}</h2>
     <div class="categories-grid">
-      <mat-card 
+      <mat-card
         *ngFor="let category of supportCategories"
         class="category-card"
-        [routerLink]="category.link.startsWith('/') ? category.link : null"
-        [attr.href]="category.link.startsWith('#') ? category.link : null">
+        [routerLink]="category.link"
+        style="cursor: pointer">
         <mat-card-content>
           <mat-icon class="category-icon">{{ category.icon }}</mat-icon>
-          <h3>{{ category.title }}</h3>
-          <p>{{ category.description }}</p>
+          <h3>{{ category.titleKey | translate }}</h3>
+          <p>{{ category.descKey | translate }}</p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -42,42 +42,42 @@
   <!-- FAQ Section -->
   <div class="faq-section" id="faq">
     <div class="faq-header">
-      <h2>Frequently Asked Questions</h2>
-      <p>Find quick answers to common questions</p>
+      <h2>{{ 'HELP.FAQ_TITLE' | translate }}</h2>
+      <p>{{ 'HELP.FAQ_SUBTITLE' | translate }}</p>
     </div>
 
     <!-- Category Filters -->
     <div class="category-filters">
       <mat-chip-listbox>
-        <mat-chip-option 
+        <mat-chip-option
           [selected]="selectedCategory === 'all'"
           (click)="selectCategory('all')">
-          All Questions
+          {{ 'HELP.FILTER_ALL' | translate }}
         </mat-chip-option>
-        <mat-chip-option 
+        <mat-chip-option
           [selected]="selectedCategory === 'getting-started'"
           (click)="selectCategory('getting-started')">
-          Getting Started
+          {{ 'HELP.FILTER_GETTING_STARTED' | translate }}
         </mat-chip-option>
-        <mat-chip-option 
+        <mat-chip-option
           [selected]="selectedCategory === 'submit-ticket'"
           (click)="selectCategory('submit-ticket')">
-          Submit Ticket
+          {{ 'HELP.FILTER_SUBMIT_TICKET' | translate }}
         </mat-chip-option>
-        <mat-chip-option 
+        <mat-chip-option
           [selected]="selectedCategory === 'track-cases'"
           (click)="selectCategory('track-cases')">
-          Track Cases
+          {{ 'HELP.FILTER_TRACK_CASES' | translate }}
         </mat-chip-option>
-        <mat-chip-option 
+        <mat-chip-option
           [selected]="selectedCategory === 'documents'"
           (click)="selectCategory('documents')">
-          Documents
+          {{ 'HELP.FILTER_DOCUMENTS' | translate }}
         </mat-chip-option>
-        <mat-chip-option 
+        <mat-chip-option
           [selected]="selectedCategory === 'billing'"
           (click)="selectCategory('billing')">
-          Billing
+          {{ 'HELP.FILTER_BILLING' | translate }}
         </mat-chip-option>
       </mat-chip-listbox>
     </div>
@@ -98,29 +98,29 @@
     <!-- No Results -->
     <div *ngIf="filteredFAQs.length === 0" class="no-results">
       <mat-icon>search_off</mat-icon>
-      <h3>No results found</h3>
-      <p>Try different keywords or browse all categories</p>
+      <h3>{{ 'HELP.NO_RESULTS' | translate }}</h3>
+      <p>{{ 'HELP.NO_RESULTS_HINT' | translate }}</p>
       <button mat-raised-button color="primary" (click)="searchQuery = ''; selectCategory('all')">
-        Clear Search
+        {{ 'HELP.CLEAR_SEARCH' | translate }}
       </button>
     </div>
   </div>
 
   <!-- Contact Support Section -->
   <div class="contact-support-section">
-    <h2>Still need help?</h2>
-    <p>Our support team is here to assist you</p>
+    <h2>{{ 'HELP.STILL_NEED_HELP' | translate }}</h2>
+    <p>{{ 'HELP.SUPPORT_TEAM_DESC' | translate }}</p>
 
     <div class="contact-methods-grid">
-      <mat-card 
+      <mat-card
         *ngFor="let method of contactMethods"
         class="contact-method-card"
         (click)="openContactMethod(method.action)">
         <mat-card-content>
           <mat-icon class="contact-icon">{{ method.icon }}</mat-icon>
-          <h3>{{ method.title }}</h3>
-          <div class="contact-value">{{ method.value }}</div>
-          <p class="contact-description">{{ method.description }}</p>
+          <h3>{{ method.titleKey | translate }}</h3>
+          <div class="contact-value">{{ method.valueKey | translate }}</div>
+          <p class="contact-description">{{ method.descKey | translate }}</p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -130,31 +130,31 @@
   <div class="quick-links-section">
     <mat-card class="quick-links-card">
       <mat-card-content>
-        <h3>Helpful Resources</h3>
+        <h3>{{ 'HELP.HELPFUL_RESOURCES' | translate }}</h3>
         <div class="links-grid">
           <a routerLink="/driver/submit-ticket" mat-button>
             <mat-icon>add_circle</mat-icon>
-            Submit New Ticket
+            {{ 'HELP.LINK_SUBMIT' | translate }}
           </a>
           <a routerLink="/driver/tickets" mat-button>
             <mat-icon>gavel</mat-icon>
-            View My Cases
+            {{ 'HELP.LINK_CASES' | translate }}
           </a>
           <a routerLink="/driver/analytics" mat-button>
             <mat-icon>analytics</mat-icon>
-            Case Analytics
+            {{ 'HELP.LINK_ANALYTICS' | translate }}
           </a>
           <a routerLink="/driver/profile" mat-button>
             <mat-icon>person</mat-icon>
-            My Profile
+            {{ 'HELP.LINK_PROFILE' | translate }}
           </a>
           <a routerLink="/privacy" mat-button>
             <mat-icon>privacy_tip</mat-icon>
-            Privacy Policy
+            {{ 'HELP.LINK_PRIVACY' | translate }}
           </a>
           <a routerLink="/terms" mat-button>
             <mat-icon>description</mat-icon>
-            Terms of Service
+            {{ 'HELP.LINK_TERMS' | translate }}
           </a>
         </div>
       </mat-card-content>

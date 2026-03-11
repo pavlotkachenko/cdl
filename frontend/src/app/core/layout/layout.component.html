@@ -1,4 +1,4 @@
-<!-- Layout Component Template - Complete with Updated Footer -->
+<!-- Layout Component Template -->
 <!-- Location: frontend/src/app/core/layout/layout.component.html -->
 
 <div class="app-layout">
@@ -9,10 +9,9 @@
       <mat-icon>menu</mat-icon>
     </button>
 
-    <div class="header-left">
-      <img src="assets/logo.png" alt="CDL Ticket Management" class="logo" *ngIf="!isMobile">
-      <h1 class="app-title">CDL Ticket Management</h1>
-    </div>
+    <a class="header-left" routerLink="/">
+      <img src="assets/icons/logo.svg" alt="CDL Ticket Management" class="logo">
+    </a>
 
     <span class="spacer"></span>
 
@@ -47,20 +46,20 @@
         <mat-divider></mat-divider>
         <button mat-menu-item routerLink="/driver/profile">
           <mat-icon>person</mat-icon>
-          <span>My Profile</span>
+          <span>{{ 'HEADER.MY_PROFILE' | translate }}</span>
         </button>
         <button mat-menu-item routerLink="/driver/settings">
           <mat-icon>settings</mat-icon>
-          <span>Settings</span>
+          <span>{{ 'HEADER.SETTINGS' | translate }}</span>
         </button>
         <button mat-menu-item routerLink="/driver/help">
           <mat-icon>help</mat-icon>
-          <span>Help & Support</span>
+          <span>{{ 'HEADER.HELP_SUPPORT' | translate }}</span>
         </button>
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="logout()">
           <mat-icon>logout</mat-icon>
-          <span>Logout</span>
+          <span>{{ 'HEADER.LOGOUT' | translate }}</span>
         </button>
       </mat-menu>
     </div>
@@ -68,9 +67,9 @@
 
   <!-- Sidenav Container -->
   <mat-sidenav-container class="sidenav-container">
-    
+
     <!-- Sidebar -->
-    <mat-sidenav 
+    <mat-sidenav
       #sidenav
       [mode]="sidenavMode"
       [opened]="sidenavOpened"
@@ -86,17 +85,30 @@
         <router-outlet></router-outlet>
       </div>
 
-      <!-- Footer - UPDATED WITH ALL LINKS -->
-      <footer class="app-footer">
-        <div class="footer-content">
-          
+      <!-- Collapsible Footer -->
+      <footer class="app-footer" [class.collapsed]="footerCollapsed">
+        <!-- Toggle bar -->
+        <button class="footer-toggle" (click)="toggleFooter()"
+                [attr.aria-label]="footerCollapsed ? 'Expand footer' : 'Collapse footer'"
+                [attr.aria-expanded]="!footerCollapsed">
+          <mat-icon>{{ footerCollapsed ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <span class="footer-toggle-label" *ngIf="footerCollapsed">
+            &copy; {{ currentYear }} {{ 'FOOTER.COMPANY_NAME' | translate }}
+          </span>
+          <span class="footer-toggle-label" *ngIf="!footerCollapsed">
+            {{ 'FOOTER.COMPANY_NAME' | translate }}
+          </span>
+        </button>
+
+        <div class="footer-content" *ngIf="!footerCollapsed">
+
           <!-- Footer Grid -->
           <div class="footer-grid">
-            
+
             <!-- Company Info -->
             <div class="footer-section">
-              <h3>CDL Ticket Management</h3>
-              <p>Professional traffic violation defense for commercial drivers.</p>
+              <h3>{{ 'FOOTER.COMPANY_NAME' | translate }}</h3>
+              <p>{{ 'FOOTER.COMPANY_DESC' | translate }}</p>
               <div class="social-links">
                 <a href="https://facebook.com" target="_blank" aria-label="Facebook">
                   <mat-icon>facebook</mat-icon>
@@ -112,34 +124,34 @@
 
             <!-- Quick Links -->
             <div class="footer-section">
-              <h4>Quick Links</h4>
+              <h4>{{ 'FOOTER.QUICK_LINKS' | translate }}</h4>
               <ul>
-                <li><a routerLink="/driver/dashboard">Dashboard</a></li>
-                <li><a routerLink="/driver/tickets">My Cases</a></li>
-                <li><a routerLink="/driver/submit-ticket">Submit Ticket</a></li>
-                <li><a routerLink="/driver/analytics">Analytics</a></li>
+                <li><a routerLink="/driver/dashboard">{{ 'NAV.DASHBOARD' | translate }}</a></li>
+                <li><a routerLink="/driver/tickets">{{ 'NAV.MY_CASES' | translate }}</a></li>
+                <li><a routerLink="/driver/submit-ticket">{{ 'NAV.SUBMIT_TICKET' | translate }}</a></li>
+                <li><a routerLink="/driver/analytics">{{ 'NAV.ANALYTICS' | translate }}</a></li>
               </ul>
             </div>
 
             <!-- Support -->
             <div class="footer-section">
-              <h4>Support</h4>
+              <h4>{{ 'FOOTER.SUPPORT' | translate }}</h4>
               <ul>
-                <li><a routerLink="/driver/help">Help Center</a></li>
-                <li><a routerLink="/driver/contact">Contact Us</a></li>
+                <li><a routerLink="/driver/help">{{ 'FOOTER.HELP_CENTER' | translate }}</a></li>
+                <li><a routerLink="/driver/contact">{{ 'FOOTER.CONTACT_US' | translate }}</a></li>
                 <li><a href="tel:1-800-235-4357">1-800-CDL-HELP</a></li>
-                <li><a href="mailto:support@cdltickets.com">Email Support</a></li>
+                <li><a href="mailto:support@cdltickets.com">{{ 'FOOTER.EMAIL_SUPPORT' | translate }}</a></li>
               </ul>
             </div>
 
             <!-- Legal -->
             <div class="footer-section">
-              <h4>Legal</h4>
+              <h4>{{ 'FOOTER.LEGAL' | translate }}</h4>
               <ul>
-                <li><a routerLink="/privacy">Privacy Policy</a></li>
-                <li><a routerLink="/terms">Terms of Service</a></li>
-                <li><a routerLink="/cookies">Cookie Policy</a></li>
-                <li><a routerLink="/accessibility">Accessibility</a></li>
+                <li><a routerLink="/privacy">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a></li>
+                <li><a routerLink="/terms">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a></li>
+                <li><a routerLink="/cookies">{{ 'FOOTER.COOKIE_POLICY' | translate }}</a></li>
+                <li><a routerLink="/accessibility">{{ 'FOOTER.ACCESSIBILITY' | translate }}</a></li>
               </ul>
             </div>
 
@@ -147,15 +159,15 @@
 
           <!-- Footer Bottom -->
           <div class="footer-bottom">
-            <p>&copy; {{ currentYear }} CDL Ticket Management. All rights reserved.</p>
+            <p>&copy; {{ currentYear }} {{ 'FOOTER.COPYRIGHT' | translate }}</p>
             <div class="footer-links">
-              <a routerLink="/privacy">Privacy</a>
+              <a routerLink="/privacy">{{ 'FOOTER.PRIVACY' | translate }}</a>
               <span class="separator">•</span>
-              <a routerLink="/terms">Terms</a>
+              <a routerLink="/terms">{{ 'FOOTER.TERMS' | translate }}</a>
               <span class="separator">•</span>
-              <a routerLink="/driver/contact">Contact</a>
+              <a routerLink="/driver/contact">{{ 'FOOTER.CONTACT' | translate }}</a>
               <span class="separator">•</span>
-              <a routerLink="/driver/help">Help</a>
+              <a routerLink="/driver/help">{{ 'FOOTER.HELP' | translate }}</a>
             </div>
           </div>
 

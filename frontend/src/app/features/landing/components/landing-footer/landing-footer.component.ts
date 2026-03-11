@@ -1,13 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-landing-footer',
   templateUrl: './landing-footer.component.html',
   styleUrls: ['./landing-footer.component.scss'],
-  standalone: true,
   imports: [
-    CommonModule
+    CommonModule,
+    TranslateModule
   ]
 })
 export class LandingFooterComponent {

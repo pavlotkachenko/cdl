@@ -13,6 +13,7 @@ interface User {
   role: UserRole;
   name: string;
   phone?: string;
+  avatar_url?: string;
   usdot?: string;         // carrier
   barNumber?: string;     // attorney
   permissions?: string[]; // admin/paralegal
@@ -208,6 +209,18 @@ export class AuthService {
     return this.http.post<{ message: string }>(
       `${this.apiUrl}/users/change-password`,
       { currentPassword, newPassword },
+    );
+  }
+
+  uploadAvatar(file: File): Observable<{ avatar_url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ avatar_url: string }>(`${this.apiUrl}/users/me/avatar`, formData).pipe(
+      tap(response => {
+        const updated = { ...this.currentUserSubject.value!, avatar_url: response.avatar_url };
+        this.currentUserSubject.next(updated);
+        localStorage.setItem('currentUser', JSON.stringify(updated));
+      })
     );
   }
 }

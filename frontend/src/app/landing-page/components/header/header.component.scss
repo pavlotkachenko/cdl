@@ -98,6 +98,12 @@
   }
 }
 
+.mobile-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
 .mobile-menu-toggle {
   display: none;
 }
@@ -133,6 +139,10 @@
 
   .header-actions {
     display: none;
+  }
+
+  .mobile-actions {
+    display: flex;
   }
 
   .mobile-menu-toggle {

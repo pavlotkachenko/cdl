@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-footer',
-  standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, TranslateModule],
   templateUrl: './footer.component.html',
   styleUrls: ['./footer.component.scss']
 })
@@ -20,16 +20,16 @@ export class FooterComponent {
   ];
 
   companyLinks = [
-    { label: 'About Us', url: '#about' },
-    { label: 'Services', url: '#services' },
-    { label: 'Pricing', url: '#pricing' },
-    { label: 'Contact', url: '#contact' }
+    { labelKey: 'LANDING.FOOTER_ABOUT', url: '#about' },
+    { labelKey: 'LANDING.FOOTER_SERVICES', url: '#services' },
+    { labelKey: 'LANDING.FOOTER_PRICING', url: '#pricing' },
+    { labelKey: 'LANDING.FOOTER_CONTACT_LINK', url: '#contact' }
   ];
 
   legalLinks = [
-    { label: 'Privacy Policy', url: '/privacy' },
-    { label: 'Terms of Service', url: '/terms' },
-    { label: 'Cookie Policy', url: '/cookies' }
+    { labelKey: 'LANDING.FOOTER_PRIVACY', url: '/privacy' },
+    { labelKey: 'LANDING.FOOTER_TERMS', url: '/terms' },
+    { labelKey: 'LANDING.FOOTER_COOKIES', url: '/cookies' }
   ];
 
   scrollToSection(sectionId: string): void {

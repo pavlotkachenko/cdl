@@ -52,22 +52,21 @@ $header-height: 64px;
   .header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+    cursor: pointer;
+    text-decoration: none;
 
     .logo {
-      height: 40px;
+      height: 36px;
       width: auto;
-    }
+      filter: brightness(0) invert(1);
+      transition: opacity 0.2s ease;
 
-    .app-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: white;
-      margin: 0;
-      white-space: nowrap;
+      &:hover {
+        opacity: 0.85;
+      }
 
       @media (max-width: 768px) {
-        font-size: 16px;
+        height: 28px;
       }
     }
   }
@@ -227,24 +226,58 @@ $header-height: 64px;
 // Replace the existing .app-footer section with this
 // ============================================
 
-// Footer - UPDATED
+// Footer - Collapsible
 .app-footer {
   background: white;
   border-top: 1px solid $border-color;
-  padding: 40px 0 24px;
+  padding: 0;
   margin-top: auto;
+  transition: all 0.3s ease;
 
-  @media (max-width: 768px) {
-    padding: 32px 0 20px;
+  // Toggle button
+  .footer-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 16px;
+    background: #f9fafb;
+    border: none;
+    border-bottom: 1px solid $border-color;
+    cursor: pointer;
+    color: $text-medium;
+    font-size: 13px;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .footer-toggle-label {
+      font-weight: 500;
+    }
+  }
+
+  &.collapsed {
+    .footer-toggle {
+      border-bottom: none;
+    }
   }
 
   .footer-content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 32px;
+    padding: 32px 32px 24px;
 
     @media (max-width: 768px) {
-      padding: 0 20px;
+      padding: 24px 20px 20px;
     }
   }
 

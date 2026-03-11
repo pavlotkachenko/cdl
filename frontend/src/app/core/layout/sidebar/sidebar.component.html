@@ -1,85 +1,36 @@
-<!-- Sidebar Navigation - Complete File with Analytics Link -->
-<!-- Location: frontend/src/app/core/layout/sidebar/sidebar.component.html -->
+<!-- Sidebar Navigation -->
+<div class="sidebar-wrapper">
 
-<mat-nav-list class="sidebar-nav">
-  
-  <!-- Dashboard -->
-  <a routerLink="/driver/dashboard" 
-     mat-list-item 
-     routerLinkActive="active"
-     [routerLinkActiveOptions]="{exact: true}">
-    <mat-icon>dashboard</mat-icon>
-    <span>Dashboard</span>
-  </a>
-
-  <!-- My Cases / Tickets -->
-  <a routerLink="/driver/tickets" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>gavel</mat-icon>
-    <span>My Cases</span>
-  </a>
-
-  <!-- Submit New Ticket -->
-  <a routerLink="/driver/submit-ticket" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>add_circle</mat-icon>
-    <span>Submit Ticket</span>
-  </a>
+  <!-- User Profile Section -->
+  <div class="sidebar-profile">
+    <div class="profile-avatar">
+      <mat-icon>person</mat-icon>
+    </div>
+    <div class="profile-info">
+      <span class="profile-name">{{ userName }}</span>
+      <span class="profile-role">{{ userRole | titlecase }}</span>
+    </div>
+  </div>
 
   <mat-divider></mat-divider>
 
-  <!-- Analytics (NEW) -->
-  <a routerLink="/driver/analytics" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>analytics</mat-icon>
-    <span>Analytics</span>
-  </a>
-
-  <!-- Notifications -->
-  <a routerLink="/driver/notifications" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon matBadge="3" matBadgeColor="warn" matBadgeSize="small">notifications</mat-icon>
-    <span>Notifications</span>
-  </a>
-
-  <mat-divider></mat-divider>
-
-  <!-- Documents -->
-  <a routerLink="/driver/documents" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>folder</mat-icon>
-    <span>Documents</span>
-  </a>
-
-  <!-- Profile -->
-  <a routerLink="/driver/profile" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>person</mat-icon>
-    <span>Profile</span>
-  </a>
-
-  <!-- Settings -->
-  <a routerLink="/driver/settings" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>settings</mat-icon>
-    <span>Settings</span>
-  </a>
-
-  <mat-divider></mat-divider>
-
-  <!-- Help -->
-  <a routerLink="/driver/help" 
-     mat-list-item 
-     routerLinkActive="active">
-    <mat-icon>help</mat-icon>
-    <span>Help & Support</span>
-  </a>
-
-</mat-nav-list>
+  <!-- Navigation -->
+  <mat-nav-list class="sidebar-nav">
+    @for (item of navigation; track item.link) {
+      @if (item.dividerBefore) {
+        <mat-divider class="nav-divider"></mat-divider>
+      }
+      <a [routerLink]="item.link"
+         mat-list-item
+         routerLinkActive="active"
+         [routerLinkActiveOptions]="{exact: item.name === 'NAV.DASHBOARD'}">
+        @if (item.badge && item.badge > 0) {
+          <mat-icon [matBadge]="item.badge" matBadgeColor="warn" matBadgeSize="small">{{ item.icon }}</mat-icon>
+        } @else {
+          <mat-icon>{{ item.icon }}</mat-icon>
+        }
+        <span>{{ item.name | translate }}</span>
+      </a>
+    }
+  </mat-nav-list>
+</div>

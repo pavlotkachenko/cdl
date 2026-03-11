@@ -1,29 +1,32 @@
-import { Component, HostListener } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageSwitcherComponent } from '../../../shared/components/language-switcher/language-switcher.component';
 
 @Component({
   selector: 'app-header',
-  standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, TranslateModule, LanguageSwitcherComponent],
   templateUrl: './header.component.html',
-  styleUrls: ['./header.component.scss']
+  styleUrls: ['./header.component.scss'],
+  host: {
+    '(window:scroll)': 'onWindowScroll()'
+  }
 })
 export class HeaderComponent {
   isScrolled = false;
   isMobileMenuOpen = false;
 
   navigationLinks = [
-    { label: 'Services', url: '#services' },
-    { label: 'About', url: '#about' },
-    { label: 'Contact', url: '#contact' }
+    { labelKey: 'LANDING.NAV_SERVICES', url: '#services' },
+    { labelKey: 'LANDING.NAV_ABOUT', url: '#about' },
+    { labelKey: 'LANDING.NAV_CONTACT', url: '#contact' }
   ];
 
   constructor(private router: Router) {}
 
-  @HostListener('window:scroll', [])
   onWindowScroll() {
     this.isScrolled = window.scrollY > 50;
   }

@@ -1,17 +1,17 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface ProcessStep {
   stepNumber: number;
   icon: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descKey: string;
 }
 
 @Component({
   selector: 'app-how-we-work',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './how-we-work.component.html',
   styleUrls: ['./how-we-work.component.scss']
 })
@@ -20,26 +20,26 @@ export class HowWeWorkComponent {
     {
       stepNumber: 1,
       icon: 'assets/icons/clipboard-check.svg',
-      title: 'Submit Your Request',
-      description: 'Fill out our simple form with your ticket or service request details.'
+      titleKey: 'LANDING.HOW_STEP1_TITLE',
+      descKey: 'LANDING.HOW_STEP1_DESC'
     },
     {
       stepNumber: 2,
       icon: 'assets/icons/users.svg',
-      title: 'Expert Review',
-      description: 'Our certified safety experts review your case and develop a strategy.'
+      titleKey: 'LANDING.HOW_STEP2_TITLE',
+      descKey: 'LANDING.HOW_STEP2_DESC'
     },
     {
       stepNumber: 3,
       icon: 'assets/icons/file-text.svg',
-      title: 'Professional Handling',
-      description: 'We handle all documentation and communication on your behalf.'
+      titleKey: 'LANDING.HOW_STEP3_TITLE',
+      descKey: 'LANDING.HOW_STEP3_DESC'
     },
     {
       stepNumber: 4,
       icon: 'assets/icons/shield.svg',
-      title: 'Resolution & Support',
-      description: 'Get the best possible outcome with ongoing support and guidance.'
+      titleKey: 'LANDING.HOW_STEP4_TITLE',
+      descKey: 'LANDING.HOW_STEP4_DESC'
     }
   ];
 }

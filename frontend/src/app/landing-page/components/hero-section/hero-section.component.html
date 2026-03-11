@@ -1,15 +1,15 @@
 <div class="hero-section" [style.background-image]="'url(' + heroImages[currentIndex] + ')'">
   <div class="hero-overlay">
-    <h1 [innerHTML]="headlines[currentIndex]"></h1>
-    <button mat-flat-button color="accent" routerLink="/signup/carrier">Get Started</button>
+    <h1 [innerHTML]="headlineKeys[currentIndex] | translate"></h1>
+    <button mat-flat-button color="accent" routerLink="/signup/carrier">{{ 'LANDING.GET_STARTED' | translate }}</button>
     <div class="stats">
       <div class="stat">
-        <p class="accent">FREE</p>
-        <p>New accounts start</p>
+        <p class="accent">{{ 'LANDING.STAT_FREE' | translate }}</p>
+        <p>{{ 'LANDING.STAT_FREE_DESC' | translate }}</p>
       </div>
       <div class="stat">
-        <p class="accent">10.5 K</p>
-        <p>Customer review</p>
+        <p class="accent">{{ 'LANDING.STAT_REVIEWS' | translate }}</p>
+        <p>{{ 'LANDING.STAT_REVIEWS_DESC' | translate }}</p>
       </div>
     </div>
   </div>

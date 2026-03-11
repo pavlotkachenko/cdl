@@ -5,17 +5,42 @@
     </div>
     <nav class="main-nav">
       <ul>
-        <li><a (click)="scrollToSection('services')" class="nav-link">Services</a></li>
-        <li><a routerLink="/plans" routerLinkActive="active" class="nav-link">Plans</a></li>
-        <li><a routerLink="/about-us" routerLinkActive="active" class="nav-link">About us</a></li>
-        <li><a routerLink="/contact-us" routerLinkActive="active" class="nav-link">Contact us</a></li>
+        <li><a (click)="scrollToSection('services')" class="nav-link">{{ 'LANDING.NAV_SERVICES' | translate }}</a></li>
+        <li><a routerLink="/plans" routerLinkActive="active" class="nav-link">{{ 'LANDING.NAV_PLANS' | translate }}</a></li>
+        <li><a routerLink="/about-us" routerLinkActive="active" class="nav-link">{{ 'LANDING.NAV_ABOUT' | translate }}</a></li>
+        <li><a routerLink="/contact-us" routerLinkActive="active" class="nav-link">{{ 'LANDING.NAV_CONTACT' | translate }}</a></li>
+        <li class="lang-switcher-item">
+          <app-language-switcher theme="light"></app-language-switcher>
+        </li>
         <li>
           <button mat-stroked-button class="sign-in-button" (click)="navigateToSignIn()">
             <mat-icon>person_outline</mat-icon>
-            <span>Sign in</span>
+            <span>{{ 'LANDING.LOGIN' | translate }}</span>
           </button>
         </li>
       </ul>
     </nav>
+
+    <!-- Mobile: language switcher + hamburger -->
+    <div class="mobile-actions">
+      <app-language-switcher theme="light"></app-language-switcher>
+      <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" mat-icon-button aria-label="Toggle menu">
+        <mat-icon>{{ isMobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
+      </button>
+    </div>
   </div>
+
+  <!-- Mobile nav drawer -->
+  @if (isMobileMenuOpen()) {
+    <nav class="mobile-nav">
+      <a (click)="scrollToSection('services')" class="mobile-nav-link">{{ 'LANDING.NAV_SERVICES' | translate }}</a>
+      <a routerLink="/plans" class="mobile-nav-link" (click)="closeMobileMenu()">{{ 'LANDING.NAV_PLANS' | translate }}</a>
+      <a routerLink="/about-us" class="mobile-nav-link" (click)="closeMobileMenu()">{{ 'LANDING.NAV_ABOUT' | translate }}</a>
+      <a routerLink="/contact-us" class="mobile-nav-link" (click)="closeMobileMenu()">{{ 'LANDING.NAV_CONTACT' | translate }}</a>
+      <button mat-stroked-button class="sign-in-button mobile-sign-in" (click)="navigateToSignIn()">
+        <mat-icon>person_outline</mat-icon>
+        <span>{{ 'LANDING.LOGIN' | translate }}</span>
+      </button>
+    </nav>
+  }
 </header>

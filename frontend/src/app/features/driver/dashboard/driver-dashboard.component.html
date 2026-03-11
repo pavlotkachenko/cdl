@@ -1,223 +1,183 @@
-<!-- Driver Dashboard Template - Uses ONLY Material Components -->
-<div class="dashboard-container">
+<div class="dash-page">
 
-  <!-- Skeleton Loading State -->
-  <div *ngIf="loading" class="skeleton-loading">
-    <div class="skeleton-header">
-      <div class="skeleton-block" style="width: 200px; height: 32px;"></div>
-      <div class="skeleton-block" style="width: 160px; height: 40px;"></div>
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <h1>{{ greetingText() }}, {{ currentUser()?.name || 'Driver' }}</h1>
+      <p class="subtitle">{{ 'DRIVER_DASHBOARD.OVERVIEW' | translate }}</p>
     </div>
-    <div class="skeleton-stats">
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-    </div>
-    <div class="skeleton-list">
-      <div class="skeleton-row-item"></div>
-      <div class="skeleton-row-item"></div>
-      <div class="skeleton-row-item"></div>
-    </div>
-  </div>
-
-  <!-- Error State -->
-  <div *ngIf="error && !loading" class="error-state">
-    <mat-icon>error_outline</mat-icon>
-    <p>{{ error }}</p>
-    <button mat-raised-button color="primary" (click)="loadDashboardData()">
-      Try Again
+    <button mat-raised-button color="primary" class="submit-btn" (click)="submitNewCase()">
+      <mat-icon>add</mat-icon>
+      {{ 'DRIVER_DASHBOARD.SUBMIT_TICKET' | translate }}
     </button>
   </div>
 
-  <!-- Main Dashboard -->
-  <div *ngIf="!loading && !error">
-    
-    <!-- Header -->
-    <div class="dashboard-header">
-      <div>
-        <h1>{{ greeting }}, {{ firstName }}!</h1>
-        <p>Here's an overview of your cases</p>
-      </div>
-      <button mat-raised-button color="primary" (click)="submitNewCase()">
-        <mat-icon>add</mat-icon>
-        Submit New Case
-      </button>
-    </div>
+  @if (loading()) {
+    <app-skeleton-loader [rows]="4" [height]="80"></app-skeleton-loader>
+    <div style="height:20px"></div>
+    <app-skeleton-loader [rows]="3" [height]="56"></app-skeleton-loader>
+  } @else if (error()) {
+    <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadDashboardData()"></app-error-state>
+  } @else {
 
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon total">
-            <mat-icon>folder</mat-icon>
-          </div>
-          <div class="stat-info">
-            <h3>{{ stats.total }}</h3>
-            <p>Total Cases</p>
-          </div>
-        </mat-card-content>
-      </mat-card>
+    <!-- Top Row: Stats + Donut Chart -->
+    <div class="overview-row">
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon active">
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card" matRipple (click)="viewAllCases()">
+          <div class="stat-icon-box total">
+            <mat-icon>folder_open</mat-icon>
+          </div>
+          <div class="stat-body">
+            <span class="stat-value">{{ stats().total }}</span>
+            <span class="stat-label">{{ 'DRIVER_DASHBOARD.TOTAL_CASES' | translate }}</span>
+          </div>
+        </div>
+
+        <div class="stat-card" matRipple (click)="viewAllCases()">
+          <div class="stat-icon-box active">
             <mat-icon>pending_actions</mat-icon>
           </div>
-          <div class="stat-info">
-            <h3>{{ stats.active }}</h3>
-            <p>Active</p>
+          <div class="stat-body">
+            <span class="stat-value">{{ stats().active }}</span>
+            <span class="stat-label">{{ 'DRIVER_DASHBOARD.ACTIVE' | translate }}</span>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon pending">
+        <div class="stat-card" matRipple (click)="viewAllCases()">
+          <div class="stat-icon-box pending">
             <mat-icon>schedule</mat-icon>
           </div>
-          <div class="stat-info">
-            <h3>{{ stats.pending }}</h3>
-            <p>Pending</p>
+          <div class="stat-body">
+            <span class="stat-value">{{ stats().pending }}</span>
+            <span class="stat-label">{{ 'DRIVER_DASHBOARD.PENDING' | translate }}</span>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon resolved">
+        <div class="stat-card" matRipple (click)="viewAllCases()">
+          <div class="stat-icon-box resolved">
             <mat-icon>check_circle</mat-icon>
           </div>
-          <div class="stat-info">
-            <h3>{{ stats.resolved }}</h3>
-            <p>Resolved</p>
+          <div class="stat-body">
+            <span class="stat-value">{{ stats().resolved }}</span>
+            <span class="stat-label">{{ 'DRIVER_DASHBOARD.RESOLVED' | translate }}</span>
           </div>
-        </mat-card-content>
+        </div>
+      </div>
+
+      <!-- Donut Chart -->
+      <mat-card class="chart-card">
+        <div class="chart-wrap">
+          <svg viewBox="0 0 100 100" class="donut-svg">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#f0f0f0" stroke-width="10"/>
+            @for (seg of donutSegments(); track seg.label) {
+              <circle cx="50" cy="50" r="40"
+                fill="none"
+                [attr.stroke]="seg.color"
+                stroke-width="10"
+                stroke-linecap="round"
+                [attr.stroke-dasharray]="seg.dasharray"
+                [attr.stroke-dashoffset]="seg.dashoffset"
+                transform="rotate(-90 50 50)"/>
+            }
+            <text x="50" y="46" text-anchor="middle" class="donut-total">{{ stats().total }}</text>
+            <text x="50" y="58" text-anchor="middle" class="donut-label">{{ 'DRIVER_DASHBOARD.CASES' | translate }}</text>
+          </svg>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#1976d2"></span> {{ 'DRIVER_DASHBOARD.ACTIVE' | translate }}
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#f57c00"></span> {{ 'DRIVER_DASHBOARD.PENDING' | translate }}
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#1dad8c"></span> {{ 'DRIVER_DASHBOARD.RESOLVED' | translate }}
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#ef4444"></span> {{ 'DRIVER_DASHBOARD.REJECTED' | translate }}
+            </div>
+          </div>
+        </div>
       </mat-card>
     </div>
 
     <!-- Recent Cases -->
-    <mat-card class="section-card">
-      <mat-card-header>
-        <mat-card-title>
+    <mat-card class="cases-card">
+      <div class="cases-header">
+        <div class="cases-title">
           <mat-icon>receipt_long</mat-icon>
-          Recent Cases
-        </mat-card-title>
+          <h2>{{ 'DRIVER_DASHBOARD.RECENT_CASES' | translate }}</h2>
+        </div>
         <button mat-button color="primary" (click)="viewAllCases()">
-          View All
-          <mat-icon>arrow_forward</mat-icon>
+          {{ 'COMMON.VIEW_ALL' | translate }} <mat-icon>arrow_forward</mat-icon>
         </button>
-      </mat-card-header>
+      </div>
 
-      <mat-card-content>
-        <!-- Empty State -->
-        <div *ngIf="recentCases.length === 0" class="empty-state">
+      @if (recentCases().length === 0) {
+        <div class="empty-state">
           <mat-icon>inbox</mat-icon>
-          <h3>No cases yet</h3>
-          <p>Submit your first case to get started</p>
+          <h3>{{ 'DRIVER_DASHBOARD.NO_CASES' | translate }}</h3>
+          <p>{{ 'DRIVER_DASHBOARD.NO_CASES_HINT' | translate }}</p>
           <button mat-raised-button color="primary" (click)="submitNewCase()">
-            Submit Case
+            <mat-icon>add</mat-icon> {{ 'DRIVER_DASHBOARD.SUBMIT_TICKET' | translate }}
           </button>
         </div>
-
-        <!-- Cases List -->
-        <div *ngIf="recentCases.length > 0" class="cases-list">
-          <div *ngFor="let case of recentCases" class="case-item" (click)="viewCase(case)">
-            <div class="case-header">
-              <div>
-                <h4>{{ case.ticketNumber || case.id.substring(0, 8).toUpperCase() }}</h4>
-                <p class="case-type">{{ case.type || case.violation_type || 'Case' }}</p>
+      } @else {
+        <div class="cases-list">
+          @for (c of recentCases(); track c.id) {
+            <div class="case-row" matRipple
+                 role="button" tabindex="0"
+                 (click)="viewCase(c)"
+                 (keydown.enter)="viewCase(c)"
+                 [attr.aria-label]="'View case ' + (c.case_number || c.id)">
+              <div class="case-left">
+                <div class="case-icon-box">
+                  <mat-icon>description</mat-icon>
+                </div>
+                <div class="case-info">
+                  <span class="case-num">{{ c.case_number || c.ticketNumber || c.id }}</span>
+                  <span class="case-type">{{ c.violation_type || c.type || 'CDL Ticket' }}</span>
+                </div>
               </div>
-              <span class="status-badge" [ngClass]="getStatusClass(case.status)">
-                {{ getStatusLabel(case.status) }}
-              </span>
-            </div>
-
-            <div class="case-details">
-              <div class="detail-item" *ngIf="case.createdAt || case.created_at">
-                <mat-icon>event</mat-icon>
-                <span>{{ formatDate(case.createdAt || case.created_at) }}</span>
-              </div>
-              <div class="detail-item" *ngIf="case.location">
-                <mat-icon>location_on</mat-icon>
-                <span>{{ case.location }}</span>
-              </div>
-              <div class="detail-item" *ngIf="case.citationNumber">
-                <mat-icon>description</mat-icon>
-                <span>{{ case.citationNumber }}</span>
+              <div class="case-right">
+                <span [class]="'status-badge ' + getStatusClass(c.status)">
+                  {{ getStatusLabel(c.status) }}
+                </span>
+                @if (c.created_at || c.createdAt) {
+                  <span class="case-date">{{ (c.created_at || c.createdAt) | date:'MMM d' }}</span>
+                }
               </div>
             </div>
-
-            <button mat-button color="primary" class="view-button">
-              View Details
-              <mat-icon>arrow_forward</mat-icon>
-            </button>
-          </div>
+          }
         </div>
-      </mat-card-content>
+      }
     </mat-card>
 
     <!-- Quick Actions -->
-    <div class="quick-actions-section">
-      <h2>
-        <mat-icon>bolt</mat-icon>
-        Quick Actions
+    <div class="quick-section">
+      <h2 class="section-title">
+        <mat-icon>bolt</mat-icon> {{ 'DRIVER_DASHBOARD.QUICK_ACTIONS' | translate }}
       </h2>
-      
       <div class="actions-grid">
-        <mat-card class="action-card" (click)="submitNewCase()">
-          <mat-card-content>
-            <mat-icon>add_circle</mat-icon>
-            <h3>Submit New Case</h3>
-            <p>Get help with a new violation</p>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="action-card" (click)="viewAllCases()">
-          <mat-card-content>
-            <mat-icon>list_alt</mat-icon>
-            <h3>View All Cases</h3>
-            <p>See your complete case history</p>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="action-card" (click)="navigateToProfile()">
-          <mat-card-content>
-            <mat-icon>person</mat-icon>
-            <h3>My Profile</h3>
-            <p>Update your information</p>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="action-card">
-          <mat-card-content>
-            <mat-icon>help_outline</mat-icon>
-            <h3>Help & Support</h3>
-            <p>Contact our support team</p>
-          </mat-card-content>
-        </mat-card>
+        <div class="action-card" matRipple (click)="submitNewCase()">
+          <div class="action-icon submit"><mat-icon>add_circle</mat-icon></div>
+          <span class="action-label">{{ 'DRIVER_DASHBOARD.NEW_CASE' | translate }}</span>
+        </div>
+        <div class="action-card" matRipple (click)="viewAllCases()">
+          <div class="action-icon cases"><mat-icon>list_alt</mat-icon></div>
+          <span class="action-label">{{ 'DRIVER_DASHBOARD.ALL_CASES' | translate }}</span>
+        </div>
+        <div class="action-card" matRipple (click)="navigateToProfile()">
+          <div class="action-icon profile"><mat-icon>person</mat-icon></div>
+          <span class="action-label">{{ 'NAV.PROFILE' | translate }}</span>
+        </div>
+        <div class="action-card" matRipple>
+          <div class="action-icon help"><mat-icon>support_agent</mat-icon></div>
+          <span class="action-label">{{ 'DRIVER_DASHBOARD.SUPPORT' | translate }}</span>
+        </div>
       </div>
     </div>
 
-    <!-- Help Section -->
-    <mat-card class="help-section">
-      <mat-card-content>
-        <div class="help-header">
-          <mat-icon>lightbulb</mat-icon>
-          <h3>Need Help?</h3>
-        </div>
-        <p>Our team is here to assist you with your cases</p>
-        <div class="contact-info">
-          <div class="contact-item">
-            <mat-icon>phone</mat-icon>
-            <span>(555) 123-4567</span>
-          </div>
-          <div class="contact-item">
-            <mat-icon>email</mat-icon>
-            <span>support@cdlhelp.com</span>
-          </div>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-  </div>
+  }
 </div>

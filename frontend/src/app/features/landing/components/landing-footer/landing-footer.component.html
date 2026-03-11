@@ -2,28 +2,28 @@
   <div class="footer-container">
     <div class="footer-links">
       <div class="footer-column">
-        <a class="footer-link" (click)="scrollToSection('contact')">Help Center</a>
-        <a class="footer-link" (click)="scrollToSection('contact')">Contact Us</a>
+        <a class="footer-link" (click)="scrollToSection('contact')">{{ 'LANDING.FTR_HELP_CENTER' | translate }}</a>
+        <a class="footer-link" (click)="scrollToSection('contact')">{{ 'LANDING.FTR_CONTACT_US' | translate }}</a>
         <a class="footer-link" href="tel:1-800-CDL-HELP">1-800-CDL-HELP</a>
-        <a class="footer-link" (click)="scrollToSection('contact')">Email Support</a>
+        <a class="footer-link" (click)="scrollToSection('contact')">{{ 'LANDING.FTR_EMAIL_SUPPORT' | translate }}</a>
       </div>
       <div class="footer-column">
-        <a class="footer-link" href="javascript:void(0)">Privacy Policy</a>
-        <a class="footer-link" href="javascript:void(0)">Terms of Service</a>
-        <a class="footer-link" href="javascript:void(0)">Cookie Policy</a>
-        <a class="footer-link" href="javascript:void(0)">Accessibility</a>
+        <a class="footer-link" href="javascript:void(0)">{{ 'LANDING.FTR_PRIVACY_POLICY' | translate }}</a>
+        <a class="footer-link" href="javascript:void(0)">{{ 'LANDING.FTR_TERMS_OF_SERVICE' | translate }}</a>
+        <a class="footer-link" href="javascript:void(0)">{{ 'LANDING.FTR_COOKIE_POLICY' | translate }}</a>
+        <a class="footer-link" href="javascript:void(0)">{{ 'LANDING.FTR_ACCESSIBILITY' | translate }}</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <p class="copyright">&copy; {{ currentYear }} CDL Ticket Management. All rights reserved.</p>
+      <p class="copyright">&copy; {{ currentYear }} {{ 'LANDING.FTR_COPYRIGHT' | translate }}</p>
       <nav class="footer-bottom-nav">
-        <a class="bottom-link" href="javascript:void(0)">Privacy</a>
+        <a class="bottom-link" href="javascript:void(0)">{{ 'LANDING.FTR_PRIVACY' | translate }}</a>
         <span class="dot-separator"></span>
-        <a class="bottom-link" href="javascript:void(0)">Terms</a>
+        <a class="bottom-link" href="javascript:void(0)">{{ 'LANDING.FTR_TERMS' | translate }}</a>
         <span class="dot-separator"></span>
-        <a class="bottom-link" (click)="scrollToSection('contact')">Contact</a>
+        <a class="bottom-link" (click)="scrollToSection('contact')">{{ 'LANDING.FTR_CONTACT' | translate }}</a>
         <span class="dot-separator"></span>
-        <a class="bottom-link" (click)="scrollToSection('contact')">Help</a>
+        <a class="bottom-link" (click)="scrollToSection('contact')">{{ 'LANDING.FTR_HELP' | translate }}</a>
       </nav>
     </div>
   </div>
