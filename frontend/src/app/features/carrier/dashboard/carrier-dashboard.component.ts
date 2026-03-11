@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { CarrierService, FleetStats, CsaScoreResponse } from '../../../core/services/carrier.service';
@@ -16,12 +17,12 @@ import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loa
 @Component({
   selector: 'app-carrier-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TitleCasePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, ErrorStateComponent, SkeletonLoaderComponent],
+  imports: [TitleCasePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, ErrorStateComponent, SkeletonLoaderComponent, TranslateModule],
   template: `
     <div class="dashboard">
       <header class="dash-header">
-        <h1>{{ greeting }}, {{ companyName() }}</h1>
-        <p class="sub">Fleet overview</p>
+        <h1>{{ greetingKey | translate }}, {{ companyName() }}</h1>
+        <p class="sub">{{ 'CARRIER.FLEET_OVERVIEW' | translate }}</p>
       </header>
 
       @if (loading()) {
@@ -29,27 +30,27 @@ import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loa
         <div class="skeleton-spacer"></div>
         <app-skeleton-loader [rows]="3" [height]="44"></app-skeleton-loader>
       } @else if (error()) {
-        <app-error-state [message]="error()" retryLabel="Retry" (retry)="loadData()"></app-error-state>
+        <app-error-state [message]="error() | translate" [retryLabel]="'CARRIER.RETRY' | translate" (retry)="loadData()"></app-error-state>
       } @else {
         <!-- CSA Score Widget -->
         <div class="csa-widget" [class]="'csa-' + csaData().riskLevel" aria-label="CSA Risk Score">
           <div class="csa-score-block">
             <span class="csa-number">{{ csaData().csaScore }}</span>
-            <span class="csa-label">CSA Risk Score</span>
+            <span class="csa-label">{{ 'CARRIER.CSA_RISK_SCORE' | translate }}</span>
           </div>
           <div class="csa-details">
-            <span class="csa-risk-badge">{{ csaData().riskLevel | titlecase }} Risk</span>
-            <span class="csa-sub">Based on {{ csaData().openViolations }} open violation{{ csaData().openViolations !== 1 ? 's' : '' }}</span>
+            <span class="csa-risk-badge">{{ csaData().riskLevel | titlecase }} {{ 'CARRIER.RISK' | translate }}</span>
+            <span class="csa-sub">{{ 'CARRIER.BASED_ON_VIOLATIONS' | translate:{ count: csaData().openViolations } }}</span>
             <span class="csa-hint" title="Score derived from open violation count and severity. Lower is better.">
               <mat-icon aria-hidden="true" style="font-size:14px;width:14px;height:14px">info</mat-icon>
-              What is this?
+              {{ 'CARRIER.WHAT_IS_THIS' | translate }}
             </span>
           </div>
         </div>
 
         <div class="risk-banner" [class]="'risk-' + riskLevel()">
           <mat-icon aria-hidden="true">{{ riskLevel() === 'green' ? 'check_circle' : riskLevel() === 'yellow' ? 'warning' : 'error' }}</mat-icon>
-          <span>Risk Score: <strong>{{ riskScore() }}</strong> open violations</span>
+          <span>{{ 'CARRIER.RISK_SCORE_LABEL' | translate }} <strong>{{ riskScore() }}</strong> {{ 'CARRIER.OPEN_VIOLATIONS' | translate }}</span>
         </div>
 
         <div class="stat-grid">
@@ -57,44 +58,44 @@ import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loa
             <mat-card-content>
               <mat-icon aria-hidden="true">people</mat-icon>
               <p class="stat-value">{{ stats().totalDrivers }}</p>
-              <p class="stat-label">Drivers</p>
+              <p class="stat-label">{{ 'CARRIER.DRIVERS' | translate }}</p>
             </mat-card-content>
           </mat-card>
           <mat-card class="stat-card active">
             <mat-card-content>
               <mat-icon aria-hidden="true">gavel</mat-icon>
               <p class="stat-value">{{ stats().activeCases }}</p>
-              <p class="stat-label">Active Cases</p>
+              <p class="stat-label">{{ 'CARRIER.ACTIVE_CASES' | translate }}</p>
             </mat-card-content>
           </mat-card>
           <mat-card class="stat-card pending">
             <mat-card-content>
               <mat-icon aria-hidden="true">schedule</mat-icon>
               <p class="stat-value">{{ stats().pendingCases }}</p>
-              <p class="stat-label">Pending</p>
+              <p class="stat-label">{{ 'CARRIER.PENDING' | translate }}</p>
             </mat-card-content>
           </mat-card>
           <mat-card class="stat-card resolved">
             <mat-card-content>
               <mat-icon aria-hidden="true">done_all</mat-icon>
               <p class="stat-value">{{ stats().resolvedCases }}</p>
-              <p class="stat-label">Resolved</p>
+              <p class="stat-label">{{ 'CARRIER.RESOLVED' | translate }}</p>
             </mat-card-content>
           </mat-card>
         </div>
 
         <div class="quick-actions">
           <button mat-raised-button color="primary" (click)="navigateToDrivers()">
-            <mat-icon>people</mat-icon> Manage Drivers
+            <mat-icon>people</mat-icon> {{ 'CARRIER.MANAGE_DRIVERS' | translate }}
           </button>
           <button mat-raised-button (click)="navigateToCases()">
-            <mat-icon>folder_open</mat-icon> View Cases
+            <mat-icon>folder_open</mat-icon> {{ 'CARRIER.VIEW_CASES' | translate }}
           </button>
           <button mat-raised-button color="accent" (click)="navigateToAnalytics()">
-            <mat-icon>bar_chart</mat-icon> Fleet Analytics
+            <mat-icon>bar_chart</mat-icon> {{ 'CARRIER.FLEET_ANALYTICS' | translate }}
           </button>
           <button mat-stroked-button (click)="navigateToProfile()">
-            <mat-icon>business</mat-icon> Company Profile
+            <mat-icon>business</mat-icon> {{ 'CARRIER.COMPANY_PROFILE' | translate }}
           </button>
         </div>
       }
@@ -152,11 +153,11 @@ export class CarrierDashboardComponent implements OnInit {
     return 'red';
   });
 
-  get greeting(): string {
+  get greetingKey(): string {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'CARRIER.GOOD_MORNING';
+    if (h < 18) return 'CARRIER.GOOD_AFTERNOON';
+    return 'CARRIER.GOOD_EVENING';
   }
 
   ngOnInit(): void {
@@ -171,7 +172,7 @@ export class CarrierDashboardComponent implements OnInit {
     this.error.set('');
     this.carrierService.getStats().subscribe({
       next: (s) => { this.stats.set(s); this.loading.set(false); },
-      error: () => { this.error.set('Failed to load fleet stats. Please try again.'); this.loading.set(false); },
+      error: () => { this.error.set('CARRIER.FAILED_LOAD_STATS'); this.loading.set(false); },
     });
     this.carrierService.getCsaScore().subscribe({
       next: (csa) => this.csaData.set(csa),

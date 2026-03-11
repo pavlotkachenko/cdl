@@ -21,7 +21,7 @@ import { CarrierService, CarrierPayment } from '../../../core/services/carrier.s
   template: `
     <div class="payments-page">
       <header class="page-header">
-        <h1>Payments</h1>
+        <h1>{{ 'CARRIER.PAYMENTS' | translate }}</h1>
       </header>
 
       <!-- Summary Cards -->
@@ -30,21 +30,21 @@ import { CarrierService, CarrierPayment } from '../../../core/services/carrier.s
           <mat-card-content>
             <mat-icon aria-hidden="true">attach_money</mat-icon>
             <p class="summary-value">{{ totalPaid() | currency:'USD':'symbol':'1.0-0' }}</p>
-            <p class="summary-label">Total Paid</p>
+            <p class="summary-label">{{ 'CARRIER.TOTAL_PAID' | translate }}</p>
           </mat-card-content>
         </mat-card>
         <mat-card class="summary-card pending">
           <mat-card-content>
             <mat-icon aria-hidden="true">schedule</mat-icon>
             <p class="summary-value">{{ totalPending() | currency:'USD':'symbol':'1.0-0' }}</p>
-            <p class="summary-label">Pending</p>
+            <p class="summary-label">{{ 'CARRIER.PENDING_AMOUNT' | translate }}</p>
           </mat-card-content>
         </mat-card>
         <mat-card class="summary-card">
           <mat-card-content>
             <mat-icon aria-hidden="true">receipt_long</mat-icon>
             <p class="summary-value">{{ payments().length }}</p>
-            <p class="summary-label">Transactions</p>
+            <p class="summary-label">{{ 'CARRIER.TRANSACTIONS' | translate }}</p>
           </mat-card-content>
         </mat-card>
       </div>
@@ -54,7 +54,7 @@ import { CarrierService, CarrierPayment } from '../../../core/services/carrier.s
       } @else if (payments().length === 0) {
         <div class="empty-state">
           <mat-icon aria-hidden="true">payment</mat-icon>
-          <p>No payment history yet.</p>
+          <p>{{ 'CARRIER.NO_PAYMENTS' | translate }}</p>
         </div>
       } @else {
         <div class="payment-list" role="list">

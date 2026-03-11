@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { CarrierService, FleetDriver } from '../../../core/services/carrier.service';
 
@@ -19,15 +20,16 @@ import { CarrierService, FleetDriver } from '../../../core/services/carrier.serv
     ReactiveFormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
+    TranslateModule,
   ],
   template: `
     <div class="drivers-page">
-      <h1>Fleet Drivers</h1>
+      <h1>{{ 'CARRIER.FLEET_DRIVERS' | translate }}</h1>
 
       <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Search drivers</mat-label>
+        <mat-label>{{ 'CARRIER.SEARCH_DRIVERS' | translate }}</mat-label>
         <input matInput [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value)"
-               placeholder="Filter by name" aria-label="Search drivers">
+               [placeholder]="'CARRIER.FILTER_BY_NAME' | translate" [attr.aria-label]="'CARRIER.SEARCH_DRIVERS' | translate">
         <mat-icon matSuffix aria-hidden="true">search</mat-icon>
       </mat-form-field>
 
@@ -36,7 +38,7 @@ import { CarrierService, FleetDriver } from '../../../core/services/carrier.serv
       } @else if (filteredDrivers().length === 0) {
         <div class="empty-state">
           <mat-icon aria-hidden="true">people_outline</mat-icon>
-          <p>{{ drivers().length === 0 ? 'No drivers yet. Add your first driver below.' : 'No drivers match your search.' }}</p>
+          <p>{{ drivers().length === 0 ? ('CARRIER.NO_DRIVERS_YET' | translate) : ('CARRIER.NO_DRIVERS_MATCH' | translate) }}</p>
         </div>
       } @else {
         <div class="driver-list" role="list">
@@ -47,14 +49,14 @@ import { CarrierService, FleetDriver } from '../../../core/services/carrier.serv
                   <mat-icon aria-hidden="true">person</mat-icon>
                   <div>
                     <p class="driver-name">{{ driver.full_name }}</p>
-                    <p class="driver-cdl">CDL: {{ driver.cdl_number }}</p>
+                    <p class="driver-cdl">{{ 'CARRIER.CDL_NUMBER' | translate }}: {{ driver.cdl_number }}</p>
                   </div>
                 </div>
                 <div class="driver-meta">
                   @if (driver.openCases > 0) {
                     <span [class]="'case-badge risk-' + (driver.openCases >= 3 ? 'red' : 'yellow')"
                           [attr.aria-label]="driver.full_name + ': ' + driver.openCases + ' open cases'">
-                      {{ driver.openCases }} open {{ driver.openCases === 1 ? 'case' : 'cases' }}
+                      {{ driver.openCases }} {{ driver.openCases === 1 ? ('CARRIER.OPEN_CASE' | translate) : ('CARRIER.OPEN_CASES' | translate) }}
                     </span>
                   }
                   <button mat-icon-button color="warn" (click)="removeDriver(driver.id)"
@@ -69,25 +71,25 @@ import { CarrierService, FleetDriver } from '../../../core/services/carrier.serv
       }
 
       <mat-card class="add-card">
-        <mat-card-header><mat-card-title>Add Driver</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'CARRIER.ADD_DRIVER' | translate }}</mat-card-title></mat-card-header>
         <mat-card-content>
           <form [formGroup]="addForm" (ngSubmit)="addDriver()" class="add-form">
             <mat-form-field appearance="outline">
-              <mat-label>Full Name</mat-label>
+              <mat-label>{{ 'CARRIER.FULL_NAME' | translate }}</mat-label>
               <input matInput formControlName="full_name" placeholder="John Smith">
               @if (addForm.get('full_name')?.invalid && addForm.get('full_name')?.touched) {
-                <mat-error>Full name is required</mat-error>
+                <mat-error>{{ 'CARRIER.FULL_NAME_REQUIRED' | translate }}</mat-error>
               }
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>CDL Number</mat-label>
+              <mat-label>{{ 'CARRIER.CDL_NUMBER' | translate }}</mat-label>
               <input matInput formControlName="cdl_number" placeholder="CDL123456">
               @if (addForm.get('cdl_number')?.invalid && addForm.get('cdl_number')?.touched) {
-                <mat-error>CDL number is required</mat-error>
+                <mat-error>{{ 'CARRIER.CDL_REQUIRED' | translate }}</mat-error>
               }
             </mat-form-field>
             <button mat-raised-button color="primary" type="submit" [disabled]="adding()">
-              @if (adding()) { <mat-spinner diameter="20"></mat-spinner> } @else { Add Driver }
+              @if (adding()) { <mat-spinner diameter="20"></mat-spinner> } @else { {{ 'CARRIER.ADD_DRIVER' | translate }} }
             </button>
           </form>
         </mat-card-content>

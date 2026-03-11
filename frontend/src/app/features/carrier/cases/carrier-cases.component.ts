@@ -10,6 +10,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SlicePipe } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { CarrierService, FleetCase } from '../../../core/services/carrier.service';
 
@@ -26,13 +27,14 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
   imports: [
     SlicePipe, MatCardModule, MatButtonModule, MatIconModule,
     MatChipsModule, MatCheckboxModule, MatProgressSpinnerModule,
+    TranslateModule,
   ],
   template: `
     <div class="cases-page">
       <div class="page-header">
-        <h1>Fleet Cases</h1>
+        <h1>{{ 'CARRIER.FLEET_CASES' | translate }}</h1>
         <button mat-stroked-button (click)="goToImport()" aria-label="Bulk import cases from CSV">
-          <mat-icon aria-hidden="true">upload_file</mat-icon> Import CSV
+          <mat-icon aria-hidden="true">upload_file</mat-icon> {{ 'CARRIER.IMPORT_CSV' | translate }}
         </button>
       </div>
 
@@ -40,23 +42,23 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
         @for (f of filters; track f.value) {
           <button mat-stroked-button [class.active-filter]="activeFilter() === f.value"
                   (click)="setFilter(f.value)">
-            {{ f.label }}
+            {{ f.label | translate }}
           </button>
         }
       </div>
 
       @if (selectedIds().size > 0) {
         <div class="bulk-bar" role="toolbar" aria-label="Bulk actions">
-          <span class="selected-count">{{ selectedIds().size }} selected</span>
+          <span class="selected-count">{{ selectedIds().size }} {{ 'CARRIER.SELECTED' | translate }}</span>
           <button mat-raised-button color="warn" [disabled]="archiving()"
                   (click)="bulkArchive()" aria-label="Archive selected cases">
             @if (archiving()) {
               <mat-spinner diameter="16" aria-label="Archiving"></mat-spinner>
             } @else {
-              Archive Selected
+              {{ 'CARRIER.ARCHIVE_SELECTED' | translate }}
             }
           </button>
-          <button mat-stroked-button (click)="clearSelection()">Cancel</button>
+          <button mat-stroked-button (click)="clearSelection()">{{ 'CARRIER.CANCEL' | translate }}</button>
         </div>
       }
 
@@ -65,7 +67,7 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
       } @else if (filteredCases().length === 0) {
         <div class="empty-state">
           <mat-icon aria-hidden="true">folder_open</mat-icon>
-          <p>No {{ activeFilter() === 'all' ? '' : activeFilter() + ' ' }}cases found.</p>
+          <p>{{ 'CARRIER.NO_CASES_FOUND' | translate }}</p>
         </div>
       } @else {
         <div class="case-list" role="list">
@@ -91,7 +93,7 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
                   </div>
                 </div>
                 @if (c.attorney_name) {
-                  <p class="attorney">Attorney: {{ c.attorney_name }}</p>
+                  <p class="attorney">{{ 'CARRIER.ATTORNEY' | translate }} {{ c.attorney_name }}</p>
                 }
               </mat-card-content>
             </mat-card>
@@ -137,10 +139,10 @@ export class CarrierCasesComponent implements OnInit {
   selectedIds = signal<Set<string>>(new Set());
 
   filters: { value: CaseFilter; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'active', label: 'Active' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'resolved', label: 'Resolved' },
+    { value: 'all', label: 'CARRIER.ALL' },
+    { value: 'active', label: 'CARRIER.ACTIVE' },
+    { value: 'pending', label: 'CARRIER.PENDING' },
+    { value: 'resolved', label: 'CARRIER.RESOLVED' },
   ];
 
   filteredCases = computed(() => {

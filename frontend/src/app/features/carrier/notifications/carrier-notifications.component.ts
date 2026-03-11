@@ -22,10 +22,10 @@ import { CarrierService, CarrierNotification } from '../../../core/services/carr
   template: `
     <div class="notifications-page">
       <header class="page-header">
-        <h1>Notifications</h1>
+        <h1>{{ 'CARRIER.NOTIFICATIONS' | translate }}</h1>
         @if (unreadCount() > 0) {
           <button mat-stroked-button (click)="markAllRead()">
-            <mat-icon>done_all</mat-icon> Mark All Read
+            <mat-icon>done_all</mat-icon> {{ 'CARRIER.MARK_ALL_READ' | translate }}
           </button>
         }
       </header>
@@ -33,7 +33,7 @@ import { CarrierService, CarrierNotification } from '../../../core/services/carr
       @if (unreadCount() > 0) {
         <div class="unread-banner">
           <mat-icon aria-hidden="true">notifications_active</mat-icon>
-          <span>{{ unreadCount() }} unread notification{{ unreadCount() !== 1 ? 's' : '' }}</span>
+          <span>{{ unreadCount() }} {{ 'CARRIER.UNREAD_NOTIFICATIONS' | translate }}</span>
         </div>
       }
 
@@ -42,7 +42,7 @@ import { CarrierService, CarrierNotification } from '../../../core/services/carr
       } @else if (notifications().length === 0) {
         <div class="empty-state">
           <mat-icon aria-hidden="true">notifications_none</mat-icon>
-          <p>No notifications yet.</p>
+          <p>{{ 'CARRIER.NO_NOTIFICATIONS' | translate }}</p>
         </div>
       } @else {
         <div class="notification-list" role="list">

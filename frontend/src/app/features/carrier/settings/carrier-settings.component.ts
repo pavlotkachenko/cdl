@@ -26,7 +26,7 @@ import { CarrierService, CarrierProfile } from '../../../core/services/carrier.s
   ],
   template: `
     <div class="settings-page">
-      <h1>Settings</h1>
+      <h1>{{ 'CARRIER.SETTINGS' | translate }}</h1>
 
       @if (loading()) {
         <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
@@ -35,29 +35,29 @@ import { CarrierService, CarrierProfile } from '../../../core/services/carrier.s
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon aria-hidden="true">business</mat-icon> Company Information
+              <mat-icon aria-hidden="true">business</mat-icon> {{ 'CARRIER.COMPANY_INFO' | translate }}
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="settings-form">
               <mat-form-field appearance="outline">
-                <mat-label>Company Name</mat-label>
+                <mat-label>{{ 'CARRIER.COMPANY_NAME' | translate }}</mat-label>
                 <input matInput formControlName="company_name">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>USDOT Number</mat-label>
+                <mat-label>{{ 'CARRIER.USDOT_NUMBER' | translate }}</mat-label>
                 <input matInput formControlName="usdot_number">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Email</mat-label>
+                <mat-label>{{ 'CARRIER.EMAIL' | translate }}</mat-label>
                 <input matInput formControlName="email" type="email">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Phone</mat-label>
+                <mat-label>{{ 'CARRIER.PHONE' | translate }}</mat-label>
                 <input matInput formControlName="phone_number" type="tel">
               </mat-form-field>
               <button mat-raised-button color="primary" type="submit" [disabled]="saving()">
-                @if (saving()) { <mat-spinner diameter="20"></mat-spinner> } @else { Save Changes }
+                @if (saving()) { <mat-spinner diameter="20"></mat-spinner> } @else { {{ 'CARRIER.SAVE_CHANGES' | translate }} }
               </button>
             </form>
           </mat-card-content>
@@ -67,38 +67,38 @@ import { CarrierService, CarrierProfile } from '../../../core/services/carrier.s
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon aria-hidden="true">notifications</mat-icon> Notification Preferences
+              <mat-icon aria-hidden="true">notifications</mat-icon> {{ 'CARRIER.NOTIFICATION_PREFS' | translate }}
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div class="toggle-row">
               <div class="toggle-info">
-                <p class="toggle-label">New ticket alerts</p>
-                <p class="toggle-desc">Get notified when a driver submits a new ticket</p>
+                <p class="toggle-label">{{ 'CARRIER.NEW_TICKET_ALERTS' | translate }}</p>
+                <p class="toggle-desc">{{ 'CARRIER.NEW_TICKET_DESC' | translate }}</p>
               </div>
               <mat-slide-toggle [checked]="notifyNewTicket()" (change)="toggleNotify('new_ticket')"></mat-slide-toggle>
             </div>
             <mat-divider></mat-divider>
             <div class="toggle-row">
               <div class="toggle-info">
-                <p class="toggle-label">Case status updates</p>
-                <p class="toggle-desc">Email notifications for case status changes</p>
+                <p class="toggle-label">{{ 'CARRIER.CASE_STATUS_UPDATES' | translate }}</p>
+                <p class="toggle-desc">{{ 'CARRIER.CASE_STATUS_DESC' | translate }}</p>
               </div>
               <mat-slide-toggle [checked]="notifyCaseStatus()" (change)="toggleNotify('case_status')"></mat-slide-toggle>
             </div>
             <mat-divider></mat-divider>
             <div class="toggle-row">
               <div class="toggle-info">
-                <p class="toggle-label">Payment alerts</p>
-                <p class="toggle-desc">Get notified about payment successes and failures</p>
+                <p class="toggle-label">{{ 'CARRIER.PAYMENT_ALERTS' | translate }}</p>
+                <p class="toggle-desc">{{ 'CARRIER.PAYMENT_ALERTS_DESC' | translate }}</p>
               </div>
               <mat-slide-toggle [checked]="notifyPayments()" (change)="toggleNotify('payments')"></mat-slide-toggle>
             </div>
             <mat-divider></mat-divider>
             <div class="toggle-row">
               <div class="toggle-info">
-                <p class="toggle-label">Weekly compliance digest</p>
-                <p class="toggle-desc">Receive a weekly summary of fleet compliance status</p>
+                <p class="toggle-label">{{ 'CARRIER.WEEKLY_DIGEST' | translate }}</p>
+                <p class="toggle-desc">{{ 'CARRIER.WEEKLY_DIGEST_DESC' | translate }}</p>
               </div>
               <mat-slide-toggle [checked]="notifyWeeklyDigest()" (change)="toggleNotify('weekly_digest')"></mat-slide-toggle>
             </div>
@@ -109,18 +109,18 @@ import { CarrierService, CarrierProfile } from '../../../core/services/carrier.s
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon aria-hidden="true">security</mat-icon> Security
+              <mat-icon aria-hidden="true">security</mat-icon> {{ 'CARRIER.SECURITY' | translate }}
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <button mat-stroked-button class="security-btn">
-              <mat-icon>lock</mat-icon> Change Password
+              <mat-icon>lock</mat-icon> {{ 'CARRIER.CHANGE_PASSWORD' | translate }}
             </button>
             <button mat-stroked-button class="security-btn">
-              <mat-icon>fingerprint</mat-icon> Enable Biometric Login
+              <mat-icon>fingerprint</mat-icon> {{ 'CARRIER.ENABLE_BIOMETRIC' | translate }}
             </button>
             <button mat-stroked-button class="security-btn">
-              <mat-icon>devices</mat-icon> Manage Active Sessions
+              <mat-icon>devices</mat-icon> {{ 'CARRIER.MANAGE_SESSIONS' | translate }}
             </button>
           </mat-card-content>
         </mat-card>
