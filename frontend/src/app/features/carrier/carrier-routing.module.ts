@@ -47,6 +47,22 @@ const routes: Routes = [
       {
         path: 'webhooks',
         loadComponent: () => import('./webhooks/webhook-management.component').then(m => m.WebhookManagementComponent)
+      },
+      {
+        path: 'payments',
+        loadComponent: () => import('./payments/carrier-payments.component').then(m => m.CarrierPaymentsComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./notifications/carrier-notifications.component').then(m => m.CarrierNotificationsComponent)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./settings/carrier-settings.component').then(m => m.CarrierSettingsComponent)
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./documents/carrier-documents.component').then(m => m.CarrierDocumentsComponent)
       }
     ]
   }

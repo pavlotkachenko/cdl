@@ -21,8 +21,8 @@
         <mat-icon>search</mat-icon>
       </button>
 
-      <!-- Language switcher (driver role only) -->
-      @if (userRole === 'driver') { <app-language-switcher></app-language-switcher> }
+      <!-- Language switcher -->
+      <app-language-switcher></app-language-switcher>
 
       <!-- Notification Bell -->
       <app-notification-bell></app-notification-bell>
@@ -44,15 +44,15 @@
           </div>
         </div>
         <mat-divider></mat-divider>
-        <button mat-menu-item routerLink="/driver/profile">
+        <button mat-menu-item [routerLink]="'/' + userRole + '/profile'">
           <mat-icon>person</mat-icon>
           <span>{{ 'HEADER.MY_PROFILE' | translate }}</span>
         </button>
-        <button mat-menu-item routerLink="/driver/settings">
+        <button mat-menu-item [routerLink]="'/' + userRole + '/settings'">
           <mat-icon>settings</mat-icon>
           <span>{{ 'HEADER.SETTINGS' | translate }}</span>
         </button>
-        <button mat-menu-item routerLink="/driver/help">
+        <button mat-menu-item [routerLink]="'/' + userRole + '/help'">
           <mat-icon>help</mat-icon>
           <span>{{ 'HEADER.HELP_SUPPORT' | translate }}</span>
         </button>
