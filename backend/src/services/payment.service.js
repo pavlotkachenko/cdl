@@ -3,7 +3,9 @@
 // Core payment processing with Stripe integration
 // ============================================
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
 const { supabase } = require('../config/supabase');
 const { sendPaymentConfirmationEmail } = require('./email.service');
 

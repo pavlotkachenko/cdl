@@ -1,38 +1,93 @@
-// ============================================
-// Sidebar Navigation Styles - FIXED
-// Location: frontend/src/app/core/layout/sidebar/sidebar.component.scss
-// ============================================
-
 $primary-color: #1dad8c;
 $text-dark: #1f2937;
 $text-medium: #6b7280;
 $text-light: #9ca3af;
-$background: #f9fafb;
 $hover-bg: #f3f4f6;
-$border-color: #e5e7eb;  // ADDED: Missing variable
+$border-color: #e5e7eb;
 
-.sidebar-nav {
-  padding: 8px;
-  
-  a[mat-list-item] {
+.sidebar-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+// User Profile Section
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  background: linear-gradient(160deg, rgba(29, 173, 140, 0.06) 0%, rgba(29, 173, 140, 0.02) 100%);
+
+  .profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, $primary-color 0%, #0f8a6f 100%);
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    margin-bottom: 4px;
-    border-radius: 8px;
-    color: $text-medium;
-    font-size: 15px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    min-height: 48px;
-    position: relative;
-    
+    justify-content: center;
+    flex-shrink: 0;
+
     mat-icon {
-      color: $text-light;
+      color: white;
       font-size: 24px;
       width: 24px;
       height: 24px;
+    }
+  }
+
+  .profile-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .profile-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: $text-dark;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-role {
+      font-size: 12px;
+      color: $primary-color;
+      font-weight: 500;
+    }
+  }
+}
+
+// Navigation
+.sidebar-nav {
+  padding: 8px;
+  flex: 1;
+
+  .nav-divider {
+    margin: 8px 0;
+    background-color: $border-color;
+  }
+
+  a[mat-list-item] {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    margin-bottom: 2px;
+    border-radius: 10px;
+    color: $text-medium;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    position: relative;
+
+    mat-icon {
+      color: $text-light;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
       transition: all 0.2s ease;
     }
 
@@ -40,28 +95,24 @@ $border-color: #e5e7eb;  // ADDED: Missing variable
       flex: 1;
     }
 
-    // Hover state
     &:hover {
       background-color: $hover-bg;
       color: $text-dark;
-      
+
       mat-icon {
         color: $primary-color;
       }
     }
 
-    // Active state
     &.active {
-      background: linear-gradient(135deg, rgba(29, 173, 140, 0.1) 0%, rgba(29, 173, 140, 0.05) 100%);
+      background: linear-gradient(135deg, rgba(29, 173, 140, 0.12) 0%, rgba(29, 173, 140, 0.04) 100%);
       color: $primary-color;
       font-weight: 600;
-      position: relative;
-      
+
       mat-icon {
         color: $primary-color;
       }
 
-      // Active indicator bar
       &::before {
         content: '';
         position: absolute;
@@ -69,53 +120,43 @@ $border-color: #e5e7eb;  // ADDED: Missing variable
         top: 50%;
         transform: translateY(-50%);
         width: 4px;
-        height: 24px;
+        height: 22px;
         background: $primary-color;
         border-radius: 0 4px 4px 0;
       }
     }
 
-    // Badge styling for notifications
     ::ng-deep .mat-badge-content {
       background: #ef4444;
       color: white;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
-      min-width: 18px;
-      height: 18px;
-      line-height: 18px;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
     }
   }
 
-  // Divider spacing
   mat-divider {
-    margin: 12px 0;
+    margin: 8px 0;
     background-color: $border-color;
   }
 }
 
-// Mobile responsive
 @media (max-width: 768px) {
-  .sidebar-nav {
-    a[mat-list-item] {
-      padding: 10px 12px;
-      gap: 12px;
-
-      mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
-      }
-
-      span {
-        font-size: 14px;
-      }
-    }
+  .sidebar-nav a[mat-list-item] {
+    padding: 10px 12px;
+    gap: 12px;
   }
 }
 
-// Dark mode support (optional)
 @media (prefers-color-scheme: dark) {
+  .sidebar-profile {
+    background: linear-gradient(160deg, rgba(29, 173, 140, 0.12) 0%, rgba(29, 173, 140, 0.04) 100%);
+
+    .profile-info .profile-name { color: #f9fafb; }
+  }
+
   .sidebar-nav {
     a[mat-list-item] {
       color: #d1d5db;
@@ -130,18 +171,10 @@ $border-color: #e5e7eb;  // ADDED: Missing variable
         color: #1dad8c;
       }
 
-      mat-icon {
-        color: #9ca3af;
-      }
-
-      &:hover mat-icon,
-      &.active mat-icon {
-        color: #1dad8c;
-      }
+      mat-icon { color: #9ca3af; }
+      &:hover mat-icon, &.active mat-icon { color: #1dad8c; }
     }
 
-    mat-divider {
-      background-color: #374151;
-    }
+    mat-divider, .nav-divider { background-color: #374151; }
   }
 }

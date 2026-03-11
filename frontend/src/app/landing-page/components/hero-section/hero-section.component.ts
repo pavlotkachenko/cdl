@@ -1,16 +1,16 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-hero-section',
-  standalone: true,
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, TranslateModule],
   templateUrl: './hero-section.component.html',
   styleUrls: ['./hero-section.component.scss']
 })
 export class HeroSectionComponent implements OnInit, OnDestroy {
   currentIndex = 0;
-  interval: any;
+  interval: ReturnType<typeof setInterval> | undefined;
 
   heroImages = [
     'assets/images/hero-1.jpg',
@@ -20,12 +20,12 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     'assets/images/hero-5.jpg'
   ];
 
-  headlines = [
-    'We are #1 advisor<br/>in the trucking industry',
-    '100% tickets<br/>resolution rate',
-    'Safety consulting<br/>for trucking companies',
-    'Services<br/>for drivers',
-    'We are proud<br/>of our team'
+  headlineKeys = [
+    'LANDING.HERO_1',
+    'LANDING.HERO_2',
+    'LANDING.HERO_3',
+    'LANDING.HERO_4',
+    'LANDING.HERO_5'
   ];
 
   ngOnInit() {

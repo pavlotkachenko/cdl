@@ -1,4 +1,4 @@
-<!-- Analytics Dashboard Template - FIXED -->
+<!-- Analytics Dashboard Template -->
 <div class="analytics-container">
 
   <!-- Page Header -->
@@ -31,16 +31,18 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <mat-spinner diameter="60"></mat-spinner>
-    <p>Loading analytics...</p>
-  </div>
+  @if (loading) {
+    <div class="loading-state">
+      <mat-spinner diameter="60"></mat-spinner>
+      <p>Loading analytics...</p>
+    </div>
+  }
 
-  <div *ngIf="!loading && summary">
+  @if (!loading && summary) {
 
     <!-- Summary Statistics Cards -->
     <div class="stats-grid">
-      
+
       <!-- Total Cases -->
       <mat-card class="stat-card primary">
         <mat-card-content>
@@ -50,15 +52,17 @@
           <div class="stat-content">
             <h3>Total Cases</h3>
             <div class="stat-value">{{ summary.totalCases }}</div>
-            <div class="stat-trend" *ngIf="trends">
-              <mat-icon [style.color]="getChangeColor(trends.caseVolume.change)">
-                {{ getChangeIcon(trends.caseVolume.change) }}
-              </mat-icon>
-              <span [style.color]="getChangeColor(trends.caseVolume.change)">
-                {{ trends.caseVolume.change > 0 ? '+' : '' }}{{ trends.caseVolume.change }}
-                ({{ formatPercentage(trends.caseVolume.changePercent) }})
-              </span>
-            </div>
+            @if (trends) {
+              <div class="stat-trend">
+                <mat-icon [style.color]="getChangeColor(trends.caseVolume.change)">
+                  {{ getChangeIcon(trends.caseVolume.change) }}
+                </mat-icon>
+                <span [style.color]="getChangeColor(trends.caseVolume.change)">
+                  {{ trends.caseVolume.change > 0 ? '+' : '' }}{{ trends.caseVolume.change }}
+                  ({{ formatPercentage(trends.caseVolume.changePercent) }})
+                </span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -72,14 +76,16 @@
           <div class="stat-content">
             <h3>Win Rate</h3>
             <div class="stat-value">{{ formatPercentage(summary.winRate) }}</div>
-            <div class="stat-trend" *ngIf="trends">
-              <mat-icon [style.color]="getChangeColor(trends.winRate.change)">
-                {{ getChangeIcon(trends.winRate.change) }}
-              </mat-icon>
-              <span [style.color]="getChangeColor(trends.winRate.change)">
-                {{ trends.winRate.change > 0 ? '+' : '' }}{{ trends.winRate.change.toFixed(1) }}%
-              </span>
-            </div>
+            @if (trends) {
+              <div class="stat-trend">
+                <mat-icon [style.color]="getChangeColor(trends.winRate.change)">
+                  {{ getChangeIcon(trends.winRate.change) }}
+                </mat-icon>
+                <span [style.color]="getChangeColor(trends.winRate.change)">
+                  {{ trends.winRate.change > 0 ? '+' : '' }}{{ trends.winRate.change.toFixed(1) }}%
+                </span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -109,14 +115,16 @@
           <div class="stat-content">
             <h3>Avg Resolution Time</h3>
             <div class="stat-value">{{ summary.avgResolutionDays }} days</div>
-            <div class="stat-trend" *ngIf="trends">
-              <mat-icon [style.color]="getChangeColor(trends.resolutionTime.change, true)">
-                {{ getChangeIcon(trends.resolutionTime.change) }}
-              </mat-icon>
-              <span [style.color]="getChangeColor(trends.resolutionTime.change, true)">
-                {{ trends.resolutionTime.change > 0 ? '+' : '' }}{{ trends.resolutionTime.change }} days
-              </span>
-            </div>
+            @if (trends) {
+              <div class="stat-trend">
+                <mat-icon [style.color]="getChangeColor(trends.resolutionTime.change, true)">
+                  {{ getChangeIcon(trends.resolutionTime.change) }}
+                </mat-icon>
+                <span [style.color]="getChangeColor(trends.resolutionTime.change, true)">
+                  {{ trends.resolutionTime.change > 0 ? '+' : '' }}{{ trends.resolutionTime.change }} days
+                </span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -126,74 +134,79 @@
     <!-- Charts Grid -->
     <div class="charts-grid">
 
-      <!-- Cases by Type -->
+      <!-- Cases by Type (CSS Donut) -->
       <mat-card class="chart-card">
         <mat-card-header>
           <mat-card-title>
             <mat-icon>pie_chart</mat-icon>
             Cases by Type
           </mat-card-title>
-          <button mat-icon-button [matMenuTriggerFor]="typeMenu">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #typeMenu="matMenu">
-            <button mat-menu-item (click)="exportChart('typeChart')">
-              <mat-icon>download</mat-icon>
-              Export as Image
-            </button>
-          </mat-menu>
         </mat-card-header>
         <mat-card-content>
-          <div class="chart-container">
-            <canvas id="typeChart"></canvas>
+          <div class="type-chart-wrapper">
+            <div class="donut-chart">
+              <div class="donut-center">
+                <span class="donut-total">{{ summary.totalCases }}</span>
+                <span class="donut-label">Total</span>
+              </div>
+            </div>
+            <div class="chart-legend">
+              @for (item of casesByType; track item.type) {
+                <div class="legend-item">
+                  <span class="legend-dot" [style.background]="item.color"></span>
+                  <span class="legend-text">{{ item.type }}</span>
+                  <span class="legend-count">{{ item.count }}</span>
+                  <span class="legend-pct">{{ item.pct }}%</span>
+                </div>
+              }
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
 
-      <!-- Cases by Status -->
+      <!-- Cases by Status (Horizontal bars) -->
       <mat-card class="chart-card">
         <mat-card-header>
           <mat-card-title>
             <mat-icon>bar_chart</mat-icon>
             Cases by Status
           </mat-card-title>
-          <button mat-icon-button [matMenuTriggerFor]="statusMenu">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #statusMenu="matMenu">
-            <button mat-menu-item (click)="exportChart('statusChart')">
-              <mat-icon>download</mat-icon>
-              Export as Image
-            </button>
-          </mat-menu>
         </mat-card-header>
         <mat-card-content>
-          <div class="chart-container">
-            <canvas id="statusChart"></canvas>
+          <div class="status-bars">
+            @for (item of casesByStatus; track item.status) {
+              <div class="status-bar-row">
+                <div class="status-bar-label">
+                  <span class="status-dot" [style.background]="item.color"></span>
+                  <span>{{ item.status }}</span>
+                </div>
+                <div class="status-bar-track">
+                  <div class="status-bar-fill" [style.width.%]="item.pct" [style.background]="item.color"></div>
+                </div>
+                <span class="status-bar-value">{{ item.count }} ({{ item.pct }}%)</span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
 
-      <!-- Timeline -->
+      <!-- Timeline (Vertical bar chart) -->
       <mat-card class="chart-card full-width">
         <mat-card-header>
           <mat-card-title>
             <mat-icon>show_chart</mat-icon>
             Case Timeline
           </mat-card-title>
-          <button mat-icon-button [matMenuTriggerFor]="timelineMenu">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #timelineMenu="matMenu">
-            <button mat-menu-item (click)="exportChart('timelineChart')">
-              <mat-icon>download</mat-icon>
-              Export as Image
-            </button>
-          </mat-menu>
         </mat-card-header>
         <mat-card-content>
-          <div class="chart-container timeline">
-            <canvas id="timelineChart"></canvas>
+          <div class="timeline-chart">
+            @for (m of timeline; track m.month) {
+              <div class="timeline-col">
+                <span class="timeline-count">{{ m.count }}</span>
+                <div class="timeline-bar" [style.height.%]="barHeight(m.count)"></div>
+                <span class="timeline-label">{{ m.month }}</span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -205,19 +218,18 @@
             <mat-icon>location_on</mat-icon>
             Cases by Location
           </mat-card-title>
-          <button mat-icon-button [matMenuTriggerFor]="locationMenu">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #locationMenu="matMenu">
-            <button mat-menu-item (click)="exportChart('locationChart')">
-              <mat-icon>download</mat-icon>
-              Export as Image
-            </button>
-          </mat-menu>
         </mat-card-header>
         <mat-card-content>
-          <div class="chart-container">
-            <canvas id="locationChart"></canvas>
+          <div class="location-list">
+            @for (loc of locationData; track loc.state) {
+              <div class="location-row">
+                <span class="location-state">{{ loc.state }}</span>
+                <div class="location-bar-track">
+                  <div class="location-bar-fill" [style.width.%]="loc.pct"></div>
+                </div>
+                <span class="location-count">{{ loc.count }} cases</span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -230,9 +242,9 @@
         <mat-icon>lightbulb</mat-icon>
         Key Insights
       </h2>
-      
+
       <div class="insights-grid">
-        
+
         <mat-card class="insight-card">
           <mat-card-content>
             <div class="insight-icon success">
@@ -252,7 +264,9 @@
             </div>
             <div class="insight-content">
               <h4>Increasing Volume</h4>
-              <p>Case volume has increased by {{ trends?.caseVolume.changePercent.toFixed(0) }}% this month.</p>
+              @if (trends) {
+                <p>Case volume has increased by {{ trends.caseVolume.changePercent.toFixed(0) }}% this period.</p>
+              }
             </div>
           </mat-card-content>
         </mat-card>
@@ -264,7 +278,9 @@
             </div>
             <div class="insight-content">
               <h4>Faster Resolutions</h4>
-              <p>Average resolution time improved by {{ Math.abs(trends?.resolutionTime.change || 0) }} days.</p>
+              @if (trends) {
+                <p>Average resolution time improved by {{ absValue(trends.resolutionTime.change) }} days.</p>
+              }
             </div>
           </mat-card-content>
         </mat-card>
@@ -272,6 +288,6 @@
       </div>
     </div>
 
-  </div>
+  }
 
 </div>

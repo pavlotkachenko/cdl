@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-services-section',
   standalone: true,
-  imports: [CommonModule, MatButtonToggleModule, MatCardModule, MatIconModule],
+  imports: [CommonModule, MatButtonToggleModule, MatCardModule, MatIconModule, TranslateModule],
   templateUrl: './services-section.component.html',
   styleUrls: ['./services-section.component.scss']
 })

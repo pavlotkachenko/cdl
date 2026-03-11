@@ -18,6 +18,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface FAQ {
   question: string;
@@ -26,15 +27,14 @@ interface FAQ {
 }
 
 interface SupportCategory {
-  title: string;
+  titleKey: string;
   icon: string;
-  description: string;
+  descKey: string;
   link: string;
 }
 
 @Component({
   selector: 'app-help',
-  standalone: true,
   templateUrl: './help.component.html',
   styleUrls: ['./help.component.scss'],
   imports: [
@@ -49,7 +49,8 @@ interface SupportCategory {
     MatFormFieldModule,
     MatInputModule,
     MatChipsModule,
-    MatTabsModule
+    MatTabsModule,
+    TranslateModule
   ]
 })
 export class HelpComponent implements OnInit {
@@ -59,39 +60,39 @@ export class HelpComponent implements OnInit {
 
   supportCategories: SupportCategory[] = [
     {
-      title: 'Getting Started',
+      titleKey: 'HELP.CAT_GETTING_STARTED',
       icon: 'rocket_launch',
-      description: 'Learn the basics of using CDL Ticket Management',
-      link: '#getting-started'
+      descKey: 'HELP.CAT_GETTING_STARTED_DESC',
+      link: '/driver/dashboard'
     },
     {
-      title: 'Submit a Ticket',
+      titleKey: 'HELP.CAT_SUBMIT_TICKET',
       icon: 'add_circle',
-      description: 'How to submit a new traffic violation case',
-      link: '#submit-ticket'
+      descKey: 'HELP.CAT_SUBMIT_TICKET_DESC',
+      link: '/driver/submit-ticket'
     },
     {
-      title: 'Track Your Cases',
+      titleKey: 'HELP.CAT_TRACK_CASES',
       icon: 'track_changes',
-      description: 'Monitor the status of your submitted cases',
-      link: '#track-cases'
+      descKey: 'HELP.CAT_TRACK_CASES_DESC',
+      link: '/driver/tickets'
     },
     {
-      title: 'Documents & Evidence',
+      titleKey: 'HELP.CAT_DOCUMENTS',
       icon: 'folder',
-      description: 'Upload and manage your case documents',
-      link: '#documents'
+      descKey: 'HELP.CAT_DOCUMENTS_DESC',
+      link: '/driver/documents'
     },
     {
-      title: 'Billing & Payments',
+      titleKey: 'HELP.CAT_BILLING',
       icon: 'payment',
-      description: 'Understanding fees and payment options',
-      link: '#billing'
+      descKey: 'HELP.CAT_BILLING_DESC',
+      link: '/driver/payments'
     },
     {
-      title: 'Contact Support',
+      titleKey: 'HELP.CAT_CONTACT',
       icon: 'support_agent',
-      description: 'Get help from our support team',
+      descKey: 'HELP.CAT_CONTACT_DESC',
       link: '/driver/contact'
     }
   ];
@@ -177,30 +178,30 @@ export class HelpComponent implements OnInit {
   contactMethods = [
     {
       icon: 'email',
-      title: 'Email Support',
-      value: 'support@cdltickets.com',
-      description: 'Response within 24 hours',
+      titleKey: 'HELP.CONTACT_EMAIL',
+      valueKey: 'HELP.CONTACT_EMAIL_VALUE',
+      descKey: 'HELP.CONTACT_EMAIL_DESC',
       action: 'mailto:support@cdltickets.com'
     },
     {
       icon: 'phone',
-      title: 'Phone Support',
-      value: '1-800-CDL-HELP',
-      description: 'Mon-Fri 8AM-8PM EST',
+      titleKey: 'HELP.CONTACT_PHONE',
+      valueKey: 'HELP.CONTACT_PHONE_VALUE',
+      descKey: 'HELP.CONTACT_PHONE_DESC',
       action: 'tel:1-800-235-4357'
     },
     {
       icon: 'chat',
-      title: 'Live Chat',
-      value: 'Available Now',
-      description: 'Average response: 2 minutes',
+      titleKey: 'HELP.CONTACT_CHAT',
+      valueKey: 'HELP.CONTACT_CHAT_VALUE',
+      descKey: 'HELP.CONTACT_CHAT_DESC',
       action: '#chat'
     },
     {
       icon: 'description',
-      title: 'Submit a Ticket',
-      value: 'Contact Form',
-      description: 'Get help with specific issues',
+      titleKey: 'HELP.CONTACT_TICKET',
+      valueKey: 'HELP.CONTACT_TICKET_VALUE',
+      descKey: 'HELP.CONTACT_TICKET_DESC',
       action: '/driver/contact'
     }
   ];

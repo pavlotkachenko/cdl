@@ -1,8 +1,8 @@
 <section class="services-section">
-  <h2>Services for {{ currentView === 'drivers' ? 'Drivers' : 'Carriers' }}</h2>
+  <h2>{{ 'LANDING.SERVICES_FOR' | translate }} {{ currentView === 'drivers' ? ('LANDING.SERVICES_DRIVERS' | translate) : ('LANDING.SERVICES_CARRIERS' | translate) }}</h2>
   <mat-button-toggle-group [(value)]="currentView">
-    <mat-button-toggle value="drivers">Drivers</mat-button-toggle>
-    <mat-button-toggle value="carriers">Carriers</mat-button-toggle>
+    <mat-button-toggle value="drivers">{{ 'LANDING.SERVICES_DRIVERS' | translate }}</mat-button-toggle>
+    <mat-button-toggle value="carriers">{{ 'LANDING.SERVICES_CARRIERS' | translate }}</mat-button-toggle>
   </mat-button-toggle-group>
   <div class="services-grid">
     <mat-card *ngFor="let service of services" class="service-card">

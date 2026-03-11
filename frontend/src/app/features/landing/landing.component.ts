@@ -11,21 +11,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { LandingHeaderComponent } from './components/landing-header/landing-header.component';
 import { LandingFooterComponent } from './components/landing-footer/landing-footer.component';
 import { CaseService } from '../../core/services/case.service';
-
-interface Testimonial {
-  name: string;
-  text: string;
-  image?: string;
-}
-
-interface FaqItem {
-  question: string;
-  answer: string;
-}
 
 @Component({
   selector: 'app-landing',
@@ -40,6 +30,7 @@ interface FaqItem {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    TranslateModule,
     LandingHeaderComponent,
     LandingFooterComponent,
   ],
@@ -54,108 +45,78 @@ export class LandingComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   readonly heroSlides = [
-    { line1: 'We are #1 advisor', line2: 'in the trucking industry', image: 'card-panel-1' },
-    { line1: '100% tickets', line2: 'resolution rate', image: 'card-panel-2' },
-    { line1: 'Safety consulting', line2: 'for trucking companies', image: 'card-panel-3' },
-    { line1: 'Services', line2: 'for drivers', image: 'card-panel-4' },
-    { line1: 'We are proud', line2: 'of our team', image: 'card-panel-5' },
+    { line1Key: 'LANDING.HERO_1_L1', line2Key: 'LANDING.HERO_1_L2', image: 'card-panel-1' },
+    { line1Key: 'LANDING.HERO_2_L1', line2Key: 'LANDING.HERO_2_L2', image: 'card-panel-2' },
+    { line1Key: 'LANDING.HERO_3_L1', line2Key: 'LANDING.HERO_3_L2', image: 'card-panel-3' },
+    { line1Key: 'LANDING.HERO_4_L1', line2Key: 'LANDING.HERO_4_L2', image: 'card-panel-4' },
+    { line1Key: 'LANDING.HERO_5_L1', line2Key: 'LANDING.HERO_5_L2', image: 'card-panel-5' },
   ];
 
   readonly driverServices = [
-    { icon: 'person', title: 'Personal Safety Expert', description: 'Have questions or concerns in regards to your driving privileges, received a DOT inspection, a citation and need a consultation, fill free to contact us' },
-    { icon: 'ticket', title: 'Submit your ticket', description: 'We help you to fight tickets in all states. We won thousands of cases, we can help with yours.' },
-    { icon: 'car-crash', title: 'Accident, claims', description: 'Have an accident or struggling with a claim, we can connect with our experts to offer you an advice.' },
-    { icon: 'screen-search', title: 'MVR', description: 'Monitor your motor vehicle record, to keep your driving record in a good standing.' },
+    { icon: 'person', titleKey: 'LANDING.SVC_DRV_1_TITLE', descKey: 'LANDING.SVC_DRV_1_DESC' },
+    { icon: 'ticket', titleKey: 'LANDING.SVC_DRV_2_TITLE', descKey: 'LANDING.SVC_DRV_2_DESC' },
+    { icon: 'car-crash', titleKey: 'LANDING.SVC_DRV_3_TITLE', descKey: 'LANDING.SVC_DRV_3_DESC' },
+    { icon: 'screen-search', titleKey: 'LANDING.SVC_DRV_4_TITLE', descKey: 'LANDING.SVC_DRV_4_DESC' },
   ];
 
   readonly carrierServices = [
-    { icon: 'driver-ticket', title: "Driver's Tickets", description: "Maintain your's CSA scores, by directing the drivers to the best attorney in USA" },
-    { icon: 'DOT', title: 'DOT, MC Set up, Audit', description: 'We help you to establish a new company. Contact us to understand what are the steps.' },
-    { icon: 'DQF', title: 'DQF, MVR', description: "Create with us a Driver Qualification File that will be in compliance with Federal Motor Carriers Regulations. We will help to monitor your driver's record and help to avoid Driver Fitness violations." },
-    { icon: 'inspections', title: 'Inspections, DataQs', description: 'Have an expert opinion about driver inspections on the road, removing CSA points is essential.' },
-    { icon: 'safety-training', title: 'Safety Training', description: 'Improve your Safety team skills by investing in their knowledge if you plan running a long term business.' },
-    { icon: 'weekly-safety', title: 'Weekly Safety Services', description: 'Arrange weekly meetings with us to help maintain and monitor a Safety Culture in your company.' },
-    { icon: 'mock-audit', title: 'Mock Audit', description: 'We can perform a mock audit to check if you are compliant.' },
-    { icon: 'CSA', title: 'CSA Review', description: 'We help you to check your CSA scores on a monthly basis, and advise what steps have to be taken to improve or monitor it.' },
-    { icon: 'accidents-claims', title: 'Accidents, Claims', description: 'If you have accidents or claims, let our experts help you to manage them so you minimize the cost.' },
-    { icon: 'insurance', title: 'Insurance', description: 'Insurance is the highest cost. We help manage and control this cost.' },
-    { icon: 'hos', title: 'HOS', description: "Monitoring driver's compliance with HOS standards" },
-    { icon: 'crash-lines', title: 'Crash lines', description: 'Report accidents 24/7' },
-    { icon: 'maintenance', title: 'Maintenance', description: 'Developing a comprehensive maintenance schedule' },
+    { icon: 'driver-ticket', titleKey: 'LANDING.SVC_CAR_1_TITLE', descKey: 'LANDING.SVC_CAR_1_DESC' },
+    { icon: 'DOT', titleKey: 'LANDING.SVC_CAR_2_TITLE', descKey: 'LANDING.SVC_CAR_2_DESC' },
+    { icon: 'DQF', titleKey: 'LANDING.SVC_CAR_3_TITLE', descKey: 'LANDING.SVC_CAR_3_DESC' },
+    { icon: 'inspections', titleKey: 'LANDING.SVC_CAR_4_TITLE', descKey: 'LANDING.SVC_CAR_4_DESC' },
+    { icon: 'safety-training', titleKey: 'LANDING.SVC_CAR_5_TITLE', descKey: 'LANDING.SVC_CAR_5_DESC' },
+    { icon: 'weekly-safety', titleKey: 'LANDING.SVC_CAR_6_TITLE', descKey: 'LANDING.SVC_CAR_6_DESC' },
+    { icon: 'mock-audit', titleKey: 'LANDING.SVC_CAR_7_TITLE', descKey: 'LANDING.SVC_CAR_7_DESC' },
+    { icon: 'CSA', titleKey: 'LANDING.SVC_CAR_8_TITLE', descKey: 'LANDING.SVC_CAR_8_DESC' },
+    { icon: 'accidents-claims', titleKey: 'LANDING.SVC_CAR_9_TITLE', descKey: 'LANDING.SVC_CAR_9_DESC' },
+    { icon: 'insurance', titleKey: 'LANDING.SVC_CAR_10_TITLE', descKey: 'LANDING.SVC_CAR_10_DESC' },
+    { icon: 'hos', titleKey: 'LANDING.SVC_CAR_11_TITLE', descKey: 'LANDING.SVC_CAR_11_DESC' },
+    { icon: 'crash-lines', titleKey: 'LANDING.SVC_CAR_12_TITLE', descKey: 'LANDING.SVC_CAR_12_DESC' },
+    { icon: 'maintenance', titleKey: 'LANDING.SVC_CAR_13_TITLE', descKey: 'LANDING.SVC_CAR_13_DESC' },
   ];
 
   readonly driverWorkSteps = [
-    { svgIcon: 'document', title: 'You submit a ticket', description: 'Using our online application submit your ticket. All you have to enter is your name, cell phone for contact, description of your request and any supporting documents that might help us to understand the nature of your request.' },
-    { svgIcon: 'document-ok', title: 'We review it immediately', description: 'You will receive SMS as soon as we start working on your request. And within an hour from this moment we will let you know what can be done in your specific case.' },
-    { svgIcon: 'approved', title: 'We guarantee 100% resolution', description: 'We work with the best traffic lawyers in U.S. and have already won thousands of cases. So if we take your case, we guarantee its resolution.' },
+    { svgIcon: 'document', titleKey: 'LANDING.STEP_DRV_1_TITLE', descKey: 'LANDING.STEP_DRV_1_DESC' },
+    { svgIcon: 'document-ok', titleKey: 'LANDING.STEP_DRV_2_TITLE', descKey: 'LANDING.STEP_DRV_2_DESC' },
+    { svgIcon: 'approved', titleKey: 'LANDING.STEP_DRV_3_TITLE', descKey: 'LANDING.STEP_DRV_3_DESC' },
   ];
 
   readonly carrierWorkSteps = [
-    { svgIcon: 'document', title: 'You submit a request', description: 'Using our online application submit your request. All you have to enter is your name, cell phone for contact, description of your request and any supporting documents that might help us to understand the nature of your request.' },
-    { svgIcon: 'document-ok', title: 'We review it immediately', description: 'You will receive SMS as soon as we start working on your request. And within an hour from this moment we will let you know what can be done in your specific case.' },
+    { svgIcon: 'document', titleKey: 'LANDING.STEP_CAR_1_TITLE', descKey: 'LANDING.STEP_CAR_1_DESC' },
+    { svgIcon: 'document-ok', titleKey: 'LANDING.STEP_CAR_2_TITLE', descKey: 'LANDING.STEP_CAR_2_DESC' },
   ];
 
   readonly benefits = [
-    { svgIcon: 'person-call', title: '24/7 call center support' },
-    { svgIcon: 'screen-point', title: 'Live tracking of a status of your case' },
-    { svgIcon: 'two-documents', title: 'Unlimited free submissions' },
-    { svgIcon: 'security', title: '100% security of all personal data' },
-    { svgIcon: 'maintenance-files', title: 'Lifetime history of your cases with all attached documents' },
-    { svgIcon: 'reload', title: 'Always updating knowledge base' },
+    { svgIcon: 'person-call', titleKey: 'LANDING.BENEFIT_1' },
+    { svgIcon: 'screen-point', titleKey: 'LANDING.BENEFIT_2' },
+    { svgIcon: 'two-documents', titleKey: 'LANDING.BENEFIT_3' },
+    { svgIcon: 'security', titleKey: 'LANDING.BENEFIT_4' },
+    { svgIcon: 'maintenance-files', titleKey: 'LANDING.BENEFIT_5' },
+    { svgIcon: 'reload', titleKey: 'LANDING.BENEFIT_6' },
   ];
 
-  readonly testimonials: Testimonial[] = [
-    { name: 'Losta M.', text: 'I had a complicated CDL issue, but the CDL advisor lawyer handled it with expertise and professionalism. They provided me with sound legal advice and successfully resolved the matter in my favor.', image: 'assets/images/clients/Losta-M.jpeg' },
-    { name: 'Karem S.', text: "The CDL advisor's tips on maintaining a clean driving record were spot-on. Their emphasis on safety made me feel more confident and responsible as a commercial driver.", image: 'assets/images/clients/Karem-S.jpeg' },
-    { name: 'Dimitrius T.', text: "I can't thank the CDL advisor lawyer enough for their exceptional representation in court. They skillfully defended my case, and I couldn't be happier with the outcome.", image: 'assets/images/clients/Dimitrius-T.jpeg' },
-    { name: 'Jorge T.', text: 'The CDL advisor took the time to explain the legal process in simple terms, making it less overwhelming for me. They were always available to answer my questions and address my concerns', image: 'assets/images/clients/Jorge-T.jpeg' },
-    { name: 'Juan P.', text: 'Excellent experience from start to finish. Highly professional team that truly cares about their clients.', image: 'assets/images/clients/Juan-P.jpeg' },
-    { name: 'Cemania P.', text: 'Very helpful and responsive team! They answered all my questions and guided me through the entire process.', image: 'assets/images/clients/Cemania-P.jpeg' },
-    { name: 'Eric V.', text: 'Highly recommend their services. Professional and efficient. They resolved my case faster than I expected.', image: 'assets/images/clients/Eric-V.jpeg' },
-    { name: 'Ivan M.', text: 'This company is very friendly, available all time any time. Very affordable and helpful services.', image: 'assets/images/clients/Ivan-M.jpeg' },
+  readonly testimonials = [
+    { nameKey: 'LANDING.TEST_1_NAME', textKey: 'LANDING.TEST_1_TEXT', image: 'assets/images/clients/Losta-M.jpeg' },
+    { nameKey: 'LANDING.TEST_2_NAME', textKey: 'LANDING.TEST_2_TEXT', image: 'assets/images/clients/Karem-S.jpeg' },
+    { nameKey: 'LANDING.TEST_3_NAME', textKey: 'LANDING.TEST_3_TEXT', image: 'assets/images/clients/Dimitrius-T.jpeg' },
+    { nameKey: 'LANDING.TEST_4_NAME', textKey: 'LANDING.TEST_4_TEXT', image: 'assets/images/clients/Jorge-T.jpeg' },
+    { nameKey: 'LANDING.TEST_5_NAME', textKey: 'LANDING.TEST_5_TEXT', image: 'assets/images/clients/Juan-P.jpeg' },
+    { nameKey: 'LANDING.TEST_6_NAME', textKey: 'LANDING.TEST_6_TEXT', image: 'assets/images/clients/Cemania-P.jpeg' },
+    { nameKey: 'LANDING.TEST_7_NAME', textKey: 'LANDING.TEST_7_TEXT', image: 'assets/images/clients/Eric-V.jpeg' },
+    { nameKey: 'LANDING.TEST_8_NAME', textKey: 'LANDING.TEST_8_TEXT', image: 'assets/images/clients/Ivan-M.jpeg' },
   ];
 
-  readonly faqItems: FaqItem[] = [
-    {
-      question: 'How quickly can you handle my CDL ticket?',
-      answer: 'We start reviewing your case within 1 hour of submission. Most cases are resolved within 5–30 business days depending on court schedules and violation type.',
-    },
-    {
-      question: 'How much does it cost to fight a CDL ticket?',
-      answer: 'Pricing depends on the violation type and state. We offer transparent, upfront pricing with no hidden fees. Submit your ticket and receive a quote before making any commitment.',
-    },
-    {
-      question: 'Which states do you cover?',
-      answer: 'We work with professional attorneys in all 50 US states and also handle federal DOT violations.',
-    },
-    {
-      question: 'Will a traffic violation affect my CDL license?',
-      answer: 'Yes — violations can impact your CDL through CSA score points, license suspension, or disqualification. Acting quickly to contest violations is critical to protecting your livelihood.',
-    },
-    {
-      question: 'What types of violations do you handle?',
-      answer: 'We handle speeding tickets, overweight violations, logbook violations, inspection failures, DOT violations, accidents and claims, MVR issues, and more.',
-    },
-    {
-      question: 'Do I need to appear in court?',
-      answer: 'In most cases, our attorneys can represent you without requiring your presence in court. We will let you know upfront if your attendance is required.',
-    },
-    {
-      question: 'How do I upload my ticket?',
-      answer: 'Simply submit your request using the form on this page. You can upload a photo or PDF of your citation, and our team will review it immediately.',
-    },
-    {
-      question: 'What if we cannot get the ticket fully dismissed?',
-      answer: 'Even when full dismissal is not possible, our attorneys negotiate to minimize CSA points, reduce fines, and protect your driving record from the worst consequences.',
-    },
-    {
-      question: 'Is my personal information secure?',
-      answer: 'Yes. We use bank-level encryption to protect all personal data and documents you share with us. Your information is never sold or shared with third parties.',
-    },
-    {
-      question: 'Can carriers manage tickets for multiple drivers?',
-      answer: 'Absolutely. Our platform allows fleet carriers to track and manage violations for all their drivers in one unified dashboard, with full visibility into CSA scores and case statuses.',
-    },
+  readonly faqItems = [
+    { questionKey: 'LANDING.FAQ_1_Q', answerKey: 'LANDING.FAQ_1_A' },
+    { questionKey: 'LANDING.FAQ_2_Q', answerKey: 'LANDING.FAQ_2_A' },
+    { questionKey: 'LANDING.FAQ_3_Q', answerKey: 'LANDING.FAQ_3_A' },
+    { questionKey: 'LANDING.FAQ_4_Q', answerKey: 'LANDING.FAQ_4_A' },
+    { questionKey: 'LANDING.FAQ_5_Q', answerKey: 'LANDING.FAQ_5_A' },
+    { questionKey: 'LANDING.FAQ_6_Q', answerKey: 'LANDING.FAQ_6_A' },
+    { questionKey: 'LANDING.FAQ_7_Q', answerKey: 'LANDING.FAQ_7_A' },
+    { questionKey: 'LANDING.FAQ_8_Q', answerKey: 'LANDING.FAQ_8_A' },
+    { questionKey: 'LANDING.FAQ_9_Q', answerKey: 'LANDING.FAQ_9_A' },
+    { questionKey: 'LANDING.FAQ_10_Q', answerKey: 'LANDING.FAQ_10_A' },
   ];
 
   readonly testimonialPageCount = Math.ceil(this.testimonials.length / 4);

@@ -8,48 +8,53 @@
           <span class="brand-name">TruckSafe</span>
         </div>
         <p class="company-description">
-          Expert guidance for CDL compliance and safety. Your trusted partner in trucking industry compliance.
+          {{ 'LANDING.FOOTER_DESC' | translate }}
         </p>
         <div class="social-links">
-          <a 
-            *ngFor="let social of socialLinks"
-            [href]="social.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            [attr.aria-label]="social.label"
-            class="social-link">
-            <mat-icon>{{ social.icon }}</mat-icon>
-          </a>
+          @for (social of socialLinks; track social.icon) {
+            <a
+              [href]="social.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              [attr.aria-label]="social.label"
+              class="social-link">
+              <mat-icon>{{ social.icon }}</mat-icon>
+            </a>
+          }
         </div>
       </div>
 
       <!-- Company Links -->
       <div class="footer-section">
-        <h3 class="section-title">Company</h3>
+        <h3 class="section-title">{{ 'LANDING.FOOTER_COMPANY' | translate }}</h3>
         <ul class="footer-links">
-          <li *ngFor="let link of companyLinks">
-            <a (click)="scrollToSection(link.url)" class="footer-link">
-              {{ link.label }}
-            </a>
-          </li>
+          @for (link of companyLinks; track link.labelKey) {
+            <li>
+              <a (click)="scrollToSection(link.url)" class="footer-link">
+                {{ link.labelKey | translate }}
+              </a>
+            </li>
+          }
         </ul>
       </div>
 
       <!-- Legal Links -->
       <div class="footer-section">
-        <h3 class="section-title">Legal</h3>
+        <h3 class="section-title">{{ 'LANDING.FOOTER_LEGAL' | translate }}</h3>
         <ul class="footer-links">
-          <li *ngFor="let link of legalLinks">
-            <a [href]="link.url" class="footer-link">
-              {{ link.label }}
-            </a>
-          </li>
+          @for (link of legalLinks; track link.labelKey) {
+            <li>
+              <a [href]="link.url" class="footer-link">
+                {{ link.labelKey | translate }}
+              </a>
+            </li>
+          }
         </ul>
       </div>
 
       <!-- Contact Info -->
       <div class="footer-section">
-        <h3 class="section-title">Contact</h3>
+        <h3 class="section-title">{{ 'LANDING.FOOTER_CONTACT' | translate }}</h3>
         <ul class="contact-info">
           <li class="contact-item">
             <mat-icon>email</mat-icon>
@@ -70,7 +75,7 @@
     <!-- Copyright Bar -->
     <div class="footer-bottom">
       <p class="copyright">
-        © {{ currentYear }} TruckSafe. All rights reserved.
+        © {{ currentYear }} {{ 'LANDING.FOOTER_COPYRIGHT' | translate }}
       </p>
     </div>
   </div>

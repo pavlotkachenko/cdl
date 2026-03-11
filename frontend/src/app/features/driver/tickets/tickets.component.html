@@ -8,8 +8,8 @@
         <mat-icon>arrow_back</mat-icon>
       </button>
       <div>
-        <h1>My Tickets</h1>
-        <p>Advanced search, filters, and export capabilities</p>
+        <h1>{{ 'CASE_LIST.TITLE' | translate }}</h1>
+        <p>{{ 'CASE_LIST.SUBTITLE' | translate }}</p>
       </div>
     </div>
     <div class="header-actions">
@@ -18,18 +18,18 @@
               [disabled]="activeFiltersCount === 0"
               matTooltip="Copy shareable URL">
         <mat-icon>share</mat-icon>
-        Share Filters
+        {{ 'CASE_LIST.SHARE_FILTERS' | translate }}
       </button>
       <button mat-stroked-button 
               (click)="exportToCSV()" 
               [disabled]="filteredCases.length === 0"
               matTooltip="Export filtered data to CSV">
         <mat-icon>file_download</mat-icon>
-        Export CSV
+        {{ 'CASE_LIST.EXPORT_CSV' | translate }}
       </button>
       <button mat-raised-button color="primary" (click)="submitNewTicket()">
         <mat-icon>add</mat-icon>
-        Submit New
+        {{ 'CASE_LIST.SUBMIT_NEW' | translate }}
       </button>
     </div>
   </div>
@@ -322,8 +322,8 @@
   <!-- Empty State -->
   <div *ngIf="!loading && !error && filteredCases.length === 0 && cases.length === 0" class="empty-state">
     <mat-icon>inbox</mat-icon>
-    <h2>No tickets yet</h2>
-    <p>Submit your first ticket to get started</p>
+    <h2>{{ 'CASE_LIST.EMPTY' | translate }}</h2>
+    <p>{{ 'CASE_LIST.EMPTY_CTA' | translate }}</p>
     <button mat-raised-button color="primary" (click)="submitNewTicket()">
       <mat-icon>add</mat-icon>
       Submit Your First Ticket
@@ -333,8 +333,8 @@
   <!-- No Results State -->
   <div *ngIf="!loading && !error && filteredCases.length === 0 && cases.length > 0" class="empty-state">
     <mat-icon>search_off</mat-icon>
-    <h2>No tickets found</h2>
-    <p>Try adjusting your filters or use a template</p>
+    <h2>{{ 'CASE_LIST.NO_RESULTS' | translate }}</h2>
+    <p>{{ 'CASE_LIST.NO_RESULTS_HINT' | translate }}</p>
     <div class="empty-actions">
       <button mat-raised-button color="primary" (click)="clearFilters()">
         <mat-icon>clear</mat-icon>

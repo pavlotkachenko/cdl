@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -20,6 +21,7 @@ import { AuthService } from '../../../core/services/auth.service';
     ReactiveFormsModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatDividerModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <div class="profile-page">
@@ -27,6 +29,32 @@ import { AuthService } from '../../../core/services/auth.service';
         <button mat-icon-button (click)="goToDashboard()" aria-label="Back to dashboard">
           <mat-icon>arrow_back</mat-icon>
         </button>
+        <div class="avatar-wrapper">
+          <button
+            class="avatar-button"
+            type="button"
+            (click)="avatarInput.click()"
+            [disabled]="uploadingAvatar()"
+            aria-label="Change profile photo">
+            @if (uploadingAvatar()) {
+              <mat-spinner diameter="40"></mat-spinner>
+            } @else if (avatarUrl()) {
+              <img [src]="avatarUrl()" alt="Profile photo" class="avatar-img" />
+            } @else {
+              <mat-icon class="avatar-icon">account_circle</mat-icon>
+            }
+            <div class="avatar-overlay">
+              <mat-icon>photo_camera</mat-icon>
+            </div>
+          </button>
+          <input
+            #avatarInput
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            class="avatar-file-input"
+            (change)="onAvatarSelected($event)"
+            aria-hidden="true" />
+        </div>
         <div>
           <h1>{{ fullName() }}</h1>
           <p class="member-since">{{ memberSince() }}</p>
@@ -127,6 +155,50 @@ import { AuthService } from '../../../core/services/auth.service';
     .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; }
     .edit-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
     .full-width { width: 100%; }
+
+    .avatar-wrapper { position: relative; }
+    .avatar-file-input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+    .avatar-button {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 2px solid #e0e0e0;
+      background: #f5f5f5;
+      cursor: pointer;
+      overflow: hidden;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-button:hover { border-color: #1dad8c; }
+    .avatar-button:disabled { cursor: default; opacity: 0.7; }
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .avatar-icon {
+      font-size: 56px;
+      width: 56px;
+      height: 56px;
+      color: #bbb;
+    }
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      border-radius: 50%;
+    }
+    .avatar-overlay mat-icon { color: #fff; font-size: 22px; }
+    .avatar-button:hover .avatar-overlay,
+    .avatar-button:focus-visible .avatar-overlay { opacity: 1; }
   `],
 })
 export class ProfileComponent implements OnInit {
@@ -140,11 +212,13 @@ export class ProfileComponent implements OnInit {
   editingPassword = signal(false);
   savingProfile = signal(false);
   savingPassword = signal(false);
+  uploadingAvatar = signal(false);
 
   profileForm!: FormGroup;
   passwordForm!: FormGroup;
 
   fullName = computed(() => this.currentUser()?.name || 'Driver');
+  avatarUrl = computed(() => this.currentUser()?.avatar_url || '');
   memberSince = computed(() => {
     const u = this.currentUser();
     const date = u?.created_at ?? u?.createdAt;
@@ -183,6 +257,39 @@ export class ProfileComponent implements OnInit {
     const n = group.get('newPassword')?.value;
     const c = group.get('confirmPassword')?.value;
     return n === c ? null : { passwordMismatch: true };
+  }
+
+  onAvatarSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      this.snackBar.open('Image must be under 5 MB.', 'Close', { duration: 3000 });
+      input.value = '';
+      return;
+    }
+
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      this.snackBar.open('Only JPG, PNG, GIF, or WebP images are allowed.', 'Close', { duration: 3000 });
+      input.value = '';
+      return;
+    }
+
+    this.uploadingAvatar.set(true);
+    this.authService.uploadAvatar(file).subscribe({
+      next: () => {
+        this.uploadingAvatar.set(false);
+        this.snackBar.open('Profile photo updated.', 'Close', { duration: 3000 });
+      },
+      error: () => {
+        this.uploadingAvatar.set(false);
+        this.snackBar.open('Failed to upload photo.', 'Close', { duration: 3000 });
+      },
+    });
+    input.value = '';
   }
 
   toggleEditProfile(): void {

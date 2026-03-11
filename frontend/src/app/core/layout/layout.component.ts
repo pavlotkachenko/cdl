@@ -19,12 +19,14 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { TranslateModule } from '@ngx-translate/core';
+
 // Components
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 import { LanguageSwitcherComponent } from '../../shared/components/language-switcher/language-switcher.component';
 
-// Services - ADD THIS
+// Services
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -45,6 +47,7 @@ import { AuthService } from '../services/auth.service';
     SidebarComponent,
     NotificationBellComponent,
     LanguageSwitcherComponent,
+    TranslateModule,
   ]
 })
 export class LayoutComponent implements OnInit, OnDestroy {
@@ -62,7 +65,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   userEmail = 'john.doe@example.com';
   userRole = '';
 
-  // Current year for footer
+  // Footer state
+  footerCollapsed = false;
   currentYear = new Date().getFullYear();
 
   constructor(
@@ -145,6 +149,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // ============================================
   // User Actions
   // ============================================
+
+  toggleFooter(): void {
+    this.footerCollapsed = !this.footerCollapsed;
+  }
 
   logout(): void {
     this.authService.logout().subscribe();

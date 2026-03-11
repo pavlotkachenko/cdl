@@ -40,6 +40,120 @@
   }
 }
 
+// Make Payment Section
+.make-payment-section {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #e0e0e0;
+
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+
+    h2 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #333;
+      font-size: 1.4rem;
+
+      mat-icon {
+        color: #1dad8c;
+      }
+    }
+
+    .unpaid-total {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e65100;
+    }
+  }
+
+  .section-desc {
+    margin: 0 0 16px;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  .unpaid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .unpaid-card {
+    border-left: 4px solid #ff9800;
+
+    mat-card-content {
+      padding: 16px;
+    }
+
+    .unpaid-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+
+      .case-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .case-number {
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: #333;
+        }
+
+        .violation {
+          font-size: 0.85rem;
+          color: #666;
+        }
+      }
+
+      .amount-due {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #e65100;
+      }
+    }
+
+    .unpaid-card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .attorney,
+        .due-date {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.8rem;
+          color: #888;
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
+      }
+
+      button mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+}
+
 .filters-card {
   margin-bottom: 24px;
 

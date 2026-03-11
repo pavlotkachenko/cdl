@@ -11,7 +11,7 @@
                [class.active]="i === currentSlideIndex()"
                [class]="slide.image">
             <div class="slide-content">
-              <h1 class="hero-title">{{ slide.line1 }}<br aria-hidden="true">{{ slide.line2 }}</h1>
+              <h1 class="hero-title">{{ slide.line1Key | translate }}<br aria-hidden="true">{{ slide.line2Key | translate }}</h1>
             </div>
           </div>
         }
@@ -43,24 +43,24 @@
     <!-- Fixed Content Overlay -->
     <div class="hero-overlay">
       <button mat-flat-button color="accent" class="cta-button" (click)="navigateToSubmit()">
-        Explore now
+        {{ 'LANDING.EXPLORE_NOW' | translate }}
       </button>
       <div class="hero-stats">
         <div class="stat-item">
-          <p class="stat-number">FREE</p>
-          <p class="stat-label">New accounts start</p>
+          <p class="stat-number">{{ 'LANDING.STAT_FREE' | translate }}</p>
+          <p class="stat-label">{{ 'LANDING.STAT_FREE_LABEL' | translate }}</p>
         </div>
         <div class="stat-item">
-          <p class="stat-number">10.5K</p>
-          <p class="stat-label">Customer reviews</p>
+          <p class="stat-number">{{ 'LANDING.STAT_REVIEWS' | translate }}</p>
+          <p class="stat-label">{{ 'LANDING.STAT_REVIEWS_LABEL' | translate }}</p>
         </div>
         <div class="stat-item">
-          <p class="stat-number">50</p>
-          <p class="stat-label">States covered</p>
+          <p class="stat-number">{{ 'LANDING.STAT_STATES' | translate }}</p>
+          <p class="stat-label">{{ 'LANDING.STAT_STATES_LABEL' | translate }}</p>
         </div>
         <div class="stat-item">
-          <p class="stat-number">100%</p>
-          <p class="stat-label">Resolution rate</p>
+          <p class="stat-number">{{ 'LANDING.STAT_RESOLUTION' | translate }}</p>
+          <p class="stat-label">{{ 'LANDING.STAT_RESOLUTION_LABEL' | translate }}</p>
         </div>
       </div>
     </div>
@@ -71,7 +71,7 @@
 <section id="services" class="services-section">
   <div class="container">
     <h2 class="section-title services-title">
-      Services for {{ currentServiceView() === 'drivers' ? 'Drivers' : 'Carriers' }}
+      {{ (currentServiceView() === 'drivers' ? 'LANDING.SERVICES_FOR_DRIVERS' : 'LANDING.SERVICES_FOR_CARRIERS') | translate }}
     </h2>
 
     <div class="service-switcher" role="tablist">
@@ -79,20 +79,20 @@
               role="tab"
               [class.active]="currentServiceView() === 'drivers'"
               [attr.aria-selected]="currentServiceView() === 'drivers'"
-              (click)="currentServiceView.set('drivers')">Drivers</button>
+              (click)="currentServiceView.set('drivers')">{{ 'LANDING.TAB_DRIVERS' | translate }}</button>
       <button class="switcher-option"
               role="tab"
               [class.active]="currentServiceView() === 'carriers'"
               [attr.aria-selected]="currentServiceView() === 'carriers'"
-              (click)="currentServiceView.set('carriers')">Carriers</button>
+              (click)="currentServiceView.set('carriers')">{{ 'LANDING.TAB_CARRIERS' | translate }}</button>
     </div>
 
     <div class="services-grid">
-      @for (service of activeServices(); track service.title) {
+      @for (service of activeServices(); track service.titleKey) {
         <div class="service-card">
-          <img [src]="'assets/icons/' + service.icon + '.svg'" [alt]="service.title" class="service-icon">
-          <h3 class="service-title">{{ service.title }}</h3>
-          <p class="service-description">{{ service.description }}</p>
+          <img [src]="'assets/icons/' + service.icon + '.svg'" [alt]="service.titleKey | translate" class="service-icon">
+          <h3 class="service-title">{{ service.titleKey | translate }}</h3>
+          <p class="service-description">{{ service.descKey | translate }}</p>
         </div>
       }
     </div>
@@ -105,9 +105,9 @@
     <!-- Left Side - Process Steps -->
     <div class="work-steps">
       <div class="work-steps-inner">
-        <h2 class="section-title work-title">How we work</h2>
+        <h2 class="section-title work-title">{{ 'LANDING.HOW_WE_WORK' | translate }}</h2>
         <div class="steps-container">
-          @for (step of activeWorkSteps(); track step.title; let i = $index; let last = $last) {
+          @for (step of activeWorkSteps(); track step.titleKey; let i = $index; let last = $last) {
             <div class="step-item">
               <div class="step-indicator">
                 <div class="step-circle"></div>
@@ -117,10 +117,10 @@
               </div>
               <div class="step-content">
                 <div class="step-header">
-                  <img [src]="'assets/icons/' + step.svgIcon + '.svg'" [alt]="step.title" class="step-icon">
-                  <h3>{{ step.title }}</h3>
+                  <img [src]="'assets/icons/' + step.svgIcon + '.svg'" [alt]="step.titleKey | translate" class="step-icon">
+                  <h3>{{ step.titleKey | translate }}</h3>
                 </div>
-                <p>{{ step.description }}</p>
+                <p>{{ step.descKey | translate }}</p>
               </div>
             </div>
           }
@@ -131,13 +131,10 @@
     <!-- Right Side - CTA with photo -->
     <div class="work-cta">
       <div class="work-cta-content">
-        <h3>Submit your first request now</h3>
-        <p class="cta-text">
-          It's 100% free. No credit card<br>
-          information required.
-        </p>
+        <h3>{{ 'LANDING.CTA_TITLE' | translate }}</h3>
+        <p class="cta-text">{{ 'LANDING.CTA_TEXT' | translate }}</p>
         <button mat-flat-button color="accent" class="submit-button" (click)="navigateToSubmit()">
-          Submit
+          {{ 'LANDING.CTA_SUBMIT' | translate }}
         </button>
       </div>
       <img src="assets/images/girl-1.png" alt="Safety Expert" class="cta-image">
@@ -148,7 +145,7 @@
 <!-- Personal Safety Expert / Benefits Section -->
 <section class="benefits-section">
   <div class="container">
-    <h2 class="section-title benefits-title">Personal Safety Expert</h2>
+    <h2 class="section-title benefits-title">{{ 'LANDING.BENEFITS_TITLE' | translate }}</h2>
 
     <div class="benefits-grid">
       <!-- Left Side - Image -->
@@ -158,19 +155,16 @@
 
       <!-- Right Side - Benefits List -->
       <div class="benefits-content">
-        <h3>Anywhere in US and Canada</h3>
-        <p class="benefits-intro">
-          We work with professional lawyers in all 50 states and have over 20 years
-          experience in trucking business working and consulting safety
-        </p>
+        <h3>{{ 'LANDING.BENEFITS_LOCATION' | translate }}</h3>
+        <p class="benefits-intro">{{ 'LANDING.BENEFITS_INTRO' | translate }}</p>
 
-        <h4>Other benefits in working with us:</h4>
+        <h4>{{ 'LANDING.BENEFITS_OTHER' | translate }}</h4>
 
         <div class="benefits-cards">
-          @for (benefit of benefits; track benefit.title) {
+          @for (benefit of benefits; track benefit.titleKey) {
             <div class="benefit-card">
-              <img [src]="'assets/icons/' + benefit.svgIcon + '.svg'" [alt]="benefit.title" class="benefit-icon">
-              <p>{{ benefit.title }}</p>
+              <img [src]="'assets/icons/' + benefit.svgIcon + '.svg'" [alt]="benefit.titleKey | translate" class="benefit-icon">
+              <p>{{ benefit.titleKey | translate }}</p>
             </div>
           }
         </div>
@@ -182,23 +176,23 @@
 <!-- Testimonials Section -->
 <section class="testimonials-section">
   <div class="container">
-    <h2 class="section-title testimonials-title">Satisfied Clients</h2>
+    <h2 class="section-title testimonials-title">{{ 'LANDING.TESTIMONIALS_TITLE' | translate }}</h2>
 
     <div class="testimonials-grid">
-      @for (testimonial of visibleTestimonials(); track testimonial.name) {
+      @for (testimonial of visibleTestimonials(); track testimonial.nameKey) {
         <div class="testimonial-card">
           <div class="testimonial-bubble">
-            <p>{{ testimonial.text }}</p>
+            <p>{{ testimonial.textKey | translate }}</p>
           </div>
           <div class="testimonial-author">
             <div class="author-avatar">
               @if (testimonial.image) {
-                <img [src]="testimonial.image" [alt]="testimonial.name" (error)="onImageError($event)">
+                <img [src]="testimonial.image" [alt]="testimonial.nameKey | translate" (error)="onImageError($event)">
               } @else {
-                <span class="initials">{{ getInitials(testimonial.name) }}</span>
+                <span class="initials">{{ getInitials(testimonial.nameKey | translate) }}</span>
               }
             </div>
-            <p class="author-name">{{ testimonial.name }}</p>
+            <p class="author-name">{{ testimonial.nameKey | translate }}</p>
           </div>
         </div>
       }
@@ -230,24 +224,24 @@
 <!-- FAQ Section -->
 <section id="faq" class="faq-section">
   <div class="container">
-    <h2 class="section-title faq-title">Frequently Asked Questions</h2>
-    <p class="section-subtitle">Everything you need to know about CDL ticket management</p>
+    <h2 class="section-title faq-title">{{ 'LANDING.FAQ_TITLE' | translate }}</h2>
+    <p class="section-subtitle">{{ 'LANDING.FAQ_SUBTITLE' | translate }}</p>
 
     <div class="faq-list" role="list">
-      @for (item of faqItems; track item.question; let i = $index) {
+      @for (item of faqItems; track item.questionKey; let i = $index) {
         <div class="faq-item" role="listitem">
           <button class="faq-question"
                   [attr.aria-expanded]="openFaqIndex() === i"
                   [attr.aria-controls]="'faq-answer-' + i"
                   (click)="toggleFaq(i)">
-            <span>{{ item.question }}</span>
+            <span>{{ item.questionKey | translate }}</span>
             <mat-icon class="faq-icon" [class.faq-icon--open]="openFaqIndex() === i">
               expand_more
             </mat-icon>
           </button>
           @if (openFaqIndex() === i) {
             <div class="faq-answer" [id]="'faq-answer-' + i" role="region">
-              <p>{{ item.answer }}</p>
+              <p>{{ item.answerKey | translate }}</p>
             </div>
           }
         </div>
@@ -255,9 +249,9 @@
     </div>
 
     <div class="faq-cta">
-      <p>Still have questions?</p>
+      <p>{{ 'LANDING.FAQ_CTA' | translate }}</p>
       <button mat-flat-button color="accent" (click)="navigateToSubmit()">
-        Contact Us
+        {{ 'LANDING.FAQ_CTA_BTN' | translate }}
       </button>
     </div>
   </div>
@@ -266,8 +260,8 @@
 <!-- Contact / Submit Request Section -->
 <section id="contact" class="contact-section">
   <div class="container">
-    <h2 class="section-title">Submit Your Request</h2>
-    <p class="section-subtitle">Get an answer in 1 hour</p>
+    <h2 class="section-title">{{ 'LANDING.FORM_TITLE' | translate }}</h2>
+    <p class="section-subtitle">{{ 'LANDING.FORM_SUBTITLE' | translate }}</p>
 
     <div class="contact-grid">
       <!-- Left Side - Form -->
@@ -276,61 +270,58 @@
           <!-- Success State -->
           <div class="submit-success">
             <mat-icon class="success-icon">check_circle</mat-icon>
-            <h3>Request Submitted!</h3>
-            <p>We will review your request and contact you within 1 hour.</p>
+            <h3>{{ 'LANDING.FORM_SUCCESS_TITLE' | translate }}</h3>
+            <p>{{ 'LANDING.FORM_SUCCESS_TEXT' | translate }}</p>
             <button mat-flat-button color="accent" (click)="submitSuccess.set(false)">
-              Submit Another Request
+              {{ 'LANDING.FORM_SUCCESS_BTN' | translate }}
             </button>
           </div>
         } @else {
           <!-- Form -->
-          <p class="form-info">
-            Fields marked with star (*) are required. The more descriptive you'll be the faster
-            and more accurate answer you will get. Attach all the documents you think might be useful.
-          </p>
+          <p class="form-info">{{ 'LANDING.FORM_INFO' | translate }}</p>
 
           <form class="submit-form" [formGroup]="submitForm" (ngSubmit)="onSubmitRequest()">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Name *</mat-label>
-              <input matInput placeholder="Your name" formControlName="customer_name">
+              <mat-label>{{ 'LANDING.FORM_NAME' | translate }}</mat-label>
+              <input matInput [placeholder]="'LANDING.FORM_NAME_PH' | translate" formControlName="customer_name">
               @if (submitForm.get('customer_name')?.hasError('required')) {
-                <mat-error>Name is required</mat-error>
+                <mat-error>{{ 'LANDING.FORM_NAME_REQ' | translate }}</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>E-mail *</mat-label>
-              <input matInput type="email" placeholder="info&#64;gmail.com" formControlName="email">
+              <mat-label>{{ 'LANDING.FORM_EMAIL' | translate }}</mat-label>
+              <input matInput type="email" [placeholder]="'LANDING.FORM_EMAIL_PH' | translate" formControlName="email">
               @if (submitForm.get('email')?.hasError('required')) {
-                <mat-error>Email is required</mat-error>
+                <mat-error>{{ 'LANDING.FORM_EMAIL_REQ' | translate }}</mat-error>
               }
               @if (submitForm.get('email')?.hasError('email')) {
-                <mat-error>Enter a valid email</mat-error>
+                <mat-error>{{ 'LANDING.FORM_EMAIL_INVALID' | translate }}</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Phone *</mat-label>
-              <input matInput type="tel" placeholder="+1 (000) 000-00-00" formControlName="driver_phone">
+              <mat-label>{{ 'LANDING.FORM_PHONE' | translate }}</mat-label>
+              <input matInput type="tel" [placeholder]="'LANDING.FORM_PHONE_PH' | translate" formControlName="driver_phone">
               @if (submitForm.get('driver_phone')?.hasError('required')) {
-                <mat-error>Phone is required</mat-error>
+                <mat-error>{{ 'LANDING.FORM_PHONE_REQ' | translate }}</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Describe your request *</mat-label>
-              <textarea matInput rows="5" placeholder="Describe your request..." formControlName="violation_details"></textarea>
+              <mat-label>{{ 'LANDING.FORM_DESC' | translate }}</mat-label>
+              <textarea matInput rows="5" [placeholder]="'LANDING.FORM_DESC_PH' | translate" formControlName="violation_details"></textarea>
               @if (submitForm.get('violation_details')?.hasError('required')) {
-                <mat-error>Description is required</mat-error>
+                <mat-error>{{ 'LANDING.FORM_DESC_REQ' | translate }}</mat-error>
               }
             </mat-form-field>
 
             <div class="file-upload">
-              <label>Upload File</label>
+              <label>{{ 'LANDING.FORM_UPLOAD' | translate }}</label>
               <div class="upload-zone" (click)="triggerFileInput()" role="button" tabindex="0"
                    (keydown.enter)="triggerFileInput()" aria-label="Upload supporting documents">
                 <mat-icon>cloud_upload</mat-icon>
-                <p>Drag and Drop or <span class="upload-link">Choose file</span> to upload</p>
+                <p>{{ 'LANDING.FORM_UPLOAD_TEXT' | translate }} <span class="upload-link">{{ 'LANDING.FORM_UPLOAD_LINK' | translate }}</span> {{ 'LANDING.FORM_UPLOAD_SUFFIX' | translate }}</p>
                 <input type="file" multiple hidden #fileInput (change)="onFileSelected($event)"
                        accept=".pdf,.jpg,.jpeg,.png" aria-label="File upload input">
               </div>
@@ -353,7 +344,7 @@
             <button mat-flat-button color="accent" type="submit" class="submit-form-button"
                     [disabled]="submitting()">
               @if (!submitting()) {
-                Submit
+                {{ 'LANDING.FORM_SUBMIT' | translate }}
               } @else {
                 <mat-spinner diameter="20"></mat-spinner>
               }
@@ -364,7 +355,7 @@
 
       <!-- Right Side - Contact Info -->
       <div class="contact-info">
-        <h3>Contact us</h3>
+        <h3>{{ 'LANDING.FORM_CONTACT_US' | translate }}</h3>
 
         <div class="contact-details">
           <a href="mailto:office@cdl-advisor.com" class="contact-item">
@@ -390,7 +381,7 @@
           </a>
         </div>
 
-        <p class="contact-note">For general inquiries</p>
+        <p class="contact-note">{{ 'LANDING.FORM_CONTACT_NOTE' | translate }}</p>
       </div>
     </div>
   </div>

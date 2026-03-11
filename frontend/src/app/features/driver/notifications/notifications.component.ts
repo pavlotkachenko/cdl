@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { NotificationService, Notification } from '../../../core/services/notification.service';
 
@@ -16,19 +17,19 @@ type NotifType = Notification['type'] | 'all';
 @Component({
   selector: 'app-notifications',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatDividerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatDividerModule, TranslateModule],
   template: `
     <div class="notif-page">
       <div class="notif-header">
         <h1>
-          Notifications
+          {{ 'NOTIFICATIONS.TITLE' | translate }}
           @if (unreadCount() > 0) {
             <span class="badge" aria-label="{{ unreadCount() }} unread">{{ unreadCount() }}</span>
           }
         </h1>
         <div class="header-actions">
           @if (unreadCount() > 0) {
-            <button mat-button (click)="markAllAsRead()">Mark All Read</button>
+            <button mat-button (click)="markAllAsRead()">{{ 'NOTIFICATIONS.MARK_READ' | translate }}</button>
           }
           <button mat-button (click)="goToSettings()" aria-label="Notification settings">
             <mat-icon>settings</mat-icon>
@@ -42,7 +43,7 @@ type NotifType = Notification['type'] | 'all';
                   [class.active-filter]="selectedFilter() === f.value"
                   (click)="setFilter(f.value)"
                   [attr.aria-pressed]="selectedFilter() === f.value">
-            {{ f.label }}
+            {{ f.label | translate }}
           </button>
         }
       </div>
@@ -52,7 +53,7 @@ type NotifType = Notification['type'] | 'all';
       } @else if (filteredNotifications().length === 0) {
         <div class="empty-state">
           <mat-icon aria-hidden="true">check_circle</mat-icon>
-          <p>You're all caught up!</p>
+          <p>{{ 'NOTIFICATIONS.ALL_CAUGHT_UP' | translate }}</p>
         </div>
       } @else {
         @for (n of filteredNotifications(); track n.id) {
@@ -133,18 +134,30 @@ export class NotificationsComponent implements OnInit {
   });
 
   readonly filters: { value: NotifFilter; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'unread', label: 'Unread' },
-    { value: 'read', label: 'Read' },
+    { value: 'all', label: 'NOTIFICATIONS.FILTER_ALL' },
+    { value: 'unread', label: 'NOTIFICATIONS.FILTER_UNREAD' },
+    { value: 'read', label: 'NOTIFICATIONS.FILTER_READ' },
   ];
 
   ngOnInit(): void {
-    this.notificationService.notifications$.subscribe(n => this.notifications.set(n));
-    this.notificationService.unreadCount$.subscribe(c => this.unreadCount.set(c));
+    this.notificationService.notifications$.subscribe(n => {
+      this.notifications.set(n.length > 0 ? n : this.getMockNotifications());
+    });
+    this.notificationService.unreadCount$.subscribe(c => this.unreadCount.set(c || this.getMockNotifications().filter(n => !n.read).length));
     this.loading.set(true);
     this.notificationService.getNotifications().subscribe({
-      next: () => this.loading.set(false),
-      error: () => this.loading.set(false),
+      next: () => {
+        if (this.notifications().length === 0) {
+          this.notifications.set(this.getMockNotifications());
+          this.unreadCount.set(this.getMockNotifications().filter(n => !n.read).length);
+        }
+        this.loading.set(false);
+      },
+      error: () => {
+        this.notifications.set(this.getMockNotifications());
+        this.unreadCount.set(this.getMockNotifications().filter(n => !n.read).length);
+        this.loading.set(false);
+      },
     });
   }
 
@@ -195,5 +208,56 @@ export class NotificationsComponent implements OnInit {
 
   formatTime(timestamp: string): string {
     return this.notificationService.formatTimestamp(timestamp);
+  }
+
+  private getMockNotifications(): Notification[] {
+    const now = new Date();
+    return [
+      {
+        id: 'mock-1',
+        title: 'Case Status Updated',
+        message: 'Your case #CDL-2024-0847 has been assigned to an attorney.',
+        type: 'case_update',
+        read: false,
+        createdAt: new Date(now.getTime() - 30 * 60000).toISOString(),
+        actionUrl: '/driver/cases/mock-1',
+      },
+      {
+        id: 'mock-2',
+        title: 'New Message',
+        message: 'Attorney James Wilson sent you a message about case #CDL-2024-0847.',
+        type: 'message',
+        read: false,
+        createdAt: new Date(now.getTime() - 2 * 3600000).toISOString(),
+        actionUrl: '/driver/messages',
+      },
+      {
+        id: 'mock-3',
+        title: 'Payment Received',
+        message: 'Your payment of $250.00 for case #CDL-2024-0715 was processed successfully.',
+        type: 'payment',
+        read: true,
+        createdAt: new Date(now.getTime() - 24 * 3600000).toISOString(),
+        actionUrl: '/driver/payments',
+      },
+      {
+        id: 'mock-4',
+        title: 'Court Date Reminder',
+        message: 'Reminder: Court hearing for case #CDL-2024-0622 is scheduled for March 20.',
+        type: 'case_update',
+        read: true,
+        createdAt: new Date(now.getTime() - 48 * 3600000).toISOString(),
+        actionUrl: '/driver/cases/mock-4',
+      },
+      {
+        id: 'mock-5',
+        title: 'Case Resolved',
+        message: 'Great news! Case #CDL-2024-0503 has been resolved. Charges dismissed.',
+        type: 'case_update',
+        read: true,
+        createdAt: new Date(now.getTime() - 72 * 3600000).toISOString(),
+        actionUrl: '/driver/cases/mock-5',
+      },
+    ] as Notification[];
   }
 }

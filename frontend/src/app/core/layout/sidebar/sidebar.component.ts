@@ -4,7 +4,7 @@
 // ============================================
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, TitleCasePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -14,6 +14,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule } from '@ngx-translate/core';
 
 // Services
 import { NotificationService } from '../../services/notification.service';
@@ -24,6 +25,7 @@ interface NavigationItem {
   icon: string;
   link: string;
   badge?: number;
+  dividerBefore?: boolean;
 }
 
 @Component({
@@ -37,7 +39,9 @@ interface NavigationItem {
     MatListModule,
     MatIconModule,
     MatBadgeModule,
-    MatDividerModule
+    MatDividerModule,
+    TitleCasePipe,
+    TranslateModule
   ]
 })
 export class SidebarComponent implements OnInit, OnDestroy {
@@ -46,71 +50,72 @@ export class SidebarComponent implements OnInit, OnDestroy {
   notificationCount = 0;
   navigation: NavigationItem[] = [];
   userRole: string = 'driver';
+  userName: string = '';
 
   // Driver Navigation
   private driverNavigation: NavigationItem[] = [
-    { name: 'Dashboard', icon: 'dashboard', link: '/driver/dashboard' },
-    { name: 'My Cases', icon: 'gavel', link: '/driver/tickets' },
-    { name: 'Messages', icon: 'forum', link: '/driver/messages', badge: 0 }, // ← Added Messages
-    { name: 'Submit Ticket', icon: 'add_circle', link: '/driver/submit-ticket' },
-    { name: 'Documents', icon: 'folder', link: '/driver/documents' },
-    { name: 'Analytics', icon: 'bar_chart', link: '/driver/analytics' },
-    { name: 'Payments', icon: 'payment', link: '/driver/payments' },
-    { name: 'Notifications', icon: 'notifications', link: '/driver/notifications', badge: 0 },
-    { name: 'Profile', icon: 'person', link: '/driver/profile' },
-    { name: 'Help', icon: 'help', link: '/driver/help' }
+    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/driver/dashboard' },
+    { name: 'NAV.MY_CASES', icon: 'gavel', link: '/driver/tickets' },
+    { name: 'NAV.MESSAGES', icon: 'forum', link: '/driver/messages', badge: 0 },
+    { name: 'NAV.SUBMIT_TICKET', icon: 'add_circle', link: '/driver/submit-ticket' },
+    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/driver/documents', dividerBefore: true },
+    { name: 'NAV.ANALYTICS', icon: 'bar_chart', link: '/driver/analytics' },
+    { name: 'NAV.PAYMENTS', icon: 'payment', link: '/driver/payments' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/driver/notifications', badge: 0 },
+    { name: 'NAV.PROFILE', icon: 'person', link: '/driver/profile', dividerBefore: true },
+    { name: 'NAV.HELP', icon: 'help', link: '/driver/help' }
   ];
 
   // Admin Navigation
   private adminNavigation: NavigationItem[] = [
-    { name: 'Dashboard', icon: 'dashboard', link: '/admin/dashboard' },
-    { name: 'Case Management', icon: 'gavel', link: '/admin/cases' },
-    { name: 'Staff Management', icon: 'groups', link: '/admin/staff' },
-    { name: 'Client Management', icon: 'people', link: '/admin/clients' },
-    { name: 'Reports & Analytics', icon: 'assessment', link: '/admin/reports' },
-    { name: 'Operator Dashboard', icon: 'support_agent', link: '/admin/operator-dashboard' },
-    { name: 'Revenue', icon: 'attach_money', link: '/admin/revenue' },
-    { name: 'Documents', icon: 'folder', link: '/admin/documents' },
-    { name: 'Notifications', icon: 'notifications', link: '/admin/notifications', badge: 0 },
-    { name: 'Settings', icon: 'settings', link: '/admin/settings' }
+    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/admin/dashboard' },
+    { name: 'NAV.CASE_MANAGEMENT', icon: 'gavel', link: '/admin/cases' },
+    { name: 'NAV.STAFF_MANAGEMENT', icon: 'groups', link: '/admin/staff' },
+    { name: 'NAV.CLIENT_MANAGEMENT', icon: 'people', link: '/admin/clients' },
+    { name: 'NAV.REPORTS', icon: 'assessment', link: '/admin/reports' },
+    { name: 'NAV.OPERATOR_DASHBOARD', icon: 'support_agent', link: '/admin/operator-dashboard' },
+    { name: 'NAV.REVENUE', icon: 'attach_money', link: '/admin/revenue' },
+    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/admin/documents', dividerBefore: true },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/admin/notifications', badge: 0 },
+    { name: 'NAV.SETTINGS', icon: 'settings', link: '/admin/settings', dividerBefore: true }
   ];
 
   // Attorney Navigation
   private attorneyNavigation: NavigationItem[] = [
-    { name: 'Dashboard', icon: 'dashboard', link: '/attorney/dashboard' },
-    { name: 'My Cases', icon: 'gavel', link: '/attorney/cases' },
-    { name: 'Clients', icon: 'people', link: '/attorney/clients' },
-    { name: 'Calendar', icon: 'calendar_today', link: '/attorney/calendar' },
-    { name: 'Documents', icon: 'folder', link: '/attorney/documents' },
-    { name: 'Reports', icon: 'assessment', link: '/attorney/reports' },
-    { name: 'Notifications', icon: 'notifications', link: '/attorney/notifications', badge: 0 },
-    { name: 'Profile', icon: 'person', link: '/attorney/profile' },
-    { name: 'Subscription', icon: 'credit_card', link: '/attorney/subscription' }
+    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/attorney/dashboard' },
+    { name: 'NAV.MY_CASES', icon: 'gavel', link: '/attorney/cases' },
+    { name: 'NAV.CLIENTS', icon: 'people', link: '/attorney/clients' },
+    { name: 'NAV.CALENDAR', icon: 'calendar_today', link: '/attorney/calendar' },
+    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/attorney/documents', dividerBefore: true },
+    { name: 'NAV.REPORTS', icon: 'assessment', link: '/attorney/reports' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/attorney/notifications', badge: 0 },
+    { name: 'NAV.PROFILE', icon: 'person', link: '/attorney/profile', dividerBefore: true },
+    { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/attorney/subscription' }
   ];
 
   // Carrier Navigation
   private carrierNavigation: NavigationItem[] = [
-    { name: 'Dashboard', icon: 'dashboard', link: '/carrier/dashboard' },
-    { name: 'My Drivers', icon: 'groups', link: '/carrier/drivers' },
-    { name: 'Fleet Cases', icon: 'gavel', link: '/carrier/cases' },
-    { name: 'Documents', icon: 'folder', link: '/carrier/documents' },
-    { name: 'Analytics', icon: 'bar_chart', link: '/carrier/analytics' },
-    { name: 'Payments', icon: 'payment', link: '/carrier/payments' },
-    { name: 'Webhooks', icon: 'webhook', link: '/carrier/webhooks' },
-    { name: 'Notifications', icon: 'notifications', link: '/carrier/notifications', badge: 0 },
-    { name: 'Settings', icon: 'settings', link: '/carrier/settings' }
+    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/carrier/dashboard' },
+    { name: 'NAV.MY_DRIVERS', icon: 'groups', link: '/carrier/drivers' },
+    { name: 'NAV.FLEET_CASES', icon: 'gavel', link: '/carrier/cases' },
+    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/carrier/documents', dividerBefore: true },
+    { name: 'NAV.ANALYTICS', icon: 'bar_chart', link: '/carrier/analytics' },
+    { name: 'NAV.PAYMENTS', icon: 'payment', link: '/carrier/payments' },
+    { name: 'NAV.WEBHOOKS', icon: 'webhook', link: '/carrier/webhooks' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/carrier/notifications', badge: 0 },
+    { name: 'NAV.SETTINGS', icon: 'settings', link: '/carrier/settings', dividerBefore: true }
   ];
 
   // Paralegal Navigation
   private paralegalNavigation: NavigationItem[] = [
-    { name: 'Dashboard', icon: 'dashboard', link: '/paralegal/dashboard' },
-    { name: 'Cases', icon: 'gavel', link: '/paralegal/cases' },
-    { name: 'Tasks', icon: 'checklist', link: '/paralegal/tasks' },
-    { name: 'Documents', icon: 'folder', link: '/paralegal/documents' },
-    { name: 'Calendar', icon: 'calendar_today', link: '/paralegal/calendar' },
-    { name: 'Messages', icon: 'forum', link: '/paralegal/messages', badge: 0 },
-    { name: 'Notifications', icon: 'notifications', link: '/paralegal/notifications', badge: 0 },
-    { name: 'Profile', icon: 'person', link: '/paralegal/profile' }
+    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/paralegal/dashboard' },
+    { name: 'NAV.MY_CASES', icon: 'gavel', link: '/paralegal/cases' },
+    { name: 'NAV.TASKS', icon: 'checklist', link: '/paralegal/tasks' },
+    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/paralegal/documents', dividerBefore: true },
+    { name: 'NAV.CALENDAR', icon: 'calendar_today', link: '/paralegal/calendar' },
+    { name: 'NAV.MESSAGES', icon: 'forum', link: '/paralegal/messages', badge: 0 },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/paralegal/notifications', badge: 0 },
+    { name: 'NAV.PROFILE', icon: 'person', link: '/paralegal/profile', dividerBefore: true }
   ];
 
   constructor(
@@ -148,6 +153,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   private loadUserRole(): void {
     this.userRole = this.authService.getUserRole() || 'driver';
+    const stored = localStorage.getItem('currentUser');
+    if (stored) {
+      try { this.userName = JSON.parse(stored).name || ''; } catch { /* ignore */ }
+    }
     this.loadNavigation();
   }
 
@@ -175,7 +184,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   private updateNotificationBadge(count: number): void {
-    const notificationItem = this.navigation.find(item => item.name === 'Notifications');
+    const notificationItem = this.navigation.find(item => item.name === 'NAV.NOTIFICATIONS');
     if (notificationItem) {
       notificationItem.badge = count;
     }
