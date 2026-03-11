@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.service';
 
@@ -17,17 +18,18 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
   imports: [
     CurrencyPipe, DecimalPipe,
     MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
+    TranslateModule,
   ],
   template: `
     <div class="analytics-page">
       <header class="page-header">
         <button mat-button (click)="goBack()" aria-label="Back to dashboard">
-          <mat-icon>arrow_back</mat-icon> Dashboard
+          <mat-icon>arrow_back</mat-icon> {{ 'CARRIER.BACK_DASHBOARD' | translate }}
         </button>
-        <h1>Fleet Analytics</h1>
+        <h1>{{ 'CARRIER.FLEET_ANALYTICS' | translate }}</h1>
         <button mat-raised-button color="accent" (click)="exportCsv()" [disabled]="exporting()">
           <mat-icon>download</mat-icon>
-          {{ exporting() ? 'Exporting…' : 'Export CSV' }}
+          {{ exporting() ? ('CARRIER.EXPORTING' | translate) : ('CARRIER.EXPORT_CSV' | translate) }}
         </button>
       </header>
 
@@ -36,16 +38,16 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
       } @else if (error()) {
         <div class="error-state" role="alert">
           <mat-icon>error_outline</mat-icon>
-          <p>{{ error() }}</p>
-          <button mat-raised-button color="primary" (click)="loadData()">Retry</button>
+          <p>{{ error() | translate }}</p>
+          <button mat-raised-button color="primary" (click)="loadData()">{{ 'CARRIER.RETRY' | translate }}</button>
         </div>
       } @else if (data().totalCases === 0) {
         <!-- Zero-data full-page empty state -->
         <div class="zero-state" role="status">
           <mat-icon aria-hidden="true">analytics</mat-icon>
-          <h2>No fleet data yet</h2>
-          <p>Analytics will appear here once your drivers submit their first cases.</p>
-          <button mat-raised-button color="primary" (click)="goBack()">Go to Dashboard</button>
+          <h2>{{ 'CARRIER.NO_FLEET_DATA' | translate }}</h2>
+          <p>{{ 'CARRIER.ANALYTICS_APPEAR' | translate }}</p>
+          <button mat-raised-button color="primary" (click)="goBack()">{{ 'CARRIER.GO_TO_DASHBOARD' | translate }}</button>
         </div>
 
       } @else {
@@ -55,25 +57,25 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
           <mat-card class="kpi-card" role="listitem">
             <mat-card-content>
               <p class="kpi-value success">{{ data().successRate }}%</p>
-              <p class="kpi-label">Success Rate</p>
+              <p class="kpi-label">{{ 'CARRIER.SUCCESS_RATE' | translate }}</p>
             </mat-card-content>
           </mat-card>
           <mat-card class="kpi-card" role="listitem">
             <mat-card-content>
               <p class="kpi-value">{{ data().avgResolutionDays }}</p>
-              <p class="kpi-label">Avg Days to Resolve</p>
+              <p class="kpi-label">{{ 'CARRIER.AVG_DAYS_RESOLVE' | translate }}</p>
             </mat-card-content>
           </mat-card>
           <mat-card class="kpi-card" role="listitem">
             <mat-card-content>
               <p class="kpi-value">{{ data().totalCases }}</p>
-              <p class="kpi-label">Total Cases</p>
+              <p class="kpi-label">{{ 'CARRIER.TOTAL_CASES' | translate }}</p>
             </mat-card-content>
           </mat-card>
           <mat-card class="kpi-card savings" role="listitem">
             <mat-card-content>
               <p class="kpi-value savings-val">{{ data().estimatedSavings | currency:'USD':'symbol':'1.0-0' }}</p>
-              <p class="kpi-label">Est. Savings</p>
+              <p class="kpi-label">{{ 'CARRIER.EST_SAVINGS' | translate }}</p>
             </mat-card-content>
           </mat-card>
         </div>
@@ -81,11 +83,11 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
         <!-- Monthly Trend -->
         <mat-card class="chart-card">
           <mat-card-content>
-            <h2 class="section-title">Cases — Last 6 Months</h2>
+            <h2 class="section-title">{{ 'CARRIER.CASES_LAST_6_MONTHS' | translate }}</h2>
             @if (data().casesByMonth.length === 0) {
               <div class="chart-empty" role="status">
                 <mat-icon aria-hidden="true">bar_chart</mat-icon>
-                <p>No monthly data yet</p>
+                <p>{{ 'CARRIER.NO_MONTHLY_DATA' | translate }}</p>
               </div>
             } @else {
               <div class="bar-chart" role="img" [attr.aria-label]="'Monthly case trend chart'">
@@ -104,11 +106,11 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
         <!-- Violation Breakdown -->
         <mat-card class="chart-card">
           <mat-card-content>
-            <h2 class="section-title">Violation Types</h2>
+            <h2 class="section-title">{{ 'CARRIER.VIOLATION_TYPES' | translate }}</h2>
             @if (data().violationBreakdown.length === 0) {
               <div class="chart-empty" role="status">
                 <mat-icon aria-hidden="true">gavel</mat-icon>
-                <p>No violations recorded</p>
+                <p>{{ 'CARRIER.NO_VIOLATIONS' | translate }}</p>
               </div>
             } @else {
               <div class="violation-list">
@@ -130,12 +132,12 @@ import { CarrierService, FleetAnalytics } from '../../../core/services/carrier.s
         @if (data().atRiskDrivers.length > 0) {
           <mat-card class="chart-card">
             <mat-card-content>
-              <h2 class="section-title">At-Risk Drivers</h2>
+              <h2 class="section-title">{{ 'CARRIER.AT_RISK_DRIVERS' | translate }}</h2>
               <div class="driver-table" role="table" aria-label="At-risk drivers">
                 <div class="driver-row header-row" role="row">
-                  <span role="columnheader">Driver</span>
-                  <span role="columnheader">Open Cases</span>
-                  <span role="columnheader">Risk</span>
+                  <span role="columnheader">{{ 'CARRIER.DRIVER_COL' | translate }}</span>
+                  <span role="columnheader">{{ 'CARRIER.OPEN_CASES_COL' | translate }}</span>
+                  <span role="columnheader">{{ 'CARRIER.RISK_COL' | translate }}</span>
                 </div>
                 @for (d of data().atRiskDrivers; track d.id) {
                   <div class="driver-row" role="row">
@@ -236,7 +238,7 @@ export class CarrierAnalyticsComponent implements OnInit {
     this.error.set('');
     this.carrierService.getAnalytics().subscribe({
       next: (d) => { this.analytics.set(d); this.loading.set(false); },
-      error: () => { this.error.set('Failed to load analytics. Please try again.'); this.loading.set(false); },
+      error: () => { this.error.set('CARRIER.FAILED_LOAD_ANALYTICS'); this.loading.set(false); },
     });
   }
 

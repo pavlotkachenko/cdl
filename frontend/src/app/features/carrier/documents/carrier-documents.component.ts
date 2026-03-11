@@ -36,18 +36,18 @@ const MOCK_DOCUMENTS: Document[] = [
   template: `
     <div class="documents-page">
       <header class="page-header">
-        <h1>Documents</h1>
+        <h1>{{ 'CARRIER.DOCUMENTS' | translate }}</h1>
         <button mat-raised-button color="primary" (click)="navigateToCompliance()">
-          <mat-icon>assessment</mat-icon> Compliance Report
+          <mat-icon>assessment</mat-icon> {{ 'CARRIER.COMPLIANCE_REPORT' | translate }}
         </button>
       </header>
 
       <!-- Category filters -->
       <div class="category-chips" role="group" aria-label="Filter by category">
-        @for (cat of categories; track cat) {
-          <button mat-stroked-button [class.active-filter]="activeCategory() === cat"
-                  (click)="activeCategory.set(cat)">
-            {{ cat }}
+        @for (cat of categories; track cat.value) {
+          <button mat-stroked-button [class.active-filter]="activeCategory() === cat.value"
+                  (click)="activeCategory.set(cat.value)">
+            {{ cat.key | translate }}
           </button>
         }
       </div>
@@ -55,7 +55,7 @@ const MOCK_DOCUMENTS: Document[] = [
       @if (filteredDocs().length === 0) {
         <div class="empty-state">
           <mat-icon aria-hidden="true">folder_open</mat-icon>
-          <p>No documents in this category.</p>
+          <p>{{ 'CARRIER.NO_DOCUMENTS' | translate }}</p>
         </div>
       } @else {
         <div class="doc-list" role="list">
@@ -119,7 +119,15 @@ export class CarrierDocumentsComponent {
   documents = signal(MOCK_DOCUMENTS);
   activeCategory = signal('All');
 
-  categories = ['All', 'Compliance', 'Tickets', 'Insurance', 'Reports', 'Import', 'Maintenance'];
+  categories: { value: string; key: string }[] = [
+    { value: 'All', key: 'CARRIER.CAT_ALL' },
+    { value: 'Compliance', key: 'CARRIER.CAT_COMPLIANCE' },
+    { value: 'Tickets', key: 'CARRIER.CAT_TICKETS' },
+    { value: 'Insurance', key: 'CARRIER.CAT_INSURANCE' },
+    { value: 'Reports', key: 'CARRIER.CAT_REPORTS' },
+    { value: 'Import', key: 'CARRIER.CAT_IMPORT' },
+    { value: 'Maintenance', key: 'CARRIER.CAT_MAINTENANCE' },
+  ];
 
   filteredDocs = computed(() => {
     const cat = this.activeCategory();
