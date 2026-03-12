@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { Chart, registerables } from 'chart.js/auto';
 
@@ -27,33 +28,33 @@ type Priority = 'high' | 'medium' | 'low' | '';
   imports: [
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatChipsModule, MatProgressSpinnerModule,
+    MatChipsModule, MatProgressSpinnerModule, TranslateModule,
   ],
   template: `
     <div class="operator-dashboard">
       <div class="page-header">
-        <h1>Operator Dashboard</h1>
+        <h1>{{ 'ADMIN.OPS_DASHBOARD' | translate }}</h1>
         <button mat-raised-button color="primary" (click)="refresh()">
-          <mat-icon>refresh</mat-icon> Refresh
+          <mat-icon>refresh</mat-icon> {{ 'ADMIN.REFRESH' | translate }}
         </button>
       </div>
 
       @if (workloadStats()) {
         <div class="stats-grid">
           <mat-card><mat-card-content>
-            <p class="stat-label">New Cases</p>
+            <p class="stat-label">{{ 'ADMIN.STATUS_NEW' | translate }}</p>
             <p class="stat-value">{{ workloadStats()!.newCases }}</p>
           </mat-card-content></mat-card>
           <mat-card><mat-card-content>
-            <p class="stat-label">Assigned</p>
+            <p class="stat-label">{{ 'ADMIN.STATUS_ASSIGNED' | translate }}</p>
             <p class="stat-value">{{ workloadStats()!.assignedCases }}</p>
           </mat-card-content></mat-card>
           <mat-card><mat-card-content>
-            <p class="stat-label">In Progress</p>
+            <p class="stat-label">{{ 'ADMIN.STATUS_IN_PROGRESS' | translate }}</p>
             <p class="stat-value">{{ workloadStats()!.inProgressCases }}</p>
           </mat-card-content></mat-card>
           <mat-card><mat-card-content>
-            <p class="stat-label">Resolved</p>
+            <p class="stat-label">{{ 'ADMIN.RESOLVED' | translate }}</p>
             <p class="stat-value">{{ workloadStats()!.resolvedCases }}</p>
           </mat-card-content></mat-card>
         </div>
@@ -61,49 +62,49 @@ type Priority = 'high' | 'medium' | 'low' | '';
 
       <div class="charts-row">
         <mat-card>
-          <mat-card-header><mat-card-title>Case Status</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'ADMIN.CASE_STATUS' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content><canvas #statusChart></canvas></mat-card-content>
         </mat-card>
         <mat-card>
-          <mat-card-header><mat-card-title>Violation Types</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'ADMIN.VIOLATION_TYPES' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content><canvas #violationChart></canvas></mat-card-content>
         </mat-card>
         <mat-card>
-          <mat-card-header><mat-card-title>Attorney Workload</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'ADMIN.ATTORNEY_WORKLOAD' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content><canvas #workloadChart></canvas></mat-card-content>
         </mat-card>
       </div>
 
       <mat-card class="queue-card">
         <mat-card-header>
-          <mat-card-title>Case Queue</mat-card-title>
+          <mat-card-title>{{ 'ADMIN.CASE_QUEUE' | translate }}</mat-card-title>
           <div class="queue-filters">
             <mat-form-field appearance="outline">
-              <mat-label>Search</mat-label>
+              <mat-label>{{ 'ADMIN.SEARCH_CASES' | translate }}</mat-label>
               <input matInput [value]="searchText()"
                 (input)="searchText.set($any($event.target).value)"
-                placeholder="Driver, case, state…">
+                [placeholder]="'ADMIN.SEARCH_PLACEHOLDER' | translate">
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Status</mat-label>
+              <mat-label>{{ 'ADMIN.STATUS' | translate }}</mat-label>
               <mat-select [value]="filterStatus()" (selectionChange)="filterStatus.set($event.value)">
-                <mat-option value="">All</mat-option>
-                <mat-option value="new">New</mat-option>
-                <mat-option value="assigned">Assigned</mat-option>
-                <mat-option value="in_progress">In Progress</mat-option>
+                <mat-option value="">{{ 'ADMIN.ALL_STATUSES' | translate }}</mat-option>
+                <mat-option value="new">{{ 'ADMIN.STATUS_NEW' | translate }}</mat-option>
+                <mat-option value="assigned">{{ 'ADMIN.STATUS_ASSIGNED' | translate }}</mat-option>
+                <mat-option value="in_progress">{{ 'ADMIN.STATUS_IN_PROGRESS' | translate }}</mat-option>
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Priority</mat-label>
+              <mat-label>{{ 'ADMIN.PRIORITY' | translate }}</mat-label>
               <mat-select [value]="filterPriority()" (selectionChange)="filterPriority.set($event.value)">
-                <mat-option value="">All</mat-option>
-                <mat-option value="high">High</mat-option>
-                <mat-option value="medium">Medium</mat-option>
-                <mat-option value="low">Low</mat-option>
+                <mat-option value="">{{ 'ADMIN.ALL_PRIORITIES' | translate }}</mat-option>
+                <mat-option value="high">{{ 'ADMIN.PRIORITY_HIGH' | translate }}</mat-option>
+                <mat-option value="medium">{{ 'ADMIN.PRIORITY_MEDIUM' | translate }}</mat-option>
+                <mat-option value="low">{{ 'ADMIN.PRIORITY_LOW' | translate }}</mat-option>
               </mat-select>
             </mat-form-field>
-            <button mat-stroked-button (click)="clearFilters()">Clear</button>
+            <button mat-stroked-button (click)="clearFilters()">{{ 'ADMIN.CLEAR' | translate }}</button>
           </div>
         </mat-card-header>
         <mat-card-content>
@@ -114,7 +115,7 @@ type Priority = 'high' | 'medium' | 'low' | '';
             @if (filteredQueue().length === 0) {
               <div class="empty-state">
                 <mat-icon>inbox</mat-icon>
-                <p>No cases in queue</p>
+                <p>{{ 'ADMIN.NO_CASES_QUEUE' | translate }}</p>
               </div>
             }
             @for (item of filteredQueue(); track item.caseId) {
@@ -133,7 +134,7 @@ type Priority = 'high' | 'medium' | 'low' | '';
                 </div>
                 <div class="case-actions">
                   <button mat-stroked-button (click)="autoAssignCase(item)">
-                    <mat-icon>auto_fix_high</mat-icon> Auto-Assign
+                    <mat-icon>auto_fix_high</mat-icon> {{ 'ADMIN.AUTO_ASSIGN' | translate }}
                   </button>
                 </div>
               </div>

@@ -73,7 +73,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'NAV.STAFF_MANAGEMENT', icon: 'groups', link: '/admin/staff' },
     { name: 'NAV.CLIENT_MANAGEMENT', icon: 'people', link: '/admin/clients' },
     { name: 'NAV.REPORTS', icon: 'assessment', link: '/admin/reports' },
-    { name: 'NAV.OPERATOR_DASHBOARD', icon: 'support_agent', link: '/admin/operator-dashboard' },
     { name: 'NAV.REVENUE', icon: 'attach_money', link: '/admin/revenue' },
     { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/admin/documents', dividerBefore: true },
     { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/admin/notifications', badge: 0 },

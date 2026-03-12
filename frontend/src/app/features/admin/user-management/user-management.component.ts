@@ -12,15 +12,16 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { AdminService, PlatformUser } from '../../../core/services/admin.service';
 
 type RoleFilter = PlatformUser['role'] | 'all';
 type StatusFilter = PlatformUser['status'] | 'all';
 
-const ROLE_LABELS: Record<PlatformUser['role'], string> = {
-  driver: 'Driver', carrier: 'Carrier', attorney: 'Attorney',
-  admin: 'Admin', operator: 'Operator', paralegal: 'Paralegal',
+const ROLE_KEYS: Record<PlatformUser['role'], string> = {
+  driver: 'ADMIN.ROLE_DRIVER', carrier: 'ADMIN.ROLE_CARRIER', attorney: 'ADMIN.ROLE_ATTORNEY',
+  admin: 'ADMIN.ROLE_ADMIN', operator: 'ADMIN.ROLE_OPERATOR', paralegal: 'ADMIN.ROLE_PARALEGAL',
 };
 
 const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'admin', 'operator', 'paralegal'];
@@ -33,17 +34,17 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
     ReactiveFormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatProgressSpinnerModule, MatDividerModule,
+    MatProgressSpinnerModule, MatDividerModule, TranslateModule,
   ],
   template: `
     <div class="user-mgmt">
 
       <!-- Page header -->
       <div class="page-header">
-        <h1>User Management</h1>
+        <h1>{{ 'ADMIN.USER_MANAGEMENT' | translate }}</h1>
         <button mat-raised-button color="primary" (click)="toggleInvite()">
           <mat-icon>person_add</mat-icon>
-          {{ showInvite() ? 'Cancel' : 'Invite User' }}
+          {{ showInvite() ? ('ADMIN.CANCEL_INVITE' | translate) : ('ADMIN.INVITE_USER' | translate) }}
         </button>
       </div>
 
@@ -51,33 +52,33 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
       @if (showInvite()) {
         <mat-card class="invite-card">
           <mat-card-content>
-            <h3 class="invite-title">Invite New User</h3>
+            <h3 class="invite-title">{{ 'ADMIN.INVITE_NEW_USER' | translate }}</h3>
             <form [formGroup]="inviteForm" (ngSubmit)="sendInvite()" class="invite-form">
               <mat-form-field appearance="outline" class="invite-email">
-                <mat-label>Email address *</mat-label>
+                <mat-label>{{ 'ADMIN.EMAIL_ADDRESS' | translate }} *</mat-label>
                 <input matInput type="email" formControlName="email"
                        placeholder="user@example.com" autocomplete="email" />
                 @if (inviteForm.get('email')?.hasError('required')) {
-                  <mat-error>Email is required</mat-error>
+                  <mat-error>{{ 'ADMIN.EMAIL_REQUIRED' | translate }}</mat-error>
                 }
                 @if (inviteForm.get('email')?.hasError('email')) {
-                  <mat-error>Enter a valid email</mat-error>
+                  <mat-error>{{ 'ADMIN.VALID_EMAIL' | translate }}</mat-error>
                 }
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Role *</mat-label>
+                <mat-label>{{ 'ADMIN.ROLE' | translate }} *</mat-label>
                 <mat-select formControlName="role">
                   @for (r of ALL_ROLES; track r) {
-                    <mat-option [value]="r">{{ getRoleLabel(r) }}</mat-option>
+                    <mat-option [value]="r">{{ getRoleKey(r) | translate }}</mat-option>
                   }
                 </mat-select>
                 @if (inviteForm.get('role')?.hasError('required')) {
-                  <mat-error>Role is required</mat-error>
+                  <mat-error>{{ 'ADMIN.ROLE_REQUIRED' | translate }}</mat-error>
                 }
               </mat-form-field>
               <button mat-raised-button color="accent" type="submit"
                       [disabled]="inviteForm.invalid || inviting()">
-                @if (inviting()) { Sending&hellip; } @else { Send Invite }
+                @if (inviting()) { {{ 'ADMIN.SENDING' | translate }} } @else { {{ 'ADMIN.SEND_INVITE' | translate }} }
               </button>
             </form>
           </mat-card-content>
@@ -87,31 +88,31 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
       <!-- Filters -->
       <div class="filter-row">
         <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Search users</mat-label>
+          <mat-label>{{ 'ADMIN.SEARCH_USERS' | translate }}</mat-label>
           <input matInput
                  [value]="searchTerm()"
                  (input)="searchTerm.set($any($event.target).value)"
-                 aria-label="Search users by name or email" />
+                 [attr.aria-label]="'ADMIN.SEARCH_USERS' | translate" />
           <mat-icon matSuffix aria-hidden="true">search</mat-icon>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Role</mat-label>
+          <mat-label>{{ 'ADMIN.ROLE' | translate }}</mat-label>
           <mat-select [value]="roleFilter()" (selectionChange)="roleFilter.set($event.value)">
             @for (r of roleOptions; track r.value) {
-              <mat-option [value]="r.value">{{ r.label }}</mat-option>
+              <mat-option [value]="r.value">{{ r.key | translate }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Status</mat-label>
+          <mat-label>{{ 'ADMIN.STATUS' | translate }}</mat-label>
           <mat-select [value]="statusFilter()" (selectionChange)="statusFilter.set($event.value)">
             @for (s of statusOptions; track s.value) {
-              <mat-option [value]="s.value">{{ s.label }}</mat-option>
+              <mat-option [value]="s.value">{{ s.key | translate }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         @if (searchTerm() || roleFilter() !== 'all' || statusFilter() !== 'all') {
-          <button mat-button (click)="clearFilters()">Clear</button>
+          <button mat-button (click)="clearFilters()">{{ 'ADMIN.CLEAR' | translate }}</button>
         }
       </div>
 
@@ -119,9 +120,9 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
       @if (loading()) {
         <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
       } @else if (filteredUsers().length === 0) {
-        <p class="empty" role="status">No users found.</p>
+        <p class="empty" role="status">{{ 'ADMIN.NO_USERS' | translate }}</p>
       } @else {
-        <p class="result-count" role="status">{{ filteredUsers().length }} user(s)</p>
+        <p class="result-count" role="status">{{ filteredUsers().length }} {{ 'ADMIN.USERS_COUNT' | translate }}</p>
         @for (user of filteredUsers(); track user.id) {
           <mat-card class="user-card">
             <mat-card-content>
@@ -131,11 +132,11 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
                   <p class="user-name">{{ user.name }}</p>
                   <p class="user-email">{{ user.email }}</p>
                   @if (user.lastLogin) {
-                    <p class="user-meta">Last login: {{ user.lastLogin | date:'mediumDate' }}</p>
+                    <p class="user-meta">{{ 'ADMIN.LAST_LOGIN' | translate }} {{ user.lastLogin | date:'mediumDate' }}</p>
                   }
                 </div>
                 <div class="user-badges">
-                  <span [class]="'badge role-' + user.role">{{ getRoleLabel(user.role) }}</span>
+                  <span [class]="'badge role-' + user.role">{{ getRoleKey(user.role) | translate }}</span>
                   <span [class]="'badge status-' + user.status">{{ user.status }}</span>
                 </div>
               </div>
@@ -143,12 +144,12 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
               <div class="user-actions">
                 @if (user.status !== 'pending') {
                   <mat-form-field appearance="outline" class="role-select">
-                    <mat-label>Role</mat-label>
+                    <mat-label>{{ 'ADMIN.ROLE' | translate }}</mat-label>
                     <mat-select [value]="user.role"
                                 (selectionChange)="changeRole(user, $event.value)"
                                 [attr.aria-label]="'Change role for ' + user.name">
                       @for (r of ALL_ROLES; track r) {
-                        <mat-option [value]="r">{{ getRoleLabel(r) }}</mat-option>
+                        <mat-option [value]="r">{{ getRoleKey(r) | translate }}</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
@@ -157,16 +158,16 @@ const ALL_ROLES: PlatformUser['role'][] = ['driver', 'carrier', 'attorney', 'adm
                   <button mat-stroked-button color="warn"
                           (click)="suspend(user)"
                           [attr.aria-label]="'Suspend ' + user.name">
-                    <mat-icon>block</mat-icon> Suspend
+                    <mat-icon>block</mat-icon> {{ 'ADMIN.SUSPEND' | translate }}
                   </button>
                 } @else if (user.status === 'suspended') {
                   <button mat-stroked-button color="primary"
                           (click)="unsuspend(user)"
                           [attr.aria-label]="'Unsuspend ' + user.name">
-                    <mat-icon>check_circle</mat-icon> Unsuspend
+                    <mat-icon>check_circle</mat-icon> {{ 'ADMIN.UNSUSPEND' | translate }}
                   </button>
                 } @else {
-                  <span class="pending-label">Invite pending</span>
+                  <span class="pending-label">{{ 'ADMIN.INVITE_PENDING' | translate }}</span>
                 }
               </div>
             </mat-card-content>
@@ -219,16 +220,16 @@ export class UserManagementComponent implements OnInit {
 
   readonly ALL_ROLES = ALL_ROLES;
 
-  readonly roleOptions: { value: RoleFilter; label: string }[] = [
-    { value: 'all', label: 'All Roles' },
-    ...ALL_ROLES.map(r => ({ value: r as RoleFilter, label: ROLE_LABELS[r] })),
+  readonly roleOptions: { value: RoleFilter; key: string }[] = [
+    { value: 'all', key: 'ADMIN.ALL_ROLES' },
+    ...ALL_ROLES.map(r => ({ value: r as RoleFilter, key: ROLE_KEYS[r] })),
   ];
 
-  readonly statusOptions: { value: StatusFilter; label: string }[] = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'active', label: 'Active' },
-    { value: 'suspended', label: 'Suspended' },
-    { value: 'pending', label: 'Pending' },
+  readonly statusOptions: { value: StatusFilter; key: string }[] = [
+    { value: 'all', key: 'ADMIN.ALL_STATUSES' },
+    { value: 'active', key: 'ADMIN.STATUS_ACTIVE' },
+    { value: 'suspended', key: 'ADMIN.STATUS_SUSPENDED' },
+    { value: 'pending', key: 'ADMIN.STATUS_PENDING_USER' },
   ];
 
   inviteForm = this.fb.group({
@@ -323,7 +324,7 @@ export class UserManagementComponent implements OnInit {
     if (newRole === user.role) return;
     this.adminService.changeUserRole(user.id, newRole).subscribe({
       next: () => {
-        this.snackBar.open(`${user.name}'s role updated to ${ROLE_LABELS[newRole]}.`, 'Close', { duration: 3000 });
+        this.snackBar.open(`${user.name}'s role updated.`, 'Close', { duration: 3000 });
         this.loadUsers();
       },
       error: (err) => {
@@ -339,8 +340,8 @@ export class UserManagementComponent implements OnInit {
     this.statusFilter.set('all');
   }
 
-  getRoleLabel(role: PlatformUser['role']): string {
-    return ROLE_LABELS[role] ?? role;
+  getRoleKey(role: PlatformUser['role']): string {
+    return ROLE_KEYS[role] ?? role;
   }
 
   getInitials(name: string): string {

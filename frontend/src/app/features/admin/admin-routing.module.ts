@@ -1,8 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { LayoutComponent } from '../../core/layout/layout.component';
-import { AdminDashboardComponent } from './dashboard/admin-dashboard.component';
-import { CaseManagementComponent } from './case-management/case-management.component';
 
 const routes: Routes = [
   {
@@ -16,39 +14,47 @@ const routes: Routes = [
       },
       {
         path: 'dashboard',
-        component: AdminDashboardComponent
+        loadComponent: () => import('./dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent)
       },
       {
         path: 'cases',
-        component: CaseManagementComponent
+        loadComponent: () => import('./case-management/case-management.component').then(m => m.CaseManagementComponent)
       },
       {
         path: 'cases/:id',
-        loadComponent: () => import('../admin/case-management/case-management.component').then(m => m.CaseManagementComponent)
+        loadComponent: () => import('./case-management/case-management.component').then(m => m.CaseManagementComponent)
       },
       {
         path: 'staff',
-        loadComponent: () => import('../admin/staff-management/staff-management.component').then(m => m.StaffManagementComponent)
+        loadComponent: () => import('./staff-management/staff-management.component').then(m => m.StaffManagementComponent)
       },
       {
         path: 'clients',
-        loadComponent: () => import('../admin/client-management/client-management.component').then(m => m.ClientManagementComponent)
+        loadComponent: () => import('./client-management/client-management.component').then(m => m.ClientManagementComponent)
       },
       {
         path: 'reports',
-        loadComponent: () => import('../admin/reports/reports.component').then(m => m.ReportsComponent)
-      },
-      {
-        path: 'operator-dashboard',
-        loadComponent: () => import('../admin/operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
+        loadComponent: () => import('./reports/reports.component').then(m => m.ReportsComponent)
       },
       {
         path: 'revenue',
-        loadComponent: () => import('../admin/revenue-dashboard/revenue-dashboard.component').then(m => m.RevenueDashboardComponent)
+        loadComponent: () => import('./revenue-dashboard/revenue-dashboard.component').then(m => m.RevenueDashboardComponent)
       },
       {
         path: 'users',
-        loadComponent: () => import('../admin/user-management/user-management.component').then(m => m.UserManagementComponent)
+        loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./notifications/admin-notifications.component').then(m => m.AdminNotificationsComponent)
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./documents/admin-documents.component').then(m => m.AdminDocumentsComponent)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./settings/admin-settings.component').then(m => m.AdminSettingsComponent)
       }
     ]
   }

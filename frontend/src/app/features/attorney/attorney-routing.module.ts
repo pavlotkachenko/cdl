@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { LayoutComponent } from '../../core/layout/layout.component';
-import { AttorneyDashboardComponent } from './attorney-dashboard/attorney-dashboard.component';
 
 const routes: Routes = [
   {
@@ -15,15 +14,39 @@ const routes: Routes = [
       },
       {
         path: 'dashboard',
-        component: AttorneyDashboardComponent
+        loadComponent: () => import('./attorney-dashboard/attorney-dashboard.component').then(m => m.AttorneyDashboardComponent)
       },
       {
-        path: 'subscription',
-        loadComponent: () => import('./subscription-management/subscription-management.component').then(m => m.SubscriptionManagementComponent)
+        path: 'cases',
+        loadComponent: () => import('./attorney-cases/attorney-cases.component').then(m => m.AttorneyCasesComponent)
       },
       {
         path: 'cases/:caseId',
         loadComponent: () => import('./attorney-case-detail/attorney-case-detail.component').then(m => m.AttorneyCaseDetailComponent)
+      },
+      {
+        path: 'clients',
+        loadComponent: () => import('./attorney-clients/attorney-clients.component').then(m => m.AttorneyClientsComponent)
+      },
+      {
+        path: 'calendar',
+        loadComponent: () => import('./attorney-calendar/attorney-calendar.component').then(m => m.AttorneyCalendarComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./attorney-notifications/attorney-notifications.component').then(m => m.AttorneyNotificationsComponent)
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./attorney-reports/attorney-reports.component').then(m => m.AttorneyReportsComponent)
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./attorney-documents/attorney-documents.component').then(m => m.AttorneyDocumentsComponent)
+      },
+      {
+        path: 'subscription',
+        loadComponent: () => import('./subscription-management/subscription-management.component').then(m => m.SubscriptionManagementComponent)
       }
     ]
   }

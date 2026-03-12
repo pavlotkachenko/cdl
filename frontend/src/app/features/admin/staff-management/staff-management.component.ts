@@ -11,18 +11,19 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { AdminService, StaffMember } from '../../../core/services/admin.service';
 
 type RoleFilter = StaffMember['role'] | 'all';
 type StatusFilter = StaffMember['status'] | 'all';
 
-const ROLE_LABELS: Record<StaffMember['role'], string> = {
-  admin: 'Admin', attorney: 'Attorney', paralegal: 'Paralegal',
+const ROLE_KEYS: Record<StaffMember['role'], string> = {
+  admin: 'ADMIN.ROLE_ADMIN', attorney: 'ADMIN.ROLE_ATTORNEY', paralegal: 'ADMIN.ROLE_PARALEGAL',
 };
 
-const STATUS_LABELS: Record<StaffMember['status'], string> = {
-  active: 'Active', inactive: 'Inactive', on_leave: 'On Leave',
+const STATUS_KEYS: Record<StaffMember['status'], string> = {
+  active: 'ADMIN.STATUS_ACTIVE', inactive: 'ADMIN.STATUS_INACTIVE', on_leave: 'ADMIN.STATUS_ON_LEAVE',
 };
 
 @Component({
@@ -31,53 +32,53 @@ const STATUS_LABELS: Record<StaffMember['status'], string> = {
   imports: [
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatProgressSpinnerModule, MatDividerModule,
+    MatProgressSpinnerModule, MatDividerModule, TranslateModule,
   ],
   template: `
     <div class="staff-mgmt">
       <div class="page-header">
-        <h1>Staff Management</h1>
+        <h1>{{ 'ADMIN.STAFF_MANAGEMENT' | translate }}</h1>
         <button mat-raised-button color="primary" (click)="addNewStaff()">
-          <mat-icon>person_add</mat-icon> Add Staff
+          <mat-icon>person_add</mat-icon> {{ 'ADMIN.ADD_STAFF' | translate }}
         </button>
       </div>
 
       <div class="filter-row">
         <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Search staff</mat-label>
+          <mat-label>{{ 'ADMIN.SEARCH_STAFF' | translate }}</mat-label>
           <input matInput
                  [value]="searchTerm()"
                  (input)="searchTerm.set($any($event.target).value)"
-                 aria-label="Search staff" />
+                 [attr.aria-label]="'ADMIN.SEARCH_STAFF' | translate" />
           <mat-icon matSuffix aria-hidden="true">search</mat-icon>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Role</mat-label>
+          <mat-label>{{ 'ADMIN.ROLE' | translate }}</mat-label>
           <mat-select [value]="roleFilter()" (selectionChange)="roleFilter.set($event.value)">
             @for (r of roles; track r.value) {
-              <mat-option [value]="r.value">{{ r.label }}</mat-option>
+              <mat-option [value]="r.value">{{ r.key | translate }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Status</mat-label>
+          <mat-label>{{ 'ADMIN.STATUS' | translate }}</mat-label>
           <mat-select [value]="statusFilter()" (selectionChange)="statusFilter.set($event.value)">
             @for (s of statuses; track s.value) {
-              <mat-option [value]="s.value">{{ s.label }}</mat-option>
+              <mat-option [value]="s.value">{{ s.key | translate }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         @if (searchTerm() || roleFilter() !== 'all' || statusFilter() !== 'all') {
-          <button mat-button (click)="clearFilters()">Clear</button>
+          <button mat-button (click)="clearFilters()">{{ 'ADMIN.CLEAR' | translate }}</button>
         }
       </div>
 
       @if (loading()) {
         <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
       } @else if (filteredStaff().length === 0) {
-        <p class="empty" role="status">No staff members found.</p>
+        <p class="empty" role="status">{{ 'ADMIN.NO_STAFF' | translate }}</p>
       } @else {
-        <p class="result-count" role="status">{{ filteredStaff().length }} member(s)</p>
+        <p class="result-count" role="status">{{ filteredStaff().length }} {{ 'ADMIN.MEMBERS_COUNT' | translate }}</p>
         @for (m of filteredStaff(); track m.id) {
           <mat-card class="staff-card">
             <mat-card-content>
@@ -87,24 +88,24 @@ const STATUS_LABELS: Record<StaffMember['status'], string> = {
                   <p class="staff-name">{{ m.name }}</p>
                   <p class="staff-email">{{ m.email }}</p>
                   <p class="staff-stats">
-                    {{ m.activeCases }} active · {{ m.successRate.toFixed(0) }}% success
+                    {{ m.activeCases }} {{ 'ADMIN.ACTIVE_LABEL' | translate }} · {{ m.successRate.toFixed(0) }}% {{ 'ADMIN.SUCCESS_LABEL' | translate }}
                   </p>
                 </div>
                 <div class="staff-badges">
-                  <span [class]="'badge role-' + m.role">{{ getRoleLabel(m.role) }}</span>
-                  <span [class]="'badge status-' + m.status">{{ getStatusLabel(m.status) }}</span>
+                  <span [class]="'badge role-' + m.role">{{ getRoleKey(m.role) | translate }}</span>
+                  <span [class]="'badge status-' + m.status">{{ getStatusKey(m.status) | translate }}</span>
                 </div>
               </div>
               <mat-divider></mat-divider>
               <div class="staff-actions">
                 <button mat-button (click)="viewPerformance(m)">
-                  <mat-icon>bar_chart</mat-icon> Performance
+                  <mat-icon>bar_chart</mat-icon> {{ 'ADMIN.PERFORMANCE' | translate }}
                 </button>
                 @if (m.status !== 'active') {
-                  <button mat-button (click)="updateStatus(m, 'active')">Activate</button>
+                  <button mat-button (click)="updateStatus(m, 'active')">{{ 'ADMIN.ACTIVATE' | translate }}</button>
                 }
                 @if (m.status === 'active') {
-                  <button mat-button (click)="updateStatus(m, 'inactive')">Deactivate</button>
+                  <button mat-button (click)="updateStatus(m, 'inactive')">{{ 'ADMIN.DEACTIVATE' | translate }}</button>
                 }
               </div>
             </mat-card-content>
@@ -168,18 +169,18 @@ export class StaffManagementComponent implements OnInit {
     return list;
   });
 
-  readonly roles: { value: RoleFilter; label: string }[] = [
-    { value: 'all', label: 'All Roles' },
-    { value: 'admin', label: 'Admin' },
-    { value: 'attorney', label: 'Attorney' },
-    { value: 'paralegal', label: 'Paralegal' },
+  readonly roles: { value: RoleFilter; key: string }[] = [
+    { value: 'all', key: 'ADMIN.ALL_ROLES' },
+    { value: 'admin', key: 'ADMIN.ROLE_ADMIN' },
+    { value: 'attorney', key: 'ADMIN.ROLE_ATTORNEY' },
+    { value: 'paralegal', key: 'ADMIN.ROLE_PARALEGAL' },
   ];
 
-  readonly statuses: { value: StatusFilter; label: string }[] = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-    { value: 'on_leave', label: 'On Leave' },
+  readonly statuses: { value: StatusFilter; key: string }[] = [
+    { value: 'all', key: 'ADMIN.ALL_STATUSES' },
+    { value: 'active', key: 'ADMIN.STATUS_ACTIVE' },
+    { value: 'inactive', key: 'ADMIN.STATUS_INACTIVE' },
+    { value: 'on_leave', key: 'ADMIN.STATUS_ON_LEAVE' },
   ];
 
   ngOnInit(): void {
@@ -221,12 +222,12 @@ export class StaffManagementComponent implements OnInit {
     this.router.navigate(['/admin/users']);
   }
 
-  getRoleLabel(role: StaffMember['role']): string {
-    return ROLE_LABELS[role] ?? role;
+  getRoleKey(role: StaffMember['role']): string {
+    return ROLE_KEYS[role] ?? role;
   }
 
-  getStatusLabel(status: StaffMember['status']): string {
-    return STATUS_LABELS[status] ?? status;
+  getStatusKey(status: StaffMember['status']): string {
+    return STATUS_KEYS[status] ?? status;
   }
 
   getInitials(name: string): string {
