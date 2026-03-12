@@ -4,8 +4,8 @@ import { Router } from '@angular/router';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
-// Support ALL 5 roles
-type UserRole = 'driver' | 'carrier' | 'attorney' | 'admin' | 'paralegal';
+// Support ALL 6 roles
+type UserRole = 'driver' | 'carrier' | 'attorney' | 'admin' | 'paralegal' | 'operator';
 
 interface User {
   id: string;
@@ -106,6 +106,9 @@ export class AuthService {
         break;
       case 'paralegal':
         this.router.navigate(['/paralegal/dashboard']);
+        break;
+      case 'operator':
+        this.router.navigate(['/operator/dashboard']);
         break;
       default:
         this.router.navigate(['/']);

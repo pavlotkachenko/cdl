@@ -192,10 +192,26 @@ export class CaseService {
   }
 
   /**
-   * Get operator case queue
+   * Get operator's own assigned cases
    */
-  getOperatorCases(status = 'new'): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/operator/cases`, { params: { status } });
+  getOperatorCases(status?: string): Observable<any> {
+    const params: Record<string, string> = {};
+    if (status) params['status'] = status;
+    return this.http.get<any>(`${this.apiUrl}/operator/cases`, { params });
+  }
+
+  /**
+   * Get unassigned cases for operator queue
+   */
+  getUnassignedCases(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/unassigned`);
+  }
+
+  /**
+   * Operator requests assignment to an unassigned case
+   */
+  requestAssignment(caseId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/operator/cases/${caseId}/request-assignment`, {});
   }
 
   /**

@@ -106,6 +106,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/carrier/subscription' }
   ];
 
+  // Operator Navigation
+  private operatorNavigation: NavigationItem[] = [
+    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/operator/dashboard' },
+    { name: 'NAV.MY_CASES', icon: 'gavel', link: '/operator/cases' },
+    { name: 'NAV.UNASSIGNED_QUEUE', icon: 'queue', link: '/operator/queue' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/operator/notifications', badge: 0 },
+    { name: 'NAV.PROFILE', icon: 'person', link: '/operator/profile', dividerBefore: true }
+  ];
+
   // Paralegal Navigation
   private paralegalNavigation: NavigationItem[] = [
     { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/paralegal/dashboard' },
@@ -170,6 +179,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
         break;
       case 'carrier':
         this.navigation = [...this.carrierNavigation];
+        break;
+      case 'operator':
+        this.navigation = [...this.operatorNavigation];
         break;
       case 'paralegal':
         this.navigation = [...this.paralegalNavigation];

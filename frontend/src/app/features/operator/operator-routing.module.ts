@@ -15,6 +15,22 @@ const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () => import('./operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
+      },
+      {
+        path: 'cases',
+        loadComponent: () => import('./operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
+      },
+      {
+        path: 'queue',
+        loadComponent: () => import('./operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./operator-notifications/operator-notifications.component').then(m => m.OperatorNotificationsComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./operator-profile/operator-profile.component').then(m => m.OperatorProfileComponent)
       }
     ]
   }

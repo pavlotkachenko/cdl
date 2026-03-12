@@ -9,7 +9,7 @@ import { RegisterComponent } from './features/auth/register/register.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 import { RoleSelectComponent } from './features/auth/role-select/role-select.component';
-import { authGuard, adminGuard } from './core/guards/auth.guard';
+import { authGuard, adminGuard, operatorGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // Landing page (public - no auth required)
@@ -78,6 +78,13 @@ export const routes: Routes = [
     path: 'carrier',
     canActivate: [authGuard],
     loadChildren: () => import('./features/carrier/carrier.module').then(m => m.CarrierModule)
+  },
+
+  // Operator routes
+  {
+    path: 'operator',
+    canActivate: [operatorGuard],
+    loadChildren: () => import('./features/operator/operator.module').then(m => m.OperatorModule)
   },
 
   // Paralegal routes
