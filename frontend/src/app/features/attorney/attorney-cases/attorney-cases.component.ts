@@ -79,6 +79,36 @@ const MOCK_CASES: AttorneyCase[] = [
     violation_type: 'Lane Violation', state: 'Arizona', driver_name: 'Jennifer Martinez',
     created_at: '2026-02-10T16:00:00Z', attorney_price: 250,
   },
+  {
+    id: 'mc-013', case_number: 'CDL-2026-430', status: 'assigned_to_attorney',
+    violation_type: 'DOT Inspection Failure', state: 'Nevada', driver_name: 'Omar Hassan',
+    created_at: '2026-03-11T08:20:00Z', attorney_price: 950,
+  },
+  {
+    id: 'mc-014', case_number: 'CDL-2026-360', status: 'call_court',
+    violation_type: 'Speeding', state: 'Colorado', driver_name: 'Brian Murphy',
+    created_at: '2026-03-03T13:10:00Z', attorney_price: 475,
+  },
+  {
+    id: 'mc-015', case_number: 'CDL-2026-275', status: 'resolved',
+    violation_type: 'Equipment Violation', state: 'Virginia', driver_name: 'Priya Sharma',
+    created_at: '2026-02-08T09:30:00Z', attorney_price: 680,
+  },
+  {
+    id: 'mc-016', case_number: 'CDL-2026-440', status: 'send_info_to_attorney',
+    violation_type: 'Reckless Driving', state: 'Washington', driver_name: 'Tyler Brooks',
+    created_at: '2026-03-10T14:55:00Z', attorney_price: 1100,
+  },
+  {
+    id: 'mc-017', case_number: 'CDL-2026-290', status: 'closed',
+    violation_type: 'Overweight', state: 'Minnesota', driver_name: 'Yuki Tanaka',
+    created_at: '2026-02-12T11:00:00Z', attorney_price: 900,
+  },
+  {
+    id: 'mc-018', case_number: 'CDL-2026-455', status: 'assigned_to_attorney',
+    violation_type: 'Failure to Signal', state: 'Oregon', driver_name: 'Alejandro Ruiz',
+    created_at: '2026-03-11T10:45:00Z', attorney_price: 520,
+  },
 ];
 
 type StatusCategory = 'all' | 'pending' | 'active' | 'resolved';
@@ -535,7 +565,8 @@ export class AttorneyCasesComponent implements OnInit {
     this.attorneyService.getMyCases().pipe(
       catchError(() => of({ cases: MOCK_CASES })),
     ).subscribe(r => {
-      this.cases.set(r.cases ?? []);
+      const cases = r.cases?.length ? r.cases : MOCK_CASES;
+      this.cases.set(cases);
     });
   }
 

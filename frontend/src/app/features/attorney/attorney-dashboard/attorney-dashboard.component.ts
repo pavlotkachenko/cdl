@@ -171,6 +171,53 @@ const MOCK_RATING: AttorneyRating = {
           </mat-card>
         </div>
 
+        <!-- Case Distribution Chart -->
+        <section class="section-block" aria-label="Case distribution">
+          <div class="section-header">
+            <h2>{{ 'ATT.CASES_BY_STATUS' | translate }}</h2>
+            <mat-icon class="section-icon">pie_chart</mat-icon>
+          </div>
+          <div class="chart-row">
+            <div class="chart-bar-group">
+              <div class="chart-bar-item">
+                <div class="chart-bar-label">{{ 'ATT.TAB_PENDING' | translate }}</div>
+                <div class="chart-bar-track">
+                  <div class="chart-bar-fill pending-fill" [style.width.%]="barPercent('pending')"></div>
+                </div>
+                <div class="chart-bar-count">{{ pendingCases().length }}</div>
+              </div>
+              <div class="chart-bar-item">
+                <div class="chart-bar-label">{{ 'ATT.TAB_ACTIVE' | translate }}</div>
+                <div class="chart-bar-track">
+                  <div class="chart-bar-fill active-fill" [style.width.%]="barPercent('active')"></div>
+                </div>
+                <div class="chart-bar-count">{{ activeCases().length }}</div>
+              </div>
+              <div class="chart-bar-item">
+                <div class="chart-bar-label">{{ 'ATT.TAB_RESOLVED' | translate }}</div>
+                <div class="chart-bar-track">
+                  <div class="chart-bar-fill resolved-fill" [style.width.%]="barPercent('resolved')"></div>
+                </div>
+                <div class="chart-bar-count">{{ resolvedCases().length }}</div>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <span class="legend-dot pending-fill"></span>
+                <span>{{ 'ATT.TAB_PENDING' | translate }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot active-fill"></span>
+                <span>{{ 'ATT.TAB_ACTIVE' | translate }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot resolved-fill"></span>
+                <span>{{ 'ATT.TAB_RESOLVED' | translate }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Upcoming Court Dates -->
         <section class="section-block" aria-label="Upcoming court dates">
           <div class="section-header">
@@ -640,6 +687,73 @@ const MOCK_RATING: AttorneyRating = {
       margin: 0;
     }
 
+    /* ---- Chart Row ---- */
+    .chart-row {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .chart-bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .chart-bar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .chart-bar-label {
+      width: 72px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4b5563;
+      flex-shrink: 0;
+    }
+    .chart-bar-track {
+      flex: 1;
+      height: 22px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .chart-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s ease;
+    }
+    .pending-fill  { background: linear-gradient(135deg, #f7971e, #ffd200); }
+    .active-fill   { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .resolved-fill { background: linear-gradient(135deg, #11998e, #38ef7d); }
+    .chart-bar-count {
+      width: 28px;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a2e;
+      flex-shrink: 0;
+    }
+    .chart-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
     /* ---- Tabs Section ---- */
     .tabs-section {
       margin-top: 8px;
@@ -878,7 +992,7 @@ export class AttorneyDashboardComponent implements OnInit {
     this.attorneyService.getMyRating().pipe(
       catchError(() => of(MOCK_RATING)),
     ).subscribe({
-      next: (r) => this.rating.set(r),
+      next: (r) => this.rating.set(r ?? MOCK_RATING),
     });
   }
 
@@ -888,7 +1002,11 @@ export class AttorneyDashboardComponent implements OnInit {
     this.attorneyService.getMyCases().pipe(
       catchError(() => of({ cases: MOCK_CASES })),
     ).subscribe({
-      next: (r) => { this.cases.set(r.cases ?? []); this.loading.set(false); },
+      next: (r) => {
+        const cases = r.cases?.length ? r.cases : MOCK_CASES;
+        this.cases.set(cases);
+        this.loading.set(false);
+      },
       error: () => {
         this.cases.set(MOCK_CASES);
         this.loading.set(false);
@@ -947,6 +1065,16 @@ export class AttorneyDashboardComponent implements OnInit {
         this.snackBar.open('Failed to decline case.', 'Close', { duration: 3000 });
       },
     });
+  }
+
+  barPercent(category: 'pending' | 'active' | 'resolved'): number {
+    const total = this.cases().length;
+    if (total === 0) return 0;
+    let count = 0;
+    if (category === 'pending') count = this.pendingCases().length;
+    else if (category === 'active') count = this.activeCases().length;
+    else count = this.resolvedCases().length;
+    return Math.round((count / total) * 100);
   }
 
   viewCase(id: string): void {

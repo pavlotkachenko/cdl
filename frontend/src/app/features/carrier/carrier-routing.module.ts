@@ -63,6 +63,10 @@ const routes: Routes = [
       {
         path: 'documents',
         loadComponent: () => import('./documents/carrier-documents.component').then(m => m.CarrierDocumentsComponent)
+      },
+      {
+        path: 'subscription',
+        loadComponent: () => import('../attorney/subscription-management/subscription-management.component').then(m => m.SubscriptionManagementComponent)
       }
     ]
   }

@@ -301,18 +301,36 @@ const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 <span class="event-time">{{ evt.time }}</span>
               </div>
               <h3 class="event-title">{{ evt.title }}</h3>
-              @if (evt.location) {
-                <p class="event-detail">{{ evt.location }}</p>
+              @if (expandedEventId() === evt.id) {
+                <div class="event-details-expanded">
+                  @if (evt.location) {
+                    <p class="event-detail">{{ evt.location }}</p>
+                  }
+                  @if (evt.caseNumber) {
+                    <p class="event-detail case-num">{{ evt.caseNumber }}</p>
+                  }
+                  @if (evt.clientName) {
+                    <p class="event-detail client-name">{{ evt.clientName }}</p>
+                  }
+                  @if (evt.notes) {
+                    <p class="event-notes">{{ evt.notes }}</p>
+                  }
+                </div>
               }
-              @if (evt.caseNumber) {
-                <p class="event-detail case-num">{{ evt.caseNumber }}</p>
-              }
-              @if (evt.clientName) {
-                <p class="event-detail client-name">{{ evt.clientName }}</p>
-              }
-              @if (evt.notes) {
-                <p class="event-notes">{{ evt.notes }}</p>
-              }
+              <div class="event-actions">
+                <button class="btn-event btn-view"
+                        [class.btn-active]="expandedEventId() === evt.id"
+                        [attr.aria-label]="'View event: ' + evt.title"
+                        [attr.aria-expanded]="expandedEventId() === evt.id"
+                        (click)="toggleEvent(evt.id)">
+                  {{ 'ATT.VIEW_EVENT' | translate }}
+                </button>
+                <button class="btn-event btn-modify"
+                        [attr.aria-label]="'Modify event: ' + evt.title"
+                        (click)="toggleEvent(evt.id)">
+                  {{ 'ATT.MODIFY_EVENT' | translate }}
+                </button>
+              </div>
             </div>
           }
         </section>
@@ -330,12 +348,36 @@ const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
               <span class="event-time">{{ formatIsoDate(evt.date) }} &middot; {{ evt.time }}</span>
             </div>
             <h3 class="event-title">{{ evt.title }}</h3>
-            @if (evt.location) {
-              <p class="event-detail">{{ evt.location }}</p>
+            @if (expandedEventId() === evt.id) {
+              <div class="event-details-expanded">
+                @if (evt.location) {
+                  <p class="event-detail">{{ evt.location }}</p>
+                }
+                @if (evt.caseNumber) {
+                  <p class="event-detail case-num">{{ evt.caseNumber }}</p>
+                }
+                @if (evt.clientName) {
+                  <p class="event-detail client-name">{{ evt.clientName }}</p>
+                }
+                @if (evt.notes) {
+                  <p class="event-notes">{{ evt.notes }}</p>
+                }
+              </div>
             }
-            @if (evt.caseNumber) {
-              <p class="event-detail case-num">{{ evt.caseNumber }}</p>
-            }
+            <div class="event-actions">
+              <button class="btn-event btn-view"
+                      [class.btn-active]="expandedEventId() === evt.id"
+                      [attr.aria-label]="'View event: ' + evt.title"
+                      [attr.aria-expanded]="expandedEventId() === evt.id"
+                      (click)="toggleEvent(evt.id)">
+                {{ 'ATT.VIEW_EVENT' | translate }}
+              </button>
+              <button class="btn-event btn-modify"
+                      [attr.aria-label]="'Modify event: ' + evt.title"
+                      (click)="toggleEvent(evt.id)">
+                {{ 'ATT.MODIFY_EVENT' | translate }}
+              </button>
+            </div>
           </div>
         }
         @if (upcomingEvents().length === 0) {
@@ -626,6 +668,57 @@ const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       font-size: 0.875rem;
     }
 
+    /* Event action buttons */
+    .event-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn-event {
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      min-height: 44px;
+      min-width: 44px;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-event:focus-visible {
+      outline: 2px solid #1976d2;
+      outline-offset: 2px;
+    }
+    .btn-view {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+    .btn-view:hover {
+      background: #bbdefb;
+    }
+    .btn-modify {
+      background: #fff3e0;
+      color: #e65100;
+    }
+    .btn-modify:hover {
+      background: #ffe0b2;
+    }
+    .btn-active {
+      background: #1565c0;
+      color: #fff;
+    }
+    .btn-active:hover {
+      background: #0d47a1;
+    }
+    .event-details-expanded {
+      animation: slideDown 0.2s ease;
+      padding-top: 4px;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; max-height: 0; }
+      to { opacity: 1; max-height: 200px; }
+    }
+
     /* Add event button */
     .add-event-wrapper {
       text-align: center;
@@ -663,6 +756,7 @@ export class AttorneyCalendarComponent {
   private readonly events = signal<CalendarEvent[]>(buildMockEvents());
   protected readonly currentMonth = signal(new Date());
   protected readonly selectedDay = signal<Date | null>(null);
+  protected readonly expandedEventId = signal<string | null>(null);
 
   protected readonly monthYearLabel = computed(() => {
     const d = this.currentMonth();
@@ -777,6 +871,10 @@ export class AttorneyCalendarComponent {
   isSelected(day: CalendarDay): boolean {
     const sel = this.selectedDay();
     return sel !== null && this.isSameDay(day.date, sel);
+  }
+
+  toggleEvent(eventId: string): void {
+    this.expandedEventId.set(this.expandedEventId() === eventId ? null : eventId);
   }
 
   eventColor(type: CalendarEvent['type']): string {

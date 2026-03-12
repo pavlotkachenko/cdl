@@ -45,6 +45,10 @@ const routes: Routes = [
         loadComponent: () => import('./attorney-documents/attorney-documents.component').then(m => m.AttorneyDocumentsComponent)
       },
       {
+        path: 'profile',
+        loadComponent: () => import('./attorney-profile/attorney-profile.component').then(m => m.AttorneyProfileComponent)
+      },
+      {
         path: 'subscription',
         loadComponent: () => import('./subscription-management/subscription-management.component').then(m => m.SubscriptionManagementComponent)
       }

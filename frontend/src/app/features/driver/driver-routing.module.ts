@@ -105,6 +105,10 @@ const routes: Routes = [
         loadComponent: () => import('../shared/payment/payment-history/payment-history.component').then(m => m.PaymentHistoryComponent)
       },
       {
+        path: 'subscription',
+        loadComponent: () => import('../attorney/subscription-management/subscription-management.component').then(m => m.SubscriptionManagementComponent)
+      },
+      {
         path: 'settings',
         redirectTo: 'settings/notifications'
       }

@@ -2,10 +2,13 @@ import {
   Component, signal, computed, ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe, UpperCasePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule } from '@ngx-translate/core';
 
@@ -41,10 +44,13 @@ const MOCK_DOCUMENTS: AttorneyDocument[] = [
   imports: [
     DatePipe,
     UpperCasePipe,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatProgressSpinnerModule,
     TranslateModule,
   ],
@@ -57,6 +63,23 @@ const MOCK_DOCUMENTS: AttorneyDocument[] = [
           {{ 'ATT.UPLOAD_DOCUMENT' | translate }}
         </button>
       </header>
+
+      <!-- Search -->
+      <div class="search-bar">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput
+                 [placeholder]="'ATT.SEARCH_DOCUMENTS' | translate"
+                 [ngModel]="searchTerm()"
+                 (ngModelChange)="searchTerm.set($event)"
+                 aria-label="Search documents" />
+          @if (searchTerm()) {
+            <button matSuffix mat-icon-button (click)="searchTerm.set('')" aria-label="Clear search">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+      </div>
 
       <!-- Category filters -->
       <div class="category-chips" role="group" aria-label="Filter by category">
@@ -132,6 +155,18 @@ const MOCK_DOCUMENTS: AttorneyDocument[] = [
     .page-header h1 {
       margin: 0;
       font-size: 1.5rem;
+    }
+
+    .search-bar {
+      margin-bottom: 16px;
+    }
+
+    .search-field {
+      width: 100%;
+    }
+
+    .search-field ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
     }
 
     .category-chips {
@@ -244,6 +279,7 @@ const MOCK_DOCUMENTS: AttorneyDocument[] = [
 export class AttorneyDocumentsComponent {
   documents = signal(MOCK_DOCUMENTS);
   activeCategory = signal('All');
+  searchTerm = signal('');
 
   categories: { value: string; key: string }[] = [
     { value: 'All', key: 'ATT.CAT_ALL' },
@@ -256,8 +292,17 @@ export class AttorneyDocumentsComponent {
 
   filteredDocs = computed(() => {
     const cat = this.activeCategory();
-    return cat === 'All'
+    const query = this.searchTerm().toLowerCase().trim();
+    let docs = cat === 'All'
       ? this.documents()
       : this.documents().filter(d => d.category === cat);
+    if (query) {
+      docs = docs.filter(d =>
+        d.name.toLowerCase().includes(query) ||
+        d.category.toLowerCase().includes(query) ||
+        d.type.toLowerCase().includes(query),
+      );
+    }
+    return docs;
   });
 }

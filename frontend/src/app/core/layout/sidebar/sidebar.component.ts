@@ -63,6 +63,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'NAV.PAYMENTS', icon: 'payment', link: '/driver/payments' },
     { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/driver/notifications', badge: 0 },
     { name: 'NAV.PROFILE', icon: 'person', link: '/driver/profile', dividerBefore: true },
+    { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/driver/subscription' },
     { name: 'NAV.HELP', icon: 'help', link: '/driver/help' }
   ];
 
@@ -88,8 +89,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/attorney/documents', dividerBefore: true },
     { name: 'NAV.REPORTS', icon: 'assessment', link: '/attorney/reports' },
     { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/attorney/notifications', badge: 0 },
-    { name: 'NAV.PROFILE', icon: 'person', link: '/attorney/profile', dividerBefore: true },
-    { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/attorney/subscription' }
+    { name: 'NAV.PROFILE', icon: 'person', link: '/attorney/profile', dividerBefore: true }
   ];
 
   // Carrier Navigation
@@ -102,7 +102,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { name: 'NAV.PAYMENTS', icon: 'payment', link: '/carrier/payments' },
     { name: 'NAV.WEBHOOKS', icon: 'webhook', link: '/carrier/webhooks' },
     { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/carrier/notifications', badge: 0 },
-    { name: 'NAV.SETTINGS', icon: 'settings', link: '/carrier/settings', dividerBefore: true }
+    { name: 'NAV.SETTINGS', icon: 'settings', link: '/carrier/settings', dividerBefore: true },
+    { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/carrier/subscription' }
   ];
 
   // Paralegal Navigation
