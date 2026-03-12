@@ -1,8 +1,9 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { ClientManagementComponent } from './client-management.component';
 import { AdminService, Client } from '../../../core/services/admin.service';
@@ -34,9 +35,9 @@ describe('ClientManagementComponent', () => {
     snackBar = { open: vi.fn() };
 
     await TestBed.configureTestingModule({
-      imports: [ClientManagementComponent],
+      imports: [ClientManagementComponent, NoopAnimationsModule],
       providers: [
-        provideAnimationsAsync(),
+        provideTranslateService(),
         { provide: AdminService, useValue: adminService },
         { provide: Router, useValue: router },
         { provide: MatSnackBar, useValue: snackBar },
@@ -81,10 +82,13 @@ describe('ClientManagementComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/admin/cases'], { queryParams: { clientId: 'c1' } });
   });
 
-  it('shows snackBar error when getAllClients fails', async () => {
+  it('falls back to mock data when getAllClients fails', () => {
     adminService.getAllClients.mockReturnValue(throwError(() => new Error('fail')));
     component.loadClients();
-    expect(snackBar.open).toHaveBeenCalledWith('Failed to load clients', 'Close', { duration: 5000 });
+    // The component uses catchError to fall back to internal mock data, so loading should complete
+    expect(component.loading()).toBe(false);
+    // clients should be populated with the fallback mock data (not empty)
+    expect(component.clients().length).toBeGreaterThan(0);
   });
 
   it('getInitials extracts up to 2 initials', () => {
@@ -92,9 +96,10 @@ describe('ClientManagementComponent', () => {
     expect(component.getInitials('Bob')).toBe('B');
   });
 
-  it('getCaseCountColor returns correct color by count', () => {
-    expect(component.getCaseCountColor(5)).toBe('warn');
-    expect(component.getCaseCountColor(2)).toBe('primary');
-    expect(component.getCaseCountColor(0)).toBe('accent');
+  it('getClientStatus returns correct status based on client data', () => {
+    // at-risk: 3 or more active cases
+    expect(component.getClientStatus(MOCK_CLIENTS[1])).toBe('at-risk');
+    // inactive: lastContact more than 90 days ago (Alice's lastContact is 2024-01-15)
+    expect(component.getClientStatus(MOCK_CLIENTS[0])).toBe('inactive');
   });
 });

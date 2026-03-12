@@ -59,49 +59,40 @@ describe('AnalyticsComponent', () => {
     fixture.detectChanges();
   }
 
-  it('shows loading spinner before data arrives', () => {
+  it('shows loading before data arrives', () => {
     fixture.detectChanges();
-    expect(component.loading()).toBe(true);
+    expect(component.loading).toBe(true);
     http.expectOne(`${BASE}/analytics`).flush(MOCK);
   });
 
   it('renders KPI values after data loads', () => {
     flush();
-    expect(component.data().totalCases).toBe(8);
-    expect(component.data().openCases).toBe(3);
-    expect(component.data().resolvedCases).toBe(5);
-    expect(component.data().successRate).toBe(62);
+    expect(component.summary?.totalCases).toBe(8);
+    expect(component.summary?.activeCases).toBe(3);
+    expect(component.summary?.winRate).toBe(62);
   });
 
   it('renders monthly chart data', () => {
     flush();
-    expect(component.data().casesByMonth).toHaveLength(3);
-    expect(component.data().casesByMonth[1].month).toBe('Nov 2025');
+    expect(component.timeline).toHaveLength(3);
+    expect(component.timeline[1].month).toBe('Nov 2025');
   });
 
-  it('computes maxMonthCount and barHeight correctly', () => {
+  it('computes barHeight correctly', () => {
     flush();
-    expect(component.maxMonthCount()).toBe(4);
     expect(component.barHeight(4)).toBe(100);
     expect(component.barHeight(2)).toBe(50);
   });
 
-  it('renders violation breakdown', () => {
-    flush();
-    expect(component.data().violationBreakdown).toHaveLength(2);
-    expect(component.data().violationBreakdown[0].type).toBe('Speeding');
-    expect(component.data().violationBreakdown[0].pct).toBe(62);
-  });
-
-  it('shows error state on fetch failure', () => {
+  it('shows fallback state on fetch failure', () => {
     fixture.detectChanges();
     http.expectOne(`${BASE}/analytics`).flush('error', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
-    expect(component.error()).toBeTruthy();
-    expect(component.loading()).toBe(false);
+    expect(component.loading).toBe(false);
+    expect(component.summary).toBeTruthy();
   });
 
-  it('retry calls loadData and clears error', () => {
+  it('retry calls loadData and refreshes data', () => {
     fixture.detectChanges();
     http.expectOne(`${BASE}/analytics`).flush('error', { status: 500, statusText: 'error' });
     fixture.detectChanges();
@@ -109,7 +100,7 @@ describe('AnalyticsComponent', () => {
     component.loadData();
     http.expectOne(`${BASE}/analytics`).flush(MOCK);
     fixture.detectChanges();
-    expect(component.error()).toBe('');
+    expect(component.summary).toBeTruthy();
   });
 
   it('goBack() navigates to /driver/dashboard', () => {

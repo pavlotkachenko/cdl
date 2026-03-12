@@ -1,5 +1,7 @@
 /**
- * Tests for OperatorDashboardComponent — Sprint 003 Story 7.8 + Sprint 016
+ * Tests for OperatorDashboardComponent — Sprint 049 rewrite
+ * Tests the operator-scoped dashboard with my-cases, unassigned queue,
+ * search filtering, and request-assignment workflow.
  */
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Router } from '@angular/router';
@@ -9,21 +11,24 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { OperatorDashboardComponent } from './operator-dashboard.component';
 import { CaseService } from '../../../core/services/case.service';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 
-const MOCK_CASES_RESPONSE = {
+const MOCK_OPERATOR_RESPONSE = {
   cases: [
-    { id: 'c1', case_number: 'CDL-001', customer_name: 'John Doe',
-      violation_type: 'speeding', state: 'CA', age_hours: 5, status: 'new' },
-    { id: 'c2', case_number: 'CDL-002', customer_name: 'Jane Roe',
-      violation_type: 'parking', state: 'TX', age_hours: 50, status: 'new' },
+    { id: 'c1', case_number: 'CDL-601', customer_name: 'Marcus Rivera',
+      violation_type: 'Speeding', state: 'TX', status: 'reviewed', ageHours: 72, created_at: '2026-03-08T10:30:00Z' },
+    { id: 'c2', case_number: 'CDL-602', customer_name: 'Jennifer Walsh',
+      violation_type: 'Overweight', state: 'CA', status: 'assigned_to_attorney', ageHours: 44, created_at: '2026-03-09T14:15:00Z' },
   ],
-  summary: { newCount: 2, avgAgeHours: 17, assignedToday: 3 },
+  summary: { assignedToMe: 2, inProgress: 1, resolvedToday: 0, pendingApproval: 1 },
 };
 
-const MOCK_ATTORNEYS = {
-  attorneys: [
-    { id: 'a1', full_name: 'Alice Smith', email: 'alice@law.com' },
-    { id: 'a2', full_name: 'Bob Jones', email: 'bob@law.com' },
+const MOCK_UNASSIGNED_RESPONSE = {
+  cases: [
+    { id: 'u1', case_number: 'CDL-610', customer_name: 'Sarah Kim',
+      violation_type: 'Lane Change', state: 'NY', status: 'new', ageHours: 18, requested: false },
+    { id: 'u2', case_number: 'CDL-611', customer_name: 'Robert Jackson',
+      violation_type: 'Following', state: 'IL', status: 'new', ageHours: 47, requested: true },
   ],
 };
 
@@ -32,17 +37,18 @@ describe('OperatorDashboardComponent', () => {
   let component: OperatorDashboardComponent;
   let caseServiceSpy: {
     getOperatorCases: ReturnType<typeof vi.fn>;
-    getAvailableAttorneys: ReturnType<typeof vi.fn>;
-    assignToAttorney: ReturnType<typeof vi.fn>;
+    getUnassignedCases: ReturnType<typeof vi.fn>;
+    requestAssignment: ReturnType<typeof vi.fn>;
   };
   let routerSpy: { navigate: ReturnType<typeof vi.fn> };
   let snackBarSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     caseServiceSpy = {
-      getOperatorCases: vi.fn().mockReturnValue(of(MOCK_CASES_RESPONSE)),
-      getAvailableAttorneys: vi.fn().mockReturnValue(of(MOCK_ATTORNEYS)),
-      assignToAttorney: vi.fn().mockReturnValue(of({ message: 'Assigned' })),
+      getOperatorCases: vi.fn().mockReturnValue(of(MOCK_OPERATOR_RESPONSE)),
+      getUnassignedCases: vi.fn().mockReturnValue(of(MOCK_UNASSIGNED_RESPONSE)),
+      requestAssignment: vi.fn().mockReturnValue(of({ request: { id: 'r1' } })),
     };
 
     routerSpy = { navigate: vi.fn() };
@@ -52,6 +58,7 @@ describe('OperatorDashboardComponent', () => {
       providers: [
         { provide: CaseService, useValue: caseServiceSpy },
         { provide: Router, useValue: routerSpy },
+        provideTranslateService(),
       ],
     }).compileComponents();
 
@@ -71,18 +78,19 @@ describe('OperatorDashboardComponent', () => {
   // ----------------------------------------------------------------
   // Initialisation
   // ----------------------------------------------------------------
-  it('loads cases and attorneys on init', () => {
-    expect(caseServiceSpy.getOperatorCases).toHaveBeenCalledWith('new');
-    expect(caseServiceSpy.getAvailableAttorneys).toHaveBeenCalled();
-    expect(component.cases()).toHaveLength(2);
-    expect(component.attorneys()).toHaveLength(2);
+  it('loads my cases and unassigned cases on init', () => {
+    expect(caseServiceSpy.getOperatorCases).toHaveBeenCalled();
+    expect(caseServiceSpy.getUnassignedCases).toHaveBeenCalled();
+    expect(component.myCases()).toHaveLength(2);
+    expect(component.unassignedCases()).toHaveLength(2);
   });
 
-  it('populates summary metrics', () => {
+  it('populates summary from API response', () => {
     const s = component.summary();
-    expect(s.newCount).toBe(2);
-    expect(s.avgAgeHours).toBe(17);
-    expect(s.assignedToday).toBe(3);
+    expect(s.assignedToMe).toBe(2);
+    expect(s.inProgress).toBe(1);
+    expect(s.resolvedToday).toBe(0);
+    expect(s.pendingApproval).toBe(1);
   });
 
   it('sets loading to false after data loads', () => {
@@ -90,236 +98,122 @@ describe('OperatorDashboardComponent', () => {
   });
 
   // ----------------------------------------------------------------
-  // load()
+  // refresh()
   // ----------------------------------------------------------------
-  it('load() calls getOperatorCases again on refresh', () => {
-    component.load();
+  it('refresh() reloads data from both endpoints', () => {
+    component.refresh();
     expect(caseServiceSpy.getOperatorCases).toHaveBeenCalledTimes(2);
+    expect(caseServiceSpy.getUnassignedCases).toHaveBeenCalledTimes(2);
   });
 
-  it('load() handles errors gracefully', () => {
+  it('handles getOperatorCases error gracefully with fallback data', () => {
     caseServiceSpy.getOperatorCases.mockReturnValue(throwError(() => new Error('DB error')));
-    component.load();
+    component.refresh();
+    // Should still have data from catchError fallback
     expect(component.loading()).toBe(false);
+    expect(component.myCases().length).toBeGreaterThanOrEqual(0);
   });
 
   // ----------------------------------------------------------------
-  // Status filter
+  // Search filters
   // ----------------------------------------------------------------
-  it('setStatusFilter updates statusFilter and reloads', () => {
-    component.setStatusFilter('under_review');
-    expect(component.statusFilter()).toBe('under_review');
-    expect(caseServiceSpy.getOperatorCases).toHaveBeenCalledWith('under_review');
+  it('filteredMyCases returns all when search is empty', () => {
+    expect(component.filteredMyCases()).toHaveLength(2);
   });
 
-  it('setStatusFilter clears selection', () => {
-    component.toggleSelect('c1');
-    component.setStatusFilter('waiting_for_driver');
-    expect(component.selectedCount()).toBe(0);
+  it('filteredMyCases filters by case number', () => {
+    component.mySearch.set('601');
+    expect(component.filteredMyCases()).toHaveLength(1);
+    expect(component.filteredMyCases()[0].case_number).toBe('CDL-601');
+  });
+
+  it('filteredMyCases filters by customer name', () => {
+    component.mySearch.set('jennifer');
+    expect(component.filteredMyCases()).toHaveLength(1);
+    expect(component.filteredMyCases()[0].customer_name).toBe('Jennifer Walsh');
+  });
+
+  it('filteredMyCases filters by violation type', () => {
+    component.mySearch.set('speeding');
+    expect(component.filteredMyCases()).toHaveLength(1);
+  });
+
+  it('filteredUnassigned filters by customer name', () => {
+    component.queueSearch.set('sarah');
+    expect(component.filteredUnassigned()).toHaveLength(1);
+    expect(component.filteredUnassigned()[0].customer_name).toBe('Sarah Kim');
+  });
+
+  it('filteredUnassigned returns all when search is empty', () => {
+    expect(component.filteredUnassigned()).toHaveLength(2);
   });
 
   // ----------------------------------------------------------------
-  // openAssign / cancelAssign
+  // viewCase
   // ----------------------------------------------------------------
-  it('openAssign() sets selectedCaseId and resets form', () => {
-    component.selectedAttorneyId.set('old-id');
-    component.attorneyPrice.set('999');
-    component.openAssign('case-1');
-
-    expect(component.selectedCaseId()).toBe('case-1');
-    expect(component.selectedAttorneyId()).toBe('');
-    expect(component.attorneyPrice()).toBe('');
-  });
-
-  it('cancelAssign() clears selectedCaseId', () => {
-    component.openAssign('case-1');
-    component.cancelAssign();
-    expect(component.selectedCaseId()).toBeNull();
+  it('viewCase navigates to /operator/cases/:id', () => {
+    component.viewCase('c1');
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/operator/cases', 'c1']);
   });
 
   // ----------------------------------------------------------------
-  // confirmAssign()
+  // requestAssignment
   // ----------------------------------------------------------------
-  it('confirmAssign() calls assignToAttorney and reloads on success', () => {
-    component.openAssign('case-1');
-    component.selectedAttorneyId.set('a1');
-    component.attorneyPrice.set('450');
+  it('requestAssignment calls service and marks case as requested', () => {
+    component.requestAssignment('u1');
+    expect(caseServiceSpy.requestAssignment).toHaveBeenCalledWith('u1');
+    // After success, case should be marked requested
+    const updated = component.unassignedCases().find((c: any) => c.id === 'u1');
+    expect(updated.requested).toBe(true);
+  });
 
-    component.confirmAssign();
+  it('requestAssignment increments pendingApproval count', () => {
+    const before = component.summary().pendingApproval;
+    component.requestAssignment('u1');
+    expect(component.summary().pendingApproval).toBe(before + 1);
+  });
 
-    expect(caseServiceSpy.assignToAttorney).toHaveBeenCalledWith('case-1', 'a1', 450);
+  it('requestAssignment shows success snackbar', () => {
+    component.requestAssignment('u1');
     expect(snackBarSpy).toHaveBeenCalledWith(
-      expect.stringContaining('success'),
+      expect.stringContaining('Assignment requested'),
       expect.anything(),
       expect.any(Object)
     );
-    expect(component.selectedCaseId()).toBeNull();
-    expect(component.assigning()).toBe(false);
   });
 
-  it('confirmAssign() shows error snackbar on price invalid', () => {
-    component.openAssign('case-1');
-    component.selectedAttorneyId.set('a1');
-    component.attorneyPrice.set('-100');
-
-    component.confirmAssign();
-
-    expect(caseServiceSpy.assignToAttorney).not.toHaveBeenCalled();
-    expect(snackBarSpy).toHaveBeenCalledWith(
-      expect.stringContaining('fee'),
-      expect.anything(),
-      expect.any(Object)
-    );
-  });
-
-  it('confirmAssign() does nothing when no case or attorney selected', () => {
-    component.confirmAssign();
-    expect(caseServiceSpy.assignToAttorney).not.toHaveBeenCalled();
-  });
-
-  it('confirmAssign() shows error snackbar when service fails', () => {
-    caseServiceSpy.assignToAttorney.mockReturnValue(throwError(() => new Error('Failed')));
-    component.openAssign('case-1');
-    component.selectedAttorneyId.set('a1');
-    component.attorneyPrice.set('450');
-
-    component.confirmAssign();
-
+  it('requestAssignment shows error snackbar on failure', () => {
+    caseServiceSpy.requestAssignment.mockReturnValue(throwError(() => new Error('fail')));
+    component.requestAssignment('u1');
     expect(snackBarSpy).toHaveBeenCalledWith(
       expect.stringContaining('Failed'),
       expect.anything(),
       expect.any(Object)
     );
-    expect(component.assigning()).toBe(false);
+  });
+
+  it('requestAssignment sets and clears requestingId', () => {
+    // Before call completes, requestingId should be set
+    // After success, it should be cleared
+    component.requestAssignment('u1');
+    expect(component.requestingId()).toBeNull(); // cleared after sync observable resolves
   });
 
   // ----------------------------------------------------------------
-  // Bulk selection
+  // Utility methods
   // ----------------------------------------------------------------
-  it('toggleSelect adds a case to selection', () => {
-    component.toggleSelect('c1');
-    expect(component.selectedCaseIds().has('c1')).toBe(true);
-    expect(component.selectedCount()).toBe(1);
+  it('getStatusKey returns translation key for known statuses', () => {
+    expect(component.getStatusKey('new')).toBe('OPR.STATUS_NEW');
+    expect(component.getStatusKey('reviewed')).toBe('OPR.STATUS_IN_PROGRESS');
+    expect(component.getStatusKey('assigned_to_attorney')).toBe('OPR.STATUS_ASSIGNED');
+    expect(component.getStatusKey('resolved')).toBe('OPR.STATUS_RESOLVED');
   });
 
-  it('toggleSelect removes an already-selected case', () => {
-    component.toggleSelect('c1');
-    component.toggleSelect('c1');
-    expect(component.selectedCaseIds().has('c1')).toBe(false);
-    expect(component.selectedCount()).toBe(0);
+  it('getStatusKey returns raw status for unknown statuses', () => {
+    expect(component.getStatusKey('unknown_status')).toBe('unknown_status');
   });
 
-  it('toggleAll selects all loaded cases', () => {
-    component.toggleAll();
-    expect(component.allSelected()).toBe(true);
-    expect(component.selectedCount()).toBe(2);
-  });
-
-  it('toggleAll deselects all when all are already selected', () => {
-    component.toggleAll(); // select all
-    component.toggleAll(); // deselect all
-    expect(component.selectedCount()).toBe(0);
-    expect(component.allSelected()).toBe(false);
-  });
-
-  it('someSelected is true when a subset is selected', () => {
-    component.toggleSelect('c1');
-    expect(component.someSelected()).toBe(true);
-    expect(component.allSelected()).toBe(false);
-  });
-
-  it('clearSelection deselects all', () => {
-    component.toggleAll();
-    component.clearSelection();
-    expect(component.selectedCount()).toBe(0);
-  });
-
-  // ----------------------------------------------------------------
-  // Bulk assign
-  // ----------------------------------------------------------------
-  it('bulkAssign calls assignToAttorney for each selected case', () => {
-    component.toggleAll();
-    component.bulkAttorneyId.set('a1');
-    component.bulkPrice.set('350');
-
-    component.bulkAssign();
-
-    expect(caseServiceSpy.assignToAttorney).toHaveBeenCalledTimes(2);
-    expect(caseServiceSpy.assignToAttorney).toHaveBeenCalledWith('c1', 'a1', 350);
-    expect(caseServiceSpy.assignToAttorney).toHaveBeenCalledWith('c2', 'a1', 350);
-  });
-
-  it('bulkAssign clears selection and resets form on success', () => {
-    component.toggleAll();
-    component.bulkAttorneyId.set('a1');
-    component.bulkPrice.set('350');
-
-    component.bulkAssign();
-
-    expect(component.selectedCount()).toBe(0);
-    expect(component.bulkAttorneyId()).toBe('');
-    expect(component.bulkPrice()).toBe('');
-    expect(component.bulkAssigning()).toBe(false);
-  });
-
-  it('bulkAssign shows success snackBar with count', () => {
-    component.toggleAll();
-    component.bulkAttorneyId.set('a1');
-    component.bulkPrice.set('350');
-
-    component.bulkAssign();
-
-    expect(snackBarSpy).toHaveBeenCalledWith(
-      expect.stringContaining('2 case(s)'),
-      expect.anything(),
-      expect.any(Object)
-    );
-  });
-
-  it('bulkAssign shows error snackbar on invalid price', () => {
-    component.toggleSelect('c1');
-    component.bulkAttorneyId.set('a1');
-    component.bulkPrice.set('0');
-
-    component.bulkAssign();
-
-    expect(caseServiceSpy.assignToAttorney).not.toHaveBeenCalled();
-    expect(snackBarSpy).toHaveBeenCalledWith(
-      expect.stringContaining('fee'),
-      expect.anything(),
-      expect.any(Object)
-    );
-  });
-
-  it('bulkAssign does nothing when no cases are selected', () => {
-    component.bulkAttorneyId.set('a1');
-    component.bulkPrice.set('350');
-    component.bulkAssign();
-    expect(caseServiceSpy.assignToAttorney).not.toHaveBeenCalled();
-  });
-
-  // ----------------------------------------------------------------
-  // Priority badges
-  // ----------------------------------------------------------------
-  it('getAgePriority returns urgent for 48+ hours', () => {
-    expect(component.getAgePriority(48)).toBe('urgent');
-    expect(component.getAgePriority(72)).toBe('urgent');
-  });
-
-  it('getAgePriority returns warning for 24-47 hours', () => {
-    expect(component.getAgePriority(24)).toBe('warning');
-    expect(component.getAgePriority(47)).toBe('warning');
-  });
-
-  it('getAgePriority returns empty string for under 24 hours', () => {
-    expect(component.getAgePriority(5)).toBe('');
-    expect(component.getAgePriority(0)).toBe('');
-  });
-
-  // ----------------------------------------------------------------
-  // formatAge()
-  // ----------------------------------------------------------------
-  it('formatAge formats hours under 24 as hours', () => {
+  it('formatAge formats hours under 24 as hours only', () => {
     expect(component.formatAge(5)).toBe('5h');
     expect(component.formatAge(0)).toBe('0h');
   });

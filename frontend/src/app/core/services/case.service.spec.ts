@@ -1,7 +1,8 @@
 /**
- * Tests for CaseService — Sprint 003 new methods
+ * Tests for CaseService — Sprint 003 + Sprint 049 methods
  * Covers: listDocuments, uploadDocument, deleteDocument,
- *         getOperatorCases, getAvailableAttorneys, assignToAttorney,
+ *         getOperatorCases, getUnassignedCases, requestAssignment,
+ *         getAvailableAttorneys, assignToAttorney,
  *         acceptCase, declineCase, getRecommendedAttorneys, selectAttorney
  */
 import { TestBed } from '@angular/core/testing';
@@ -82,23 +83,58 @@ describe('CaseService — Sprint 003 methods', () => {
   // getOperatorCases
   // ----------------------------------------------------------------
   describe('getOperatorCases', () => {
-    it('GET /operator/cases with default status=new', () => {
-      const mockResponse = { cases: [], summary: { newCount: 0, avgAgeHours: 0, assignedToday: 0 } };
+    it('GET /operator/cases without params when no status given', () => {
+      const mockResponse = { cases: [], summary: { assignedToMe: 0, inProgress: 0, resolvedToday: 0, pendingApproval: 0 } };
 
       service.getOperatorCases().subscribe(res => {
         expect(res).toEqual(mockResponse);
       });
 
-      const req = http.expectOne(`${API}/operator/cases?status=new`);
+      const req = http.expectOne(`${API}/operator/cases`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
 
-    it('GET /operator/cases with custom status', () => {
+    it('GET /operator/cases with status param when provided', () => {
       service.getOperatorCases('reviewed').subscribe();
       const req = http.expectOne(`${API}/operator/cases?status=reviewed`);
       expect(req.request.urlWithParams).toContain('status=reviewed');
       req.flush({ cases: [], summary: {} });
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // getUnassignedCases
+  // ----------------------------------------------------------------
+  describe('getUnassignedCases', () => {
+    it('GET /operator/unassigned and returns response', () => {
+      const mockResponse = { cases: [{ id: 'u1', case_number: 'CDL-610', requested: false }] };
+
+      service.getUnassignedCases().subscribe(res => {
+        expect(res).toEqual(mockResponse);
+      });
+
+      const req = http.expectOne(`${API}/operator/unassigned`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // requestAssignment
+  // ----------------------------------------------------------------
+  describe('requestAssignment', () => {
+    it('POST /operator/cases/:id/request-assignment with empty body', () => {
+      const mockResponse = { request: { id: 'r1', case_id: 'case-1', status: 'pending' } };
+
+      service.requestAssignment('case-1').subscribe(res => {
+        expect(res).toEqual(mockResponse);
+      });
+
+      const req = http.expectOne(`${API}/operator/cases/case-1/request-assignment`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush(mockResponse);
     });
   });
 

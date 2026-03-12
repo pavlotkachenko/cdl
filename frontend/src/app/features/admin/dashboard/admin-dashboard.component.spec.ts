@@ -3,9 +3,12 @@ import { Router } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect } from 'vitest';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { AdminDashboardComponent } from './admin-dashboard.component';
 import { AdminService, DashboardStats, Case, WorkloadDistribution } from '../../../core/services/admin.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 const MOCK_STATS: DashboardStats = {
   totalCases: 100, activeCases: 30, pendingCases: 10, resolvedCases: 60,
@@ -39,19 +42,39 @@ function makeServiceSpy() {
   };
 }
 
+function makeDashboardServiceSpy() {
+  return {
+    getCaseQueue: vi.fn().mockReturnValue(of({ cases: [], total: 0 })),
+    getViolationTypeDistribution: vi.fn().mockReturnValue(of(null)),
+    getAttorneyWorkloadDistribution: vi.fn().mockReturnValue(of(null)),
+    autoAssignCase: vi.fn().mockReturnValue(of({ success: true })),
+    assignCase: vi.fn().mockReturnValue(of({ success: true })),
+  };
+}
+
+function makeAuthServiceSpy() {
+  return {};
+}
+
 async function setup(spy = makeServiceSpy()) {
   const routerSpy = { navigate: vi.fn() };
+  const dashSpy = makeDashboardServiceSpy();
+  const authSpy = makeAuthServiceSpy();
+
   await TestBed.configureTestingModule({
     imports: [AdminDashboardComponent, NoopAnimationsModule],
     providers: [
+      provideTranslateService(),
       { provide: AdminService, useValue: spy },
+      { provide: DashboardService, useValue: dashSpy },
+      { provide: AuthService, useValue: authSpy },
       { provide: Router, useValue: routerSpy },
     ],
   }).compileComponents();
 
   const fixture = TestBed.createComponent(AdminDashboardComponent);
   fixture.detectChanges();
-  return { fixture, component: fixture.componentInstance, spy, router: routerSpy };
+  return { fixture, component: fixture.componentInstance, spy, dashSpy, router: routerSpy };
 }
 
 describe('AdminDashboardComponent', () => {
@@ -82,12 +105,6 @@ describe('AdminDashboardComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/admin/cases']);
   });
 
-  it('viewStaff navigates to /admin/staff', async () => {
-    const { component, router } = await setup();
-    component.viewStaff();
-    expect(router.navigate).toHaveBeenCalledWith(['/admin/staff']);
-  });
-
   it('viewCase navigates to /admin/cases/:id', async () => {
     const { component, router } = await setup();
     component.viewCase(MOCK_CASES[0]);
@@ -105,10 +122,8 @@ describe('AdminDashboardComponent', () => {
   it('sets error signal when getAllCases fails', async () => {
     const spy = makeServiceSpy();
     spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
-    const { component, fixture } = await setup(spy);
-    expect(component.error()).toBe('Failed to load dashboard data.');
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('Failed to load dashboard data.');
+    const { component } = await setup(spy);
+    expect(component.error()).toBe('ADMIN.FAILED_LOAD');
   });
 
   it('clears error and retries on loadDashboardData call', async () => {

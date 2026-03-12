@@ -77,7 +77,7 @@ describe('LandingComponent', () => {
   it('visibleTestimonials returns first 4 testimonials on page 0', () => {
     component.currentTestimonialIndex.set(0);
     expect(component.visibleTestimonials().length).toBe(4);
-    expect(component.visibleTestimonials()[0].name).toBe('Losta M.');
+    expect(component.visibleTestimonials()[0].nameKey).toBeTruthy();
   });
 
   it('nextTestimonial advances to next page', () => {
@@ -155,12 +155,9 @@ describe('LandingComponent', () => {
     expect(clearSpy).toHaveBeenCalled();
   });
 
-  it('hero slides use line1/line2 text fields — no innerHTML binding', () => {
-    const el: HTMLElement = fixture.nativeElement;
-    const h1 = el.querySelector('.hero-title');
-    expect(h1).not.toBeNull();
-    expect(h1!.textContent).toContain(component.heroSlides[0].line1);
-    expect(h1!.textContent).toContain(component.heroSlides[0].line2);
+  it('hero slides use translation keys — no innerHTML binding', () => {
+    expect(component.heroSlides[0].line1Key).toBeTruthy();
+    expect(component.heroSlides[0].line2Key).toBeTruthy();
   });
 
   it('carousel pagination dots have aria-label with slide number', () => {

@@ -17,10 +17,12 @@ let chain;
 
 function buildChain(arrayResult = { data: [], error: null, count: 0 }) {
   chain = {};
-  const plain = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'in',
+  const plain = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'in', 'is',
     'gte', 'lte', 'order', 'limit', 'head'];
   plain.forEach(m => { chain[m] = jest.fn().mockReturnValue(chain); });
   chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+  chain.maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
+  chain.catch = jest.fn().mockReturnValue(chain);
   chain.then = (onFulfilled, onRejected) =>
     Promise.resolve(arrayResult).then(onFulfilled, onRejected);
   supabase.from.mockReturnValue(chain);
@@ -28,7 +30,7 @@ function buildChain(arrayResult = { data: [], error: null, count: 0 }) {
 
 function makeReq(overrides = {}) {
   return {
-    user: { id: 'op-1', role: 'operator' },
+    user: { id: 'op-1', role: 'operator', full_name: 'Test Operator' },
     query: {},
     params: {},
     body: {},
@@ -51,28 +53,28 @@ beforeEach(() => {
 // getOperatorCases
 // ============================================================
 describe('getOperatorCases', () => {
-  test('returns cases with computed ageHours', async () => {
+  test('returns cases scoped to operator with summary', async () => {
     const now = Date.now();
     const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
 
     const cases = [
-      { id: 'c1', case_number: 'CDL-001', status: 'new', state: 'CA',
+      { id: 'c1', case_number: 'CDL-001', status: 'reviewed', state: 'CA',
         violation_type: 'speeding', created_at: oneHourAgo, customer_name: 'John Doe',
         attorney_price: null, driver: null },
     ];
 
     // First awaited chain call (cases query) → cases array
-    // Second awaited chain call (assignedToday count) → { count: 2 }
+    // Second awaited chain call (pending assignment requests count) → { count: 1 }
     let callCount = 0;
     chain.then = (onFulfilled) => {
       callCount++;
       const result = callCount === 1
         ? { data: cases, error: null }
-        : { data: null, error: null, count: 2 };
+        : { data: null, error: null, count: 1 };
       return Promise.resolve(result).then(onFulfilled);
     };
 
-    const req = makeReq({ query: { status: 'new' } });
+    const req = makeReq();
     const res = makeRes();
 
     await operatorController.getOperatorCases(req, res);
@@ -80,32 +82,40 @@ describe('getOperatorCases', () => {
     const { cases: returned, summary } = res.json.mock.calls[0][0];
     expect(returned).toHaveLength(1);
     expect(returned[0].ageHours).toBeGreaterThanOrEqual(0);
-    expect(summary.newCount).toBe(1);
-    expect(summary.avgAgeHours).toBeGreaterThanOrEqual(0);
-    expect(summary.assignedToday).toBe(2);
+    expect(summary.assignedToMe).toBe(1);
+    expect(summary.inProgress).toBe(1); // 'reviewed' is in progress
+    expect(summary.pendingApproval).toBe(1);
   });
 
-  test('defaults to status=new when no query param provided', async () => {
-    const req = makeReq({ query: {} });
+  test('scopes query to assigned_operator_id', async () => {
+    const req = makeReq();
     const res = makeRes();
 
     await operatorController.getOperatorCases(req, res);
 
-    // Should query cases table with status eq 'new'
-    expect(chain.eq).toHaveBeenCalledWith('status', 'new');
+    expect(chain.eq).toHaveBeenCalledWith('assigned_operator_id', 'op-1');
   });
 
-  test('returns empty cases and zeroed summary when queue is empty', async () => {
-    const req = makeReq({ query: { status: 'new' } });
+  test('applies optional status filter', async () => {
+    const req = makeReq({ query: { status: 'reviewed' } });
     const res = makeRes();
 
-    // Default: buildChain gives { data: [], error: null, count: 0 }
+    await operatorController.getOperatorCases(req, res);
+
+    expect(chain.eq).toHaveBeenCalledWith('status', 'reviewed');
+  });
+
+  test('returns empty cases and zeroed summary when no cases assigned', async () => {
+    const req = makeReq();
+    const res = makeRes();
+
     await operatorController.getOperatorCases(req, res);
 
     const { cases: returned, summary } = res.json.mock.calls[0][0];
     expect(returned).toEqual([]);
-    expect(summary.newCount).toBe(0);
-    expect(summary.avgAgeHours).toBe(0);
+    expect(summary.assignedToMe).toBe(0);
+    expect(summary.inProgress).toBe(0);
+    expect(summary.resolvedToday).toBe(0);
   });
 
   test('returns 500 on supabase error', async () => {
@@ -116,6 +126,198 @@ describe('getOperatorCases', () => {
     const res = makeRes();
 
     await operatorController.getOperatorCases(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'FETCH_ERROR' }) })
+    );
+  });
+});
+
+// ============================================================
+// getUnassignedCases
+// ============================================================
+describe('getUnassignedCases', () => {
+  test('returns unassigned cases with requested flag', async () => {
+    const now = Date.now();
+    const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000).toISOString();
+
+    const cases = [
+      { id: 'u1', case_number: 'CDL-610', status: 'new', state: 'NY',
+        violation_type: 'lane change', created_at: twoHoursAgo, customer_name: 'Sarah Kim' },
+    ];
+
+    const requests = [{ case_id: 'u1', status: 'pending' }];
+
+    let callCount = 0;
+    chain.then = (onFulfilled) => {
+      callCount++;
+      const result = callCount === 1
+        ? { data: cases, error: null }
+        : { data: requests, error: null };
+      return Promise.resolve(result).then(onFulfilled);
+    };
+
+    const req = makeReq();
+    const res = makeRes();
+
+    await operatorController.getUnassignedCases(req, res);
+
+    const { cases: returned } = res.json.mock.calls[0][0];
+    expect(returned).toHaveLength(1);
+    expect(returned[0].requested).toBe(true);
+    expect(returned[0].ageHours).toBeGreaterThanOrEqual(1);
+  });
+
+  test('marks cases as not requested when no pending requests exist', async () => {
+    const cases = [
+      { id: 'u1', case_number: 'CDL-610', status: 'new', state: 'NY',
+        violation_type: 'lane change', created_at: new Date().toISOString(), customer_name: 'Sarah Kim' },
+    ];
+
+    let callCount = 0;
+    chain.then = (onFulfilled) => {
+      callCount++;
+      const result = callCount === 1
+        ? { data: cases, error: null }
+        : { data: [], error: null };
+      return Promise.resolve(result).then(onFulfilled);
+    };
+
+    const req = makeReq();
+    const res = makeRes();
+
+    await operatorController.getUnassignedCases(req, res);
+
+    const { cases: returned } = res.json.mock.calls[0][0];
+    expect(returned[0].requested).toBe(false);
+  });
+
+  test('queries for null assigned_operator_id and new/submitted status', async () => {
+    const req = makeReq();
+    const res = makeRes();
+
+    await operatorController.getUnassignedCases(req, res);
+
+    expect(chain.is).toHaveBeenCalledWith('assigned_operator_id', null);
+    expect(chain.in).toHaveBeenCalledWith('status', ['new', 'submitted']);
+  });
+
+  test('returns 500 on supabase error', async () => {
+    chain.then = (onFulfilled) =>
+      Promise.resolve({ data: null, error: { message: 'db error' } }).then(onFulfilled);
+
+    const req = makeReq();
+    const res = makeRes();
+
+    await operatorController.getUnassignedCases(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'FETCH_ERROR' }) })
+    );
+  });
+});
+
+// ============================================================
+// requestAssignment
+// ============================================================
+describe('requestAssignment', () => {
+  test('creates assignment request for unassigned case', async () => {
+    // .single() calls: 1st = case lookup, 2nd = maybeSingle (existing check), 3rd = insert result
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) {
+        // Case lookup — found and unassigned
+        return Promise.resolve({ data: { id: 'c1', case_number: 'CDL-001', assigned_operator_id: null }, error: null });
+      }
+      // Insert result
+      return Promise.resolve({ data: { id: 'r1', case_id: 'c1', operator_id: 'op-1', status: 'pending' }, error: null });
+    });
+
+    // maybeSingle: no existing pending request
+    chain.maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
+
+    // thenable for admin query
+    chain.then = (onFulfilled) =>
+      Promise.resolve({ data: [{ id: 'admin-1' }], error: null }).then(onFulfilled);
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.requestAssignment(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ request: expect.objectContaining({ case_id: 'c1' }) })
+    );
+  });
+
+  test('returns 404 when case not found', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: { message: 'not found' } });
+
+    const req = makeReq({ params: { caseId: 'nonexistent' } });
+    const res = makeRes();
+
+    await operatorController.requestAssignment(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'NOT_FOUND' }) })
+    );
+  });
+
+  test('returns 400 when case is already assigned', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { id: 'c1', case_number: 'CDL-001', assigned_operator_id: 'other-op' },
+      error: null,
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.requestAssignment(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'ALREADY_ASSIGNED' }) })
+    );
+  });
+
+  test('returns 400 when duplicate pending request exists', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { id: 'c1', case_number: 'CDL-001', assigned_operator_id: null },
+      error: null,
+    });
+    chain.maybeSingle = jest.fn().mockResolvedValue({
+      data: { id: 'existing-request' },
+      error: null,
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.requestAssignment(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'DUPLICATE_REQUEST' }) })
+    );
+  });
+
+  test('returns 500 on insert error', async () => {
+    chain.single = jest.fn().mockImplementation(() => {
+      // First call: case lookup
+      chain.single = jest.fn().mockResolvedValue({ data: null, error: { message: 'insert failed' } });
+      return Promise.resolve({ data: { id: 'c1', case_number: 'CDL-001', assigned_operator_id: null }, error: null });
+    });
+    chain.maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.requestAssignment(req, res);
 
     expect(res.status).toHaveBeenCalledWith(500);
   });

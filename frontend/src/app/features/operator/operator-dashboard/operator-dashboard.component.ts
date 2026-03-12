@@ -10,7 +10,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatRippleModule } from '@angular/material/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
 
@@ -54,267 +56,679 @@ const STATUS_LABELS: Record<string, string> = {
     FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule,
-    MatProgressSpinnerModule, MatDividerModule,
+    MatProgressSpinnerModule, MatTooltipModule,
+    MatChipsModule, MatRippleModule,
     TranslateModule, SkeletonLoaderComponent,
   ],
   template: `
     <div class="op-dash">
 
       <!-- ====== PAGE HEADER ====== -->
-      <div class="page-header">
-        <div>
+      <header class="page-header">
+        <div class="header-text">
           <h1>{{ 'OPR.DASHBOARD' | translate }}</h1>
           <p class="subtitle">{{ 'OPR.DASHBOARD_SUBTITLE' | translate }}</p>
         </div>
-        <button mat-stroked-button (click)="refresh()" aria-label="Refresh dashboard">
+        <button mat-icon-button
+                class="refresh-btn"
+                (click)="refresh()"
+                [matTooltip]="'OPR.REFRESH' | translate"
+                aria-label="Refresh dashboard">
           <mat-icon>refresh</mat-icon>
-          {{ 'OPR.REFRESH' | translate }}
         </button>
-      </div>
+      </header>
 
       @if (loading()) {
         <app-skeleton-loader [rows]="4" [height]="68"></app-skeleton-loader>
       } @else {
 
         <!-- ====== STAT CARDS ====== -->
-        <div class="stat-grid">
-          <mat-card class="stat-card border-blue">
-            <mat-card-content>
-              <div class="stat-icon bg-blue"><mat-icon>assignment_ind</mat-icon></div>
-              <p class="stat-lbl">{{ 'OPR.ASSIGNED_TO_ME' | translate }}</p>
-              <p class="stat-val">{{ summary().assignedToMe }}</p>
-            </mat-card-content>
+        <div class="stat-grid" role="region" aria-label="Case statistics">
+          <mat-card class="stat-card" appearance="outlined">
+            <div class="stat-icon-wrap blue-gradient"><mat-icon>assignment_ind</mat-icon></div>
+            <div class="stat-body">
+              <span class="stat-label">{{ 'OPR.ASSIGNED_TO_ME' | translate }}</span>
+              <span class="stat-value">{{ summary().assignedToMe }}</span>
+            </div>
           </mat-card>
-          <mat-card class="stat-card border-amber">
-            <mat-card-content>
-              <div class="stat-icon bg-amber"><mat-icon>pending_actions</mat-icon></div>
-              <p class="stat-lbl">{{ 'OPR.IN_PROGRESS' | translate }}</p>
-              <p class="stat-val pending">{{ summary().inProgress }}</p>
-            </mat-card-content>
+          <mat-card class="stat-card" appearance="outlined">
+            <div class="stat-icon-wrap amber-gradient"><mat-icon>pending_actions</mat-icon></div>
+            <div class="stat-body">
+              <span class="stat-label">{{ 'OPR.IN_PROGRESS' | translate }}</span>
+              <span class="stat-value amber-text">{{ summary().inProgress }}</span>
+            </div>
           </mat-card>
-          <mat-card class="stat-card border-green">
-            <mat-card-content>
-              <div class="stat-icon bg-green"><mat-icon>check_circle</mat-icon></div>
-              <p class="stat-lbl">{{ 'OPR.RESOLVED_TODAY' | translate }}</p>
-              <p class="stat-val resolved">{{ summary().resolvedToday }}</p>
-            </mat-card-content>
+          <mat-card class="stat-card" appearance="outlined">
+            <div class="stat-icon-wrap green-gradient"><mat-icon>check_circle</mat-icon></div>
+            <div class="stat-body">
+              <span class="stat-label">{{ 'OPR.RESOLVED_TODAY' | translate }}</span>
+              <span class="stat-value green-text">{{ summary().resolvedToday }}</span>
+            </div>
           </mat-card>
-          <mat-card class="stat-card border-purple">
-            <mat-card-content>
-              <div class="stat-icon bg-purple"><mat-icon>hourglass_top</mat-icon></div>
-              <p class="stat-lbl">{{ 'OPR.PENDING_APPROVAL' | translate }}</p>
-              <p class="stat-val">{{ summary().pendingApproval }}</p>
-            </mat-card-content>
+          <mat-card class="stat-card" appearance="outlined">
+            <div class="stat-icon-wrap purple-gradient"><mat-icon>hourglass_top</mat-icon></div>
+            <div class="stat-body">
+              <span class="stat-label">{{ 'OPR.PENDING_APPROVAL' | translate }}</span>
+              <span class="stat-value">{{ summary().pendingApproval }}</span>
+            </div>
           </mat-card>
         </div>
 
         <!-- ====== MY ASSIGNED CASES ====== -->
-        <mat-card class="section-card">
-          <mat-card-header>
-            <mat-card-title>{{ 'OPR.MY_ASSIGNED' | translate }}</mat-card-title>
-            <span class="case-count">{{ myCases().length }} {{ 'OPR.CASES' | translate }}</span>
-          </mat-card-header>
-          <mat-card-content>
+        <section class="section-block" aria-label="My assigned cases">
+          <div class="section-header">
+            <div class="section-title-row">
+              <mat-icon class="section-icon">folder_open</mat-icon>
+              <h2>{{ 'OPR.MY_ASSIGNED' | translate }}</h2>
+            </div>
+            <span class="badge-count">{{ myCases().length }}</span>
+          </div>
 
-            <!-- Search -->
-            <mat-form-field appearance="outline" class="search-field">
-              <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
-              <input matInput
-                     [ngModel]="mySearch()"
-                     (ngModelChange)="mySearch.set($event)" />
-              <mat-icon matPrefix>search</mat-icon>
-            </mat-form-field>
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
+            <input matInput
+                   [ngModel]="mySearch()"
+                   (ngModelChange)="mySearch.set($event)" />
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
 
-            @if (filteredMyCases().length === 0) {
-              <div class="empty-state" role="status">
+          @if (filteredMyCases().length === 0) {
+            <div class="empty-state" role="status">
+              <div class="empty-icon-wrap">
                 <mat-icon aria-hidden="true">inbox</mat-icon>
-                <p class="empty-title">{{ 'OPR.NO_ASSIGNED_CASES' | translate }}</p>
               </div>
-            } @else {
-              @for (c of filteredMyCases(); track c.id) {
-                <div class="case-item"
-                     role="button"
-                     tabindex="0"
-                     (click)="viewCase(c.id)"
-                     (keydown.enter)="viewCase(c.id)"
-                     [attr.aria-label]="'View case ' + c.case_number">
-                  <div class="case-info">
-                    <span class="case-num">{{ c.case_number }}</span>
-                    <span class="case-client">{{ c.customer_name }}</span>
-                    <span class="case-detail">{{ c.violation_type }} · {{ c.state }}</span>
-                  </div>
-                  <div class="case-badges">
-                    <span [class]="'chip status-' + c.status">{{ getStatusKey(c.status) | translate }}</span>
-                    <span class="case-age" [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48" [class.age-urgent]="c.ageHours >= 48">
-                      {{ formatAge(c.ageHours ?? 0) }}
-                    </span>
-                  </div>
+              <p class="empty-title">{{ 'OPR.NO_ASSIGNED_CASES' | translate }}</p>
+            </div>
+          } @else {
+            <!-- Table header -->
+            <div class="table-header" aria-hidden="true">
+              <span class="th-case">{{ 'OPR.CASE' | translate: { Default: 'Case' } }}</span>
+              <span class="th-violation">{{ 'OPR.VIOLATION' | translate: { Default: 'Violation' } }}</span>
+              <span class="th-status">{{ 'OPR.STATUS' | translate: { Default: 'Status' } }}</span>
+              <span class="th-age">{{ 'OPR.AGE' | translate: { Default: 'Age' } }}</span>
+            </div>
+
+            @for (c of filteredMyCases(); track c.id) {
+              <div class="case-row"
+                   matRipple
+                   role="button"
+                   tabindex="0"
+                   (click)="viewCase(c.id)"
+                   (keydown.enter)="viewCase(c.id)"
+                   [attr.aria-label]="'View case ' + c.case_number">
+                <!-- Case + Client -->
+                <div class="cell-case">
+                  <span class="case-num">{{ c.case_number }}</span>
+                  <span class="case-client">{{ c.customer_name }}</span>
                 </div>
-                <mat-divider></mat-divider>
-              }
+                <!-- Violation + State -->
+                <div class="cell-violation">
+                  <span class="violation-text">{{ c.violation_type }}</span>
+                  <span class="state-badge">{{ c.state }}</span>
+                </div>
+                <!-- Status chip -->
+                <div class="cell-status">
+                  <span [class]="'status-chip status-' + c.status">
+                    {{ getStatusKey(c.status) | translate }}
+                  </span>
+                </div>
+                <!-- Age -->
+                <div class="cell-age"
+                     [matTooltip]="'Created ' + c.created_at">
+                  <mat-icon class="age-icon"
+                            [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                            [class.age-urgent]="c.ageHours >= 48">
+                    schedule
+                  </mat-icon>
+                  <span class="age-text"
+                        [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                        [class.age-urgent]="c.ageHours >= 48">
+                    {{ formatAge(c.ageHours ?? 0) }}
+                  </span>
+                </div>
+                <!-- Arrow -->
+                <mat-icon class="row-arrow">chevron_right</mat-icon>
+              </div>
             }
-          </mat-card-content>
-        </mat-card>
+          }
+        </section>
 
         <!-- ====== UNASSIGNED QUEUE ====== -->
-        <mat-card class="section-card">
-          <mat-card-header>
-            <mat-card-title>{{ 'OPR.UNASSIGNED_QUEUE' | translate }}</mat-card-title>
-            <span class="case-count">{{ unassignedCases().length }} {{ 'OPR.QUEUE' | translate }}</span>
-          </mat-card-header>
-          <mat-card-content>
+        <section class="section-block" aria-label="Unassigned case queue">
+          <div class="section-header">
+            <div class="section-title-row">
+              <mat-icon class="section-icon queue-icon">queue</mat-icon>
+              <h2>{{ 'OPR.UNASSIGNED_QUEUE' | translate }}</h2>
+            </div>
+            <span class="badge-count queue-badge">{{ unassignedCases().length }}</span>
+          </div>
 
-            <!-- Search -->
-            <mat-form-field appearance="outline" class="search-field">
-              <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
-              <input matInput
-                     [ngModel]="queueSearch()"
-                     (ngModelChange)="queueSearch.set($event)" />
-              <mat-icon matPrefix>search</mat-icon>
-            </mat-form-field>
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
+            <input matInput
+                   [ngModel]="queueSearch()"
+                   (ngModelChange)="queueSearch.set($event)" />
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
 
-            @if (filteredUnassigned().length === 0) {
-              <div class="empty-state" role="status">
-                <mat-icon aria-hidden="true">queue</mat-icon>
-                <p class="empty-title">{{ 'OPR.NO_UNASSIGNED_CASES' | translate }}</p>
+          @if (filteredUnassigned().length === 0) {
+            <div class="empty-state" role="status">
+              <div class="empty-icon-wrap">
+                <mat-icon aria-hidden="true">playlist_add_check</mat-icon>
               </div>
-            } @else {
+              <p class="empty-title">{{ 'OPR.NO_UNASSIGNED_CASES' | translate }}</p>
+            </div>
+          } @else {
+            <div class="queue-grid">
               @for (c of filteredUnassigned(); track c.id) {
-                <div class="queue-item">
-                  <div class="case-info">
-                    <span class="case-num">{{ c.case_number }}</span>
-                    <span class="case-client">{{ c.customer_name }}</span>
-                    <span class="case-detail">{{ c.violation_type }} · {{ c.state }}</span>
+                <mat-card class="queue-card" appearance="outlined"
+                          [class.queue-card--requested]="c.requested"
+                          [class.queue-card--urgent]="c.ageHours >= 48"
+                          [class.queue-card--warning]="c.ageHours >= 24 && c.ageHours < 48">
+                  <!-- Urgency bar -->
+                  <div class="urgency-bar"
+                       [class.urgency-normal]="c.ageHours < 24"
+                       [class.urgency-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                       [class.urgency-urgent]="c.ageHours >= 48"></div>
+
+                  <div class="queue-card-body">
+                    <!-- Header row: case number + age -->
+                    <div class="qc-header">
+                      <span class="qc-number">{{ c.case_number }}</span>
+                      <span class="qc-age"
+                            [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                            [class.age-urgent]="c.ageHours >= 48"
+                            [matTooltip]="'Created ' + c.created_at">
+                        <mat-icon class="qc-age-icon">schedule</mat-icon>
+                        {{ formatAge(c.ageHours ?? 0) }}
+                      </span>
+                    </div>
+
+                    <!-- Client name -->
+                    <p class="qc-client">{{ c.customer_name }}</p>
+
+                    <!-- Details row -->
+                    <div class="qc-details">
+                      <span class="qc-detail-item">
+                        <mat-icon class="qc-detail-icon">description</mat-icon>
+                        {{ c.violation_type }}
+                      </span>
+                      <span class="qc-detail-item">
+                        <mat-icon class="qc-detail-icon">location_on</mat-icon>
+                        {{ c.state }}
+                      </span>
+                    </div>
+
+                    <!-- Action -->
+                    <div class="qc-action">
+                      @if (c.requested) {
+                        <button mat-stroked-button disabled class="qc-requested-btn">
+                          <mat-icon>hourglass_top</mat-icon>
+                          {{ 'OPR.REQUESTED' | translate }}
+                        </button>
+                      } @else {
+                        <button mat-flat-button
+                                class="qc-claim-btn"
+                                (click)="requestAssignment(c.id)"
+                                [disabled]="requestingId() === c.id">
+                          @if (requestingId() === c.id) {
+                            <mat-spinner diameter="18"></mat-spinner>
+                          } @else {
+                            <ng-container>
+                              <mat-icon>person_add</mat-icon>
+                              {{ 'OPR.REQUEST_ASSIGNMENT' | translate }}
+                            </ng-container>
+                          }
+                        </button>
+                      }
+                    </div>
                   </div>
-                  <div class="queue-actions">
-                    <span class="case-age" [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48" [class.age-urgent]="c.ageHours >= 48">
-                      {{ formatAge(c.ageHours ?? 0) }}
-                    </span>
-                    @if (c.requested) {
-                      <button mat-stroked-button disabled class="requested-btn">
-                        <mat-icon>hourglass_top</mat-icon>
-                        {{ 'OPR.REQUESTED' | translate }}
-                      </button>
-                    } @else {
-                      <button mat-flat-button color="primary"
-                              (click)="requestAssignment(c.id)"
-                              [disabled]="requestingId() === c.id">
-                        @if (requestingId() === c.id) {
-                          <mat-spinner diameter="16"></mat-spinner>
-                        } @else {
-                          <ng-container>
-                            <mat-icon>assignment_ind</mat-icon>
-                            {{ 'OPR.REQUEST_ASSIGNMENT' | translate }}
-                          </ng-container>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-                <mat-divider></mat-divider>
+                </mat-card>
               }
-            }
-          </mat-card-content>
-        </mat-card>
+            </div>
+          }
+        </section>
 
       }
     </div>
   `,
   styles: [`
-    /* --- Layout --- */
-    .op-dash { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+    /* ============================================================
+       LAYOUT
+       ============================================================ */
+    .op-dash {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
 
-    /* --- Page header --- */
-    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
-    .page-header h1 { margin: 0; font-size: 1.4rem; }
-    .subtitle { margin: 2px 0 0; font-size: 0.85rem; color: #888; }
+    /* ============================================================
+       PAGE HEADER
+       ============================================================ */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .header-text h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .refresh-btn {
+      color: var(--mat-sys-outline, #717680);
+      transition: color 0.2s;
+    }
+    .refresh-btn:hover { color: var(--mat-sys-primary, #1976d2); }
 
-    /* --- Stat cards --- */
+    /* ============================================================
+       STAT CARDS
+       ============================================================ */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 16px;
+      border-radius: 14px;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .stat-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
+    .stat-icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-icon-wrap mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; }
+    .blue-gradient   { background: linear-gradient(135deg, #1565c0, #42a5f5); }
+    .amber-gradient  { background: linear-gradient(135deg, #e65100, #ffb74d); }
+    .green-gradient  { background: linear-gradient(135deg, #2e7d32, #66bb6a); }
+    .purple-gradient { background: linear-gradient(135deg, #6a1b9a, #ce93d8); }
+    .stat-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--mat-sys-on-surface, #1a1c1e);
+    }
+    .amber-text { color: #e65100; }
+    .green-text { color: #2e7d32; }
+
+    /* ============================================================
+       SECTION BLOCKS
+       ============================================================ */
+    .section-block {
+      background: var(--mat-sys-surface, #fff);
+      border: 1px solid var(--mat-sys-outline-variant, #c4c7cf);
+      border-radius: 16px;
+      padding: 20px;
       margin-bottom: 20px;
     }
-    .stat-card { position: relative; overflow: hidden; }
-    .stat-card mat-card-content { padding: 14px 16px; }
-    .stat-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 8px;
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
     }
-    .stat-icon mat-icon { color: #fff; font-size: 20px; width: 20px; height: 20px; }
-    .bg-blue   { background: linear-gradient(135deg, #1976d2, #42a5f5); }
-    .bg-green  { background: linear-gradient(135deg, #388e3c, #66bb6a); }
-    .bg-amber  { background: linear-gradient(135deg, #f57c00, #ffb74d); }
-    .bg-purple { background: linear-gradient(135deg, #7b1fa2, #ba68c8); }
-    .border-blue   { border-left: 4px solid #1976d2; }
-    .border-green  { border-left: 4px solid #388e3c; }
-    .border-amber  { border-left: 4px solid #f57c00; }
-    .border-purple { border-left: 4px solid #7b1fa2; }
-    .stat-lbl { margin: 0; font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.3px; }
-    .stat-val { margin: 4px 0 0; font-size: 1.5rem; font-weight: 700; }
-    .stat-val.pending { color: #f57c00; }
-    .stat-val.resolved { color: #388e3c; }
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-icon {
+      color: #1565c0;
+      font-size: 22px; width: 22px; height: 22px;
+    }
+    .queue-icon { color: #e65100; }
+    .section-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .badge-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+    .queue-badge {
+      background: #fff3e0;
+      color: #e65100;
+    }
 
-    /* --- Section cards --- */
-    .section-card { margin-bottom: 16px; }
-    mat-card-header { display: flex; justify-content: space-between; align-items: center; }
-    .case-count { font-size: 0.82rem; color: #888; margin-left: auto; }
-
-    /* --- Search --- */
-    .search-field { width: 100%; margin-bottom: 8px; }
+    /* ============================================================
+       SEARCH FIELD
+       ============================================================ */
+    .search-field {
+      width: 100%;
+      margin-bottom: 4px;
+    }
     .search-field ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
 
-    /* --- My cases list --- */
-    .case-item {
-      display: flex; align-items: center; gap: 16px; padding: 10px 8px; cursor: pointer;
-      transition: background 0.15s;
+    /* ============================================================
+       MY CASES — TABLE LAYOUT
+       ============================================================ */
+    .table-header {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr 1fr 80px 32px;
+      gap: 12px;
+      padding: 8px 16px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--mat-sys-outline, #717680);
+      border-bottom: 2px solid var(--mat-sys-outline-variant, #e0e3e8);
+      margin-bottom: 2px;
     }
-    .case-item:hover { background: #f5f7ff; border-radius: 6px; }
-    .case-item:focus-visible { outline: 2px solid #1976d2; border-radius: 6px; }
-    .case-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-    .case-num { font-weight: 600; font-size: 0.9rem; }
-    .case-client { font-size: 0.82rem; color: #444; }
-    .case-detail { font-size: 0.78rem; color: #888; }
-    .case-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-    .case-age { font-size: 0.75rem; color: #888; white-space: nowrap; }
-    .age-warning { color: #f57c00; font-weight: 600; }
-    .age-urgent { color: #c62828; font-weight: 600; }
-
-    /* --- Status chips --- */
-    .chip {
-      font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap;
+    .case-row {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr 1fr 80px 32px;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
     }
-    .status-new, .status-submitted { background: #e3f2fd; color: #1565c0; }
-    .status-reviewed, .status-send_info_to_attorney, .status-waiting_for_driver, .status-in_progress { background: #fff3e0; color: #e65100; }
-    .status-assigned_to_attorney { background: #e8f5e9; color: #2e7d32; }
-    .status-call_court { background: #fff8e1; color: #f57f17; }
-    .status-resolved { background: #e8f5e9; color: #1b5e20; }
-    .status-closed { background: #f5f5f5; color: #616161; }
-
-    /* --- Queue items --- */
-    .queue-item {
-      display: flex; align-items: center; gap: 16px; padding: 12px 8px;
+    .case-row:hover {
+      background: var(--mat-sys-surface-container-low, #f5f7ff);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.04);
     }
-    .queue-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-    .requested-btn { font-size: 0.82rem; }
-    .requested-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+    .case-row:focus-visible {
+      outline: 2px solid var(--mat-sys-primary, #1976d2);
+      outline-offset: -2px;
+      border-radius: 10px;
+    }
+    .case-row + .case-row {
+      border-top: 1px solid var(--mat-sys-outline-variant, #f0f1f3);
+    }
 
-    /* --- Empty state --- */
-    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; color: #999; text-align: center; }
-    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; color: #ccc; }
-    .empty-title { margin: 4px 0 0; font-size: 1rem; font-weight: 500; color: #666; }
+    /* Cell: Case + Client */
+    .cell-case { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .case-num {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--mat-sys-primary, #1565c0);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .case-client {
+      font-size: 0.82rem;
+      color: var(--mat-sys-on-surface-variant, #44474e);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-    /* --- Responsive --- */
-    @media (max-width: 768px) {
+    /* Cell: Violation + State */
+    .cell-violation { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .violation-text {
+      font-size: 0.82rem;
+      color: var(--mat-sys-on-surface, #1a1c1e);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .state-badge {
+      display: inline-flex;
+      align-self: flex-start;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--mat-sys-surface-container, #eef0f5);
+      color: var(--mat-sys-on-surface-variant, #44474e);
+      letter-spacing: 0.5px;
+    }
+
+    /* Cell: Status */
+    .cell-status { display: flex; align-items: center; }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+    .status-new, .status-submitted       { background: #e3f2fd; color: #1565c0; }
+    .status-reviewed,
+    .status-send_info_to_attorney,
+    .status-waiting_for_driver,
+    .status-in_progress                  { background: #fff3e0; color: #e65100; }
+    .status-assigned_to_attorney         { background: #e8f5e9; color: #2e7d32; }
+    .status-call_court                   { background: #fff8e1; color: #f57f17; }
+    .status-resolved                     { background: #e8f5e9; color: #1b5e20; }
+    .status-closed                       { background: #f3f3f3; color: #616161; }
+
+    /* Cell: Age */
+    .cell-age {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .age-icon {
+      font-size: 16px; width: 16px; height: 16px;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .age-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .age-warning { color: #e65100 !important; }
+    .age-urgent  { color: #b71c1c !important; }
+
+    /* Row arrow */
+    .row-arrow {
+      font-size: 18px; width: 18px; height: 18px;
+      color: var(--mat-sys-outline, #c4c7cf);
+      transition: color 0.15s, transform 0.15s;
+    }
+    .case-row:hover .row-arrow {
+      color: var(--mat-sys-primary, #1976d2);
+      transform: translateX(2px);
+    }
+
+    /* ============================================================
+       UNASSIGNED QUEUE — CARD GRID
+       ============================================================ */
+    .queue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+    .queue-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 14px;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .queue-card:hover {
+      box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+    .queue-card--requested {
+      opacity: 0.72;
+    }
+
+    /* Urgency color bar */
+    .urgency-bar {
+      height: 4px;
+      width: 100%;
+    }
+    .urgency-normal  { background: linear-gradient(90deg, #42a5f5, #90caf9); }
+    .urgency-warning { background: linear-gradient(90deg, #ff9800, #ffcc80); }
+    .urgency-urgent  { background: linear-gradient(90deg, #e53935, #ef9a9a); }
+
+    .queue-card-body { padding: 16px 18px 18px; }
+
+    /* Header: case number + age */
+    .qc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .qc-number {
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: var(--mat-sys-primary, #1565c0);
+    }
+    .qc-age {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .qc-age-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    /* Client name */
+    .qc-client {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--mat-sys-on-surface, #1a1c1e);
+    }
+
+    /* Details row */
+    .qc-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .qc-detail-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant, #44474e);
+    }
+    .qc-detail-icon {
+      font-size: 16px; width: 16px; height: 16px;
+      color: var(--mat-sys-outline, #717680);
+    }
+
+    /* Action row */
+    .qc-action { display: flex; justify-content: flex-end; }
+    .qc-claim-btn {
+      border-radius: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      background: linear-gradient(135deg, #1565c0, #1976d2);
+      color: #fff;
+    }
+    .qc-claim-btn:hover:not([disabled]) {
+      background: linear-gradient(135deg, #0d47a1, #1565c0);
+      box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+    }
+    .qc-claim-btn mat-icon {
+      font-size: 18px; width: 18px; height: 18px;
+      margin-right: 4px;
+    }
+    .qc-requested-btn {
+      border-radius: 10px;
+      font-weight: 600;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .qc-requested-btn mat-icon {
+      font-size: 16px; width: 16px; height: 16px;
+      margin-right: 4px;
+    }
+
+    /* ============================================================
+       EMPTY STATE
+       ============================================================ */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 48px 16px;
+      text-align: center;
+    }
+    .empty-icon-wrap {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--mat-sys-surface-container, #eef0f5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .empty-icon-wrap mat-icon {
+      font-size: 32px; width: 32px; height: 32px;
+      color: var(--mat-sys-outline, #b0b4bc);
+    }
+    .empty-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--mat-sys-outline, #717680);
+    }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    @media (max-width: 900px) {
       .stat-grid { grid-template-columns: repeat(2, 1fr); }
-      .case-item, .queue-item { flex-wrap: wrap; }
-      .queue-actions { width: 100%; justify-content: flex-end; }
+      .table-header { display: none; }
+      .case-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 14px 12px;
+        border: 1px solid var(--mat-sys-outline-variant, #e0e3e8);
+        border-radius: 12px;
+        margin-bottom: 8px;
+      }
+      .case-row + .case-row { border-top: none; }
+      .case-row .row-arrow { display: none; }
+      .cell-status { justify-content: flex-start; }
+      .cell-age { justify-content: flex-start; }
+      .queue-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 480px) {
-      .op-dash { padding: 16px 8px; }
-      .page-header { flex-direction: column; align-items: flex-start; }
+      .op-dash { padding: 16px 12px 32px; }
+      .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-card { padding: 14px 12px; gap: 10px; }
+      .stat-value { font-size: 1.3rem; }
+      .section-block { padding: 16px 14px; border-radius: 12px; }
     }
   `],
 })

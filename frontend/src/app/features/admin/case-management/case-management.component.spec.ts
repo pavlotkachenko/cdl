@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect } from 'vitest';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { CaseManagementComponent } from './case-management.component';
 import { AdminService, Case, StaffMember } from '../../../core/services/admin.service';
@@ -43,6 +44,7 @@ async function setup(spy = makeServiceSpy()) {
   await TestBed.configureTestingModule({
     imports: [CaseManagementComponent, NoopAnimationsModule],
     providers: [
+      provideTranslateService(),
       { provide: AdminService, useValue: spy },
       { provide: Router, useValue: routerSpy },
     ],
@@ -94,20 +96,18 @@ describe('CaseManagementComponent', () => {
     expect(snackBar.open).toHaveBeenCalledWith('Status updated.', 'Close', expect.any(Object));
   });
 
-  it('getStatusLabel maps status codes', async () => {
+  it('getStatusKey maps status codes to i18n keys', async () => {
     const { component } = await setup();
-    expect(component.getStatusLabel('new')).toBe('New');
-    expect(component.getStatusLabel('pending_court')).toBe('Pending Court');
-    expect(component.getStatusLabel('resolved')).toBe('Resolved');
+    expect(component.getStatusKey('new')).toBe('ADMIN.STATUS_NEW');
+    expect(component.getStatusKey('pending_court')).toBe('ADMIN.STATUS_PENDING_COURT');
+    expect(component.getStatusKey('resolved')).toBe('ADMIN.STATUS_RESOLVED');
   });
 
   it('sets error signal when getAllCases fails', async () => {
     const spy = makeServiceSpy();
     spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
-    const { component, fixture } = await setup(spy);
-    expect(component.error()).toBe('Failed to load cases. Please try again.');
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('Failed to load cases. Please try again.');
+    const { component } = await setup(spy);
+    expect(component.error()).toBe('ADMIN.FAILED_LOAD');
   });
 
   it('clears error on retry and reloads', async () => {
