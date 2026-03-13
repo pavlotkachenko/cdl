@@ -5,6 +5,54 @@
 const { supabase } = require('../config/supabase');
 
 /**
+ * Calculate priority level based on court date proximity and case age.
+ * @param {object} caseData — must have created_at, assigned_attorney_id
+ * @param {string|null} courtDate — ISO timestamp of next upcoming court date
+ * @returns {'critical'|'high'|'medium'|'low'}
+ */
+function calculatePriority(caseData, courtDate) {
+  const now = Date.now();
+  const ageHours = (now - new Date(caseData.created_at).getTime()) / (1000 * 60 * 60);
+  const daysUntilCourt = courtDate
+    ? (new Date(courtDate).getTime() - now) / (1000 * 60 * 60 * 24)
+    : Infinity;
+  const hasAttorney = !!caseData.assigned_attorney_id;
+
+  if (daysUntilCourt <= 3 || (ageHours > 96 && !hasAttorney)) return 'critical';
+  if (daysUntilCourt <= 7 || ageHours > 48) return 'high';
+  if (daysUntilCourt <= 14 || ageHours > 24) return 'medium';
+  return 'low';
+}
+
+/**
+ * Pick the next upcoming scheduled court date from an array of court_dates rows.
+ * Prefers the closest future date; falls back to the most recent past date.
+ * @param {Array} courtDates — rows from PostgREST embedded court_dates
+ * @returns {{ date: string, court_name: string } | null}
+ */
+function pickNextCourtDate(courtDates) {
+  if (!courtDates || courtDates.length === 0) return null;
+
+  const scheduled = courtDates.filter(cd => cd.status === 'scheduled');
+  if (scheduled.length === 0) return null;
+
+  const now = Date.now();
+  const future = scheduled
+    .filter(cd => new Date(cd.date).getTime() >= now)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (future.length > 0) return future[0];
+
+  // All past — return most recent
+  const past = scheduled.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return past[0];
+}
+
+// Export for testing
+exports._calculatePriority = calculatePriority;
+exports._pickNextCourtDate = pickNextCourtDate;
+
+/**
  * GET /api/operator/cases
  * Operator's own assigned cases
  * Query params: status (optional filter)
@@ -18,8 +66,9 @@ exports.getOperatorCases = async (req, res) => {
       .from('cases')
       .select(`
         id, case_number, status, state, violation_type, created_at,
-        customer_name, attorney_price,
-        driver:driver_id(id, full_name, phone)
+        customer_name, attorney_price, assigned_attorney_id,
+        driver:driver_id(id, full_name, phone),
+        court_dates(id, date, court_name, location, status)
       `)
       .eq('assigned_operator_id', operatorId)
       .order('created_at', { ascending: false });
@@ -32,10 +81,19 @@ exports.getOperatorCases = async (req, res) => {
     if (error) throw error;
 
     const now = Date.now();
-    const cases = (data || []).map(c => ({
-      ...c,
-      ageHours: Math.floor((now - new Date(c.created_at).getTime()) / (1000 * 60 * 60))
-    }));
+    const cases = (data || []).map(c => {
+      const nextCourt = pickNextCourtDate(c.court_dates);
+      const courtDate = nextCourt ? nextCourt.date : null;
+      return {
+        ...c,
+        court_dates: undefined,
+        fine_amount: c.attorney_price ?? null,
+        court_date: courtDate,
+        courthouse: nextCourt ? (nextCourt.court_name || nextCourt.location || null) : null,
+        priority: calculatePriority(c, courtDate),
+        ageHours: Math.floor((now - new Date(c.created_at).getTime()) / (1000 * 60 * 60)),
+      };
+    });
 
     const inProgress = cases.filter(c =>
       ['reviewed', 'assigned_to_attorney', 'send_info_to_attorney', 'waiting_for_driver', 'call_court'].includes(c.status)
@@ -79,8 +137,9 @@ exports.getUnassignedCases = async (req, res) => {
       .from('cases')
       .select(`
         id, case_number, status, state, violation_type, created_at,
-        customer_name, attorney_price,
-        driver:driver_id(id, full_name, phone)
+        customer_name, attorney_price, assigned_attorney_id,
+        driver:driver_id(id, full_name, phone),
+        court_dates(id, date, court_name, location, status)
       `)
       .is('assigned_operator_id', null)
       .in('status', ['new', 'submitted'])
@@ -98,11 +157,20 @@ exports.getUnassignedCases = async (req, res) => {
     const requestedCaseIds = new Set((requests || []).map(r => r.case_id));
 
     const now = Date.now();
-    const cases = (data || []).map(c => ({
-      ...c,
-      ageHours: Math.floor((now - new Date(c.created_at).getTime()) / (1000 * 60 * 60)),
-      requested: requestedCaseIds.has(c.id)
-    }));
+    const cases = (data || []).map(c => {
+      const nextCourt = pickNextCourtDate(c.court_dates);
+      const courtDate = nextCourt ? nextCourt.date : null;
+      return {
+        ...c,
+        court_dates: undefined,
+        fine_amount: c.attorney_price ?? null,
+        court_date: courtDate,
+        courthouse: nextCourt ? (nextCourt.court_name || nextCourt.location || null) : null,
+        priority: calculatePriority(c, courtDate),
+        ageHours: Math.floor((now - new Date(c.created_at).getTime()) / (1000 * 60 * 60)),
+        requested: requestedCaseIds.has(c.id),
+      };
+    });
 
     res.json({ cases });
   } catch (error) {
@@ -186,6 +254,163 @@ exports.requestAssignment = async (req, res) => {
 };
 
 /**
+ * Valid case_status enum values for status updates.
+ */
+const VALID_STATUSES = [
+  'new', 'reviewed', 'assigned_to_attorney', 'waiting_for_driver',
+  'send_info_to_attorney', 'attorney_paid', 'call_court',
+  'check_with_manager', 'pay_attorney', 'closed',
+];
+
+/**
+ * Statuses that are visible to the driver and should trigger a notification.
+ */
+const DRIVER_VISIBLE_STATUSES = [
+  'reviewed', 'assigned_to_attorney', 'waiting_for_driver', 'closed',
+];
+
+/**
+ * GET /api/operator/cases/:caseId
+ * Full case detail for a single case, including driver, attorney, court dates, activity log.
+ */
+exports.getCaseDetail = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const { data: caseData, error: caseError } = await supabase
+      .from('cases')
+      .select(`
+        id, case_number, status, state, violation_type, violation_date, created_at, updated_at,
+        customer_name, county, attorney_price, assigned_operator_id, assigned_attorney_id,
+        driver:driver_id(id, full_name, phone, email, cdl_number),
+        attorney:assigned_attorney_id(id, full_name, email, specializations),
+        court_dates(id, date, court_name, location, status)
+      `)
+      .eq('id', caseId)
+      .single();
+
+    if (caseError || !caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    // Access check: operator must be assigned, or user must be admin
+    if (userRole !== 'admin' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not authorized to view this case' } });
+    }
+
+    // Fetch activity log
+    const { data: activityData } = await supabase
+      .from('activity_log')
+      .select('id, action, details, created_at, user_id')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    // Fetch pending assignment request for this operator
+    const { data: assignmentReq } = await supabase
+      .from('assignment_requests')
+      .select('id, status, created_at')
+      .eq('case_id', caseId)
+      .eq('status', 'pending')
+      .limit(1);
+
+    const nextCourt = pickNextCourtDate(caseData.court_dates);
+    const courtDate = nextCourt ? nextCourt.date : null;
+
+    const enrichedCase = {
+      ...caseData,
+      fine_amount: caseData.attorney_price ?? null,
+      court_date: courtDate,
+      courthouse: nextCourt ? (nextCourt.court_name || nextCourt.location || null) : null,
+      priority: calculatePriority(caseData, courtDate),
+      ageHours: Math.floor((Date.now() - new Date(caseData.created_at).getTime()) / (1000 * 60 * 60)),
+      assignment_request: (assignmentReq && assignmentReq.length > 0) ? assignmentReq[0] : null,
+    };
+
+    res.json({
+      case: enrichedCase,
+      activity: activityData || [],
+    });
+  } catch (error) {
+    console.error('Get case detail error:', error);
+    res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Failed to fetch case detail' } });
+  }
+};
+
+/**
+ * PATCH /api/operator/cases/:caseId/status
+ * Update case status with optional note, creating an activity log entry.
+ */
+exports.updateCaseStatus = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { status, note } = req.body;
+
+    if (!status || !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: { code: 'INVALID_STATUS', message: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` } });
+    }
+
+    // Fetch case to verify access
+    const { data: caseData, error: caseError } = await supabase
+      .from('cases')
+      .select('id, case_number, status, assigned_operator_id, driver_id')
+      .eq('id', caseId)
+      .single();
+
+    if (caseError || !caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    if (userRole !== 'admin' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not authorized to update this case' } });
+    }
+
+    const oldStatus = caseData.status;
+
+    // Update status
+    const { data: updated, error: updateError } = await supabase
+      .from('cases')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', caseId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Insert activity log entry
+    await supabase.from('activity_log').insert({
+      case_id: caseId,
+      user_id: userId,
+      action: 'status_change',
+      details: { from: oldStatus, to: status, note: note || null },
+    }).catch(() => {});
+
+    // Notify driver if status is customer-visible
+    if (DRIVER_VISIBLE_STATUSES.includes(status) && caseData.driver_id) {
+      await supabase.from('notifications').insert({
+        user_id: caseData.driver_id,
+        case_id: caseId,
+        title: 'Case Status Update',
+        message: `Your case ${caseData.case_number} status has been updated to ${status}`,
+        type: 'case_update',
+      }).catch(() => {});
+    }
+
+    res.json({ case: updated });
+  } catch (error) {
+    console.error('Update case status error:', error);
+    res.status(500).json({ error: { code: 'UPDATE_ERROR', message: 'Failed to update case status' } });
+  }
+};
+
+// Export for testing
+exports._VALID_STATUSES = VALID_STATUSES;
+
+/**
  * GET /api/operator/attorneys
  * Available attorneys for manual assignment with workload info
  */
@@ -224,5 +449,279 @@ exports.getAvailableAttorneys = async (req, res) => {
   } catch (error) {
     console.error('Get available attorneys error:', error);
     res.status(500).json({ error: 'Failed to fetch attorneys' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// OC-4: Operator Messaging — conversation & message endpoints
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/operator/cases/:caseId/conversation
+ * Get (or create) the operator–driver conversation for a case.
+ */
+exports.getCaseConversation = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+    const userRole = req.user?.role;
+
+    // Verify case exists and operator has access
+    const { data: caseData, error: caseErr } = await supabase
+      .from('cases')
+      .select('case_id, case_number, driver_id, assigned_operator_id')
+      .eq('case_id', caseId)
+      .single();
+
+    if (caseErr || !caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+    if (userRole !== 'admin' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not assigned to this case' } });
+    }
+
+    // Look for an existing conversation for this case
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return res.json({ success: true, data: existing[0] });
+    }
+
+    // No conversation yet — create one (operator stored in attorney_id slot)
+    const driverId = caseData.driver_id;
+    if (!driverId) {
+      return res.status(400).json({ error: { code: 'NO_DRIVER', message: 'Case has no linked driver' } });
+    }
+
+    const { data: created, error: createErr } = await supabase
+      .from('conversations')
+      .insert([{
+        case_id: caseId,
+        driver_id: driverId,
+        attorney_id: userId,
+        accessed_by: [userId],
+      }])
+      .select('*')
+      .single();
+
+    if (createErr) {
+      return res.status(500).json({ error: { code: 'CREATE_FAILED', message: createErr.message } });
+    }
+
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    console.error('getCaseConversation error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to get conversation' } });
+  }
+};
+
+/**
+ * GET /api/operator/cases/:caseId/messages
+ * Get messages for the case conversation.
+ */
+exports.getCaseMessages = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+    const userRole = req.user?.role;
+
+    // Verify access
+    const { data: caseData } = await supabase
+      .from('cases')
+      .select('case_id, assigned_operator_id')
+      .eq('case_id', caseId)
+      .single();
+
+    if (!caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+    if (userRole !== 'admin' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not assigned to this case' } });
+    }
+
+    // Find conversation
+    const { data: convos } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!convos || convos.length === 0) {
+      return res.json({ success: true, data: { messages: [], total: 0 } });
+    }
+
+    const conversationId = convos[0].id;
+
+    // Fetch messages
+    const { data: messages, error: msgErr, count } = await supabase
+      .from('messages')
+      .select('*, sender:users!sender_id(user_id, full_name, role)', { count: 'exact' })
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (msgErr) {
+      return res.status(500).json({ error: { code: 'QUERY_FAILED', message: msgErr.message } });
+    }
+
+    res.json({ success: true, data: { messages: messages || [], total: count || 0, conversationId } });
+  } catch (error) {
+    console.error('getCaseMessages error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to get messages' } });
+  }
+};
+
+/**
+ * POST /api/operator/cases/:caseId/messages
+ * Send a message in the case conversation. Creates conversation if needed.
+ */
+exports.sendCaseMessage = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { content } = req.body;
+    const userId = req.user?.userId || req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Message content is required' } });
+    }
+
+    // Verify access
+    const { data: caseData } = await supabase
+      .from('cases')
+      .select('case_id, driver_id, assigned_operator_id')
+      .eq('case_id', caseId)
+      .single();
+
+    if (!caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+    if (userRole !== 'admin' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not assigned to this case' } });
+    }
+
+    // Find or create conversation
+    let conversationId;
+    const { data: convos } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (convos && convos.length > 0) {
+      conversationId = convos[0].id;
+    } else {
+      const { data: created, error: createErr } = await supabase
+        .from('conversations')
+        .insert([{
+          case_id: caseId,
+          driver_id: caseData.driver_id,
+          attorney_id: userId,
+          accessed_by: [userId],
+        }])
+        .select('id')
+        .single();
+      if (createErr) {
+        return res.status(500).json({ error: { code: 'CREATE_FAILED', message: createErr.message } });
+      }
+      conversationId = created.id;
+    }
+
+    // Insert message
+    const { data: message, error: msgErr } = await supabase
+      .from('messages')
+      .insert([{
+        conversation_id: conversationId,
+        sender_id: userId,
+        recipient_id: caseData.driver_id,
+        content: content.trim(),
+        message_type: 'text',
+        priority: 'normal',
+      }])
+      .select('*')
+      .single();
+
+    if (msgErr) {
+      return res.status(500).json({ error: { code: 'SEND_FAILED', message: msgErr.message } });
+    }
+
+    // Update conversation last_message_at
+    await supabase
+      .from('conversations')
+      .update({ last_message_at: new Date().toISOString() })
+      .eq('id', conversationId)
+      .catch(() => {});
+
+    res.status(201).json({ success: true, data: message });
+  } catch (error) {
+    console.error('sendCaseMessage error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to send message' } });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// OC-5: Batch OCR — sequential multi-file processing
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/operator/batch-ocr
+ * Process multiple ticket images through OCR sequentially.
+ * Returns per-file results with filenames and a summary.
+ */
+exports.batchOcr = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: { code: 'NO_FILES', message: 'No files uploaded' } });
+    }
+
+    const ocrService = require('../services/ocr.service');
+    const results = [];
+
+    // Process sequentially to avoid overloading OCR service
+    for (const file of req.files) {
+      try {
+        const data = await ocrService.extractTicketData(file.buffer);
+        results.push({
+          filename: file.originalname,
+          success: true,
+          data: {
+            violation_type: data.extractedData?.violationType || null,
+            violation_date: data.extractedData?.violationDate || null,
+            state: data.extractedData?.state || null,
+            county: data.extractedData?.location || null,
+            fine_amount: data.extractedData?.fineAmount || null,
+            court_date: data.extractedData?.courtDate || null,
+            citation_number: data.extractedData?.citationNumber || null,
+            confidence: data.validation?.overallConfidence ?? data.confidence ?? 0,
+          },
+        });
+      } catch (fileErr) {
+        results.push({
+          filename: file.originalname,
+          success: false,
+          error: fileErr.message || 'Could not extract text from image',
+        });
+      }
+    }
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+
+    res.json({
+      success: true,
+      data: {
+        results,
+        summary: { total: results.length, successful, failed },
+      },
+    });
+  } catch (error) {
+    console.error('batchOcr error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Batch OCR processing failed' } });
   }
 };

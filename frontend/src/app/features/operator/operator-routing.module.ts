@@ -17,8 +17,20 @@ const routes: Routes = [
         loadComponent: () => import('./operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
       },
       {
+        path: 'cases/:id/messages',
+        loadComponent: () => import('./messaging/operator-messaging.component').then(m => m.OperatorMessagingComponent)
+      },
+      {
+        path: 'cases/:id',
+        loadComponent: () => import('./case-detail/operator-case-detail.component').then(m => m.OperatorCaseDetailComponent)
+      },
+      {
         path: 'cases',
         loadComponent: () => import('./operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
+      },
+      {
+        path: 'batch-ocr',
+        loadComponent: () => import('./batch-ocr/batch-ocr.component').then(m => m.BatchOcrComponent)
       },
       {
         path: 'queue',

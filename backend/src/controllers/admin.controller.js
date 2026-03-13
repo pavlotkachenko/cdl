@@ -1,9 +1,10 @@
 /**
- * Admin Controller — Platform user management
+ * Admin Controller — Platform user management + assignment request approval
  * All handlers require authenticate + authorize('admin') middleware.
  */
 
 const { supabase } = require('../config/supabase');
+const { emitToUser } = require('../socket/socket');
 
 // ─────────────────────────────────────────────
 // GET /api/admin/users
@@ -184,5 +185,176 @@ exports.unsuspendUser = async (req, res) => {
   } catch (error) {
     console.error('unsuspendUser error:', error);
     res.status(500).json({ error: { code: 'UPDATE_FAILED', message: 'Failed to unsuspend user' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/admin/assignment-requests
+// Returns pending operator assignment requests with joins
+// ─────────────────────────────────────────────
+exports.getAssignmentRequests = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('assignment_requests')
+      .select('id, status, created_at, operator_id, case_id, operator:users!operator_id(id, full_name), case:cases!case_id(id, case_number, violation_type, state)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const requests = (data || []).map(r => ({
+      id: r.id,
+      operator: r.operator ? { id: r.operator.id, full_name: r.operator.full_name } : null,
+      case: r.case ? { id: r.case.id, case_number: r.case.case_number, violation_type: r.case.violation_type, state: r.case.state } : null,
+      status: r.status,
+      created_at: r.created_at,
+    }));
+
+    res.json({ requests });
+  } catch (error) {
+    console.error('getAssignmentRequests error:', error);
+    res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch assignment requests' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// POST /api/admin/assignment-requests/:requestId/approve
+// ─────────────────────────────────────────────
+exports.approveAssignmentRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    // Fetch the request
+    const { data: request, error: fetchErr } = await supabase
+      .from('assignment_requests')
+      .select('id, status, operator_id, case_id')
+      .eq('id', requestId)
+      .single();
+
+    if (fetchErr || !request) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Assignment request not found' } });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: { code: 'ALREADY_PROCESSED', message: 'Request has already been processed' } });
+    }
+
+    // Check if case already has an operator assigned
+    const { data: caseData, error: caseErr } = await supabase
+      .from('cases')
+      .select('id, case_number, assigned_operator_id')
+      .eq('id', request.case_id)
+      .single();
+
+    if (caseErr || !caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    if (caseData.assigned_operator_id && caseData.assigned_operator_id !== request.operator_id) {
+      return res.status(409).json({ error: { code: 'ALREADY_ASSIGNED', message: 'Case has already been assigned to an operator' } });
+    }
+
+    // Approve: update request status
+    await supabase
+      .from('assignment_requests')
+      .update({ status: 'approved', updated_at: new Date().toISOString() })
+      .eq('id', requestId);
+
+    // Assign operator to case
+    await supabase
+      .from('cases')
+      .update({ assigned_operator_id: request.operator_id, updated_at: new Date().toISOString() })
+      .eq('id', request.case_id);
+
+    // Create notification for the operator
+    await supabase.from('notifications').insert({
+      user_id: request.operator_id,
+      case_id: request.case_id,
+      title: 'Assignment Request Approved',
+      message: `Your request to handle case ${caseData.case_number} has been approved`,
+      type: 'assignment_approved',
+    }).catch(() => {});
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      case_id: request.case_id,
+      user_id: req.user.id,
+      action: 'assignment_approved',
+      details: { operator_id: request.operator_id, request_id: requestId },
+    }).catch(() => {});
+
+    // Real-time notification
+    emitToUser(request.operator_id, 'assignment:approved', {
+      requestId, caseId: request.case_id, caseNumber: caseData.case_number,
+    });
+
+    res.json({ success: true, message: 'Assignment request approved' });
+  } catch (error) {
+    console.error('approveAssignmentRequest error:', error);
+    res.status(500).json({ error: { code: 'APPROVE_FAILED', message: 'Failed to approve assignment request' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// POST /api/admin/assignment-requests/:requestId/reject
+// Body (optional): { reason: string }
+// ─────────────────────────────────────────────
+exports.rejectAssignmentRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { reason } = req.body || {};
+
+    // Fetch the request
+    const { data: request, error: fetchErr } = await supabase
+      .from('assignment_requests')
+      .select('id, status, operator_id, case_id')
+      .eq('id', requestId)
+      .single();
+
+    if (fetchErr || !request) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Assignment request not found' } });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: { code: 'ALREADY_PROCESSED', message: 'Request has already been processed' } });
+    }
+
+    // Get case number for notification message
+    const { data: caseData } = await supabase
+      .from('cases')
+      .select('case_number')
+      .eq('id', request.case_id)
+      .single();
+
+    const caseNumber = caseData?.case_number || request.case_id;
+
+    // Reject: update request status
+    await supabase
+      .from('assignment_requests')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', requestId);
+
+    // Create notification
+    const message = reason
+      ? `Your request for case ${caseNumber} was declined. Reason: ${reason}`
+      : `Your request for case ${caseNumber} was declined`;
+
+    await supabase.from('notifications').insert({
+      user_id: request.operator_id,
+      case_id: request.case_id,
+      title: 'Assignment Request Rejected',
+      message,
+      type: 'assignment_rejected',
+    }).catch(() => {});
+
+    // Real-time notification
+    emitToUser(request.operator_id, 'assignment:rejected', {
+      requestId, caseId: request.case_id, caseNumber, reason: reason || null,
+    });
+
+    res.json({ success: true, message: 'Assignment request rejected' });
+  } catch (error) {
+    console.error('rejectAssignmentRequest error:', error);
+    res.status(500).json({ error: { code: 'REJECT_FAILED', message: 'Failed to reject assignment request' } });
   }
 };

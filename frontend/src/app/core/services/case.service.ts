@@ -215,6 +215,65 @@ export class CaseService {
   }
 
   /**
+   * Get operator case detail (driver, attorney, court dates, activity)
+   */
+  getOperatorCaseDetail(caseId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/cases/${caseId}`);
+  }
+
+  /**
+   * Update case status (operator action)
+   */
+  updateOperatorCaseStatus(caseId: string, status: string, note?: string): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/operator/cases/${caseId}/status`, { status, note });
+  }
+
+  /**
+   * Get ranked attorneys for a case (assignment scoring)
+   */
+  getRankedAttorneys(caseId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/assignment/cases/${caseId}/attorneys`);
+  }
+
+  /**
+   * Auto-assign case to best-scoring attorney
+   */
+  autoAssignCase(caseId: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/assignment/cases/${caseId}/auto-assign`, {});
+  }
+
+  /**
+   * Manually assign case to a specific attorney
+   */
+  manualAssignCase(caseId: string, attorneyId: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/assignment/cases/${caseId}/manual-assign`, { attorneyId });
+  }
+
+  // ── OC-4: Operator messaging ────────────────────────────────────
+
+  getCaseConversation(caseId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/cases/${caseId}/conversation`);
+  }
+
+  getCaseMessages(caseId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/cases/${caseId}/messages`).pipe(
+      map(r => r.data ?? r),
+    );
+  }
+
+  sendCaseMessage(caseId: string, content: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/operator/cases/${caseId}/messages`, { content });
+  }
+
+  // ── OC-5: Batch OCR ────────────────────────────────────────────
+
+  batchOcr(files: File[]): Observable<any> {
+    const fd = new FormData();
+    files.forEach(f => fd.append('tickets', f));
+    return this.http.post<any>(`${this.apiUrl}/operator/batch-ocr`, fd);
+  }
+
+  /**
    * Get available attorneys for assignment
    */
   getAvailableAttorneys(): Observable<any> {

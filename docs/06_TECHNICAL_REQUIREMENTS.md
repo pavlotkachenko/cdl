@@ -165,9 +165,23 @@ This document defines the technical architecture, technology stack, security req
   - Benefits: Prevent SQL injection, XSS
 
 #### Real-Time Communication
-- **Socket.io** (Optional)
+- **Socket.io 4.8** (Active — not optional)
   - WebSockets: Real-time bidirectional communication
-  - Use Cases: Live ticket updates, chat
+  - Use Cases: Live ticket updates, chat, operator notifications, assignment approvals
+  - **Room Architecture:**
+    - `user:<userId>` — per-user room for targeted notifications
+    - `role:<roleName>` — role-based rooms (e.g., `role:operator` for broadcast to all operators)
+    - `case:<caseId>` — per-case rooms for live case updates
+  - **Server → Client Events (Operator):**
+    - `notification:new` — new notification for the operator (assignment updates, case changes)
+    - `assignment:approved` — operator's assignment request was approved by admin
+    - `assignment:rejected` — operator's assignment request was rejected by admin
+    - `case:statusUpdate` — case status changed (for cases the operator is subscribed to)
+    - `message:new` — new message in a case conversation
+  - **Emit Helpers** (`backend/src/socket/socket.js`):
+    - `emitToUser(userId, event, data)` — emit to a specific user's room
+    - `emitToRole(role, event, data)` — emit to all users with a given role
+    - `emitToCase(caseId, event, data)` — emit to all subscribers of a case
 
 #### File Handling
 - **Multer**

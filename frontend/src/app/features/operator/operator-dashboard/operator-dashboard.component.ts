@@ -1,6 +1,7 @@
 import {
   Component, OnInit, DestroyRef, signal, computed, ChangeDetectionStrategy, inject,
 } from '@angular/core';
+import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -23,18 +24,22 @@ import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loa
 /*  Mock data — fallback when API returns empty                        */
 /* ------------------------------------------------------------------ */
 const MOCK_MY_CASES: any[] = [
-  { id: 'c1', case_number: 'CDL-2026-601', status: 'reviewed', state: 'TX', violation_type: 'Speeding 20+ Over', created_at: '2026-03-08T10:30:00Z', customer_name: 'Marcus Rivera', ageHours: 72 },
-  { id: 'c2', case_number: 'CDL-2026-602', status: 'assigned_to_attorney', state: 'CA', violation_type: 'Overweight Load', created_at: '2026-03-09T14:15:00Z', customer_name: 'Jennifer Walsh', ageHours: 44 },
-  { id: 'c3', case_number: 'CDL-2026-603', status: 'waiting_for_driver', state: 'FL', violation_type: 'Logbook Violation', created_at: '2026-03-10T08:45:00Z', customer_name: 'Ahmed Hassan', ageHours: 26 },
+  { id: 'c1', case_number: 'CDL-2026-601', status: 'reviewed', state: 'TX', violation_type: 'Speeding 20+ Over', created_at: '2026-03-08T10:30:00Z', customer_name: 'Marcus Rivera', ageHours: 72, fine_amount: 350, court_date: '2026-04-10T09:00:00Z', courthouse: 'Harris County Court', priority: 'high' },
+  { id: 'c2', case_number: 'CDL-2026-602', status: 'assigned_to_attorney', state: 'CA', violation_type: 'Overweight Load', created_at: '2026-03-09T14:15:00Z', customer_name: 'Jennifer Walsh', ageHours: 44, fine_amount: 500, court_date: '2026-03-20T10:00:00Z', courthouse: 'LA Traffic Court', priority: 'medium' },
+  { id: 'c3', case_number: 'CDL-2026-603', status: 'waiting_for_driver', state: 'FL', violation_type: 'Logbook Violation', created_at: '2026-03-10T08:45:00Z', customer_name: 'Ahmed Hassan', ageHours: 26, fine_amount: null, court_date: null, courthouse: null, priority: 'medium' },
 ];
 
 const MOCK_UNASSIGNED: any[] = [
-  { id: 'u1', case_number: 'CDL-2026-610', status: 'new', state: 'NY', violation_type: 'Improper Lane Change', created_at: '2026-03-10T16:20:00Z', customer_name: 'Sarah Kim', ageHours: 18, requested: false },
-  { id: 'u2', case_number: 'CDL-2026-611', status: 'new', state: 'IL', violation_type: 'Following Too Closely', created_at: '2026-03-09T11:00:00Z', customer_name: 'Robert Jackson', ageHours: 47, requested: false },
-  { id: 'u3', case_number: 'CDL-2026-612', status: 'submitted', state: 'GA', violation_type: 'Equipment Violation', created_at: '2026-03-10T09:30:00Z', customer_name: 'Maria Gonzalez', ageHours: 24, requested: true },
+  { id: 'u1', case_number: 'CDL-2026-610', status: 'new', state: 'NY', violation_type: 'Improper Lane Change', created_at: '2026-03-10T16:20:00Z', customer_name: 'Sarah Kim', ageHours: 18, requested: false, fine_amount: 200, court_date: null, courthouse: null, priority: 'low' },
+  { id: 'u2', case_number: 'CDL-2026-611', status: 'new', state: 'IL', violation_type: 'Following Too Closely', created_at: '2026-03-09T11:00:00Z', customer_name: 'Robert Jackson', ageHours: 47, requested: false, fine_amount: 450, court_date: '2026-03-15T14:00:00Z', courthouse: 'Cook County Court', priority: 'high' },
+  { id: 'u3', case_number: 'CDL-2026-612', status: 'submitted', state: 'GA', violation_type: 'Equipment Violation', created_at: '2026-03-10T09:30:00Z', customer_name: 'Maria Gonzalez', ageHours: 24, requested: true, fine_amount: null, court_date: null, courthouse: null, priority: 'medium' },
 ];
 
 const MOCK_SUMMARY = { assignedToMe: 3, inProgress: 2, resolvedToday: 0, pendingApproval: 1 };
+
+const PRIORITY_ORDER: Record<string, number> = {
+  critical: 0, high: 1, medium: 2, low: 3,
+};
 
 const STATUS_LABELS: Record<string, string> = {
   new: 'OPR.STATUS_NEW',
@@ -44,7 +49,9 @@ const STATUS_LABELS: Record<string, string> = {
   send_info_to_attorney: 'OPR.STATUS_IN_PROGRESS',
   waiting_for_driver: 'OPR.STATUS_IN_PROGRESS',
   call_court: 'OPR.STATUS_PENDING_COURT',
-  resolved: 'OPR.STATUS_RESOLVED',
+  check_with_manager: 'OPR.STATUS_CHECK_MANAGER',
+  pay_attorney: 'OPR.STATUS_PAY_ATTORNEY',
+  attorney_paid: 'OPR.STATUS_ATTORNEY_PAID',
   closed: 'OPR.STATUS_CLOSED',
   in_progress: 'OPR.STATUS_IN_PROGRESS',
 };
@@ -53,7 +60,7 @@ const STATUS_LABELS: Record<string, string> = {
   selector: 'app-operator-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    FormsModule,
+    FormsModule, DatePipe, CurrencyPipe,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule,
     MatProgressSpinnerModule, MatTooltipModule,
@@ -145,6 +152,8 @@ const STATUS_LABELS: Record<string, string> = {
               <span class="th-case">{{ 'OPR.CASE' | translate: { Default: 'Case' } }}</span>
               <span class="th-violation">{{ 'OPR.VIOLATION' | translate: { Default: 'Violation' } }}</span>
               <span class="th-status">{{ 'OPR.STATUS' | translate: { Default: 'Status' } }}</span>
+              <span class="th-court">{{ 'OPR.COURT_DATE' | translate: { Default: 'Court' } }}</span>
+              <span class="th-fine">{{ 'OPR.FINE' | translate: { Default: 'Fine' } }}</span>
               <span class="th-age">{{ 'OPR.AGE' | translate: { Default: 'Age' } }}</span>
             </div>
 
@@ -156,9 +165,19 @@ const STATUS_LABELS: Record<string, string> = {
                    (click)="viewCase(c.id)"
                    (keydown.enter)="viewCase(c.id)"
                    [attr.aria-label]="'View case ' + c.case_number">
-                <!-- Case + Client -->
+                <!-- Priority indicator + Case + Client -->
                 <div class="cell-case">
-                  <span class="case-num">{{ c.case_number }}</span>
+                  <div class="case-name-row">
+                    <span class="priority-dot"
+                          [class.priority-critical]="c.priority === 'critical'"
+                          [class.priority-high]="c.priority === 'high'"
+                          [class.priority-medium]="c.priority === 'medium'"
+                          [class.priority-low]="c.priority === 'low'"
+                          [matTooltip]="getPriorityLabel(c.priority)"
+                          role="img"
+                          [attr.aria-label]="(c.priority || 'low') + ' priority'"></span>
+                    <span class="case-num">{{ c.case_number }}</span>
+                  </div>
                   <span class="case-client">{{ c.customer_name }}</span>
                 </div>
                 <!-- Violation + State -->
@@ -171,6 +190,24 @@ const STATUS_LABELS: Record<string, string> = {
                   <span [class]="'status-chip status-' + c.status">
                     {{ getStatusKey(c.status) | translate }}
                   </span>
+                </div>
+                <!-- Court date -->
+                <div class="cell-court">
+                  @if (c.court_date) {
+                    <span class="court-text" [matTooltip]="c.courthouse || ''">
+                      {{ c.court_date | date:'mediumDate' }}
+                    </span>
+                  } @else {
+                    <span class="cell-dash">&mdash;</span>
+                  }
+                </div>
+                <!-- Fine amount -->
+                <div class="cell-fine">
+                  @if (c.fine_amount != null) {
+                    <span class="fine-text">{{ c.fine_amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                  } @else {
+                    <span class="cell-dash">&mdash;</span>
+                  }
                 </div>
                 <!-- Age -->
                 <div class="cell-age"
@@ -203,6 +240,14 @@ const STATUS_LABELS: Record<string, string> = {
             <span class="badge-count queue-badge">{{ unassignedCases().length }}</span>
           </div>
 
+          <!-- Priority legend -->
+          <div class="priority-legend" role="img" aria-label="Priority color legend">
+            <span class="legend-item"><span class="legend-dot priority-critical"></span> {{ 'OPR.PRIORITY_CRITICAL' | translate: { Default: 'Critical' } }}</span>
+            <span class="legend-item"><span class="legend-dot priority-high"></span> {{ 'OPR.PRIORITY_HIGH' | translate: { Default: 'High' } }}</span>
+            <span class="legend-item"><span class="legend-dot priority-medium"></span> {{ 'OPR.PRIORITY_MEDIUM' | translate: { Default: 'Medium' } }}</span>
+            <span class="legend-item"><span class="legend-dot priority-low"></span> {{ 'OPR.PRIORITY_LOW' | translate: { Default: 'Low' } }}</span>
+          </div>
+
           <mat-form-field appearance="outline" class="search-field">
             <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
             <input matInput
@@ -211,7 +256,7 @@ const STATUS_LABELS: Record<string, string> = {
             <mat-icon matPrefix>search</mat-icon>
           </mat-form-field>
 
-          @if (filteredUnassigned().length === 0) {
+          @if (sortedUnassigned().length === 0) {
             <div class="empty-state" role="status">
               <div class="empty-icon-wrap">
                 <mat-icon aria-hidden="true">playlist_add_check</mat-icon>
@@ -220,16 +265,17 @@ const STATUS_LABELS: Record<string, string> = {
             </div>
           } @else {
             <div class="queue-grid">
-              @for (c of filteredUnassigned(); track c.id) {
+              @for (c of sortedUnassigned(); track c.id) {
                 <mat-card class="queue-card" appearance="outlined"
-                          [class.queue-card--requested]="c.requested"
-                          [class.queue-card--urgent]="c.ageHours >= 48"
-                          [class.queue-card--warning]="c.ageHours >= 24 && c.ageHours < 48">
-                  <!-- Urgency bar -->
-                  <div class="urgency-bar"
-                       [class.urgency-normal]="c.ageHours < 24"
-                       [class.urgency-warning]="c.ageHours >= 24 && c.ageHours < 48"
-                       [class.urgency-urgent]="c.ageHours >= 48"></div>
+                          data-cy="queue-card"
+                          [class.queue-card--requested]="c.requested">
+                  <!-- Priority color bar -->
+                  <div class="priority-bar"
+                       data-cy="priority-indicator"
+                       [class.priority-bar-critical]="c.priority === 'critical'"
+                       [class.priority-bar-high]="c.priority === 'high'"
+                       [class.priority-bar-medium]="c.priority === 'medium'"
+                       [class.priority-bar-low]="c.priority === 'low'"></div>
 
                   <div class="queue-card-body">
                     <!-- Header row: case number + age -->
@@ -249,14 +295,26 @@ const STATUS_LABELS: Record<string, string> = {
 
                     <!-- Details row -->
                     <div class="qc-details">
-                      <span class="qc-detail-item">
+                      <span class="qc-detail-item" data-cy="violation-type">
                         <mat-icon class="qc-detail-icon">description</mat-icon>
                         {{ c.violation_type }}
                       </span>
-                      <span class="qc-detail-item">
+                      <span class="qc-detail-item" data-cy="state">
                         <mat-icon class="qc-detail-icon">location_on</mat-icon>
                         {{ c.state }}
                       </span>
+                      @if (c.court_date) {
+                        <span class="qc-detail-item" data-cy="court-date">
+                          <mat-icon class="qc-detail-icon">event</mat-icon>
+                          {{ c.court_date | date:'mediumDate' }}
+                        </span>
+                      }
+                      @if (c.fine_amount != null) {
+                        <span class="qc-detail-item" data-cy="fine-amount">
+                          <mat-icon class="qc-detail-icon">payments</mat-icon>
+                          {{ c.fine_amount | currency:'USD':'symbol':'1.0-0' }}
+                        </span>
+                      }
                     </div>
 
                     <!-- Action -->
@@ -427,6 +485,41 @@ const STATUS_LABELS: Record<string, string> = {
     }
 
     /* ============================================================
+       PRIORITY LEGEND
+       ============================================================ */
+    .priority-legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 0.75rem;
+      color: var(--mat-sys-outline, #717680);
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       PRIORITY COLORS (shared dot + bar)
+       ============================================================ */
+    .priority-critical { background-color: #E53935; }
+    .priority-high     { background-color: #FB8C00; }
+    .priority-medium   { background-color: #FDD835; }
+    .priority-low      { background-color: #43A047; }
+
+    .priority-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
        SEARCH FIELD
        ============================================================ */
     .search-field {
@@ -440,7 +533,7 @@ const STATUS_LABELS: Record<string, string> = {
        ============================================================ */
     .table-header {
       display: grid;
-      grid-template-columns: 2fr 1.5fr 1fr 80px 32px;
+      grid-template-columns: 2fr 1.5fr 1fr 100px 80px 80px 32px;
       gap: 12px;
       padding: 8px 16px;
       font-size: 0.72rem;
@@ -453,7 +546,7 @@ const STATUS_LABELS: Record<string, string> = {
     }
     .case-row {
       display: grid;
-      grid-template-columns: 2fr 1.5fr 1fr 80px 32px;
+      grid-template-columns: 2fr 1.5fr 1fr 100px 80px 80px 32px;
       gap: 12px;
       align-items: center;
       padding: 14px 16px;
@@ -476,6 +569,11 @@ const STATUS_LABELS: Record<string, string> = {
 
     /* Cell: Case + Client */
     .cell-case { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .case-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .case-num {
       font-weight: 700;
       font-size: 0.88rem;
@@ -531,9 +629,32 @@ const STATUS_LABELS: Record<string, string> = {
     .status-waiting_for_driver,
     .status-in_progress                  { background: #fff3e0; color: #e65100; }
     .status-assigned_to_attorney         { background: #e8f5e9; color: #2e7d32; }
-    .status-call_court                   { background: #fff8e1; color: #f57f17; }
-    .status-resolved                     { background: #e8f5e9; color: #1b5e20; }
+    .status-call_court,
+    .status-check_with_manager           { background: #fff8e1; color: #f57f17; }
+    .status-pay_attorney,
+    .status-attorney_paid                { background: #e8eaf6; color: #283593; }
     .status-closed                       { background: #f3f3f3; color: #616161; }
+
+    /* Cell: Court date */
+    .cell-court { min-width: 0; }
+    .court-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--mat-sys-on-surface, #1a1c1e);
+      white-space: nowrap;
+    }
+    .cell-dash {
+      font-size: 0.85rem;
+      color: var(--mat-sys-outline, #b0b4bc);
+    }
+
+    /* Cell: Fine */
+    .cell-fine { min-width: 0; }
+    .fine-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--mat-sys-on-surface, #1a1c1e);
+    }
 
     /* Cell: Age */
     .cell-age {
@@ -586,14 +707,15 @@ const STATUS_LABELS: Record<string, string> = {
       opacity: 0.72;
     }
 
-    /* Urgency color bar */
-    .urgency-bar {
+    /* Priority color bar */
+    .priority-bar {
       height: 4px;
       width: 100%;
     }
-    .urgency-normal  { background: linear-gradient(90deg, #42a5f5, #90caf9); }
-    .urgency-warning { background: linear-gradient(90deg, #ff9800, #ffcc80); }
-    .urgency-urgent  { background: linear-gradient(90deg, #e53935, #ef9a9a); }
+    .priority-bar-critical { background: linear-gradient(90deg, #E53935, #ef9a9a); }
+    .priority-bar-high     { background: linear-gradient(90deg, #FB8C00, #ffcc80); }
+    .priority-bar-medium   { background: linear-gradient(90deg, #FDD835, #fff59d); }
+    .priority-bar-low      { background: linear-gradient(90deg, #43A047, #a5d6a7); }
 
     .queue-card-body { padding: 16px 18px 18px; }
 
@@ -729,6 +851,7 @@ const STATUS_LABELS: Record<string, string> = {
       .stat-card { padding: 14px 12px; gap: 10px; }
       .stat-value { font-size: 1.3rem; }
       .section-block { padding: 16px 14px; border-radius: 12px; }
+      .priority-legend { flex-wrap: wrap; gap: 10px; }
     }
   `],
 })
@@ -770,6 +893,16 @@ export class OperatorDashboardComponent implements OnInit {
       (c.customer_name || '').toLowerCase().includes(term) ||
       (c.violation_type || '').toLowerCase().includes(term)
     );
+  });
+
+  sortedUnassigned = computed(() => {
+    const filtered = this.filteredUnassigned();
+    return [...filtered].sort((a: any, b: any) => {
+      const pa = PRIORITY_ORDER[a.priority] ?? 3;
+      const pb = PRIORITY_ORDER[b.priority] ?? 3;
+      if (pa !== pb) return pa - pb;
+      return (b.ageHours ?? 0) - (a.ageHours ?? 0);
+    });
   });
 
   ngOnInit(): void {
@@ -838,6 +971,16 @@ export class OperatorDashboardComponent implements OnInit {
 
   getStatusKey(status: string): string {
     return STATUS_LABELS[status] ?? status;
+  }
+
+  getPriorityLabel(priority: string): string {
+    const labels: Record<string, string> = {
+      critical: 'Critical priority',
+      high: 'High priority',
+      medium: 'Medium priority',
+      low: 'Low priority',
+    };
+    return labels[priority] ?? 'Unknown priority';
   }
 
   formatAge(hours: number): string {

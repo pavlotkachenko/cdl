@@ -53,6 +53,10 @@ const routes: Routes = [
         loadComponent: () => import('./documents/admin-documents.component').then(m => m.AdminDocumentsComponent)
       },
       {
+        path: 'assignment-requests',
+        loadComponent: () => import('./assignment-requests/admin-assignment-requests.component').then(m => m.AdminAssignmentRequestsComponent)
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./settings/admin-settings.component').then(m => m.AdminSettingsComponent)
       }

@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed, ChangeDetectionStrategy,
+  Component, OnInit, OnDestroy, signal, computed, ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -8,8 +8,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatBadgeModule } from '@angular/material/badge';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
-interface OperatorNotification {
+import { NotificationService, Notification } from '../../../core/services/notification.service';
+import { SocketService } from '../../../core/services/socket.service';
+
+export interface OperatorNotification {
   id: string;
   title: string;
   message: string;
@@ -17,89 +21,6 @@ interface OperatorNotification {
   read: boolean;
   created_at: string;
 }
-
-const MOCK_NOTIFICATIONS: OperatorNotification[] = [
-  {
-    id: 'opn-001',
-    title: 'New Case Assigned',
-    message: 'Case CDL-2026-601 has been assigned to you by the admin',
-    type: 'info',
-    read: false,
-    created_at: '2026-03-11T09:45:00Z',
-  },
-  {
-    id: 'opn-002',
-    title: 'Assignment Request Approved',
-    message: 'Your request for case CDL-2026-505 has been approved by admin',
-    type: 'success',
-    read: false,
-    created_at: '2026-03-11T08:30:00Z',
-  },
-  {
-    id: 'opn-003',
-    title: 'Case Status Changed',
-    message: 'Case CDL-2026-502 status changed to "Waiting for Driver"',
-    type: 'info',
-    read: false,
-    created_at: '2026-03-10T17:00:00Z',
-  },
-  {
-    id: 'opn-004',
-    title: 'Assignment Request Rejected',
-    message: 'Your request for case CDL-2026-498 was rejected — already assigned to another operator',
-    type: 'warning',
-    read: false,
-    created_at: '2026-03-10T14:22:00Z',
-  },
-  {
-    id: 'opn-005',
-    title: 'Case Resolved',
-    message: 'Case CDL-2026-478 has been resolved — ticket dismissed',
-    type: 'success',
-    read: true,
-    created_at: '2026-03-10T11:15:00Z',
-  },
-  {
-    id: 'opn-006',
-    title: 'New Unassigned Cases',
-    message: '3 new cases are available in the unassigned queue',
-    type: 'info',
-    read: false,
-    created_at: '2026-03-10T09:48:00Z',
-  },
-  {
-    id: 'opn-007',
-    title: 'SLA Warning',
-    message: 'Case CDL-2026-490 has been unresolved for 48+ hours — requires attention',
-    type: 'warning',
-    read: false,
-    created_at: '2026-03-09T16:30:00Z',
-  },
-  {
-    id: 'opn-008',
-    title: 'Attorney Assigned',
-    message: 'Attorney Sarah Johnson has been assigned to your case CDL-2026-501',
-    type: 'info',
-    read: true,
-    created_at: '2026-03-09T13:10:00Z',
-  },
-  {
-    id: 'opn-009',
-    title: 'Client Document Uploaded',
-    message: 'Driver Marcus Rivera uploaded a new document for case CDL-2026-601',
-    type: 'info',
-    read: true,
-    created_at: '2026-03-09T10:00:00Z',
-  },
-  {
-    id: 'opn-010',
-    title: 'Weekly Summary',
-    message: 'You resolved 12 cases this week — great work!',
-    type: 'success',
-    read: true,
-    created_at: '2026-03-08T08:00:00Z',
-  },
-];
 
 @Component({
   selector: 'app-operator-notifications',
@@ -201,27 +122,84 @@ const MOCK_NOTIFICATIONS: OperatorNotification[] = [
     .unread-dot { width: 10px; height: 10px; border-radius: 50%; background: #1976d2; flex-shrink: 0; margin-top: 4px; }
   `],
 })
-export class OperatorNotificationsComponent implements OnInit {
+export class OperatorNotificationsComponent implements OnInit, OnDestroy {
+  private notificationService = inject(NotificationService);
+  private socketService = inject(SocketService);
+  private socketSub?: Subscription;
+
   loading = signal(true);
   notifications = signal<OperatorNotification[]>([]);
 
   unreadCount = computed(() => this.notifications().filter(n => !n.read).length);
 
   ngOnInit(): void {
-    setTimeout(() => {
-      this.notifications.set(MOCK_NOTIFICATIONS.map(n => ({ ...n })));
-      this.loading.set(false);
-    }, 400);
+    this.loadNotifications();
+
+    // Connect socket and listen for real-time notifications
+    this.socketService.connect();
+    this.socketSub = this.socketService.onNotification().subscribe(notification => {
+      if (notification) {
+        const mapped = this.mapNotification(notification);
+        this.notifications.update(list => [mapped, ...list]);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.socketSub?.unsubscribe();
+  }
+
+  loadNotifications(): void {
+    this.loading.set(true);
+    this.notificationService.getNotifications({ limit: 50 }).subscribe({
+      next: (res) => {
+        const mapped = (res.notifications || []).map(n => this.mapNotification(n));
+        this.notifications.set(mapped);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.notifications.set([]);
+        this.loading.set(false);
+      },
+    });
   }
 
   markRead(n: OperatorNotification): void {
     if (n.read) return;
-    this.notifications.update(list =>
-      list.map(item => item.id === n.id ? { ...item, read: true } : item)
-    );
+    this.notificationService.markAsRead(n.id).subscribe({
+      next: () => {
+        this.notifications.update(list =>
+          list.map(item => item.id === n.id ? { ...item, read: true } : item),
+        );
+      },
+      error: () => {},
+    });
   }
 
   markAllRead(): void {
-    this.notifications.update(list => list.map(item => ({ ...item, read: true })));
+    this.notificationService.markAllAsRead().subscribe({
+      next: () => {
+        this.notifications.update(list => list.map(item => ({ ...item, read: true })));
+      },
+      error: () => {},
+    });
+  }
+
+  private mapNotification(n: Notification | any): OperatorNotification {
+    return {
+      id: n.id,
+      title: n.title || '',
+      message: n.message || '',
+      type: this.resolveType(n.type),
+      read: !!n.read,
+      created_at: n.createdAt || n.created_at || n.timestamp || new Date().toISOString(),
+    };
+  }
+
+  private resolveType(type: string): 'info' | 'warning' | 'success' | 'error' {
+    if (type === 'assignment_rejected') return 'warning';
+    if (type === 'assignment_approved' || type === 'payment') return 'success';
+    if (type === 'error') return 'error';
+    return 'info';
   }
 }

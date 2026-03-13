@@ -80,7 +80,15 @@
     "PRIORITY_LOW": "Low",
     "PRIORITY_MEDIUM": "Medium",
     "PRIORITY_HIGH": "High",
+    "PRIORITY_CRITICAL": "Critical",
     "PRIORITY_URGENT": "Urgent",
+    "COURT_DATE": "Court",
+    "FINE": "Fine",
+    "CASE": "Case",
+    "AGE": "Age",
+    "STATUS_CHECK_MANAGER": "Check Manager",
+    "STATUS_PAY_ATTORNEY": "Pay Attorney",
+    "STATUS_ATTORNEY_PAID": "Attorney Paid",
     "CASES_FOUND": "case(s) found",
     "CASES": "Cases",
     "QUEUE": "Queue",
@@ -100,7 +108,125 @@
     "NOTIFICATIONS": "Notifications",
     "MARK_ALL_READ": "Mark All Read",
     "UNREAD_NOTIFICATIONS": "unread notifications",
-    "NO_NOTIFICATIONS": "No notifications yet"
+    "NO_NOTIFICATIONS": "No notifications yet",
+    "DETAIL": {
+      "LOADING": "Loading case details…",
+      "RETRY": "Retry",
+      "BACK": "Back to dashboard",
+      "CASE_AGE": "Case age",
+      "TICKET_INFO": "Ticket Information",
+      "VIOLATION_TYPE": "Violation Type",
+      "VIOLATION_DATE": "Violation Date",
+      "STATE": "State",
+      "FINE_AMOUNT": "Fine Amount",
+      "COURT_DATES": "Court Dates",
+      "NO_COURT_DATES": "No court dates scheduled",
+      "DRIVER_INFO": "Driver Information",
+      "NAME": "Name",
+      "PHONE": "Phone",
+      "EMAIL": "Email",
+      "CDL_NUMBER": "CDL Number",
+      "NO_DRIVER": "No driver linked",
+      "ATTORNEY": "Attorney",
+      "NO_ATTORNEY": "No attorney assigned",
+      "ASSIGN_ATTORNEY": "Assign Attorney",
+      "SPECIALIZATIONS": "Specializations",
+      "UPDATE_STATUS": "Update Status",
+      "NEW_STATUS": "New Status",
+      "NOTE": "Note (optional)",
+      "UPDATE": "Update",
+      "ACTIVITY_LOG": "Activity Log",
+      "NO_ACTIVITY": "No activity recorded yet",
+      "MESSAGE_DRIVER": "Message Driver",
+      "TITLE": "Case Detail",
+      "COURTHOUSE": "Courthouse",
+      "COURT_TIME": "Court Time",
+      "STATUS_NOTE_PLACEHOLDER": "Add a note about this status change..."
+    },
+    "ASSIGN": {
+      "TITLE": "Assign Attorney for",
+      "LOADING": "Loading attorneys…",
+      "NO_ATTORNEYS": "No attorneys available",
+      "NO_ATTORNEYS_DETAIL": "Case will be queued for later assignment.",
+      "AUTO_ASSIGN": "Auto-Assign",
+      "AUTO_HINT": "System picks the highest-ranked attorney",
+      "OR_MANUAL": "or select manually",
+      "SELECT_ATTORNEY": "Select an attorney",
+      "ACTIVE_CASES": "active cases",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Assign",
+      "AUTO_ASSIGN_DESC": "Automatically find the best attorney match",
+      "MANUAL_TITLE": "Manual Assignment",
+      "RANK": "Rank",
+      "NAME": "Name",
+      "SCORE": "Score",
+      "SPECIALIZATIONS": "Specializations",
+      "JURISDICTIONS": "Jurisdictions",
+      "CONFIRM_ASSIGN": "Confirm Assignment",
+      "NO_ATTORNEYS_DESC": "No attorneys are currently available for assignment",
+      "ASSIGNING": "Assigning...",
+      "ASSIGNED_SUCCESS": "Attorney assigned successfully",
+      "SCORE_BREAKDOWN": "Score Breakdown",
+      "WEIGHT_SPECIALIZATION": "Specialization",
+      "WEIGHT_LICENSE": "License",
+      "WEIGHT_WORKLOAD": "Workload",
+      "WEIGHT_SUCCESS_RATE": "Success Rate",
+      "WEIGHT_AVAILABILITY": "Availability"
+    },
+    "MSG": {
+      "TITLE": "Messages —",
+      "LOADING": "Loading messages…",
+      "RETRY": "Retry",
+      "BACK": "Back to case",
+      "THREAD": "Message thread",
+      "NO_MESSAGES": "No messages yet. Send one to start the conversation.",
+      "PLACEHOLDER": "Type a message…",
+      "SEND": "Send message",
+      "TEMPLATES": "Templates",
+      "CLOSE": "Close",
+      "NO_TEMPLATES": "No templates available",
+      "USE_TEMPLATE": "Use Template",
+      "TYPE_MESSAGE": "Type a message...",
+      "SENDING": "Sending...",
+      "TEMPLATE_PICKER_TITLE": "Message Templates",
+      "PREVIEW": "Preview",
+      "VARIABLES": "Variables",
+      "CTRL_ENTER_SEND": "Press Ctrl+Enter to send"
+    },
+    "OCR": {
+      "TITLE": "Batch OCR Processing",
+      "BACK": "Back to dashboard",
+      "DROP_ZONE": "Ticket upload area",
+      "DROP_HINT": "Drag & drop ticket images here, or click to browse",
+      "DROP_SUB": "JPEG, PNG, or PDF — up to 10 files, 10 MB each",
+      "SELECTED_FILES": "Selected Files",
+      "REMOVE": "Remove file",
+      "PROCESS_ALL": "Process All",
+      "RESULTS": "Results",
+      "PROCESSED": "processed",
+      "SUCCESSFUL": "successful",
+      "FAILED": "failed",
+      "VIOLATION": "Violation",
+      "DATE": "Date",
+      "STATE": "State",
+      "FINE": "Fine",
+      "COURT_DATE": "Court Date",
+      "UPLOAD_ZONE": "Upload Zone",
+      "DRAG_DROP": "Drag and drop files here",
+      "OR_BROWSE": "or click to browse",
+      "PROCESSING": "Processing...",
+      "RETRY": "Retry",
+      "CREATE_CASE": "Create Case",
+      "CREATE_ALL": "Create All Cases",
+      "FILE_LIMIT": "Maximum 10 files",
+      "SIZE_LIMIT": "Maximum 10MB per file",
+      "CONFIDENCE": "Confidence",
+      "REMOVE_FILE": "Remove file",
+      "SUMMARY": "Summary"
+    },
+    "PRIORITY": "Priority",
+    "PRIORITY_LEGEND": "Priority Legend",
+    "BATCH_OCR": "Batch OCR"
   },
   "SUBMIT_TICKET": {
     "TITLE": "Submit Ticket",
@@ -355,7 +481,6 @@
     "NAV_ABOUT": "About us",
     "NAV_CONTACT": "Contact us",
     "LOGIN": "Sign in",
-
     "HERO_1_L1": "We are #1 advisor",
     "HERO_1_L2": "in the trucking industry",
     "HERO_2_L1": "100% tickets",
@@ -366,7 +491,6 @@
     "HERO_4_L2": "for drivers",
     "HERO_5_L1": "We are proud",
     "HERO_5_L2": "of our team",
-
     "EXPLORE_NOW": "Explore now",
     "STAT_FREE": "FREE",
     "STAT_FREE_LABEL": "New accounts start",
@@ -376,12 +500,10 @@
     "STAT_STATES_LABEL": "States covered",
     "STAT_RESOLUTION": "100%",
     "STAT_RESOLUTION_LABEL": "Resolution rate",
-
     "SERVICES_FOR_DRIVERS": "Services for Drivers",
     "SERVICES_FOR_CARRIERS": "Services for Carriers",
     "TAB_DRIVERS": "Drivers",
     "TAB_CARRIERS": "Carriers",
-
     "SVC_DRV_1_TITLE": "Personal Safety Expert",
     "SVC_DRV_1_DESC": "Have questions or concerns in regards to your driving privileges, received a DOT inspection, a citation and need a consultation, fill free to contact us",
     "SVC_DRV_2_TITLE": "Submit your ticket",
@@ -390,7 +512,6 @@
     "SVC_DRV_3_DESC": "Have an accident or struggling with a claim, we can connect with our experts to offer you an advice.",
     "SVC_DRV_4_TITLE": "MVR",
     "SVC_DRV_4_DESC": "Monitor your motor vehicle record, to keep your driving record in a good standing.",
-
     "SVC_CAR_1_TITLE": "Driver's Tickets",
     "SVC_CAR_1_DESC": "Maintain your CSA scores, by directing the drivers to the best attorney in USA",
     "SVC_CAR_2_TITLE": "DOT, MC Set up, Audit",
@@ -417,7 +538,6 @@
     "SVC_CAR_12_DESC": "Report accidents 24/7",
     "SVC_CAR_13_TITLE": "Maintenance",
     "SVC_CAR_13_DESC": "Developing a comprehensive maintenance schedule",
-
     "HOW_WE_WORK": "How we work",
     "STEP_DRV_1_TITLE": "You submit a ticket",
     "STEP_DRV_1_DESC": "Using our online application submit your ticket. All you have to enter is your name, cell phone for contact, description of your request and any supporting documents that might help us to understand the nature of your request.",
@@ -429,11 +549,9 @@
     "STEP_CAR_1_DESC": "Using our online application submit your request. All you have to enter is your name, cell phone for contact, description of your request and any supporting documents that might help us to understand the nature of your request.",
     "STEP_CAR_2_TITLE": "We review it immediately",
     "STEP_CAR_2_DESC": "You will receive SMS as soon as we start working on your request. And within an hour from this moment we will let you know what can be done in your specific case.",
-
     "CTA_TITLE": "Submit your first request now",
     "CTA_TEXT": "It's 100% free. No credit card\ninformation required.",
     "CTA_SUBMIT": "Submit",
-
     "BENEFITS_TITLE": "Personal Safety Expert",
     "BENEFITS_LOCATION": "Anywhere in US and Canada",
     "BENEFITS_INTRO": "We work with professional lawyers in all 50 states and have over 20 years experience in trucking business working and consulting safety",
@@ -444,7 +562,6 @@
     "BENEFIT_4": "100% security of all personal data",
     "BENEFIT_5": "Lifetime history of your cases with all attached documents",
     "BENEFIT_6": "Always updating knowledge base",
-
     "TESTIMONIALS_TITLE": "Satisfied Clients",
     "TEST_1_NAME": "Losta M.",
     "TEST_1_TEXT": "I had a complicated CDL issue, but the CDL advisor lawyer handled it with expertise and professionalism. They provided me with sound legal advice and successfully resolved the matter in my favor.",
@@ -462,7 +579,6 @@
     "TEST_7_TEXT": "Highly recommend their services. Professional and efficient. They resolved my case faster than I expected.",
     "TEST_8_NAME": "Ivan M.",
     "TEST_8_TEXT": "This company is very friendly, available all time any time. Very affordable and helpful services.",
-
     "FAQ_TITLE": "Frequently Asked Questions",
     "FAQ_SUBTITLE": "Everything you need to know about CDL ticket management",
     "FAQ_1_Q": "How quickly can you handle my CDL ticket?",
@@ -487,7 +603,6 @@
     "FAQ_10_A": "Absolutely. Our platform allows fleet carriers to track and manage violations for all their drivers in one unified dashboard, with full visibility into CSA scores and case statuses.",
     "FAQ_CTA": "Still have questions?",
     "FAQ_CTA_BTN": "Contact Us",
-
     "FORM_TITLE": "Submit Your Request",
     "FORM_SUBTITLE": "Get an answer in 1 hour",
     "FORM_INFO": "Fields marked with star (*) are required. The more descriptive you'll be the faster and more accurate answer you will get. Attach all the documents you think might be useful.",
@@ -514,7 +629,6 @@
     "FORM_SUCCESS_BTN": "Submit Another Request",
     "FORM_CONTACT_US": "Contact us",
     "FORM_CONTACT_NOTE": "For general inquiries",
-
     "FTR_HELP_CENTER": "Help Center",
     "FTR_CONTACT_US": "Contact Us",
     "FTR_EMAIL_SUPPORT": "Email Support",
@@ -653,7 +767,6 @@
     "STAFF_WORKLOAD": "Staff Workload",
     "FAILED_LOAD": "Failed to load dashboard data.",
     "RETRY": "Retry",
-
     "CASE_MANAGEMENT": "Case Management",
     "NEW_CASE": "New Case",
     "SEARCH_CASES": "Search cases",
@@ -683,7 +796,6 @@
     "STATUS_UPDATED": "Status updated.",
     "FAILED_STATUS": "Failed to update status.",
     "CASE_CREATION_SOON": "Case creation coming soon.",
-
     "STAFF_MANAGEMENT": "Staff Management",
     "ADD_STAFF": "Add Staff",
     "SEARCH_STAFF": "Search staff",
@@ -706,7 +818,6 @@
     "FAILED_LOAD_STAFF": "Failed to load staff.",
     "ACTIVE_LABEL": "active",
     "SUCCESS_LABEL": "success",
-
     "CLIENT_MANAGEMENT": "Client Management",
     "SEARCH_CLIENTS": "Search clients",
     "SEARCH_PLACEHOLDER": "Name, email, phone, CDL…",
@@ -728,7 +839,6 @@
     "EDIT_CLIENT": "Edit",
     "LAST_CONTACT": "Last contact:",
     "NEVER": "Never",
-
     "REPORTS_ANALYTICS": "Reports & Analytics",
     "REPORT_TYPE": "Report Type",
     "OVERVIEW": "Overview",
@@ -755,7 +865,6 @@
     "CASES_COL": "Cases",
     "REVENUE_COL": "Revenue",
     "RATE_COL": "Rate",
-
     "REVENUE_DASHBOARD": "Revenue Dashboard",
     "START_DATE": "Start Date",
     "END_DATE": "End Date",
@@ -781,7 +890,6 @@
     "REVENUE_ERROR": "Error loading dashboard data",
     "EXPORT_SUCCESS": "Report exported successfully",
     "EXPORT_ERROR": "Error exporting report",
-
     "OPS_DASHBOARD": "Admin Dashboard",
     "REFRESH": "Refresh",
     "NEW_CASES": "New Cases",
@@ -798,7 +906,6 @@
     "NO_CASES_QUEUE": "No cases in queue",
     "AUTO_ASSIGN": "Auto-Assign",
     "FAILED_AUTO_ASSIGN": "Failed to auto-assign case",
-
     "USER_MANAGEMENT": "User Management",
     "INVITE_USER": "Invite User",
     "CANCEL_INVITE": "Cancel",
@@ -822,12 +929,10 @@
     "FAILED_SUSPEND": "Failed to suspend user.",
     "FAILED_UNSUSPEND": "Failed to unsuspend user.",
     "FAILED_CHANGE_ROLE": "Failed to change role.",
-
     "NOTIFICATIONS": "Notifications",
     "MARK_ALL_READ": "Mark All Read",
     "UNREAD_NOTIFICATIONS": "unread notification(s)",
     "NO_NOTIFICATIONS": "No notifications yet",
-
     "DOCUMENTS": "Documents",
     "UPLOAD_DOCUMENT": "Upload Document",
     "NO_DOCUMENTS": "No documents found",
@@ -838,7 +943,6 @@
     "CAT_CLIENT_DOCS": "Client Documents",
     "CAT_INTERNAL": "Internal",
     "CAT_TEMPLATES": "Templates",
-
     "CASES_THIS_WEEK": "Cases This Week",
     "PENDING_REVENUE": "Pending Revenue",
     "ASSIGN_OPERATOR": "Assign Operator",
@@ -856,7 +960,6 @@
     "TOGGLE_SEARCH": "Toggle search",
     "SEARCH_DOCUMENTS": "Search documents…",
     "SEARCH_NOTIFICATIONS": "Search notifications…",
-
     "SETTINGS": "Settings",
     "SETTINGS_FIRM_INFO": "Firm Information",
     "SETTINGS_FIRM_NAME": "Firm Name",
@@ -915,7 +1018,6 @@
     "NO_UPCOMING": "No upcoming court dates",
     "RECENT_ACTIVITY": "Recent Activity",
     "VIEW_ALL_CASES": "View All Cases",
-
     "MY_CASES": "My Cases",
     "SEARCH_CASES": "Search cases",
     "FILTER_STATUS": "Status",
@@ -936,7 +1038,6 @@
     "STATUS_ESCALATED": "Escalated",
     "STATUS_CLOSED": "Closed",
     "STATUS_RESOLVED": "Resolved",
-
     "CLIENTS": "My Clients",
     "SEARCH_CLIENTS": "Search clients",
     "TOTAL_CLIENTS": "Total Clients",
@@ -953,7 +1054,6 @@
     "MESSAGE_CLIENT": "Message",
     "ACTIVE_STATUS": "Active",
     "INACTIVE_STATUS": "Inactive",
-
     "CALENDAR": "Calendar",
     "TODAY": "Today",
     "PREV_MONTH": "Previous month",
@@ -967,12 +1067,10 @@
     "DEPOSITION": "Deposition",
     "FILING_DEADLINE": "Filing Deadline",
     "ADD_EVENT": "Add Event",
-
     "NOTIFICATIONS": "Notifications",
     "MARK_ALL_READ": "Mark All Read",
     "UNREAD_NOTIFICATIONS": "unread notification(s)",
     "NO_NOTIFICATIONS": "No notifications yet",
-
     "REPORTS": "Reports & Analytics",
     "REPORT_TYPE": "Report Type",
     "PERFORMANCE": "Performance",
@@ -992,7 +1090,6 @@
     "CLIENT_SATISFACTION": "Client Satisfaction",
     "REPEAT_CLIENTS": "Repeat Clients",
     "REFERRAL_RATE": "Referral Rate",
-
     "DOCUMENTS": "Documents",
     "UPLOAD_DOCUMENT": "Upload Document",
     "NO_DOCUMENTS": "No documents found",
@@ -1003,7 +1100,6 @@
     "CAT_CLIENT_DOCS": "Client Documents",
     "CAT_TEMPLATES": "Templates",
     "CAT_CORRESPONDENCE": "Correspondence",
-
     "WELCOME_BACK": "Welcome back",
     "DASHBOARD_SUBTITLE": "Here's your practice overview",
     "PENDING_CASES": "Pending Cases",
@@ -1016,7 +1112,6 @@
     "TAB_PENDING": "Pending",
     "TAB_ACTIVE": "Active",
     "TAB_RESOLVED": "Resolved",
-
     "CASES_FOUND": "case(s) found",
     "SEARCH_PLACEHOLDER": "Search by case #, driver, or violation…",
     "STATUS_ALL": "All Statuses",
@@ -1024,13 +1119,11 @@
     "VIOLATION_ALL": "All Violations",
     "NO_CASES_TITLE": "No Cases Found",
     "NO_CASES_SUBTITLE": "Try adjusting your search or filters",
-
     "CALENDAR_TITLE": "Calendar",
     "CALENDAR_GRID": "Calendar grid",
     "EVENTS_LIST": "Events list",
     "EVENTS_ON": "Events on",
     "UPCOMING_EVENTS": "Upcoming Events",
-
     "CLIENTS_TITLE": "My Clients",
     "ADD_CLIENT": "Add Client",
     "AVG_CASES_CLIENT": "Avg Cases/Client",
@@ -1041,7 +1134,6 @@
     "VIEW": "View",
     "CASES": "Cases",
     "MESSAGE": "Message",
-
     "REPORTS_ANALYTICS": "Reports & Analytics",
     "CLIENT_INSIGHTS": "Client Insights",
     "REVENUE": "Revenue",
@@ -1064,11 +1156,9 @@
     "TOP_CLIENTS": "Top Clients",
     "CLIENT_NAME": "Client Name",
     "SATISFACTION_BREAKDOWN": "Satisfaction Breakdown",
-
     "SEARCH_DOCUMENTS": "Search documents…",
     "VIEW_EVENT": "View",
     "MODIFY_EVENT": "Modify",
-
     "PROFILE_INFO": "Profile Information",
     "FIRST_NAME": "First Name",
     "LAST_NAME": "Last Name",
@@ -1083,5 +1173,12 @@
     "NEW_PASSWORD": "New Password",
     "CONFIRM_PASSWORD": "Confirm New Password",
     "UPDATE_PASSWORD": "Update Password"
+  },
+  "ADM": {
+    "ASSIGNMENT_REQUESTS": "Assignment Requests",
+    "NO_PENDING_REQUESTS": "No pending requests",
+    "APPROVE": "Approve",
+    "REJECT": "Reject",
+    "BACK": "Back"
   }
 }

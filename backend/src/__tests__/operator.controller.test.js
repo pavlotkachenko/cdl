@@ -9,6 +9,7 @@ jest.mock('../config/supabase', () => ({
 
 const { supabase } = require('../config/supabase');
 const operatorController = require('../controllers/operator.controller');
+const { _calculatePriority: calculatePriority, _pickNextCourtDate: pickNextCourtDate } = operatorController;
 
 // ============================================================
 // Chain helper (thenable for array queries)
@@ -53,14 +54,16 @@ beforeEach(() => {
 // getOperatorCases
 // ============================================================
 describe('getOperatorCases', () => {
-  test('returns cases scoped to operator with summary', async () => {
+  test('returns cases scoped to operator with summary and enriched fields', async () => {
     const now = Date.now();
     const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
+    const nextWeek = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const cases = [
       { id: 'c1', case_number: 'CDL-001', status: 'reviewed', state: 'CA',
         violation_type: 'speeding', created_at: oneHourAgo, customer_name: 'John Doe',
-        attorney_price: null, driver: null },
+        attorney_price: 350, assigned_attorney_id: null, driver: null,
+        court_dates: [{ id: 'cd1', date: nextWeek, court_name: 'Harris County Court', location: 'Houston TX', status: 'scheduled' }] },
     ];
 
     // First awaited chain call (cases query) → cases array
@@ -82,6 +85,11 @@ describe('getOperatorCases', () => {
     const { cases: returned, summary } = res.json.mock.calls[0][0];
     expect(returned).toHaveLength(1);
     expect(returned[0].ageHours).toBeGreaterThanOrEqual(0);
+    expect(returned[0].fine_amount).toBe(350);
+    expect(returned[0].court_date).toBe(nextWeek);
+    expect(returned[0].courthouse).toBe('Harris County Court');
+    expect(returned[0].priority).toBeDefined();
+    expect(returned[0].court_dates).toBeUndefined();
     expect(summary.assignedToMe).toBe(1);
     expect(summary.inProgress).toBe(1); // 'reviewed' is in progress
     expect(summary.pendingApproval).toBe(1);
@@ -138,13 +146,14 @@ describe('getOperatorCases', () => {
 // getUnassignedCases
 // ============================================================
 describe('getUnassignedCases', () => {
-  test('returns unassigned cases with requested flag', async () => {
+  test('returns unassigned cases with requested flag and enriched fields', async () => {
     const now = Date.now();
     const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000).toISOString();
 
     const cases = [
       { id: 'u1', case_number: 'CDL-610', status: 'new', state: 'NY',
-        violation_type: 'lane change', created_at: twoHoursAgo, customer_name: 'Sarah Kim' },
+        violation_type: 'lane change', created_at: twoHoursAgo, customer_name: 'Sarah Kim',
+        attorney_price: 200, assigned_attorney_id: null, court_dates: [] },
     ];
 
     const requests = [{ case_id: 'u1', status: 'pending' }];
@@ -167,12 +176,18 @@ describe('getUnassignedCases', () => {
     expect(returned).toHaveLength(1);
     expect(returned[0].requested).toBe(true);
     expect(returned[0].ageHours).toBeGreaterThanOrEqual(1);
+    expect(returned[0].fine_amount).toBe(200);
+    expect(returned[0].court_date).toBeNull();
+    expect(returned[0].courthouse).toBeNull();
+    expect(returned[0].priority).toBeDefined();
+    expect(returned[0].court_dates).toBeUndefined();
   });
 
   test('marks cases as not requested when no pending requests exist', async () => {
     const cases = [
       { id: 'u1', case_number: 'CDL-610', status: 'new', state: 'NY',
-        violation_type: 'lane change', created_at: new Date().toISOString(), customer_name: 'Sarah Kim' },
+        violation_type: 'lane change', created_at: new Date().toISOString(), customer_name: 'Sarah Kim',
+        attorney_price: null, assigned_attorney_id: null, court_dates: [] },
     ];
 
     let callCount = 0;
@@ -440,5 +455,736 @@ describe('getAvailableAttorneys', () => {
       jurisdictions: ['CA'],
       activeCount: 0,
     });
+  });
+});
+
+// ============================================================
+// getCaseDetail
+// ============================================================
+describe('getCaseDetail', () => {
+  const MOCK_CASE = {
+    id: 'c1', case_number: 'CDL-001', status: 'reviewed', state: 'CA',
+    violation_type: 'speeding', violation_date: '2026-02-15', county: 'Harris',
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+    customer_name: 'John Doe', attorney_price: 350,
+    assigned_operator_id: 'op-1', assigned_attorney_id: 'att-1',
+    driver: { id: 'd1', full_name: 'John Doe', phone: '555-1234', email: 'john@test.com', cdl_number: 'CDL123' },
+    attorney: { id: 'att-1', full_name: 'Alice Smith', email: 'alice@law.com', specializations: ['speeding'] },
+    court_dates: [
+      { id: 'cd1', date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), court_name: 'Harris County Court', location: 'Houston TX', status: 'scheduled' },
+    ],
+  };
+
+  const MOCK_ACTIVITY = [
+    { id: 'a1', action: 'status_change', details: { from: 'new', to: 'reviewed' }, created_at: new Date().toISOString(), user_id: 'op-1' },
+  ];
+
+  function setupCaseDetailMocks(caseResult, activityResult = { data: MOCK_ACTIVITY, error: null }, assignmentResult = { data: [], error: null }) {
+    chain.single = jest.fn().mockResolvedValue(caseResult);
+    let thenCallCount = 0;
+    chain.then = (onFulfilled) => {
+      thenCallCount++;
+      const result = thenCallCount === 1 ? activityResult : assignmentResult;
+      return Promise.resolve(result).then(onFulfilled);
+    };
+  }
+
+  test('returns enriched case with driver, attorney, court_dates, and activity for assigned operator', async () => {
+    setupCaseDetailMocks({ data: MOCK_CASE, error: null });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.getCaseDetail(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.case).toBeDefined();
+    expect(body.case.id).toBe('c1');
+    expect(body.case.driver).toMatchObject({ full_name: 'John Doe' });
+    expect(body.case.attorney).toMatchObject({ full_name: 'Alice Smith' });
+    expect(body.case.fine_amount).toBe(350);
+    expect(body.case.court_date).toBeDefined();
+    expect(body.case.courthouse).toBe('Harris County Court');
+    expect(body.case.priority).toBeDefined();
+    expect(body.case.ageHours).toBeGreaterThanOrEqual(1);
+    expect(body.activity).toHaveLength(1);
+    expect(body.activity[0].action).toBe('status_change');
+  });
+
+  test('returns 403 for operator not assigned to the case', async () => {
+    const otherCase = { ...MOCK_CASE, assigned_operator_id: 'other-op' };
+    chain.single = jest.fn().mockResolvedValue({ data: otherCase, error: null });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.getCaseDetail(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'FORBIDDEN' }) })
+    );
+  });
+
+  test('returns 404 for non-existent case', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: { message: 'not found' } });
+
+    const req = makeReq({ params: { caseId: 'nonexistent' } });
+    const res = makeRes();
+
+    await operatorController.getCaseDetail(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'NOT_FOUND' }) })
+    );
+  });
+
+  test('returns case for admin regardless of assignment', async () => {
+    const otherCase = { ...MOCK_CASE, assigned_operator_id: 'other-op' };
+    setupCaseDetailMocks({ data: otherCase, error: null });
+
+    const req = makeReq({
+      params: { caseId: 'c1' },
+      user: { id: 'admin-1', role: 'admin', full_name: 'Admin User' },
+    });
+    const res = makeRes();
+
+    await operatorController.getCaseDetail(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.case).toBeDefined();
+    expect(body.case.id).toBe('c1');
+  });
+
+  test('includes assignment_request when one exists', async () => {
+    const pendingReq = { id: 'ar-1', status: 'pending', created_at: new Date().toISOString() };
+    setupCaseDetailMocks(
+      { data: MOCK_CASE, error: null },
+      { data: MOCK_ACTIVITY, error: null },
+      { data: [pendingReq], error: null }
+    );
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.getCaseDetail(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.case.assignment_request).toMatchObject({ id: 'ar-1', status: 'pending' });
+  });
+
+  test('returns 500 on supabase error', async () => {
+    chain.single = jest.fn().mockRejectedValue(new Error('db failure'));
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+
+    await operatorController.getCaseDetail(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'FETCH_ERROR' }) })
+    );
+  });
+});
+
+// ============================================================
+// updateCaseStatus
+// ============================================================
+describe('updateCaseStatus', () => {
+  function setupUpdateMocks(caseResult, updateResult = { data: { id: 'c1', status: 'reviewed' }, error: null }) {
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) return Promise.resolve(caseResult);
+      return Promise.resolve(updateResult);
+    });
+    chain.then = (onFulfilled) => Promise.resolve({ data: null, error: null }).then(onFulfilled);
+  }
+
+  test('updates status and creates activity log entry', async () => {
+    setupUpdateMocks(
+      { data: { id: 'c1', case_number: 'CDL-001', status: 'new', assigned_operator_id: 'op-1', driver_id: 'd1' }, error: null },
+      { data: { id: 'c1', case_number: 'CDL-001', status: 'reviewed' }, error: null }
+    );
+
+    const req = makeReq({ params: { caseId: 'c1' }, body: { status: 'reviewed', note: 'Initial review done' } });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.case).toBeDefined();
+    expect(body.case.status).toBe('reviewed');
+    expect(supabase.from).toHaveBeenCalledWith('activity_log');
+  });
+
+  test('rejects invalid status values', async () => {
+    const req = makeReq({ params: { caseId: 'c1' }, body: { status: 'invalid_status' } });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'INVALID_STATUS' }) })
+    );
+  });
+
+  test('rejects empty status', async () => {
+    const req = makeReq({ params: { caseId: 'c1' }, body: {} });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  test('returns 404 for non-existent case', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: { message: 'not found' } });
+
+    const req = makeReq({ params: { caseId: 'nonexistent' }, body: { status: 'reviewed' } });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('returns 403 for non-assigned operator', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { id: 'c1', case_number: 'CDL-001', status: 'new', assigned_operator_id: 'other-op', driver_id: 'd1' },
+      error: null,
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' }, body: { status: 'reviewed' } });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  test('admin can update any case regardless of assignment', async () => {
+    setupUpdateMocks(
+      { data: { id: 'c1', case_number: 'CDL-001', status: 'new', assigned_operator_id: 'other-op', driver_id: 'd1' }, error: null },
+      { data: { id: 'c1', status: 'reviewed' }, error: null }
+    );
+
+    const req = makeReq({
+      params: { caseId: 'c1' },
+      body: { status: 'reviewed' },
+      user: { id: 'admin-1', role: 'admin', full_name: 'Admin' },
+    });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.case).toBeDefined();
+  });
+
+  test('triggers driver notification for customer-visible status changes', async () => {
+    setupUpdateMocks(
+      { data: { id: 'c1', case_number: 'CDL-001', status: 'new', assigned_operator_id: 'op-1', driver_id: 'd1' }, error: null },
+      { data: { id: 'c1', status: 'assigned_to_attorney' }, error: null }
+    );
+
+    const req = makeReq({ params: { caseId: 'c1' }, body: { status: 'assigned_to_attorney' } });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    expect(supabase.from).toHaveBeenCalledWith('notifications');
+  });
+
+  test('returns 500 on update error', async () => {
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) {
+        return Promise.resolve({ data: { id: 'c1', case_number: 'CDL-001', status: 'new', assigned_operator_id: 'op-1', driver_id: 'd1' }, error: null });
+      }
+      return Promise.resolve({ data: null, error: { message: 'update failed' } });
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' }, body: { status: 'reviewed' } });
+    const res = makeRes();
+
+    await operatorController.updateCaseStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+// ============================================================
+// calculatePriority
+// ============================================================
+describe('calculatePriority', () => {
+  function makeCase(overrides = {}) {
+    return {
+      created_at: new Date().toISOString(),
+      assigned_attorney_id: 'att-1',
+      ...overrides,
+    };
+  }
+
+  function daysFromNow(days) {
+    return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  function hoursAgo(hours) {
+    return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  }
+
+  test('returns critical when court date within 3 days', () => {
+    const c = makeCase();
+    expect(calculatePriority(c, daysFromNow(2))).toBe('critical');
+  });
+
+  test('returns critical when court date is exactly 3 days away', () => {
+    const c = makeCase();
+    expect(calculatePriority(c, daysFromNow(3))).toBe('critical');
+  });
+
+  test('returns critical when age >96h and no attorney', () => {
+    const c = makeCase({ created_at: hoursAgo(100), assigned_attorney_id: null });
+    expect(calculatePriority(c, null)).toBe('critical');
+  });
+
+  test('does NOT return critical for age >96h when attorney is assigned', () => {
+    const c = makeCase({ created_at: hoursAgo(100), assigned_attorney_id: 'att-1' });
+    expect(calculatePriority(c, null)).not.toBe('critical');
+  });
+
+  test('returns high when court date within 7 days', () => {
+    const c = makeCase();
+    expect(calculatePriority(c, daysFromNow(5))).toBe('high');
+  });
+
+  test('returns high when case age >48h', () => {
+    const c = makeCase({ created_at: hoursAgo(50) });
+    expect(calculatePriority(c, null)).toBe('high');
+  });
+
+  test('returns medium when court date within 14 days', () => {
+    const c = makeCase();
+    expect(calculatePriority(c, daysFromNow(10))).toBe('medium');
+  });
+
+  test('returns medium when case age >24h', () => {
+    const c = makeCase({ created_at: hoursAgo(30) });
+    expect(calculatePriority(c, null)).toBe('medium');
+  });
+
+  test('returns low when court date >14 days and age <24h', () => {
+    const c = makeCase({ created_at: hoursAgo(5) });
+    expect(calculatePriority(c, daysFromNow(30))).toBe('low');
+  });
+
+  test('returns low when no court date and age <24h', () => {
+    const c = makeCase({ created_at: hoursAgo(5) });
+    expect(calculatePriority(c, null)).toBe('low');
+  });
+});
+
+// ============================================================
+// pickNextCourtDate
+// ============================================================
+describe('pickNextCourtDate', () => {
+  function daysFromNow(days) {
+    return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  function daysAgo(days) {
+    return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  test('returns null for empty array', () => {
+    expect(pickNextCourtDate([])).toBeNull();
+  });
+
+  test('returns null for null input', () => {
+    expect(pickNextCourtDate(null)).toBeNull();
+  });
+
+  test('returns null when all court dates are cancelled', () => {
+    const dates = [
+      { id: '1', date: daysFromNow(5), court_name: 'Court A', status: 'cancelled' },
+    ];
+    expect(pickNextCourtDate(dates)).toBeNull();
+  });
+
+  test('picks closest future scheduled date', () => {
+    const dates = [
+      { id: '1', date: daysFromNow(10), court_name: 'Far Court', status: 'scheduled' },
+      { id: '2', date: daysFromNow(3), court_name: 'Near Court', status: 'scheduled' },
+    ];
+    expect(pickNextCourtDate(dates)).toMatchObject({ id: '2', court_name: 'Near Court' });
+  });
+
+  test('falls back to most recent past date when all are past', () => {
+    const dates = [
+      { id: '1', date: daysAgo(10), court_name: 'Old Court', status: 'scheduled' },
+      { id: '2', date: daysAgo(2), court_name: 'Recent Court', status: 'scheduled' },
+    ];
+    expect(pickNextCourtDate(dates)).toMatchObject({ id: '2', court_name: 'Recent Court' });
+  });
+
+  test('ignores non-scheduled dates and picks scheduled future', () => {
+    const dates = [
+      { id: '1', date: daysFromNow(2), court_name: 'Cancelled', status: 'cancelled' },
+      { id: '2', date: daysFromNow(5), court_name: 'Scheduled', status: 'scheduled' },
+    ];
+    expect(pickNextCourtDate(dates)).toMatchObject({ id: '2', court_name: 'Scheduled' });
+  });
+
+  test('prefers future over past scheduled dates', () => {
+    const dates = [
+      { id: '1', date: daysAgo(1), court_name: 'Past', status: 'scheduled' },
+      { id: '2', date: daysFromNow(1), court_name: 'Future', status: 'scheduled' },
+    ];
+    expect(pickNextCourtDate(dates)).toMatchObject({ id: '2', court_name: 'Future' });
+  });
+});
+
+// ============================================================
+// getCaseConversation (OC-4)
+// ============================================================
+describe('getCaseConversation', () => {
+  function setupConversationMocks({ caseResult, convoArrayResult, createResult }) {
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) return Promise.resolve(caseResult);
+      // create conversation call
+      return Promise.resolve(createResult || { data: null, error: null });
+    });
+    // Conversation query returns array
+    chain.then = (onFulfilled) => Promise.resolve(convoArrayResult).then(onFulfilled);
+  }
+
+  test('returns existing conversation for case', async () => {
+    setupConversationMocks({
+      caseResult: { data: { case_id: 'c1', driver_id: 'd1', assigned_operator_id: 'op-1' }, error: null },
+      convoArrayResult: { data: [{ id: 'conv-1', case_id: 'c1' }], error: null },
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+    await operatorController.getCaseConversation(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      data: expect.objectContaining({ id: 'conv-1' }),
+    }));
+  });
+
+  test('returns 404 if case not found', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+    const req = makeReq({ params: { caseId: 'missing' } });
+    const res = makeRes();
+    await operatorController.getCaseConversation(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('returns 403 if operator is not assigned to case', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { case_id: 'c1', driver_id: 'd1', assigned_operator_id: 'other-op' },
+      error: null,
+    });
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+    await operatorController.getCaseConversation(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  test('admin can access any case conversation', async () => {
+    setupConversationMocks({
+      caseResult: { data: { case_id: 'c1', driver_id: 'd1', assigned_operator_id: 'other-op' }, error: null },
+      convoArrayResult: { data: [{ id: 'conv-1', case_id: 'c1' }], error: null },
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' }, user: { id: 'admin-1', role: 'admin' } });
+    const res = makeRes();
+    await operatorController.getCaseConversation(req, res);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+});
+
+// ============================================================
+// getCaseMessages (OC-4)
+// ============================================================
+describe('getCaseMessages', () => {
+  test('returns messages for case conversation', async () => {
+    const msgs = [
+      { id: 'm1', content: 'Hello', sender_id: 'op-1', created_at: '2026-03-10T10:00:00Z' },
+    ];
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      return Promise.resolve({ data: { case_id: 'c1', assigned_operator_id: 'op-1' }, error: null });
+    });
+    let thenCallCount = 0;
+    chain.then = (onFulfilled) => {
+      thenCallCount++;
+      if (thenCallCount === 1) {
+        return Promise.resolve({ data: [{ id: 'conv-1' }], error: null }).then(onFulfilled);
+      }
+      return Promise.resolve({ data: msgs, error: null, count: 1 }).then(onFulfilled);
+    };
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+    await operatorController.getCaseMessages(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      data: expect.objectContaining({ messages: msgs }),
+    }));
+  });
+
+  test('returns empty array when no conversation exists', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { case_id: 'c1', assigned_operator_id: 'op-1' }, error: null,
+    });
+    chain.then = (onFulfilled) =>
+      Promise.resolve({ data: [], error: null }).then(onFulfilled);
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+    await operatorController.getCaseMessages(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.data.messages).toEqual([]);
+  });
+
+  test('returns 403 for non-assigned operator', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { case_id: 'c1', assigned_operator_id: 'other-op' }, error: null,
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' } });
+    const res = makeRes();
+    await operatorController.getCaseMessages(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+});
+
+// ============================================================
+// sendCaseMessage (OC-4)
+// ============================================================
+describe('sendCaseMessage', () => {
+  test('sends message and returns 201', async () => {
+    const msgData = { id: 'm1', content: 'Hello driver', sender_id: 'op-1' };
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) {
+        return Promise.resolve({ data: { case_id: 'c1', driver_id: 'd1', assigned_operator_id: 'op-1' }, error: null });
+      }
+      // insert message
+      return Promise.resolve({ data: msgData, error: null });
+    });
+    chain.then = (onFulfilled) =>
+      Promise.resolve({ data: [{ id: 'conv-1' }], error: null }).then(onFulfilled);
+    chain.catch = jest.fn().mockReturnValue(chain);
+
+    const req = makeReq({ params: { caseId: 'c1' }, body: { content: 'Hello driver' } });
+    const res = makeRes();
+    await operatorController.sendCaseMessage(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      data: expect.objectContaining({ id: 'm1' }),
+    }));
+  });
+
+  test('returns 400 for empty content', async () => {
+    const req = makeReq({ params: { caseId: 'c1' }, body: { content: '   ' } });
+    const res = makeRes();
+    await operatorController.sendCaseMessage(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  test('returns 403 for non-assigned operator', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { case_id: 'c1', driver_id: 'd1', assigned_operator_id: 'other-op' }, error: null,
+    });
+
+    const req = makeReq({ params: { caseId: 'c1' }, body: { content: 'Hi' } });
+    const res = makeRes();
+    await operatorController.sendCaseMessage(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  test('returns 404 for missing case', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+
+    const req = makeReq({ params: { caseId: 'missing' }, body: { content: 'Hi' } });
+    const res = makeRes();
+    await operatorController.sendCaseMessage(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+// ─── OC-5: Batch OCR ────────────────────────────────────────────────
+describe('batchOcr', () => {
+  const mockOcrService = { extractTicketData: jest.fn() };
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.doMock('../services/ocr.service', () => mockOcrService);
+    mockOcrService.extractTicketData.mockReset();
+  });
+
+  // Re-require the controller after mocking ocr.service so the inline require picks it up
+  function getController() {
+    // Clear cached controller so fresh require() inside batchOcr finds our mock
+    delete require.cache[require.resolve('../../src/controllers/operator.controller')];
+    return require('../../src/controllers/operator.controller');
+  }
+
+  test('returns 400 when no files uploaded', async () => {
+    const ctrl = getController();
+    const req = makeReq({ files: [] });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'NO_FILES' }) }),
+    );
+  });
+
+  test('returns 400 when files is undefined', async () => {
+    const ctrl = getController();
+    const req = makeReq({ files: undefined });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  test('processes multiple files successfully', async () => {
+    mockOcrService.extractTicketData
+      .mockResolvedValueOnce({
+        extractedData: { violationType: 'Speeding', violationDate: '2026-01-15', state: 'TX', location: 'Harris', fineAmount: 250, courtDate: '2026-03-01', citationNumber: 'CIT-001' },
+        validation: { overallConfidence: 92 },
+      })
+      .mockResolvedValueOnce({
+        extractedData: { violationType: 'Red Light', state: 'CA' },
+        confidence: 78,
+      });
+
+    const ctrl = getController();
+    const req = makeReq({
+      files: [
+        { originalname: 'ticket1.jpg', buffer: Buffer.from('img1') },
+        { originalname: 'ticket2.png', buffer: Buffer.from('img2') },
+      ],
+    });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        results: [
+          {
+            filename: 'ticket1.jpg',
+            success: true,
+            data: expect.objectContaining({ violation_type: 'Speeding', state: 'TX', confidence: 92 }),
+          },
+          {
+            filename: 'ticket2.png',
+            success: true,
+            data: expect.objectContaining({ violation_type: 'Red Light', state: 'CA', confidence: 78 }),
+          },
+        ],
+        summary: { total: 2, successful: 2, failed: 0 },
+      },
+    });
+  });
+
+  test('continues processing when individual file fails', async () => {
+    mockOcrService.extractTicketData
+      .mockRejectedValueOnce(new Error('Corrupt image'))
+      .mockResolvedValueOnce({
+        extractedData: { violationType: 'Speeding' },
+        validation: { overallConfidence: 85 },
+      });
+
+    const ctrl = getController();
+    const req = makeReq({
+      files: [
+        { originalname: 'bad.jpg', buffer: Buffer.from('bad') },
+        { originalname: 'good.png', buffer: Buffer.from('good') },
+      ],
+    });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.data.results[0]).toEqual(
+      expect.objectContaining({ filename: 'bad.jpg', success: false, error: 'Corrupt image' }),
+    );
+    expect(body.data.results[1]).toEqual(
+      expect.objectContaining({ filename: 'good.png', success: true }),
+    );
+    expect(body.data.summary).toEqual({ total: 2, successful: 1, failed: 1 });
+  });
+
+  test('maps OCR fields to snake_case correctly', async () => {
+    mockOcrService.extractTicketData.mockResolvedValue({
+      extractedData: {
+        violationType: 'Parking', violationDate: '2026-02-20', state: 'NY',
+        location: 'Manhattan', fineAmount: 100, courtDate: '2026-04-15', citationNumber: 'NYC-999',
+      },
+      validation: { overallConfidence: 95 },
+    });
+
+    const ctrl = getController();
+    const req = makeReq({ files: [{ originalname: 'test.jpg', buffer: Buffer.from('x') }] });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+
+    const result = res.json.mock.calls[0][0].data.results[0].data;
+    expect(result).toEqual({
+      violation_type: 'Parking',
+      violation_date: '2026-02-20',
+      state: 'NY',
+      county: 'Manhattan',
+      fine_amount: 100,
+      court_date: '2026-04-15',
+      citation_number: 'NYC-999',
+      confidence: 95,
+    });
+  });
+
+  test('uses fallback confidence when validation is missing', async () => {
+    mockOcrService.extractTicketData.mockResolvedValue({
+      extractedData: { violationType: 'Speeding' },
+      confidence: 60,
+    });
+
+    const ctrl = getController();
+    const req = makeReq({ files: [{ originalname: 'f.jpg', buffer: Buffer.from('x') }] });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+
+    expect(res.json.mock.calls[0][0].data.results[0].data.confidence).toBe(60);
+  });
+
+  test('defaults confidence to 0 when both missing', async () => {
+    mockOcrService.extractTicketData.mockResolvedValue({ extractedData: {} });
+
+    const ctrl = getController();
+    const req = makeReq({ files: [{ originalname: 'f.jpg', buffer: Buffer.from('x') }] });
+    const res = makeRes();
+    await ctrl.batchOcr(req, res);
+
+    expect(res.json.mock.calls[0][0].data.results[0].data.confidence).toBe(0);
   });
 });

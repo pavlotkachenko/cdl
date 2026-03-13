@@ -74,6 +74,13 @@ const autoAssignCase = async (req, res) => {
 
     const result = await assignmentService.autoAssign(caseId, userId);
 
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        error: 'No attorneys available at this time'
+      });
+    }
+
     res.json({
       success: true,
       message: 'Case auto-assigned successfully',
@@ -81,7 +88,10 @@ const autoAssignCase = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error auto-assigning case:', error);
-    res.status(error.message.includes('already assigned') ? 409 : 500).json({
+    const status = error.message.includes('already assigned') ? 409
+      : error.message.includes('No eligible') ? 404
+      : 500;
+    res.status(status).json({
       success: false,
       error: error.message
     });
@@ -115,7 +125,11 @@ const manualAssignCase = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error manually assigning case:', error);
-    res.status(error.message.includes('already assigned') ? 409 : 500).json({
+    const status = error.message.includes('already assigned') ? 409
+      : error.message.includes('not active') ? 400
+      : error.message.includes('not found') ? 404
+      : 500;
+    res.status(status).json({
       success: false,
       error: error.message
     });
