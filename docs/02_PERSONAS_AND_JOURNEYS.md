@@ -438,6 +438,58 @@ PART 2 COMPLETE!
 
 ---
 
+## PERSONA 5: LISA CHEN - OPERATOR / CASE MANAGER
+
+### Demographics & Background
+- **Age:** 29 years old
+- **Location:** Remote (works from home office)
+- **Role:** Full-time case manager / operator for the CDL Ticket platform
+- **Experience:** 3 years in legal operations, 1 year on the CDL platform
+- **Education:** Associate's degree in Paralegal Studies
+
+### Technology Comfort Level: **HIGH**
+- **Primary Device:** Laptop with dual monitors
+- **Tools Used Daily:** Platform dashboard, email, Slack, spreadsheets
+- **Comfort:** Very comfortable with web apps, learns new features quickly
+- **Preference:** Keyboard shortcuts, batch operations, efficient workflows
+
+### Goals & Motivations
+1. **Throughput:** Process as many cases as possible each day without sacrificing quality
+2. **Accuracy:** Match the right attorneys to the right cases for best outcomes
+3. **Communication:** Keep drivers informed without spending hours on individual messages
+4. **Visibility:** See the full picture of every case at a glance
+5. **Efficiency:** Minimize repetitive work through templates and automation
+
+### Pain Points (Before Sprint 051)
+1. No detailed case view — had to open multiple tabs to see driver info, court dates, and attorney details
+2. No batch OCR — processed ticket images one at a time
+3. No message templates — typed the same responses repeatedly
+4. No priority indicators — couldn't quickly identify urgent cases
+5. Assignment required admin involvement for every case
+
+---
+
+### LISA CHEN'S JOURNEY MAP (After Sprint 051)
+
+| Step | Action | Emotion | Time | Feature |
+|------|--------|---------|------|---------|
+| 1 | Logs into operator dashboard, sees enriched queue with priority colors | **Focused** 🎯 | 10 sec | Queue enrichment (OC-3) |
+| 2 | Spots critical-priority case (court in 3 days, no attorney), clicks it | **Alert** ⚡ | 5 sec | Priority indicators |
+| 3 | Reviews full case detail: driver info, violation, court dates, activity log | **Informed** 📋 | 30 sec | Case detail (OC-1) |
+| 4 | Clicks "Assign Attorney", reviews ranked list, selects top match | **Confident** 💪 | 15 sec | Attorney assignment (OC-2) |
+| 5 | Sends driver a message using "Case Received" template | **Efficient** ⚡ | 10 sec | Messaging + templates (OC-4) |
+| 6 | Switches to batch OCR, uploads 5 new ticket images at once | **Productive** 🚀 | 1 min | Batch OCR (OC-5) |
+| 7 | Reviews OCR results, creates cases from successful extractions | **Satisfied** ✅ | 2 min | Batch OCR (OC-5) |
+| 8 | Receives real-time notification: "Assignment request approved by admin" | **Informed** 🔔 | - | Real-time notifications (OC-6) |
+| 9 | Requests assignment to an unassigned case in the queue | **Proactive** 👍 | 5 sec | Request assignment |
+| 10 | End of day: 25 cases processed, 5 attorneys assigned, 8 OCR tickets processed | **Accomplished** ⭐ | - | Full workflow |
+
+**DAILY THROUGHPUT:** 20-30 cases (up from 10-15 before sprint 051)
+**TIME SAVINGS:** 50% reduction in per-case handling time
+**EMOTIONAL ARC:** Focused → Efficient → Productive → Accomplished
+
+---
+
 ## KEY UX INSIGHTS ACROSS ALL PERSONAS
 
 ### 1. **Mobile-First is Critical**

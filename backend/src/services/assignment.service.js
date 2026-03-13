@@ -232,6 +232,25 @@ const autoAssign = async (caseId, assignedBy = null, excludeAttorneyIds = []) =>
       attorney_id: selectedAttorney.userId
     });
 
+    // Activity log entry
+    await supabase.from('activity_log').insert({
+      case_id: caseId,
+      user_id: assignedBy,
+      action: 'attorney_assigned',
+      details: { method: 'auto', attorney_id: selectedAttorney.userId, attorney_name: `${selectedAttorney.firstName} ${selectedAttorney.lastName}`, score: selectedAttorney.score },
+    }).catch(err => logger.error('Activity log insert failed:', err));
+
+    // Notify assigned attorney
+    await supabase.from('notifications').insert({
+      user_id: selectedAttorney.userId,
+      type: 'case_update',
+      channel: 'in_app',
+      title: 'New Case Assignment',
+      message: `You have been auto-assigned to case ${caseId}`,
+      data: { caseId },
+      status: 'pending',
+    }).catch(err => logger.error('Attorney notification failed:', err));
+
     logger.info(`Auto-assigned case ${caseId} to attorney ${selectedAttorney.userId} (score: ${selectedAttorney.score})`);
 
     return {
@@ -329,6 +348,25 @@ const manualAssign = async (caseId, attorneyId, assignedBy = null) => {
     await supabase.rpc('increment_attorney_cases', {
       attorney_id: attorneyId
     });
+
+    // Activity log entry
+    await supabase.from('activity_log').insert({
+      case_id: caseId,
+      user_id: assignedBy,
+      action: 'attorney_assigned',
+      details: { method: 'manual', attorney_id: attorneyId, attorney_name: `${attorney.first_name} ${attorney.last_name}`, score: scoreData.totalScore },
+    }).catch(err => logger.error('Activity log insert failed:', err));
+
+    // Notify assigned attorney
+    await supabase.from('notifications').insert({
+      user_id: attorneyId,
+      type: 'case_update',
+      channel: 'in_app',
+      title: 'New Case Assignment',
+      message: `You have been assigned to case ${caseId}`,
+      data: { caseId },
+      status: 'pending',
+    }).catch(err => logger.error('Attorney notification failed:', err));
 
     logger.info(`Manually assigned case ${caseId} to attorney ${attorneyId}`);
 

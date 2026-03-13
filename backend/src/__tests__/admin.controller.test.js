@@ -3,8 +3,14 @@
 jest.mock('../config/supabase', () => ({
   supabase: { from: jest.fn() },
 }));
+jest.mock('../socket/socket', () => ({
+  emitToUser: jest.fn(),
+  emitToRole: jest.fn(),
+  emitToCase: jest.fn(),
+}));
 
 const { supabase } = require('../config/supabase');
+const { emitToUser } = require('../socket/socket');
 const adminController = require('../controllers/admin.controller');
 
 // ─────────────────────────────────────────────
@@ -14,7 +20,7 @@ let chain;
 
 function buildChain(arrayResult = { data: [], error: null }) {
   chain = {};
-  ['select', 'insert', 'update', 'eq', 'neq', 'order', 'limit'].forEach(m => {
+  ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'order', 'limit'].forEach(m => {
     chain[m] = jest.fn().mockReturnValue(chain);
   });
   chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
@@ -23,6 +29,7 @@ function buildChain(arrayResult = { data: [], error: null }) {
   chain.head = jest.fn().mockReturnValue(chain);
   chain.then = (onFulfilled, onRejected) =>
     Promise.resolve(arrayResult).then(onFulfilled, onRejected);
+  chain.catch = jest.fn().mockReturnValue(Promise.resolve());
   supabase.from.mockReturnValue(chain);
 }
 
@@ -174,5 +181,155 @@ describe('unsuspendUser', () => {
     const res = makeRes();
     await adminController.unsuspendUser(req, res);
     expect(res.json.mock.calls[0][0].user).toMatchObject({ id: 'u1', status: 'active' });
+  });
+});
+
+// ─── OC-7: Assignment Request Approval ───────────────────────────
+describe('getAssignmentRequests', () => {
+  test('returns pending requests with joins', async () => {
+    buildChain({
+      data: [{
+        id: 'ar-1', status: 'pending', created_at: '2026-03-10T14:00:00Z',
+        operator_id: 'op-1', case_id: 'c1',
+        operator: { id: 'op-1', full_name: 'Lisa Chen' },
+        case: { id: 'c1', case_number: 'CDL-610', violation_type: 'Speeding', state: 'TX' },
+      }],
+      error: null,
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getAssignmentRequests(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      requests: [expect.objectContaining({
+        id: 'ar-1',
+        operator: { id: 'op-1', full_name: 'Lisa Chen' },
+        case: expect.objectContaining({ case_number: 'CDL-610' }),
+      })],
+    });
+  });
+
+  test('returns empty array when no pending requests', async () => {
+    buildChain({ data: [], error: null });
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getAssignmentRequests(req, res);
+    expect(res.json).toHaveBeenCalledWith({ requests: [] });
+  });
+});
+
+describe('approveAssignmentRequest', () => {
+  function setupApprove(request, caseData) {
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) return Promise.resolve({ data: request, error: null });
+      if (singleCallCount === 2) return Promise.resolve({ data: caseData, error: null });
+      return Promise.resolve({ data: null, error: null });
+    });
+  }
+
+  test('approves request and assigns operator to case', async () => {
+    setupApprove(
+      { id: 'ar-1', status: 'pending', operator_id: 'op-1', case_id: 'c1' },
+      { id: 'c1', case_number: 'CDL-610', assigned_operator_id: null },
+    );
+
+    const req = makeReq({ params: { requestId: 'ar-1' } });
+    const res = makeRes();
+    await adminController.approveAssignmentRequest(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(emitToUser).toHaveBeenCalledWith('op-1', 'assignment:approved', expect.any(Object));
+  });
+
+  test('returns 404 for missing request', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+    const req = makeReq({ params: { requestId: 'missing' } });
+    const res = makeRes();
+    await adminController.approveAssignmentRequest(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('returns 400 for already processed request', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { id: 'ar-1', status: 'approved', operator_id: 'op-1', case_id: 'c1' },
+      error: null,
+    });
+    const req = makeReq({ params: { requestId: 'ar-1' } });
+    const res = makeRes();
+    await adminController.approveAssignmentRequest(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'ALREADY_PROCESSED' }) }),
+    );
+  });
+
+  test('returns 409 when case already assigned to different operator', async () => {
+    setupApprove(
+      { id: 'ar-1', status: 'pending', operator_id: 'op-1', case_id: 'c1' },
+      { id: 'c1', case_number: 'CDL-610', assigned_operator_id: 'op-other' },
+    );
+
+    const req = makeReq({ params: { requestId: 'ar-1' } });
+    const res = makeRes();
+    await adminController.approveAssignmentRequest(req, res);
+    expect(res.status).toHaveBeenCalledWith(409);
+  });
+});
+
+describe('rejectAssignmentRequest', () => {
+  function setupReject() {
+    let singleCallCount = 0;
+    chain.single = jest.fn().mockImplementation(() => {
+      singleCallCount++;
+      if (singleCallCount === 1) return Promise.resolve({ data: { id: 'ar-1', status: 'pending', operator_id: 'op-1', case_id: 'c1' }, error: null });
+      if (singleCallCount === 2) return Promise.resolve({ data: { case_number: 'CDL-610' }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    });
+  }
+
+  test('rejects request with reason', async () => {
+    setupReject();
+    const req = makeReq({ params: { requestId: 'ar-1' }, body: { reason: 'No capacity' } });
+    const res = makeRes();
+    await adminController.rejectAssignmentRequest(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(emitToUser).toHaveBeenCalledWith('op-1', 'assignment:rejected',
+      expect.objectContaining({ reason: 'No capacity' }),
+    );
+  });
+
+  test('rejects without reason', async () => {
+    setupReject();
+    const req = makeReq({ params: { requestId: 'ar-1' }, body: {} });
+    const res = makeRes();
+    await adminController.rejectAssignmentRequest(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(emitToUser).toHaveBeenCalledWith('op-1', 'assignment:rejected',
+      expect.objectContaining({ reason: null }),
+    );
+  });
+
+  test('returns 404 for missing request', async () => {
+    chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+    const req = makeReq({ params: { requestId: 'missing' } });
+    const res = makeRes();
+    await adminController.rejectAssignmentRequest(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('returns 400 for already processed request', async () => {
+    chain.single = jest.fn().mockResolvedValue({
+      data: { id: 'ar-1', status: 'rejected', operator_id: 'op-1', case_id: 'c1' },
+      error: null,
+    });
+    const req = makeReq({ params: { requestId: 'ar-1' } });
+    const res = makeRes();
+    await adminController.rejectAssignmentRequest(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

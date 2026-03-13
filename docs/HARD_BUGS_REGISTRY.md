@@ -237,6 +237,48 @@ grep -rn "path:" frontend/src/app/*routing* frontend/src/app/app.routes.ts
 | BUG-003 | Supabase admin client auth state pollution | Critical | Shared mutable state | Singleton client accumulates state |
 | BUG-004 | DB enum mismatch for `carrier`/`paralegal` | High | Schema mismatch | API values vs DB enum |
 | BUG-005 | Route paths with wrong `/app/` prefix | High | Config mismatch | Navigate target vs route definition |
+| BUG-006 | Missing `chain.catch` in Supabase test mock | Medium | Test mock gap | `.catch()` on fire-and-forget inserts |
+
+---
+
+## BUG-006: Missing `chain.catch` in Supabase Test Mock Causes Silent Test Failures
+
+**Severity:** Medium (tests fail with unhelpful error messages)
+**Discovered:** 2026-03-12 (Sprint 051, OC-7 implementation)
+**Files:**
+- `backend/src/__tests__/admin.controller.test.js`
+- Any test file using the `buildChain()` Supabase mock pattern
+
+**Symptoms:**
+- Tests for `rejectAssignmentRequest` and similar handlers that use fire-and-forget inserts fail with `TypeError: Cannot read properties of undefined (reading 'then')`
+- The error is in an `await` expression inside the controller, not in the test itself
+- Hard to trace because the stack points into the controller, not the mock setup
+
+**Root Cause:**
+Controllers that create notifications or activity log entries use a fire-and-forget pattern:
+```javascript
+await supabase.from('notifications').insert({...}).catch(() => {});
+```
+The `.catch()` call on the Supabase chain returns undefined if `chain.catch` is not defined in the mock. When the controller `await`s this result, it gets `undefined` — which is fine. But if the `insert()` call itself rejects (or the chain resolution rejects), the missing `.catch()` means the error propagates up uncaught.
+
+**The Fix:**
+Add `chain.catch` to the `buildChain()` mock helper:
+```javascript
+chain.catch = jest.fn().mockReturnValue(Promise.resolve());
+```
+
+**Detection Pattern — audit all test files for:**
+```
+# Find all buildChain functions that might be missing .catch
+grep -rn "buildChain" backend/src/__tests__/ --include="*.test.js"
+
+# Find all controller code that uses .catch(() => {}) on Supabase chains
+grep -rn "\.catch(() => {})" backend/src/controllers/ --include="*.js"
+```
+
+**Test to write:**
+- Verify every `buildChain()` includes `chain.catch` mock
+- Add a meta-test that asserts `chain.catch` is a function after `buildChain()` runs
 
 ---
 

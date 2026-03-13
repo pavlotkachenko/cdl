@@ -556,6 +556,430 @@ socket.on('message-read', (data) => {
 
 ---
 
+## Operator API
+
+### Get Operator's Assigned Cases
+```http
+GET /api/operator/cases
+```
+
+**Query Parameters:**
+- `status` (optional): Filter by case status (e.g. `new`, `reviewed`, `assigned_to_attorney`)
+
+**Auth:** `operator`, `admin`
+
+**Response:**
+```json
+{
+  "cases": [
+    {
+      "id": "case-uuid",
+      "case_number": "CDL-610",
+      "status": "reviewed",
+      "state": "TX",
+      "violation_type": "Speeding",
+      "created_at": "2026-03-10T14:00:00Z",
+      "customer_name": "Marcus Rivera",
+      "fine_amount": 299,
+      "court_date": "2026-04-15T09:00:00Z",
+      "courthouse": "Harris County Court",
+      "priority": "high",
+      "ageHours": 72,
+      "driver": { "id": "...", "full_name": "Marcus Rivera", "phone": "+1..." },
+      "assigned_attorney_id": null
+    }
+  ],
+  "summary": {
+    "assignedToMe": 12,
+    "inProgress": 8,
+    "resolvedToday": 2,
+    "pendingApproval": 1
+  }
+}
+```
+
+### Get Unassigned Cases Queue
+```http
+GET /api/operator/unassigned
+```
+
+**Auth:** `operator`, `admin`
+
+**Response:**
+```json
+{
+  "cases": [
+    {
+      "id": "case-uuid",
+      "case_number": "CDL-611",
+      "status": "new",
+      "state": "CA",
+      "violation_type": "Logbook",
+      "priority": "critical",
+      "court_date": "2026-03-14T10:00:00Z",
+      "requested": false,
+      "driver": { "id": "...", "full_name": "John Smith", "phone": "+1..." }
+    }
+  ]
+}
+```
+
+### Get Case Detail
+```http
+GET /api/operator/cases/:caseId
+```
+
+**Auth:** `operator` (own cases), `admin` (any case)
+
+**Response:**
+```json
+{
+  "case": {
+    "id": "case-uuid",
+    "case_number": "CDL-610",
+    "status": "reviewed",
+    "state": "TX",
+    "violation_type": "Speeding",
+    "violation_date": "2026-03-05",
+    "customer_name": "Marcus Rivera",
+    "county": "Harris",
+    "fine_amount": 299,
+    "court_date": "2026-04-15T09:00:00Z",
+    "courthouse": "Harris County Court",
+    "priority": "high",
+    "driver": { "id": "...", "full_name": "Marcus Rivera", "phone": "+1...", "email": "...", "cdl_number": "..." },
+    "attorney": { "id": "...", "full_name": "James Wilson", "email": "...", "specializations": ["speeding", "logbook"] },
+    "court_dates": [{ "id": "...", "date": "2026-04-15T09:00:00Z", "court_name": "Harris County Court", "location": "Houston, TX", "status": "scheduled" }],
+    "assignment_request": null
+  },
+  "activity": [
+    { "id": "...", "action": "status_change", "details": { "from": "new", "to": "reviewed", "note": null }, "created_at": "2026-03-10T15:00:00Z", "user_id": "..." }
+  ]
+}
+```
+
+### Update Case Status
+```http
+PATCH /api/operator/cases/:caseId/status
+```
+
+**Auth:** `operator` (own cases), `admin` (any case)
+
+**Request Body:**
+```json
+{
+  "status": "reviewed",
+  "note": "Reviewed documents, ready for attorney assignment"
+}
+```
+
+**Valid statuses:** `new`, `reviewed`, `assigned_to_attorney`, `waiting_for_driver`, `send_info_to_attorney`, `attorney_paid`, `call_court`, `check_with_manager`, `pay_attorney`, `closed`
+
+**Response:**
+```json
+{
+  "case": { "id": "...", "status": "reviewed", "..." : "..." }
+}
+```
+
+### Request Assignment to Case
+```http
+POST /api/operator/cases/:caseId/request-assignment
+```
+
+**Auth:** `operator`
+
+**Response (201):**
+```json
+{
+  "request": { "id": "req-uuid", "case_id": "...", "operator_id": "...", "status": "pending", "created_at": "..." }
+}
+```
+
+**Errors:** 404 (case not found), 400 (already assigned or duplicate request)
+
+### Get Case Conversation
+```http
+GET /api/operator/cases/:caseId/conversation
+```
+
+**Auth:** `operator` (own cases), `admin` (any case)
+
+Creates the conversation if one does not exist for this case.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": { "id": "conv-uuid", "case_id": "...", "driver_id": "...", "attorney_id": "...", "created_at": "..." }
+}
+```
+
+### Get Case Messages
+```http
+GET /api/operator/cases/:caseId/messages
+```
+
+**Auth:** `operator` (own cases), `admin` (any case)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "messages": [
+      { "id": "msg-uuid", "conversation_id": "...", "sender_id": "...", "content": "Hello", "message_type": "text", "created_at": "...", "sender": { "full_name": "Lisa Chen", "role": "operator" } }
+    ],
+    "total": 15,
+    "conversationId": "conv-uuid"
+  }
+}
+```
+
+### Send Case Message
+```http
+POST /api/operator/cases/:caseId/messages
+```
+
+**Auth:** `operator` (own cases), `admin` (any case)
+
+**Request Body:**
+```json
+{
+  "content": "Your documents have been received. The attorney will review them shortly."
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": { "id": "msg-uuid", "conversation_id": "...", "sender_id": "...", "content": "...", "message_type": "text", "created_at": "..." }
+}
+```
+
+### Get Available Attorneys
+```http
+GET /api/operator/attorneys
+```
+
+**Auth:** `operator`, `admin`
+
+**Response:**
+```json
+{
+  "attorneys": [
+    { "id": "...", "fullName": "James Wilson", "email": "...", "specializations": ["speeding"], "jurisdictions": ["TX", "NC"], "activeCount": 5 }
+  ]
+}
+```
+
+### Batch OCR Processing
+```http
+POST /api/operator/batch-ocr
+Content-Type: multipart/form-data
+```
+
+**Auth:** `operator`, `admin`
+
+**Request:** Upload up to 10 files under field name `tickets`. Accepted types: JPEG, PNG, PDF. Max 10MB each.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "filename": "ticket1.jpg",
+        "success": true,
+        "data": {
+          "violation_type": "Speeding",
+          "violation_date": "2026-03-01",
+          "state": "TX",
+          "county": "Harris",
+          "fine_amount": 250,
+          "court_date": "2026-04-15",
+          "citation_number": "TX-2026-001234",
+          "confidence": 0.87
+        }
+      },
+      {
+        "filename": "blurry.jpg",
+        "success": false,
+        "error": "Could not extract text from image"
+      }
+    ],
+    "summary": { "total": 2, "successful": 1, "failed": 1 }
+  }
+}
+```
+
+---
+
+## Assignment API
+
+### Get Ranked Attorneys for a Case
+```http
+GET /api/assignment/cases/:caseId/attorneys
+```
+
+**Auth:** `operator`, `admin`
+
+**Response:**
+```json
+{
+  "attorneys": [
+    {
+      "id": "...",
+      "fullName": "James Wilson",
+      "score": 92.5,
+      "specializations": ["speeding", "logbook"],
+      "jurisdictions": ["TX", "NC"],
+      "activeCases": 3,
+      "scoreBreakdown": {
+        "specialization": 25,
+        "license": 20,
+        "workload": 17.5,
+        "successRate": 15,
+        "availability": 15
+      }
+    }
+  ]
+}
+```
+
+### Auto-Assign Case to Best Attorney
+```http
+POST /api/assignment/cases/:caseId/auto-assign
+```
+
+**Auth:** `operator`, `admin`
+
+**Response:**
+```json
+{
+  "success": true,
+  "attorney": { "id": "...", "fullName": "James Wilson" },
+  "caseId": "..."
+}
+```
+
+### Manually Assign Case to Attorney
+```http
+POST /api/assignment/cases/:caseId/manual-assign
+```
+
+**Auth:** `operator`, `admin`
+
+**Request Body:**
+```json
+{
+  "attorneyId": "attorney-uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "attorney": { "id": "...", "fullName": "James Wilson" },
+  "caseId": "..."
+}
+```
+
+### Calculate Attorney Score for Case
+```http
+GET /api/assignment/cases/:caseId/attorneys/:attorneyId/score
+```
+
+**Auth:** `operator`, `admin`
+
+**Response:**
+```json
+{
+  "score": 92.5,
+  "breakdown": {
+    "specialization": 25,
+    "license": 20,
+    "workload": 17.5,
+    "successRate": 15,
+    "availability": 15
+  }
+}
+```
+
+---
+
+## Admin Assignment Requests API
+
+### Get Pending Assignment Requests
+```http
+GET /api/admin/assignment-requests
+```
+
+**Auth:** `admin`
+
+**Response:**
+```json
+{
+  "requests": [
+    {
+      "id": "req-uuid",
+      "operator": { "id": "...", "full_name": "Lisa Chen" },
+      "case": { "id": "...", "case_number": "CDL-610", "violation_type": "Speeding", "state": "TX" },
+      "status": "pending",
+      "created_at": "2026-03-10T14:00:00Z"
+    }
+  ]
+}
+```
+
+### Approve Assignment Request
+```http
+POST /api/admin/assignment-requests/:requestId/approve
+```
+
+**Auth:** `admin`
+
+Assigns the operator to the case, creates a notification for the operator, emits `assignment:approved` socket event, and logs activity.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Assignment request approved"
+}
+```
+
+**Errors:** 404 (request not found), 400 (already processed), 409 (case already assigned to another operator)
+
+### Reject Assignment Request
+```http
+POST /api/admin/assignment-requests/:requestId/reject
+```
+
+**Auth:** `admin`
+
+**Request Body (optional):**
+```json
+{
+  "reason": "Case requires senior operator experience"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Assignment request rejected"
+}
+```
+
+**Errors:** 404 (request not found), 400 (already processed)
+
+---
+
 ## Error Responses
 
 All error responses follow this format:

@@ -9,6 +9,9 @@ const jwt = require('jsonwebtoken');
 // Store active users
 const activeUsers = new Map();
 
+// Store io instance for use by emitTo* helpers
+let ioInstance = null;
+
 /**
  * Initialize Socket.io server
  */
@@ -56,6 +59,11 @@ const initializeSocket = (server) => {
 
     // Join user-specific room
     socket.join(`user:${socket.userId}`);
+
+    // Join role-based room for broadcasts (e.g. all operators)
+    if (socket.userRole) {
+      socket.join(`role:${socket.userRole}`);
+    }
 
     // Broadcast user online status
     io.emit('user-online', {
@@ -220,6 +228,7 @@ const initializeSocket = (server) => {
     });
   });
 
+  ioInstance = io;
   return io;
 };
 
@@ -244,9 +253,33 @@ const isUserOnline = (userId) => {
   return activeUsers.has(userId);
 };
 
+/**
+ * Emit an event to a specific user's room.
+ */
+const emitToUser = (userId, event, data) => {
+  if (ioInstance) ioInstance.to(`user:${userId}`).emit(event, data);
+};
+
+/**
+ * Emit an event to all users with a given role.
+ */
+const emitToRole = (role, event, data) => {
+  if (ioInstance) ioInstance.to(`role:${role}`).emit(event, data);
+};
+
+/**
+ * Emit an event to a case room.
+ */
+const emitToCase = (caseId, event, data) => {
+  if (ioInstance) ioInstance.to(`case:${caseId}`).emit(event, data);
+};
+
 module.exports = {
   initializeSocket,
   getActiveUsersCount,
   getActiveUser,
-  isUserOnline
+  isUserOnline,
+  emitToUser,
+  emitToRole,
+  emitToCase,
 };

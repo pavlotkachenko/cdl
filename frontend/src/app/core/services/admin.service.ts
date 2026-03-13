@@ -109,6 +109,14 @@ export interface BulkOperation {
   data?: any;
 }
 
+export interface AssignmentRequest {
+  id: string;
+  operator: { id: string; full_name: string } | null;
+  case: { id: string; case_number: string; violation_type: string; state: string } | null;
+  status: string;
+  created_at: string;
+}
+
 export interface PlatformUser {
   id: string;
   name: string;
@@ -543,5 +551,26 @@ export class AdminService {
 
   unsuspendUser(userId: string): Observable<{ user: Pick<PlatformUser, 'id' | 'status'> }> {
     return this.http.patch<{ user: Pick<PlatformUser, 'id' | 'status'> }>(`${this.apiUrl}/admin/users/${userId}/unsuspend`, {});
+  }
+
+  // ── Assignment Request Approval (OC-7) ──
+
+  getAssignmentRequests(): Observable<{ requests: AssignmentRequest[] }> {
+    return this.http.get<{ requests: AssignmentRequest[] }>(`${this.apiUrl}/admin/assignment-requests`).pipe(
+      catchError(() => of({ requests: [] })),
+    );
+  }
+
+  approveAssignmentRequest(requestId: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(
+      `${this.apiUrl}/admin/assignment-requests/${requestId}/approve`, {},
+    );
+  }
+
+  rejectAssignmentRequest(requestId: string, reason?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(
+      `${this.apiUrl}/admin/assignment-requests/${requestId}/reject`,
+      reason ? { reason } : {},
+    );
   }
 }

@@ -800,6 +800,36 @@ Setup Wizard (Step 4 of 4)
 - ✅ User can reply directly from notification (iOS/Android)
 - ✅ Badge count shows un
 
-✅ Functional Requirements created!
+---
 
-📁 Saved to: /Users/paveltkachenko/prj/cdl-ticket-management/docs/04_FUNCTIONAL_REQUIREMENTS.md
+## 5. ROLE-BASED ACCESS CONTROL (RBAC) MATRIX
+
+### Operator Permissions (Sprint 051)
+
+| Resource | Operator | Admin | Driver | Attorney |
+|----------|----------|-------|--------|----------|
+| View own assigned cases | ✅ | ✅ (all) | ❌ | ❌ |
+| View unassigned queue | ✅ | ✅ | ❌ | ❌ |
+| View case detail | ✅ (own) | ✅ (all) | ✅ (own) | ✅ (assigned) |
+| Update case status | ✅ (own) | ✅ (all) | ❌ | ✅ (assigned) |
+| Request assignment to case | ✅ | ❌ (assigns directly) | ❌ | ❌ |
+| Auto-assign attorney | ✅ | ✅ | ❌ | ❌ |
+| Manual-assign attorney | ✅ | ✅ | ❌ | ❌ |
+| Batch OCR processing | ✅ | ✅ | ❌ | ❌ |
+| View/send case messages | ✅ (own cases) | ✅ (all) | ✅ (own) | ✅ (assigned) |
+| Use message templates | ✅ | ✅ | ❌ | ❌ |
+| View available attorneys | ✅ | ✅ | ❌ | ❌ |
+| Approve/reject assignment requests | ❌ | ✅ | ❌ | ❌ |
+| User management | ❌ | ✅ | ❌ | ❌ |
+| View reports/analytics | ❌ | ✅ | ❌ | ❌ |
+
+### Access Enforcement Layers
+
+1. **API Middleware:** `authenticate` + `authorize(['operator', 'admin'])` on routes
+2. **Controller Logic:** Ownership checks (e.g., `caseData.assigned_operator_id !== userId` → 403)
+3. **Database RLS:** Row-Level Security policies on Supabase tables
+4. **Frontend Guards:** Angular route guards prevent navigation to unauthorized pages
+
+---
+
+✅ Functional Requirements created!
