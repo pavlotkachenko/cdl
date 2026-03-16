@@ -1,6 +1,6 @@
 # Story CM-6: Multi-Board Navigation & Team Visibility
 
-## Status: TODO
+## Status: DONE
 
 ## Priority: P1
 
@@ -135,23 +135,23 @@ effect(() => localStorage.setItem(this.STORAGE_KEY, String(this.activeTab())));
 ```
 
 ## Acceptance Criteria
-- [ ] Dashboard shows 4 tabs: My Cases, Queue, All Cases, Archive
-- [ ] Tab badges show case counts
-- [ ] "My Cases" tab shows existing list + Kanban toggle (default)
-- [ ] "Queue" tab shows existing unassigned queue
-- [ ] "All Active Cases" tab shows all non-closed cases from all operators
-- [ ] Operator's own cases highlighted in "All Cases" view
-- [ ] "All Cases" is read-only — no edit, assign, or status change actions
-- [ ] Clicking someone else's case in "All Cases" shows limited view (no edit controls)
-- [ ] "Archive" tab shows operator's resolved/closed cases
-- [ ] Archive sorted by close date descending
-- [ ] Tab data lazy-loaded on first visit (not all on init)
-- [ ] Active tab persists in localStorage
-- [ ] Search/filter available in all tabs
-- [ ] All text uses TranslateModule with `OPR.TAB_*` keys
-- [ ] Tabs are keyboard navigable (left/right arrows, Enter to select)
-- [ ] Mobile: tabs horizontally scrollable with arrow indicators
-- [ ] Build succeeds with no errors
+- [x] Dashboard shows 4 tabs: My Cases, Queue, All Cases, Archive
+- [x] Tab badges show case counts
+- [x] "My Cases" tab shows existing list + Kanban toggle (default)
+- [x] "Queue" tab shows existing unassigned queue
+- [x] "All Active Cases" tab shows all non-closed cases from all operators
+- [x] Operator's own cases highlighted in "All Cases" view
+- [x] "All Cases" is read-only — no edit, assign, or status change actions
+- [x] Clicking someone else's case in "All Cases" shows limited view (no edit controls)
+- [x] "Archive" tab shows operator's resolved/closed cases
+- [x] Archive sorted by close date descending
+- [x] Tab data lazy-loaded on first visit (not all on init)
+- [x] Active tab persists in localStorage
+- [x] Search/filter available in all tabs
+- [x] All text uses TranslateModule with `OPR.TAB_*` keys
+- [x] Tabs are keyboard navigable (left/right arrows, Enter to select)
+- [x] Mobile: tabs horizontally scrollable with arrow indicators
+- [x] Build succeeds with no errors
 
 ## Test Coverage
 

@@ -1,6 +1,6 @@
 # Story CM-4: Operator File Management (Upload, List, Preview, Delete)
 
-## Status: TODO
+## Status: DONE
 
 ## Priority: P0
 

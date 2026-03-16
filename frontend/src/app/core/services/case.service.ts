@@ -208,6 +208,20 @@ export class CaseService {
   }
 
   /**
+   * Get all active (non-closed) cases for team view
+   */
+  getTeamCases(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/team-cases`);
+  }
+
+  /**
+   * Get operator's own closed/resolved cases (archive)
+   */
+  getClosedCases(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/operator/closed-cases`);
+  }
+
+  /**
    * Operator requests assignment to an unassigned case
    */
   requestAssignment(caseId: string): Observable<any> {
@@ -219,6 +233,13 @@ export class CaseService {
    */
   getOperatorCaseDetail(caseId: string): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/operator/cases/${caseId}`);
+  }
+
+  /**
+   * Patch case fields (operator inline edit)
+   */
+  patchCase(caseId: string, fields: Record<string, unknown>): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/cases/${caseId}`, fields);
   }
 
   /**
@@ -263,6 +284,12 @@ export class CaseService {
 
   sendCaseMessage(caseId: string, content: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/operator/cases/${caseId}/messages`, { content });
+  }
+
+  // ── CT-5: Operator All-Cases Table ──────────────────────────────
+
+  getOperatorAllCases(params?: Record<string, string | number>): Observable<{ cases: any[]; total: number }> {
+    return this.http.get<{ cases: any[]; total: number }>(`${this.apiUrl}/operator/all-cases`, { params: params as any });
   }
 
   // ── OC-5: Batch OCR ────────────────────────────────────────────

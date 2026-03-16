@@ -37,6 +37,10 @@ const routes: Routes = [
         loadComponent: () => import('./operator-dashboard/operator-dashboard.component').then(m => m.OperatorDashboardComponent)
       },
       {
+        path: 'all-cases',
+        loadComponent: () => import('./all-cases/operator-all-cases.component').then(m => m.OperatorAllCasesComponent)
+      },
+      {
         path: 'notifications',
         loadComponent: () => import('./operator-notifications/operator-notifications.component').then(m => m.OperatorNotificationsComponent)
       },

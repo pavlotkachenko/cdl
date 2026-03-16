@@ -29,13 +29,13 @@ and should be implemented first — it fixes a security-relevant middleware bug.
 
 | # | Story | Priority | Status |
 |---|-------|----------|--------|
-| CM-1 | Backend fixes: canAccessCase middleware, document upload auth, status enum, error format | P0 | TODO |
-| CM-2 | Status workflow engine & pipeline UI (transition rules + visual stepper + quick actions) | P0 | TODO |
-| CM-3 | Case data edit form (inline editing on case detail page) | P0 | TODO |
-| CM-4 | Operator file management (upload, list, preview, delete on case detail) | P0 | TODO |
-| CM-5 | Kanban board view (status-grouped columns with drag-and-drop) | P1 | TODO |
-| CM-6 | Multi-board navigation & team visibility (All Cases, Closed Archive tabs) | P1 | TODO |
-| CM-7 | i18n, accessibility & comprehensive test coverage | P2 | TODO |
+| CM-1 | Backend fixes: canAccessCase middleware, document upload auth, status enum, error format | P0 | DONE |
+| CM-2 | Status workflow engine & pipeline UI (transition rules + visual stepper + quick actions) | P0 | DONE |
+| CM-3 | Case data edit form (inline editing on case detail page) | P0 | DONE |
+| CM-4 | Operator file management (upload, list, preview, delete on case detail) | P0 | DONE |
+| CM-5 | Kanban board view (status-grouped columns with drag-and-drop) | P1 | DONE |
+| CM-6 | Multi-board navigation & team visibility (All Cases, Closed Archive tabs) | P1 | DONE |
+| CM-7 | i18n, accessibility & comprehensive test coverage | P2 | DONE |
 
 ## Critical Bug Discovered
 **`canAccessCase` middleware** (`backend/src/middleware/auth.js:145`) selects

@@ -71,6 +71,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private adminNavigation: NavigationItem[] = [
     { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/admin/dashboard' },
     { name: 'NAV.CASE_MANAGEMENT', icon: 'gavel', link: '/admin/cases' },
+    { name: 'NAV.CASE_TABLE', icon: 'table_view', link: '/admin/case-table' },
     { name: 'NAV.STAFF_MANAGEMENT', icon: 'groups', link: '/admin/staff' },
     { name: 'NAV.CLIENT_MANAGEMENT', icon: 'people', link: '/admin/clients' },
     { name: 'NAV.REPORTS', icon: 'assessment', link: '/admin/reports' },
@@ -110,6 +111,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private operatorNavigation: NavigationItem[] = [
     { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/operator/dashboard' },
     { name: 'NAV.MY_CASES', icon: 'gavel', link: '/operator/cases' },
+    { name: 'NAV.ALL_CASES', icon: 'table_view', link: '/operator/all-cases' },
     { name: 'NAV.UNASSIGNED_QUEUE', icon: 'queue', link: '/operator/queue' },
     { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/operator/notifications', badge: 0 },
     { name: 'NAV.PROFILE', icon: 'person', link: '/operator/profile', dividerBefore: true }

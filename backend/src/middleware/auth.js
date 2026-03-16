@@ -160,7 +160,7 @@ const canAccessCase = async (req, res, next) => {
 
     const { data: caseData, error } = await supabase
       .from('cases')
-      .select('created_by, operator_id, attorney_id')
+      .select('driver_id, assigned_operator_id, assigned_attorney_id')
       .eq('id', caseId)
       .single();
 
@@ -173,9 +173,9 @@ const canAccessCase = async (req, res, next) => {
 
     const userId = req.user.id;
     const hasAccess =
-      caseData.created_by === userId ||
-      caseData.operator_id === userId ||
-      caseData.attorney_id === userId;
+      caseData.driver_id === userId ||
+      caseData.assigned_operator_id === userId ||
+      caseData.assigned_attorney_id === userId;
 
     if (!hasAccess) {
       return res.status(403).json({

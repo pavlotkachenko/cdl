@@ -1,6 +1,6 @@
 import {
   Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef,
-  signal, computed, inject, ChangeDetectionStrategy,
+  signal, computed, effect, inject, ChangeDetectionStrategy,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,73 +14,39 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
 import { TranslateModule } from '@ngx-translate/core';
 import { Chart } from 'chart.js/auto';
 import { catchError, of } from 'rxjs';
 
 import {
-  AdminService, DashboardStats, Case, WorkloadDistribution,
+  AdminService, DashboardStats,
 } from '../../../core/services/admin.service';
-import { DashboardService, WorkloadStats, CaseQueueItem } from '../../../core/services/dashboard.service';
+import { CaseService } from '../../../core/services/case.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
-
-/* ------------------------------------------------------------------ */
-/*  Mock data for case queue (DashboardService has no fallback)       */
-/* ------------------------------------------------------------------ */
-const MOCK_QUEUE: CaseQueueItem[] = [
-  { caseId: 'CDL-2026-501', driverName: 'Marcus Rivera', violationType: 'Speeding 20+ Over', violationDate: '2026-03-01', violationState: 'TX', priority: 'high', status: 'new', createdAt: '2026-03-02T10:30:00Z' },
-  { caseId: 'CDL-2026-502', driverName: 'Jennifer Walsh', violationType: 'Overweight Load', violationDate: '2026-03-03', violationState: 'CA', priority: 'medium', status: 'new', createdAt: '2026-03-03T14:15:00Z' },
-  { caseId: 'CDL-2026-503', driverName: 'Ahmed Hassan', violationType: 'Logbook Violation', violationDate: '2026-02-28', violationState: 'FL', priority: 'high', status: 'new', createdAt: '2026-03-01T08:45:00Z' },
-  { caseId: 'CDL-2026-504', driverName: 'Sarah Kim', violationType: 'Improper Lane Change', violationDate: '2026-03-05', violationState: 'NY', priority: 'low', status: 'new', createdAt: '2026-03-05T16:20:00Z' },
-  { caseId: 'CDL-2026-505', driverName: 'Robert Jackson', violationType: 'Following Too Closely', violationDate: '2026-03-04', violationState: 'IL', priority: 'medium', status: 'assigned', createdAt: '2026-03-04T11:00:00Z' },
-  { caseId: 'CDL-2026-506', driverName: 'Maria Gonzalez', violationType: 'Equipment Violation', violationDate: '2026-03-06', violationState: 'GA', priority: 'high', status: 'new', createdAt: '2026-03-06T09:30:00Z' },
-  { caseId: 'CDL-2026-507', driverName: 'David Chen', violationType: 'Speeding 15+ Over', violationDate: '2026-03-02', violationState: 'OH', priority: 'medium', status: 'in_progress', createdAt: '2026-03-02T13:45:00Z' },
-  { caseId: 'CDL-2026-508', driverName: 'Lisa Patel', violationType: 'Red Light Violation', violationDate: '2026-03-07', violationState: 'PA', priority: 'low', status: 'new', createdAt: '2026-03-07T15:10:00Z' },
-];
-
-/* ------------------------------------------------------------------ */
-/*  Mock chart data (DashboardService chart endpoints have no fallback) */
-/* ------------------------------------------------------------------ */
-const MOCK_VIOLATION_DATA = {
-  labels: ['Speeding', 'Overweight', 'Logbook', 'Lane Change', 'Equipment', 'Following', 'Red Light', 'Other'],
-  values: [42, 28, 19, 15, 12, 11, 8, 6],
-};
-
-const MOCK_ATTORNEY_WORKLOAD = [
-  { name: 'Sarah Johnson', caseCount: 15 },
-  { name: 'Michael Chen', caseCount: 12 },
-  { name: 'Emily Rodriguez', caseCount: 8 },
-  { name: 'James Wilson', caseCount: 6 },
-  { name: 'Lisa Park', caseCount: 4 },
-];
-
-const MOCK_OPERATORS = [
-  { id: 'op-1', name: 'Alex Turner' },
-  { id: 'op-2', name: 'Rachel Adams' },
-  { id: 'op-3', name: 'Chris Martinez' },
-];
-
-const MOCK_ATTORNEYS = [
-  { id: 'att-1', name: 'Sarah Johnson' },
-  { id: 'att-2', name: 'Michael Chen' },
-  { id: 'att-3', name: 'Emily Rodriguez' },
-  { id: 'att-4', name: 'James Wilson' },
-  { id: 'att-5', name: 'Lisa Park' },
-];
+import { AdminOperatorKanbanComponent } from '../operator-kanban/admin-operator-kanban.component';
+import { OperatorKanbanComponent } from '../../operator/kanban/operator-kanban.component';
 
 /* ------------------------------------------------------------------ */
 /*  Label maps                                                        */
 /* ------------------------------------------------------------------ */
-const STATUS_LABELS: Record<Case['status'], string> = {
-  new: 'New', assigned: 'Assigned', in_progress: 'In Progress',
-  pending_court: 'Pending Court', resolved: 'Resolved', closed: 'Closed',
+const STATUS_LABELS: Record<string, string> = {
+  new: 'New', reviewed: 'Reviewed', assigned_to_attorney: 'Assigned',
+  send_info_to_attorney: 'Info Sent', waiting_for_driver: 'Waiting',
+  call_court: 'Call Court', check_with_manager: 'Check Mgr',
+  pay_attorney: 'Pay Atty', attorney_paid: 'Atty Paid',
+  resolved: 'Resolved', closed: 'Closed',
 };
 
-const PRIORITY_LABELS: Record<Case['priority'], string> = {
-  low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent',
-};
+/** Compute priority from case age (hours since creation) */
+function agePriority(ageHours: number): 'high' | 'medium' | 'low' {
+  if (ageHours > 168) return 'high';
+  if (ageHours > 72) return 'medium';
+  return 'low';
+}
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -89,9 +55,10 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatDividerModule, MatChipsModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatTabsModule,
     TitleCasePipe,
     ErrorStateComponent, SkeletonLoaderComponent, TranslateModule,
+    AdminOperatorKanbanComponent, OperatorKanbanComponent,
   ],
   template: `
     <div class="admin-dash">
@@ -205,204 +172,295 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
           </mat-card>
         </div>
 
-        <!-- ====== 3. CHARTS ROW ====== -->
-        <div class="charts-row">
-          <mat-card class="chart-card">
-            <mat-card-header><mat-card-title>{{ 'ADMIN.CASE_STATUS' | translate }}</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="chart-wrap">
-                <canvas #statusChart></canvas>
+        <!-- ====== 3. MULTI-BOARD TABS ====== -->
+        <mat-tab-group [selectedIndex]="activeTab()"
+                       (selectedIndexChange)="onTabChange($event)"
+                       mat-stretch-tabs="false"
+                       class="admin-tabs"
+                       animationDuration="200ms">
+
+          <!-- ── Tab 0: All Cases ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">list</mat-icon>
+              <span class="tab-text">{{ 'ADMIN.TAB_ALL_CASES' | translate }}</span>
+              <span class="tab-badge" [attr.aria-label]="'Active cases: ' + (stats()?.activeCases ?? 0)">
+                {{ stats()?.activeCases ?? 0 }}
+              </span>
+            </ng-template>
+
+            <div class="tab-content">
+              <!-- Charts -->
+              <div class="charts-row">
+                <mat-card class="chart-card">
+                  <mat-card-header><mat-card-title>{{ 'ADMIN.CASE_STATUS' | translate }}</mat-card-title></mat-card-header>
+                  <mat-card-content>
+                    <div class="chart-wrap"><canvas #statusChart role="img" aria-label="Bar chart showing case status distribution"></canvas></div>
+                  </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card">
+                  <mat-card-header><mat-card-title>{{ 'ADMIN.VIOLATION_TYPES' | translate }}</mat-card-title></mat-card-header>
+                  <mat-card-content>
+                    <div class="chart-wrap"><canvas #violationChart role="img" aria-label="Doughnut chart showing violation type distribution"></canvas></div>
+                  </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card">
+                  <mat-card-header><mat-card-title>{{ 'ADMIN.ATTORNEY_WORKLOAD' | translate }}</mat-card-title></mat-card-header>
+                  <mat-card-content>
+                    <div class="chart-wrap"><canvas #workloadChart role="img" aria-label="Bar chart showing attorney workload distribution"></canvas></div>
+                  </mat-card-content>
+                </mat-card>
               </div>
-            </mat-card-content>
-          </mat-card>
 
-          <mat-card class="chart-card">
-            <mat-card-header><mat-card-title>{{ 'ADMIN.VIOLATION_TYPES' | translate }}</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="chart-wrap">
-                <canvas #violationChart></canvas>
-              </div>
-            </mat-card-content>
-          </mat-card>
+              <!-- Case queue -->
+              <mat-card class="section-card">
+                <mat-card-header>
+                  <mat-card-title>{{ 'ADMIN.CASE_QUEUE' | translate }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="queue-filters">
+                    <mat-form-field appearance="outline" class="filter-field search-field">
+                      <mat-label>{{ 'ADMIN.SEARCH_CASES' | translate }}</mat-label>
+                      <input matInput
+                             [ngModel]="searchTerm()"
+                             (ngModelChange)="searchTerm.set($event)"
+                             [placeholder]="'ADMIN.SEARCH_PLACEHOLDER' | translate" />
+                      <mat-icon matPrefix>search</mat-icon>
+                    </mat-form-field>
 
-          <mat-card class="chart-card">
-            <mat-card-header><mat-card-title>{{ 'ADMIN.ATTORNEY_WORKLOAD' | translate }}</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="chart-wrap">
-                <canvas #workloadChart></canvas>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        </div>
-
-        <!-- ====== 4. CASE QUEUE ====== -->
-        <mat-card class="section-card">
-          <mat-card-header>
-            <mat-card-title>{{ 'ADMIN.CASE_QUEUE' | translate }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="queue-filters">
-              <mat-form-field appearance="outline" class="filter-field search-field">
-                <mat-label>{{ 'ADMIN.SEARCH_CASES' | translate }}</mat-label>
-                <input matInput
-                       [ngModel]="searchTerm()"
-                       (ngModelChange)="searchTerm.set($event)"
-                       [placeholder]="'ADMIN.SEARCH_PLACEHOLDER' | translate" />
-                <mat-icon matPrefix>search</mat-icon>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="filter-field">
-                <mat-label>{{ 'ADMIN.STATUS' | translate }}</mat-label>
-                <mat-select [ngModel]="queueStatusFilter()" (ngModelChange)="queueStatusFilter.set($event)">
-                  <mat-option value="">{{ 'ADMIN.ALL_STATUSES' | translate }}</mat-option>
-                  <mat-option value="new">{{ 'ADMIN.STATUS_NEW' | translate }}</mat-option>
-                  <mat-option value="assigned">{{ 'ADMIN.STATUS_ASSIGNED' | translate }}</mat-option>
-                  <mat-option value="in_progress">{{ 'ADMIN.STATUS_IN_PROGRESS' | translate }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="filter-field">
-                <mat-label>{{ 'ADMIN.PRIORITY' | translate }}</mat-label>
-                <mat-select [ngModel]="queuePriorityFilter()" (ngModelChange)="queuePriorityFilter.set($event)">
-                  <mat-option value="">{{ 'ADMIN.ALL_PRIORITIES' | translate }}</mat-option>
-                  <mat-option value="high">{{ 'ADMIN.PRIORITY_HIGH' | translate }}</mat-option>
-                  <mat-option value="medium">{{ 'ADMIN.PRIORITY_MEDIUM' | translate }}</mat-option>
-                  <mat-option value="low">{{ 'ADMIN.PRIORITY_LOW' | translate }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <button mat-stroked-button class="clear-btn" (click)="clearFilters()">
-                <mat-icon>clear</mat-icon>
-                {{ 'ADMIN.CLEAR' | translate }}
-              </button>
-            </div>
-
-            @if (filteredQueue().length === 0) {
-              <div class="empty-state" role="status">
-                <mat-icon aria-hidden="true">inbox</mat-icon>
-                <p class="empty-title">{{ 'ADMIN.NO_CASES_QUEUE' | translate }}</p>
-              </div>
-            } @else {
-              @for (item of filteredQueue(); track item.caseId) {
-                <div [class]="'queue-item priority-stripe-' + item.priority">
-                  <div class="queue-item-header">
-                    <div class="queue-item-id">
-                      <span class="case-num">{{ item.caseId }}</span>
-                      <span class="queue-state-tag">{{ item.violationState }}</span>
-                    </div>
-                    <div class="queue-item-badges">
-                      <span [class]="'chip priority-' + item.priority">{{ item.priority | titlecase }}</span>
-                      <span [class]="'chip status-' + item.status">{{ formatQueueStatus(item.status) }}</span>
-                    </div>
-                  </div>
-                  <div class="queue-item-body">
-                    <span class="queue-driver">{{ item.driverName }}</span>
-                    <span class="queue-sep">&middot;</span>
-                    <span class="queue-violation">{{ item.violationType }}</span>
-                  </div>
-                  <div class="queue-item-actions">
-                    <mat-form-field appearance="outline" class="assign-field">
-                      <mat-label>{{ 'ADMIN.ASSIGN_OPERATOR' | translate }}</mat-label>
-                      <mat-select (selectionChange)="assignOperator(item.caseId, $event.value)">
-                        @for (op of operators; track op.id) {
-                          <mat-option [value]="op.id">{{ op.name }}</mat-option>
-                        }
+                    <mat-form-field appearance="outline" class="filter-field">
+                      <mat-label>{{ 'ADMIN.STATUS' | translate }}</mat-label>
+                      <mat-select [ngModel]="queueStatusFilter()" (ngModelChange)="queueStatusFilter.set($event)">
+                        <mat-option value="">{{ 'ADMIN.ALL_STATUSES' | translate }}</mat-option>
+                        <mat-option value="new">{{ 'ADMIN.STATUS_NEW' | translate }}</mat-option>
+                        <mat-option value="assigned">{{ 'ADMIN.STATUS_ASSIGNED' | translate }}</mat-option>
+                        <mat-option value="in_progress">{{ 'ADMIN.STATUS_IN_PROGRESS' | translate }}</mat-option>
                       </mat-select>
                     </mat-form-field>
-                    <mat-form-field appearance="outline" class="assign-field">
-                      <mat-label>{{ 'ADMIN.ASSIGN_ATTORNEY' | translate }}</mat-label>
-                      <mat-select (selectionChange)="assignAttorney(item.caseId, $event.value)">
-                        @for (att of attorneys; track att.id) {
-                          <mat-option [value]="att.id">{{ att.name }}</mat-option>
-                        }
+
+                    <mat-form-field appearance="outline" class="filter-field">
+                      <mat-label>{{ 'ADMIN.PRIORITY' | translate }}</mat-label>
+                      <mat-select [ngModel]="queuePriorityFilter()" (ngModelChange)="queuePriorityFilter.set($event)">
+                        <mat-option value="">{{ 'ADMIN.ALL_PRIORITIES' | translate }}</mat-option>
+                        <mat-option value="high">{{ 'ADMIN.PRIORITY_HIGH' | translate }}</mat-option>
+                        <mat-option value="medium">{{ 'ADMIN.PRIORITY_MEDIUM' | translate }}</mat-option>
+                        <mat-option value="low">{{ 'ADMIN.PRIORITY_LOW' | translate }}</mat-option>
                       </mat-select>
                     </mat-form-field>
-                    <button mat-flat-button
-                            color="primary"
-                            class="auto-assign-btn"
-                            (click)="autoAssign(item.caseId)"
-                            [disabled]="assigningCaseId() === item.caseId">
-                      @if (assigningCaseId() === item.caseId) {
-                        <mat-spinner diameter="16"></mat-spinner>
-                      } @else {
-                        <ng-container>
-                          <mat-icon>auto_fix_high</mat-icon>
-                          {{ 'ADMIN.AUTO_ASSIGN' | translate }}
-                        </ng-container>
-                      }
+
+                    <button mat-stroked-button class="clear-btn" (click)="clearFilters()">
+                      <mat-icon>clear</mat-icon>
+                      {{ 'ADMIN.CLEAR' | translate }}
                     </button>
                   </div>
-                </div>
-              }
-            }
-          </mat-card-content>
-        </mat-card>
 
-        <!-- ====== 5. RECENT CASES ====== -->
-        <mat-card class="section-card">
-          <mat-card-header>
-            <mat-card-title>{{ 'ADMIN.RECENT_CASES' | translate }}</mat-card-title>
-            <div class="card-action">
-              <button mat-button (click)="viewAllCases()">{{ 'ADMIN.VIEW_ALL' | translate }}</button>
+                  @if (filteredQueue().length === 0) {
+                    <div class="empty-state" role="status">
+                      <mat-icon aria-hidden="true">inbox</mat-icon>
+                      <p class="empty-title">{{ 'ADMIN.NO_CASES_QUEUE' | translate }}</p>
+                    </div>
+                  } @else {
+                    @for (item of filteredQueue(); track item.id) {
+                      <div [class]="'queue-item priority-stripe-' + item.priority">
+                        <div class="queue-item-header">
+                          <div class="queue-item-id">
+                            <span class="case-num">{{ item.case_number }}</span>
+                            <span class="queue-state-tag">{{ item.state }}</span>
+                          </div>
+                          <div class="queue-item-badges">
+                            <span [class]="'chip priority-' + item.priority">{{ item.priority | titlecase }}</span>
+                            <span [class]="'chip status-' + item.status">{{ formatQueueStatus(item.status) }}</span>
+                          </div>
+                        </div>
+                        <div class="queue-item-body">
+                          <span class="queue-driver">{{ item.customer_name }}</span>
+                          <span class="queue-sep">&middot;</span>
+                          <span class="queue-violation">{{ item.violation_type }}</span>
+                        </div>
+                        <div class="queue-item-actions">
+                          <mat-form-field appearance="outline" class="assign-field">
+                            <mat-label>{{ 'ADMIN.ASSIGN_OPERATOR' | translate }}</mat-label>
+                            <mat-select (selectionChange)="assignOperator(item.id, $event.value)">
+                              @for (op of operators(); track op.id) {
+                                <mat-option [value]="op.id">{{ op.name }} ({{ op.activeCaseCount }})</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" class="assign-field">
+                            <mat-label>{{ 'ADMIN.ASSIGN_ATTORNEY' | translate }}</mat-label>
+                            <mat-select (selectionChange)="assignAttorney(item.id, $event.value)">
+                              @for (att of attorneys(); track att.id) {
+                                <mat-option [value]="att.id">{{ att.full_name }} ({{ att.active_cases || 0 }})</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                          <button mat-flat-button
+                                  color="primary"
+                                  class="auto-assign-btn"
+                                  (click)="autoAssign(item.id)"
+                                  [disabled]="assigningCaseId() === item.id">
+                            @if (assigningCaseId() === item.id) {
+                              <mat-spinner diameter="16"></mat-spinner>
+                            } @else {
+                              <ng-container>
+                                <mat-icon>auto_fix_high</mat-icon>
+                                {{ 'ADMIN.AUTO_ASSIGN' | translate }}
+                              </ng-container>
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  }
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Recent cases -->
+              <mat-card class="section-card">
+                <mat-card-header>
+                  <mat-card-title>{{ 'ADMIN.RECENT_CASES' | translate }}</mat-card-title>
+                  <div class="card-action">
+                    <button mat-button (click)="viewAllCases()">{{ 'ADMIN.VIEW_ALL' | translate }}</button>
+                  </div>
+                </mat-card-header>
+                <mat-card-content>
+                  @if (recentCases().length === 0) {
+                    <div class="empty-state" role="status">
+                      <mat-icon aria-hidden="true">folder_open</mat-icon>
+                      <p class="empty-title">{{ 'ADMIN.NO_CASES_YET' | translate }}</p>
+                      <p class="empty-hint">{{ 'ADMIN.CASES_WILL_APPEAR' | translate }}</p>
+                      <button mat-stroked-button color="primary" (click)="viewAllCases()">{{ 'ADMIN.VIEW_ALL_CASES' | translate }}</button>
+                    </div>
+                  } @else {
+                    @for (c of recentCases(); track c.id) {
+                      <div class="case-row"
+                           role="button"
+                           tabindex="0"
+                           (click)="viewCase(c)"
+                           (keydown.enter)="viewCase(c)"
+                           [attr.aria-label]="'View case ' + c.case_number">
+                        <div class="case-info">
+                          <span class="case-num">{{ c.case_number }}</span>
+                          <span class="case-client">{{ c.customer_name }}</span>
+                          <span class="case-type">{{ c.violation_type }}</span>
+                        </div>
+                        <div class="case-staff">
+                          @if (c.attorney_name) {
+                            <span class="staff-label"><mat-icon class="staff-icon">gavel</mat-icon> {{ c.attorney_name }}</span>
+                          }
+                          @if (c.operator_name) {
+                            <span class="staff-label"><mat-icon class="staff-icon">support_agent</mat-icon> {{ c.operator_name }}</span>
+                          }
+                        </div>
+                        <div class="case-badges">
+                          <span [class]="'badge status-' + c.status">{{ getStatusLabel(c.status) }}</span>
+                        </div>
+                      </div>
+                      <mat-divider></mat-divider>
+                    }
+                  }
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Staff workload -->
+              @if (workload().length > 0) {
+                <mat-card class="section-card">
+                  <mat-card-header><mat-card-title>{{ 'ADMIN.STAFF_WORKLOAD' | translate }}</mat-card-title></mat-card-header>
+                  <mat-card-content>
+                    @for (w of workload(); track w.id) {
+                      <div class="workload-row">
+                        <span class="staff-name">{{ w.name }}</span>
+                        <span class="workload-num">{{ w.activeCases }}/{{ w.capacity }}</span>
+                        <span [class]="'util-badge ' + (w.utilization >= 90 ? 'over' : w.utilization >= 70 ? 'high' : 'ok')">
+                          {{ w.utilization.toFixed(0) }}%
+                        </span>
+                      </div>
+                    }
+                  </mat-card-content>
+                </mat-card>
+              }
             </div>
-          </mat-card-header>
-          <mat-card-content>
-            @if (recentCases().length === 0) {
-              <div class="empty-state" role="status">
-                <mat-icon aria-hidden="true">folder_open</mat-icon>
-                <p class="empty-title">{{ 'ADMIN.NO_CASES_YET' | translate }}</p>
-                <p class="empty-hint">{{ 'ADMIN.CASES_WILL_APPEAR' | translate }}</p>
-                <button mat-stroked-button color="primary" (click)="viewAllCases()">{{ 'ADMIN.VIEW_ALL_CASES' | translate }}</button>
-              </div>
-            } @else {
-              @for (c of recentCases(); track c.id) {
-                <div class="case-row"
-                     role="button"
-                     tabindex="0"
-                     (click)="viewCase(c)"
-                     (keydown.enter)="viewCase(c)"
-                     [attr.aria-label]="'View case ' + c.caseNumber">
-                  <div class="case-info">
-                    <span class="case-num">{{ c.caseNumber }}</span>
-                    <span class="case-client">{{ c.clientName }}</span>
-                    <span class="case-type">{{ c.violationType }}</span>
-                  </div>
-                  <div class="case-staff">
-                    @if (c.assignedToName) {
-                      <span class="staff-label"><mat-icon class="staff-icon">gavel</mat-icon> {{ c.assignedToName }}</span>
-                    }
-                    @if (c.operatorName) {
-                      <span class="staff-label"><mat-icon class="staff-icon">support_agent</mat-icon> {{ c.operatorName }}</span>
-                    }
-                  </div>
-                  <div class="case-badges">
-                    <span [class]="'badge status-' + c.status">{{ getStatusLabel(c.status) }}</span>
-                    <span [class]="'badge priority-' + c.priority">{{ getPriorityLabel(c.priority) }}</span>
-                  </div>
-                </div>
-                <mat-divider></mat-divider>
-              }
-            }
-          </mat-card-content>
-        </mat-card>
+          </mat-tab>
 
-        <!-- ====== 6. STAFF WORKLOAD ====== -->
-        @if (workload().length > 0) {
-          <mat-card class="section-card">
-            <mat-card-header><mat-card-title>{{ 'ADMIN.STAFF_WORKLOAD' | translate }}</mat-card-title></mat-card-header>
-            <mat-card-content>
-              @for (w of workload(); track w.staffId) {
-                <div class="workload-row">
-                  <span class="staff-name">{{ w.staffName }}</span>
-                  <span class="workload-num">{{ w.activeCases }}/{{ w.capacity }}</span>
-                  <span [class]="'util-badge ' + (w.utilization >= 90 ? 'over' : w.utilization >= 70 ? 'high' : 'ok')">
-                    {{ w.utilization.toFixed(0) }}%
-                  </span>
-                </div>
-              }
-            </mat-card-content>
-          </mat-card>
-        }
+          <!-- ── Tab 1: By Operator ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">view_column</mat-icon>
+              <span class="tab-text">{{ 'ADMIN.TAB_BY_OPERATOR' | translate }}</span>
+              <span class="tab-badge warn" [attr.aria-label]="'Unassigned cases: ' + unassignedCount()">
+                {{ unassignedCount() }}
+              </span>
+            </ng-template>
+            @if (byOperatorLoaded()) {
+              <div class="tab-content">
+                <app-admin-operator-kanban></app-admin-operator-kanban>
+              </div>
+            }
+          </mat-tab>
+
+          <!-- ── Tab 2: By Status ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">view_kanban</mat-icon>
+              <span class="tab-text">{{ 'ADMIN.TAB_BY_STATUS' | translate }}</span>
+              <span class="tab-badge" [attr.aria-label]="'In-progress cases: ' + inProgressCount()">
+                {{ inProgressCount() }}
+              </span>
+            </ng-template>
+            @if (byStatusLoaded()) {
+              <div class="tab-content">
+                <app-operator-kanban [cases]="allCasesForStatusKanban()" (caseUpdated)="onStatusKanbanUpdated()"></app-operator-kanban>
+              </div>
+            }
+          </mat-tab>
+
+          <!-- ── Tab 3: Archive ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">archive</mat-icon>
+              <span class="tab-text">{{ 'ADMIN.TAB_ARCHIVE' | translate }}</span>
+              <span class="tab-badge muted" [attr.aria-label]="'Archived cases: ' + archiveCases().length">
+                {{ archiveCases().length }}
+              </span>
+            </ng-template>
+            @if (archiveLoaded()) {
+              <div class="tab-content archive-content">
+                <mat-form-field appearance="outline" class="archive-search">
+                  <mat-label>{{ 'ADMIN.SEARCH_ARCHIVE' | translate }}</mat-label>
+                  <input matInput
+                         [ngModel]="archiveSearch()"
+                         (ngModelChange)="archiveSearch.set($event)"
+                         [placeholder]="'ADMIN.SEARCH_ARCHIVE' | translate" />
+                  <mat-icon matPrefix>search</mat-icon>
+                </mat-form-field>
+
+                @if (filteredArchive().length === 0) {
+                  <div class="empty-state" role="status">
+                    <mat-icon aria-hidden="true">archive</mat-icon>
+                    <p class="empty-title">{{ 'ADMIN.NO_ARCHIVED_CASES' | translate }}</p>
+                  </div>
+                } @else {
+                  @for (c of filteredArchive(); track c.id) {
+                    <div class="archive-row"
+                         role="button"
+                         tabindex="0"
+                         (click)="viewCase(c)"
+                         (keydown.enter)="viewCase(c)"
+                         [attr.aria-label]="'View archived case ' + c.case_number">
+                      <div class="archive-info">
+                        <span class="case-num">{{ c.case_number }}</span>
+                        <span class="archive-client">{{ c.customer_name }}</span>
+                      </div>
+                      <span class="archive-type">{{ c.violation_type }}</span>
+                      <span [class]="'badge status-' + c.status">{{ getStatusLabel(c.status) }}</span>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </mat-tab>
+
+        </mat-tab-group>
 
       }
     </div>
@@ -446,6 +504,20 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     .stat-delta { margin: 2px 0 0; font-size: 0.72rem; font-weight: 600; }
     .stat-delta.up { color: #388e3c; }
     .stat-delta.down { color: #d32f2f; }
+
+    /* --- Tabs --- */
+    .admin-tabs { margin-bottom: 20px; }
+    .tab-icon { margin-right: 6px; font-size: 18px; width: 18px; height: 18px; }
+    .tab-text { margin-right: 6px; }
+    .tab-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 20px; height: 20px; padding: 0 6px;
+      border-radius: 10px; font-size: 0.7rem; font-weight: 600;
+      background: #e3f2fd; color: #1565c0;
+    }
+    .tab-badge.warn { background: #fff3e0; color: #e65100; }
+    .tab-badge.muted { background: #f5f5f5; color: #616161; }
+    .tab-content { padding-top: 16px; }
 
     /* --- Charts --- */
     .charts-row {
@@ -556,6 +628,20 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
     .util-badge.high { background: #fff3e0; color: #e65100; }
     .util-badge.over { background: #ffebee; color: #c62828; }
 
+    /* --- Archive --- */
+    .archive-content { max-width: 900px; }
+    .archive-search { width: 100%; max-width: 400px; margin-bottom: 12px; }
+    .archive-search ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+    .archive-row {
+      display: flex; align-items: center; gap: 16px; padding: 10px 8px;
+      cursor: pointer; border-bottom: 1px solid #f0f0f0;
+    }
+    .archive-row:hover { background: #f5f7ff; border-radius: 6px; }
+    .archive-row:focus-visible { outline: 2px solid #1976d2; border-radius: 6px; }
+    .archive-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    .archive-client { font-size: 0.82rem; color: #444; }
+    .archive-type { font-size: 0.82rem; color: #777; width: 140px; flex-shrink: 0; }
+
     /* --- Responsive --- */
     @media (max-width: 1024px) {
       .charts-row { grid-template-columns: 1fr 1fr; }
@@ -572,6 +658,8 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
       .case-row { flex-wrap: wrap; }
       .case-staff { width: auto; flex-shrink: 1; }
       .case-badges { width: auto; }
+      .archive-row { flex-wrap: wrap; }
+      .archive-type { width: auto; }
     }
     @media (max-width: 480px) {
       .admin-dash { padding: 16px 8px; }
@@ -582,6 +670,7 @@ const PRIORITY_LABELS: Record<Case['priority'], string> = {
 })
 export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private adminService = inject(AdminService);
+  private caseService = inject(CaseService);
   private dashboardService = inject(DashboardService);
   private authService = inject(AuthService);
   private router = inject(Router);
@@ -598,43 +687,60 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
 
   /* --- State signals --- */
   stats = signal<DashboardStats | null>(null);
-  recentCases = signal<Case[]>([]);
-  workload = signal<WorkloadDistribution[]>([]);
-  caseQueue = signal<CaseQueueItem[]>([]);
+  recentCases = signal<any[]>([]);
+  workload = signal<any[]>([]);
+  caseQueue = signal<any[]>([]);
+  operators = signal<any[]>([]);
+  attorneys = signal<any[]>([]);
   loading = signal(true);
   error = signal('');
   assigningCaseId = signal<string | null>(null);
-
-  /* --- Assignment lists --- */
-  operators = MOCK_OPERATORS;
-  attorneys = MOCK_ATTORNEYS;
 
   /* --- Queue filter signals --- */
   searchTerm = signal('');
   queueStatusFilter = signal('');
   queuePriorityFilter = signal('');
 
+  /* --- Tab signals --- */
+  activeTab = signal(this.readSavedTab());
+  byOperatorLoaded = signal(false);
+  byStatusLoaded = signal(false);
+  archiveLoaded = signal(false);
+  archiveCases = signal<any[]>([]);
+  archiveSearch = signal('');
+  allCasesForStatusKanban = signal<any[]>([]);
+
+  /* --- Tab persistence effect --- */
+  private _tabPersist = effect(() => {
+    try { localStorage.setItem('admin_active_tab', this.activeTab().toString()); } catch { /* noop */ }
+  });
+
   /* --- Computed --- */
   revenueChange = computed(() => {
     const s = this.stats();
     if (!s) return 0;
-    if (s.revenueLastMonth === 0) return 100;
+    if (!s.revenueLastMonth) return s.revenueThisMonth ? 100 : 0;
     return ((s.revenueThisMonth - s.revenueLastMonth) / s.revenueLastMonth) * 100;
   });
 
   pendingRevenue = computed(() => {
     const s = this.stats();
     if (!s) return 0;
-    // Estimate: pending cases × average fine
-    return Math.round(s.pendingCases * 420);
+    return Math.round((s.pendingCases ?? 0) * 420);
   });
 
   weeklyChange = computed(() => {
     const s = this.stats();
     if (!s) return 0;
-    if (s.casesLastWeek === 0) return s.casesThisWeek > 0 ? 100 : 0;
+    if (!s.casesLastWeek) return s.casesThisWeek > 0 ? 100 : 0;
     return ((s.casesThisWeek - s.casesLastWeek) / s.casesLastWeek) * 100;
   });
+
+  unassignedCount = computed(() =>
+    this.caseQueue().filter((c: any) => !c.assigned_operator_id).length,
+  );
+
+  inProgressCount = computed(() => this.stats()?.activeCases ?? 0);
 
   filteredQueue = computed(() => {
     let items = this.caseQueue();
@@ -644,20 +750,30 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
 
     if (term) {
       items = items.filter(
-        (i) =>
-          i.caseId.toLowerCase().includes(term) ||
-          i.driverName.toLowerCase().includes(term) ||
-          i.violationType.toLowerCase().includes(term) ||
-          i.violationState.toLowerCase().includes(term),
+        (i: any) =>
+          (i.case_number || '').toLowerCase().includes(term) ||
+          (i.customer_name || '').toLowerCase().includes(term) ||
+          (i.violation_type || '').toLowerCase().includes(term) ||
+          (i.state || '').toLowerCase().includes(term),
       );
     }
     if (statusF) {
-      items = items.filter((i) => i.status === statusF);
+      items = items.filter((i: any) => i.status === statusF);
     }
     if (priorityF) {
-      items = items.filter((i) => i.priority === priorityF);
+      items = items.filter((i: any) => i.priority === priorityF);
     }
     return items;
+  });
+
+  filteredArchive = computed(() => {
+    const term = this.archiveSearch().toLowerCase().trim();
+    if (!term) return this.archiveCases();
+    return this.archiveCases().filter(
+      (c: any) =>
+        (c.case_number || '').toLowerCase().includes(term) ||
+        (c.customer_name || '').toLowerCase().includes(term),
+    );
   });
 
   /* --- Lifecycle --- */
@@ -673,24 +789,56 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
     this.destroyCharts();
   }
 
+  /* --- Tab management --- */
+  private readSavedTab(): number {
+    try {
+      const val = parseInt(localStorage.getItem('admin_active_tab') ?? '0', 10);
+      return val >= 0 && val <= 3 ? val : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  onTabChange(index: number): void {
+    this.activeTab.set(index);
+
+    if (index === 0) {
+      // Rebuild charts when returning to Tab 0 (canvas may have been hidden)
+      setTimeout(() => this.buildCharts());
+    }
+    if (index === 1 && !this.byOperatorLoaded()) {
+      this.byOperatorLoaded.set(true);
+    }
+    if (index === 2 && !this.byStatusLoaded()) {
+      this.loadAllCasesForStatusKanban();
+      this.byStatusLoaded.set(true);
+    }
+    if (index === 3 && !this.archiveLoaded()) {
+      this.loadArchive();
+      this.archiveLoaded.set(true);
+    }
+  }
+
   /* --- Data loading --- */
   loadDashboardData(): void {
     this.loading.set(true);
     this.error.set('');
 
     // Admin stats
-    this.adminService.getDashboardStats().subscribe({
-      next: (s) => this.stats.set(s),
-      error: () => {},
+    this.adminService.getDashboardStats().pipe(
+      catchError(() => of(null)),
+    ).subscribe({
+      next: (s) => { if (s) this.stats.set(s); },
     });
 
     // Recent cases (controls loading spinner)
-    this.adminService.getAllCases({ limit: 10, sort: 'createdAt', order: 'desc' }).subscribe({
-      next: (cases) => {
-        this.recentCases.set(cases.slice(0, 10));
+    this.adminService.getAllCases({ limit: 10 }).subscribe({
+      next: (resp) => {
+        this.recentCases.set(resp.cases || []);
         this.loading.set(false);
-        // Build charts once loading completes and view is ready
-        setTimeout(() => this.buildCharts());
+        if (this.activeTab() === 0) {
+          setTimeout(() => this.buildCharts());
+        }
       },
       error: () => {
         this.error.set('ADMIN.FAILED_LOAD');
@@ -699,23 +847,79 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     // Staff workload
-    this.adminService.getWorkloadDistribution().subscribe({
-      next: (w) => this.workload.set(w),
-      error: () => {},
+    this.adminService.getWorkloadDistribution().pipe(
+      catchError(() => of({ staff: [] })),
+    ).subscribe({
+      next: (resp) => this.workload.set(resp.staff || []),
     });
 
-    // Case queue
-    this.dashboardService.getCaseQueue({ limit: 50 }).pipe(
-      catchError(() => of({ cases: MOCK_QUEUE, total: MOCK_QUEUE.length })),
+    // Case queue (active cases — not closed/resolved)
+    this.adminService.getAllCases({ limit: 50 }).pipe(
+      catchError(() => of({ cases: [], total: 0 })),
     ).subscribe({
-      next: (res) => this.caseQueue.set(res.cases),
-      error: () => this.caseQueue.set(MOCK_QUEUE),
+      next: (resp) => {
+        const cases = (resp.cases || [])
+          .filter((c: any) => c.status !== 'closed' && c.status !== 'resolved')
+          .map((c: any) => ({ ...c, priority: agePriority(c.ageHours || 0) }));
+        this.caseQueue.set(cases);
+      },
     });
+
+    // Load operators
+    this.adminService.getOperators().pipe(
+      catchError(() => of({ operators: [] })),
+    ).subscribe({
+      next: (resp) => this.operators.set(resp.operators || []),
+    });
+
+    // Load attorneys for assignment dropdown
+    this.loadAttorneys();
+  }
+
+  private loadAttorneys(): void {
+    this.caseService.getAvailableAttorneys().pipe(
+      catchError(() => of({ attorneys: [] })),
+    ).subscribe((resp: any) => {
+      this.attorneys.set(resp.attorneys || []);
+    });
+  }
+
+  private loadAllCasesForStatusKanban(): void {
+    this.adminService.getAllCases({ limit: 500 }).pipe(
+      catchError(() => of({ cases: [], total: 0 })),
+    ).subscribe((resp) => {
+      const cases = (resp.cases || []).filter(
+        (c: any) => c.status !== 'closed' && c.status !== 'resolved',
+      );
+      this.allCasesForStatusKanban.set(cases);
+    });
+  }
+
+  private loadArchive(): void {
+    this.adminService.getAllCases({ status: 'closed,resolved', limit: 100 }).pipe(
+      catchError(() => of({ cases: [], total: 0 })),
+    ).subscribe((resp) => {
+      this.archiveCases.set(resp.cases || []);
+    });
+  }
+
+  onStatusKanbanUpdated(): void {
+    this.loadAllCasesForStatusKanban();
+    this.loadDashboardData();
   }
 
   refresh(): void {
     this.destroyCharts();
     this.loadDashboardData();
+
+    // Also refresh data for the current tab
+    const tab = this.activeTab();
+    if (tab === 2 && this.byStatusLoaded()) {
+      this.loadAllCasesForStatusKanban();
+    }
+    if (tab === 3 && this.archiveLoaded()) {
+      this.loadArchive();
+    }
   }
 
   /* --- Charts --- */
@@ -728,48 +932,48 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
 
   private buildStatusChart(): void {
     if (!this.statusChartRef) return;
-    const s = this.stats();
-    const data = s
-      ? [s.activeCases, s.pendingCases, s.resolvedCases, (s.totalCases - s.activeCases - s.pendingCases - s.resolvedCases)]
-      : [89, 34, 124, 0];
-    const labels = ['Active', 'Pending', 'Resolved', 'Other'];
 
-    this.statusChartInstance = new Chart(this.statusChartRef.nativeElement, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data,
-          backgroundColor: ['#1976d2', '#f57c00', '#388e3c', '#9e9e9e'],
-          borderWidth: 1,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+    this.adminService.getChartData('status-distribution').pipe(
+      catchError(() => of(null)),
+    ).subscribe((chartData) => {
+      if (!chartData || !this.statusChartRef) return;
+      const labels = chartData.labels.map((l: string) => STATUS_LABELS[l] || l);
+      this.statusChartInstance = new Chart(this.statusChartRef.nativeElement, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: chartData.data,
+            backgroundColor: ['#1976d2', '#f57c00', '#388e3c', '#7b1fa2', '#ff5722', '#9e9e9e', '#00bcd4', '#795548', '#607d8b', '#e91e63', '#4caf50'],
+            borderWidth: 1,
+          }],
         },
-      },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          },
+        },
+      });
     });
   }
 
   private buildViolationChart(): void {
     if (!this.violationChartRef) return;
 
-    this.dashboardService.getViolationTypeDistribution().pipe(
+    this.adminService.getChartData('violation-distribution').pipe(
       catchError(() => of(null)),
-    ).subscribe((apiData) => {
-      const labels = apiData?.labels ?? MOCK_VIOLATION_DATA.labels;
-      const values = apiData?.values ?? MOCK_VIOLATION_DATA.values;
+    ).subscribe((chartData) => {
+      if (!chartData || !this.violationChartRef) return;
 
       this.violationChartInstance = new Chart(this.violationChartRef.nativeElement, {
         type: 'bar',
         data: {
-          labels,
+          labels: chartData.labels,
           datasets: [{
             label: 'Cases',
-            data: values,
+            data: chartData.data,
             backgroundColor: '#42a5f5',
             borderRadius: 4,
           }],
@@ -790,20 +994,18 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   private buildAttorneyWorkloadChart(): void {
     if (!this.workloadChartRef) return;
 
-    this.dashboardService.getAttorneyWorkloadDistribution().pipe(
+    this.adminService.getChartData('attorney-workload').pipe(
       catchError(() => of(null)),
-    ).subscribe((apiData) => {
-      const attorneys = apiData ?? MOCK_ATTORNEY_WORKLOAD;
-      const labels = attorneys.map((a: { name: string }) => a.name);
-      const values = attorneys.map((a: { caseCount: number }) => a.caseCount);
+    ).subscribe((chartData) => {
+      if (!chartData || !this.workloadChartRef) return;
 
       this.workloadChartInstance = new Chart(this.workloadChartRef.nativeElement, {
         type: 'bar',
         data: {
-          labels,
+          labels: chartData.labels,
           datasets: [{
             label: 'Cases',
-            data: values,
+            data: chartData.data,
             backgroundColor: '#7b1fa2',
             borderRadius: 4,
           }],
@@ -835,13 +1037,12 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   autoAssign(caseId: string): void {
     this.assigningCaseId.set(caseId);
     this.dashboardService.autoAssignCase(caseId).pipe(
-      catchError(() => of({ success: true })),
+      catchError(() => of(null)),
     ).subscribe({
       next: () => {
-        // Update queue item status locally
         this.caseQueue.update((queue) =>
-          queue.map((item) =>
-            item.caseId === caseId ? { ...item, status: 'assigned' } : item,
+          queue.map((item: any) =>
+            item.id === caseId ? { ...item, status: 'assigned_to_attorney' } : item,
           ),
         );
         this.assigningCaseId.set(null);
@@ -851,25 +1052,24 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   assignOperator(caseId: string, operatorId: string): void {
-    this.dashboardService.assignCase(caseId, operatorId).pipe(
-      catchError(() => of({ success: true })),
+    this.adminService.assignOperator(caseId, operatorId).pipe(
+      catchError(() => of(null)),
     ).subscribe(() => {
-      const op = MOCK_OPERATORS.find((o) => o.id === operatorId);
       this.caseQueue.update((queue) =>
-        queue.map((item) =>
-          item.caseId === caseId ? { ...item, status: 'assigned' } : item,
+        queue.map((item: any) =>
+          item.id === caseId ? { ...item, assigned_operator_id: operatorId } : item,
         ),
       );
     });
   }
 
   assignAttorney(caseId: string, attorneyId: string): void {
-    this.dashboardService.assignCase(caseId, attorneyId).pipe(
-      catchError(() => of({ success: true })),
+    this.adminService.assignAttorney(caseId, attorneyId).pipe(
+      catchError(() => of(null)),
     ).subscribe(() => {
       this.caseQueue.update((queue) =>
-        queue.map((item) =>
-          item.caseId === caseId ? { ...item, status: 'assigned' } : item,
+        queue.map((item: any) =>
+          item.id === caseId ? { ...item, assigned_attorney_id: attorneyId, status: 'assigned_to_attorney' } : item,
         ),
       );
     });
@@ -882,23 +1082,16 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   /* --- Navigation --- */
-  viewCase(c: Case): void { this.router.navigate(['/admin/cases', c.id]); }
+  viewCase(c: any): void { this.router.navigate(['/admin/cases', c.id]); }
   viewAllCases(): void { this.router.navigate(['/admin/cases']); }
 
   /* --- Formatters --- */
-  getStatusLabel(status: Case['status']): string {
+  getStatusLabel(status: string): string {
     return STATUS_LABELS[status] ?? status;
   }
 
-  getPriorityLabel(priority: Case['priority']): string {
-    return PRIORITY_LABELS[priority] ?? priority;
-  }
-
   formatQueueStatus(status: string): string {
-    const map: Record<string, string> = {
-      new: 'New', assigned: 'Assigned', in_progress: 'In Progress',
-    };
-    return map[status] ?? status;
+    return STATUS_LABELS[status] ?? status;
   }
 
   formatCurrency(amount: number): string {

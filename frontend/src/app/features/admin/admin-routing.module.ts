@@ -22,7 +22,7 @@ const routes: Routes = [
       },
       {
         path: 'cases/:id',
-        loadComponent: () => import('./case-management/case-management.component').then(m => m.CaseManagementComponent)
+        loadComponent: () => import('./case-detail/admin-case-detail.component').then(m => m.AdminCaseDetailComponent)
       },
       {
         path: 'staff',
@@ -55,6 +55,14 @@ const routes: Routes = [
       {
         path: 'assignment-requests',
         loadComponent: () => import('./assignment-requests/admin-assignment-requests.component').then(m => m.AdminAssignmentRequestsComponent)
+      },
+      {
+        path: 'operator-kanban',
+        loadComponent: () => import('./operator-kanban/admin-operator-kanban.component').then(m => m.AdminOperatorKanbanComponent)
+      },
+      {
+        path: 'case-table',
+        loadComponent: () => import('./case-table/admin-case-table.component').then(m => m.AdminCaseTableComponent)
       },
       {
         path: 'settings',

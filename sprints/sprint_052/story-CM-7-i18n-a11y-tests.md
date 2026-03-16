@@ -1,6 +1,6 @@
 # Story CM-7: i18n, Accessibility & Comprehensive Test Coverage
 
-## Status: TODO
+## Status: DONE
 
 ## Priority: P2
 
@@ -119,15 +119,15 @@ cd frontend && npx ng test --no-watch 2>&1 | tail -5
 ```
 
 ## Acceptance Criteria
-- [ ] All ~60 translation keys added to en.json, es.json, fr.json
-- [ ] Language switch correctly reflects new translations on all sprint 052 screens
-- [ ] AXE audit on CaseEditForm, FileManager, StatusPipeline, Kanban: zero violations
-- [ ] Keyboard navigation works for: edit form, file upload, status change, Kanban drag
-- [ ] Focus management correct for: dialog open/close, edit mode toggle, file preview
-- [ ] All interactive elements ≥44×44px touch targets
-- [ ] Color contrast ≥4.5:1 on all text elements
-- [ ] Every new source file has a co-located test file
-- [ ] Backend tests pass: `npm test` from `backend/`
-- [ ] Frontend tests pass: `npx ng test --no-watch` from `frontend/`
-- [ ] Zero test regressions (existing tests still pass)
-- [ ] Build succeeds with no errors
+- [x] All ~60 translation keys added to en.json, es.json, fr.json
+- [x] Language switch correctly reflects new translations on all sprint 052 screens
+- [x] AXE audit on CaseEditForm, FileManager, StatusPipeline, Kanban: zero violations
+- [x] Keyboard navigation works for: edit form, file upload, status change, Kanban drag
+- [x] Focus management correct for: dialog open/close, edit mode toggle, file preview
+- [x] All interactive elements ≥44×44px touch targets
+- [x] Color contrast ≥4.5:1 on all text elements
+- [x] Every new source file has a co-located test file
+- [x] Backend tests pass: `npm test` from `backend/`
+- [x] Frontend tests pass: `npx ng test --no-watch` from `frontend/`
+- [x] Zero test regressions (existing tests still pass)
+- [x] Build succeeds with no errors

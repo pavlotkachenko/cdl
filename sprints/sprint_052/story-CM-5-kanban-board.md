@@ -1,6 +1,6 @@
 # Story CM-5: Kanban Board View
 
-## Status: TODO
+## Status: DONE
 
 ## Priority: P1
 

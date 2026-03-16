@@ -1,7 +1,7 @@
 import {
   Component, OnInit, signal, computed, ChangeDetectionStrategy, inject,
 } from '@angular/core';
-import { DatePipe, CurrencyPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -20,6 +20,9 @@ import { catchError, of, finalize } from 'rxjs';
 
 import { CaseService } from '../../../core/services/case.service';
 import { AttorneyAssignmentComponent, AttorneyAssignmentDialogResult } from '../attorney-assignment/attorney-assignment.component';
+import { StatusPipelineComponent } from '../status-pipeline/status-pipeline.component';
+import { CaseEditFormComponent } from '../case-edit/case-edit-form.component';
+import { FileManagerComponent } from '../file-manager/file-manager.component';
 
 const STATUS_LABELS: Record<string, string> = {
   new: 'OPR.STATUS_NEW',
@@ -53,11 +56,11 @@ const PRIORITY_COLORS: Record<string, string> = {
   selector: 'app-operator-case-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe, CurrencyPipe, FormsModule,
+    DatePipe, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatTooltipModule, MatChipsModule,
-    TranslateModule,
+    TranslateModule, StatusPipelineComponent, CaseEditFormComponent, FileManagerComponent,
   ],
   template: `
     <!-- Loading -->
@@ -102,42 +105,23 @@ const PRIORITY_COLORS: Record<string, string> = {
         </div>
       </div>
 
+      <!-- Status pipeline -->
+      <app-status-pipeline
+        [currentStatus]="caseData()!.status"
+        [caseId]="caseData()!.id"
+        (statusChanged)="onStatusChanged($event)">
+      </app-status-pipeline>
+
       <div class="detail-grid">
-        <!-- Left column: Ticket + Court Dates -->
+        <!-- Left column: Case Edit + Court Dates -->
         <div class="detail-column">
-          <!-- Ticket info -->
+          <!-- Case data (view/edit form) -->
           <mat-card appearance="outlined" class="detail-card">
-            <mat-card-header>
-              <mat-icon mat-card-avatar>description</mat-icon>
-              <mat-card-title>{{ 'OPR.DETAIL.TICKET_INFO' | translate }}</mat-card-title>
-            </mat-card-header>
             <mat-card-content>
-              <dl class="info-list">
-                <div class="info-row">
-                  <dt>{{ 'OPR.DETAIL.VIOLATION_TYPE' | translate }}</dt>
-                  <dd>{{ caseData()!.violation_type }}</dd>
-                </div>
-                @if (caseData()!.violation_date) {
-                  <div class="info-row">
-                    <dt>{{ 'OPR.DETAIL.VIOLATION_DATE' | translate }}</dt>
-                    <dd>{{ caseData()!.violation_date | date:'mediumDate' }}</dd>
-                  </div>
-                }
-                <div class="info-row">
-                  <dt>{{ 'OPR.DETAIL.STATE' | translate }}</dt>
-                  <dd>{{ caseData()!.state }}@if (caseData()!.county) {, {{ caseData()!.county }}}</dd>
-                </div>
-                <div class="info-row">
-                  <dt>{{ 'OPR.DETAIL.FINE_AMOUNT' | translate }}</dt>
-                  <dd>
-                    @if (caseData()!.fine_amount != null) {
-                      {{ caseData()!.fine_amount | currency:'USD':'symbol':'1.0-0' }}
-                    } @else {
-                      <span class="cell-dash">&mdash;</span>
-                    }
-                  </dd>
-                </div>
-              </dl>
+              <app-case-edit-form
+                [caseData]="caseData()!"
+                (saved)="onCaseEdited($event)">
+              </app-case-edit-form>
             </mat-card-content>
           </mat-card>
 
@@ -291,6 +275,13 @@ const PRIORITY_COLORS: Record<string, string> = {
           </mat-card>
         </div>
       </div>
+
+      <!-- File manager -->
+      <mat-card appearance="outlined" class="detail-card">
+        <mat-card-content>
+          <app-file-manager [caseId]="caseData()!.id"></app-file-manager>
+        </mat-card-content>
+      </mat-card>
 
       <!-- Activity log -->
       <mat-card appearance="outlined" class="detail-card activity-card">
@@ -501,6 +492,14 @@ export class OperatorCaseDetailComponent implements OnInit {
     ref.afterClosed().subscribe((result: AttorneyAssignmentDialogResult | undefined) => {
       if (result?.assigned) this.loadCase();
     });
+  }
+
+  onStatusChanged(_newStatus: string): void {
+    this.loadCase();
+  }
+
+  onCaseEdited(_updated: unknown): void {
+    this.loadCase();
   }
 
   updateStatus(): void {

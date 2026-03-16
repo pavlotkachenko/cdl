@@ -4,21 +4,21 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect } from 'vitest';
 import { provideTranslateService } from '@ngx-translate/core';
+import { MatDialog } from '@angular/material/dialog';
 
 import { CaseManagementComponent } from './case-management.component';
-import { AdminService, Case, StaffMember } from '../../../core/services/admin.service';
+import { AdminService, StaffMember } from '../../../core/services/admin.service';
+import { StatusWorkflowService } from '../../../core/services/status-workflow.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-const MOCK_CASES: Case[] = [
+const MOCK_CASES = [
   {
-    id: 'c1', caseNumber: 'CASE-001', clientId: 'u1', clientName: 'Alice', clientEmail: 'a@test.com',
-    violationType: 'Speeding', status: 'new', priority: 'high',
-    createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-01'),
+    id: 'c1', case_number: 'CDL-001', customer_name: 'Alice', customer_email: 'a@test.com',
+    violation_type: 'Speeding', status: 'new', priority: 'high',
   },
   {
-    id: 'c2', caseNumber: 'CASE-002', clientId: 'u2', clientName: 'Bob', clientEmail: 'b@test.com',
-    violationType: 'Overweight', status: 'in_progress', priority: 'low',
-    createdAt: new Date('2026-01-02'), updatedAt: new Date('2026-01-02'),
+    id: 'c2', case_number: 'CDL-002', customer_name: 'Bob', customer_email: 'b@test.com',
+    violation_type: 'Overweight', status: 'reviewed', priority: 'low',
   },
 ];
 
@@ -30,22 +30,36 @@ const MOCK_STAFF: StaffMember[] = [
   },
 ];
 
-function makeServiceSpy() {
+function makeAdminServiceSpy() {
   return {
-    getAllCases: vi.fn().mockReturnValue(of(MOCK_CASES)),
+    getAllCases: vi.fn().mockReturnValue(of({ cases: MOCK_CASES, total: 2 })),
     getAllStaff: vi.fn().mockReturnValue(of(MOCK_STAFF)),
     updateCaseStatus: vi.fn().mockReturnValue(of(null)),
     assignCase: vi.fn().mockReturnValue(of(null)),
   };
 }
 
-async function setup(spy = makeServiceSpy()) {
+function makeWorkflowServiceSpy() {
+  return {
+    getNextStatuses: vi.fn().mockReturnValue(of({
+      currentStatus: 'new',
+      nextStatuses: ['reviewed', 'assigned_to_attorney'],
+      requiresNote: { assigned_to_attorney: false },
+    })),
+    changeStatus: vi.fn().mockReturnValue(of({ message: 'ok' })),
+  };
+}
+
+async function setup(adminSpy = makeAdminServiceSpy()) {
   const routerSpy = { navigate: vi.fn() };
+  const workflowSpy = makeWorkflowServiceSpy();
+
   await TestBed.configureTestingModule({
     imports: [CaseManagementComponent, NoopAnimationsModule],
     providers: [
       provideTranslateService(),
-      { provide: AdminService, useValue: spy },
+      { provide: AdminService, useValue: adminSpy },
+      { provide: StatusWorkflowService, useValue: workflowSpy },
       { provide: Router, useValue: routerSpy },
     ],
   }).compileComponents();
@@ -54,7 +68,7 @@ async function setup(spy = makeServiceSpy()) {
   const snackBar = fixture.debugElement.injector.get(MatSnackBar);
   vi.spyOn(snackBar, 'open').mockReturnValue(null as any);
   fixture.detectChanges();
-  return { fixture, component: fixture.componentInstance, spy, router: routerSpy, snackBar };
+  return { fixture, component: fixture.componentInstance, adminSpy, workflowSpy, router: routerSpy, snackBar };
 }
 
 describe('CaseManagementComponent', () => {
@@ -74,7 +88,7 @@ describe('CaseManagementComponent', () => {
 
   it('filteredCases is computed from statusFilter', async () => {
     const { component } = await setup();
-    component.statusFilter.set('in_progress');
+    component.statusFilter.set('reviewed');
     expect(component.filteredCases().length).toBe(1);
     expect(component.filteredCases()[0].id).toBe('c2');
   });
@@ -89,35 +103,176 @@ describe('CaseManagementComponent', () => {
     expect(component.filteredCases().length).toBe(2);
   });
 
-  it('updateStatus calls service and reloads', async () => {
-    const { component, spy, snackBar } = await setup();
-    component.updateStatus(MOCK_CASES[0], 'resolved');
-    expect(spy.updateCaseStatus).toHaveBeenCalledWith('c1', 'resolved');
-    expect(snackBar.open).toHaveBeenCalledWith('Status updated.', 'Close', expect.any(Object));
-  });
-
   it('getStatusKey maps status codes to i18n keys', async () => {
     const { component } = await setup();
     expect(component.getStatusKey('new')).toBe('ADMIN.STATUS_NEW');
-    expect(component.getStatusKey('pending_court')).toBe('ADMIN.STATUS_PENDING_COURT');
+    expect(component.getStatusKey('reviewed')).toBe('ADMIN.STATUS_REVIEWED');
     expect(component.getStatusKey('resolved')).toBe('ADMIN.STATUS_RESOLVED');
   });
 
   it('sets error signal when getAllCases fails', async () => {
-    const spy = makeServiceSpy();
+    const spy = makeAdminServiceSpy();
     spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
     const { component } = await setup(spy);
     expect(component.error()).toBe('ADMIN.FAILED_LOAD');
   });
 
   it('clears error on retry and reloads', async () => {
-    const spy = makeServiceSpy();
+    const spy = makeAdminServiceSpy();
     spy.getAllCases.mockReturnValue(throwError(() => new Error('net')));
     const { component } = await setup(spy);
     expect(component.error()).toBeTruthy();
-    spy.getAllCases.mockReturnValue(of(MOCK_CASES));
+    spy.getAllCases.mockReturnValue(of({ cases: MOCK_CASES, total: 2 }));
     component.loadData();
     expect(component.error()).toBe('');
     expect(component.cases().length).toBe(2);
+  });
+
+  // ── Workflow integration tests ──
+
+  it('toggleDetail fetches next statuses for expanded case', async () => {
+    const { component, workflowSpy } = await setup();
+    component.toggleDetail('c1');
+    expect(component.expandedCaseId()).toBe('c1');
+    expect(workflowSpy.getNextStatuses).toHaveBeenCalledWith('c1');
+  });
+
+  it('populates nextStatuses after workflow fetch', async () => {
+    const { component } = await setup();
+    component.toggleDetail('c1');
+    const ns = component.nextStatuses();
+    expect(ns['c1']).toEqual(['reviewed', 'assigned_to_attorney']);
+  });
+
+  it('toggleDetail collapses if same case clicked', async () => {
+    const { component } = await setup();
+    component.toggleDetail('c1');
+    expect(component.expandedCaseId()).toBe('c1');
+    component.toggleDetail('c1');
+    expect(component.expandedCaseId()).toBeNull();
+  });
+
+  it('onStatusAction calls updateCaseStatus when no note required', async () => {
+    const { component, adminSpy } = await setup();
+    component.toggleDetail('c1');
+    await component.onStatusAction(MOCK_CASES[0], 'reviewed');
+    expect(adminSpy.updateCaseStatus).toHaveBeenCalledWith('c1', 'reviewed', undefined);
+  });
+
+  it('onStatusAction opens dialog when note required', async () => {
+    const { component, workflowSpy, adminSpy } = await setup();
+    workflowSpy.getNextStatuses.mockReturnValue(of({
+      currentStatus: 'new',
+      nextStatuses: ['closed'],
+      requiresNote: { closed: true },
+    }));
+    component.toggleDetail('c1');
+
+    const dialog = TestBed.inject(MatDialog);
+    const dialogSpy = vi.spyOn(dialog, 'open').mockReturnValue({
+      afterClosed: () => of('My note'),
+    } as any);
+
+    await component.onStatusAction(MOCK_CASES[0], 'closed');
+    expect(dialogSpy).toHaveBeenCalled();
+    expect(adminSpy.updateCaseStatus).toHaveBeenCalledWith('c1', 'closed', 'My note');
+  });
+
+  it('cancelled note dialog does not change status', async () => {
+    const { component, workflowSpy, adminSpy } = await setup();
+    workflowSpy.getNextStatuses.mockReturnValue(of({
+      currentStatus: 'new',
+      nextStatuses: ['closed'],
+      requiresNote: { closed: true },
+    }));
+    component.toggleDetail('c1');
+
+    const dialog = TestBed.inject(MatDialog);
+    vi.spyOn(dialog, 'open').mockReturnValue({
+      afterClosed: () => of(undefined),
+    } as any);
+
+    await component.onStatusAction(MOCK_CASES[0], 'closed');
+    expect(adminSpy.updateCaseStatus).not.toHaveBeenCalled();
+  });
+
+  it('terminal status shows message when no next statuses', async () => {
+    const { component, workflowSpy } = await setup();
+    workflowSpy.getNextStatuses.mockReturnValue(of({
+      currentStatus: 'closed',
+      nextStatuses: [],
+      requiresNote: {},
+    }));
+    component.toggleDetail('c1');
+    expect(component.nextStatuses()['c1']).toEqual([]);
+  });
+
+  // ── Override flow tests ──
+
+  it('onOverride opens override dialog with current status', async () => {
+    const { component } = await setup();
+    component.onOverride({ id: 'c1', status: 'new' });
+    expect(component.overrideDialog()).toBeTruthy();
+    expect(component.overrideDialog()!.currentStatus).toBe('new');
+    expect(component.overrideDialog()!.caseId).toBe('c1');
+  });
+
+  it('overrideStatuses excludes current status', async () => {
+    const { component } = await setup();
+    component.onOverride({ id: 'c1', status: 'new' });
+    expect(component.overrideStatuses()).not.toContain('new');
+    expect(component.overrideStatuses().length).toBe(10); // 11 total - 1 current
+  });
+
+  it('cancelOverride clears dialog', async () => {
+    const { component } = await setup();
+    component.onOverride({ id: 'c1', status: 'new' });
+    component.cancelOverride();
+    expect(component.overrideDialog()).toBeNull();
+  });
+
+  it('confirmOverride calls updateCaseStatus with override flag', async () => {
+    const { component, adminSpy } = await setup();
+    component.onOverride({ id: 'c1', status: 'new' });
+    component.overrideTargetStatus.set('closed');
+    component.overrideNote.set('Force closing per admin decision');
+
+    component.confirmOverride();
+    expect(adminSpy.updateCaseStatus).toHaveBeenCalledWith('c1', 'closed', 'Force closing per admin decision', true);
+    expect(component.overrideDialog()).toBeNull();
+  });
+
+  it('confirmOverride does nothing if note too short', async () => {
+    const { component, adminSpy } = await setup();
+    component.onOverride({ id: 'c1', status: 'new' });
+    component.overrideTargetStatus.set('closed');
+    component.overrideNote.set('short');
+
+    component.confirmOverride();
+    expect(adminSpy.updateCaseStatus).not.toHaveBeenCalled();
+  });
+
+  it('confirmOverride does nothing if no target status selected', async () => {
+    const { component, adminSpy } = await setup();
+    component.onOverride({ id: 'c1', status: 'new' });
+    component.overrideNote.set('Long enough note for override');
+
+    component.confirmOverride();
+    expect(adminSpy.updateCaseStatus).not.toHaveBeenCalled();
+  });
+
+  it('getStatusIcon maps known statuses', async () => {
+    const { component } = await setup();
+    expect(component.getStatusIcon('new')).toBe('fiber_new');
+    expect(component.getStatusIcon('resolved')).toBe('check_circle');
+    expect(component.getStatusIcon('unknown')).toBe('swap_horiz');
+  });
+
+  it('updateStatus calls service and reloads on success', async () => {
+    const { component, adminSpy, snackBar } = await setup();
+    component.toggleDetail('c1');
+    await component.onStatusAction(MOCK_CASES[0], 'reviewed');
+    expect(adminSpy.updateCaseStatus).toHaveBeenCalledWith('c1', 'reviewed', undefined);
+    expect(snackBar.open).toHaveBeenCalledWith('Status updated.', 'Close', expect.any(Object));
   });
 });

@@ -11,6 +11,7 @@ const smsService = require('../services/sms.service');
 const oneSignalService = require('../services/onesignal.service');
 const assignmentService = require('../services/assignment.service');
 const webhookService = require('../services/webhook.service');
+const statusWorkflow = require('../services/status-workflow.service');
 
 /**
  * PUBLIC SUBMIT
@@ -363,6 +364,9 @@ exports.updateCase = async (req, res) => {
     delete updates.case_number;
     delete updates.driver_id;
     delete updates.created_at;
+    delete updates.assigned_operator_id;
+    delete updates.assigned_attorney_id;
+    delete updates.updated_at;
     
     const { data, error } = await supabase
       .from('cases')
@@ -582,31 +586,38 @@ exports.changeStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, comment } = req.body;
-    
-    // Valid status transitions
-    const validStatuses = [
-      'new', 'reviewed', 'assigned_to_attorney', 'waiting_for_driver',
-      'send_info_to_attorney', 'attorney_paid', 'call_court',
-      'check_with_manager', 'pay_attorney', 'closed'
-    ];
-    
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        error: 'Invalid status',
-        valid_statuses: validStatuses
-      });
-    }
-    
-    // Get current case
-    const { data: currentCase } = await supabase
+
+    // Get current case to validate transition
+    const { data: currentCase, error: fetchError } = await supabase
       .from('cases')
       .select('*')
       .eq('id', id)
       .single();
-    
+
+    if (fetchError || !currentCase) {
+      return res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Case not found' }
+      });
+    }
+
+    // Validate transition using the state machine
+    const validation = statusWorkflow.validateTransition(currentCase.status, status);
+
+    if (!validation.allowed) {
+      return res.status(400).json({
+        error: { code: 'INVALID_TRANSITION', message: validation.error }
+      });
+    }
+
+    if (validation.requiresNote && !comment) {
+      return res.status(400).json({
+        error: { code: 'NOTE_REQUIRED', message: `A note is required when changing status to "${status}"` }
+      });
+    }
+
     // Update status
     const updates = { status };
-    
+
     // If closing the case
     if (status === 'closed') {
       updates.closed_at = new Date().toISOString();
@@ -683,6 +694,42 @@ exports.changeStatus = async (req, res) => {
   } catch (error) {
     console.error('Change status error:', error);
     res.status(500).json({ error: 'Failed to change status' });
+  }
+};
+
+/**
+ * GET NEXT STATUSES
+ * Returns allowed transitions for the case's current status
+ */
+exports.getNextStatuses = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: caseData, error } = await supabase
+      .from('cases')
+      .select('status')
+      .eq('id', id)
+      .single();
+
+    if (error || !caseData) {
+      return res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Case not found' }
+      });
+    }
+
+    const nextStatuses = statusWorkflow.getNextStatuses(caseData.status);
+    const requiresNote = statusWorkflow.buildRequiresNoteMap(nextStatuses);
+
+    res.json({
+      currentStatus: caseData.status,
+      nextStatuses,
+      requiresNote,
+    });
+  } catch (error) {
+    console.error('Get next statuses error:', error);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to get next statuses' }
+    });
   }
 };
 
@@ -884,29 +931,37 @@ exports.listDocuments = async (req, res) => {
 
 /**
  * UPLOAD DOCUMENT
- * Driver uploads a file to their case (max 10MB, validated MIME)
+ * Upload a file to a case (max 10MB, validated MIME)
+ * Access: Driver (own case), Operator (assigned case), Admin (any case)
  */
 exports.uploadDocument = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: { code: 'NO_FILE', message: 'No file uploaded' } });
     }
 
-    // Verify driver owns the case
+    // Verify access based on role
     const { data: caseData, error: fetchError } = await supabase
       .from('cases')
-      .select('id, driver_id')
+      .select('id, driver_id, assigned_operator_id')
       .eq('id', id)
       .single();
 
     if (fetchError || !caseData) {
-      return res.status(404).json({ error: 'Case not found' });
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
     }
-    if (caseData.driver_id !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+
+    const role = req.user.role;
+    const userId = req.user.id;
+    if (role === 'driver' && caseData.driver_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have access to this case' } });
     }
+    if (role === 'operator' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You are not assigned to this case' } });
+    }
+    // Admin can upload to any case
 
     // Enforce max 10 documents
     const { count } = await supabase
@@ -915,7 +970,7 @@ exports.uploadDocument = async (req, res) => {
       .eq('case_id', id);
 
     if (count >= 10) {
-      return res.status(400).json({ error: 'Maximum 10 documents per case reached' });
+      return res.status(400).json({ error: { code: 'MAX_FILES', message: 'Maximum 10 documents per case reached' } });
     }
 
     const storageService = require('../services/storage.service');
@@ -926,13 +981,16 @@ exports.uploadDocument = async (req, res) => {
       `cases/${id}`
     );
 
+    const fileType = role === 'driver' ? 'driver_upload' : 'operator_upload';
+
     const { data: fileRecord, error: insertError } = await supabase
       .from('case_files')
       .insert([{
         case_id: id,
         file_name: req.file.originalname,
         file_url: uploadResult.path,
-        file_type: 'driver_upload'
+        file_type: fileType,
+        uploaded_by: userId
       }])
       .select()
       .single();
@@ -954,39 +1012,54 @@ exports.uploadDocument = async (req, res) => {
     });
   } catch (error) {
     console.error('Upload document error:', error);
-    res.status(500).json({ error: 'Failed to upload document' });
+    res.status(500).json({ error: { code: 'UPLOAD_ERROR', message: 'Failed to upload document' } });
   }
 };
 
 /**
  * DELETE DOCUMENT
- * Driver deletes their uploaded file
+ * Delete a file from a case
+ * Access: Driver (own case), Operator (own uploads), Admin (any)
  */
 exports.deleteDocument = async (req, res) => {
   try {
     const { id, documentId } = req.params;
+    const role = req.user.role;
+    const userId = req.user.id;
 
-    // Verify driver owns the case
+    // Verify access based on role
     const { data: caseData } = await supabase
       .from('cases')
-      .select('driver_id')
+      .select('driver_id, assigned_operator_id')
       .eq('id', id)
       .single();
 
-    if (!caseData || caseData.driver_id !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (!caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    if (role === 'driver' && caseData.driver_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have access to this case' } });
+    }
+    if (role === 'operator' && caseData.assigned_operator_id !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You are not assigned to this case' } });
     }
 
     // Get file record
     const { data: fileRecord, error: fetchError } = await supabase
       .from('case_files')
-      .select('file_url')
+      .select('file_url, uploaded_by')
       .eq('id', documentId)
       .eq('case_id', id)
       .single();
 
     if (fetchError || !fileRecord) {
-      return res.status(404).json({ error: 'Document not found' });
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+
+    // Operators can only delete their own uploads (admins can delete any)
+    if (role === 'operator' && fileRecord.uploaded_by && fileRecord.uploaded_by !== userId) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You can only delete your own uploads' } });
     }
 
     // Delete from storage
@@ -999,7 +1072,7 @@ exports.deleteDocument = async (req, res) => {
     res.json({ message: 'Document deleted' });
   } catch (error) {
     console.error('Delete document error:', error);
-    res.status(500).json({ error: 'Failed to delete document' });
+    res.status(500).json({ error: { code: 'DELETE_ERROR', message: 'Failed to delete document' } });
   }
 };
 

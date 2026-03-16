@@ -1,6 +1,6 @@
 # Story CM-1: Backend Fixes — canAccessCase, Authorization, Status Enum & Error Format
 
-## Status: TODO
+## Status: DONE
 
 ## Priority: P0 (blocker — all other stories depend on this)
 

@@ -10,6 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { OperatorCaseDetailComponent } from './operator-case-detail.component';
 import { CaseService } from '../../../core/services/case.service';
+import { StatusWorkflowService } from '../../../core/services/status-workflow.service';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 
@@ -57,6 +58,18 @@ describe('OperatorCaseDetailComponent', () => {
   let caseServiceSpy: {
     getOperatorCaseDetail: ReturnType<typeof vi.fn>;
     updateOperatorCaseStatus: ReturnType<typeof vi.fn>;
+    listDocuments: ReturnType<typeof vi.fn>;
+    uploadDocument: ReturnType<typeof vi.fn>;
+    deleteDocument: ReturnType<typeof vi.fn>;
+    patchCase: ReturnType<typeof vi.fn>;
+  };
+  let workflowSpy: {
+    getNextStatuses: ReturnType<typeof vi.fn>;
+    changeStatus: ReturnType<typeof vi.fn>;
+    getPhaseForStatus: ReturnType<typeof vi.fn>;
+    getPhaseIndex: ReturnType<typeof vi.fn>;
+    getPhases: ReturnType<typeof vi.fn>;
+    getStatusConfig: ReturnType<typeof vi.fn>;
   };
   let routerSpy: { navigate: ReturnType<typeof vi.fn> };
   let snackBarSpy: ReturnType<typeof vi.spyOn>;
@@ -66,6 +79,27 @@ describe('OperatorCaseDetailComponent', () => {
     caseServiceSpy = {
       getOperatorCaseDetail: vi.fn().mockReturnValue(of({ case: MOCK_CASE, activity: MOCK_ACTIVITY })),
       updateOperatorCaseStatus: vi.fn().mockReturnValue(of({ case: { ...MOCK_CASE, status: 'closed' } })),
+      listDocuments: vi.fn().mockReturnValue(of({ documents: [] })),
+      uploadDocument: vi.fn().mockReturnValue(of({ id: 'f1', file_name: 'test.jpg' })),
+      deleteDocument: vi.fn().mockReturnValue(of({ message: 'deleted' })),
+      patchCase: vi.fn().mockReturnValue(of({ case: MOCK_CASE })),
+    };
+
+    const PHASES = [
+      { key: 'intake', label: 'OPR.PHASE_INTAKE', statuses: ['new', 'reviewed'] },
+      { key: 'assignment', label: 'OPR.PHASE_ASSIGNMENT', statuses: ['assigned_to_attorney'] },
+      { key: 'processing', label: 'OPR.PHASE_PROCESSING', statuses: ['send_info_to_attorney', 'waiting_for_driver', 'call_court', 'check_with_manager'] },
+      { key: 'payment', label: 'OPR.PHASE_PAYMENT', statuses: ['pay_attorney', 'attorney_paid'] },
+      { key: 'resolution', label: 'OPR.PHASE_RESOLUTION', statuses: ['resolved', 'closed'] },
+    ];
+
+    workflowSpy = {
+      getNextStatuses: vi.fn().mockReturnValue(of({ currentStatus: 'reviewed', nextStatuses: ['assigned_to_attorney'], requiresNote: {} })),
+      changeStatus: vi.fn().mockReturnValue(of({ message: 'ok' })),
+      getPhaseForStatus: vi.fn().mockReturnValue(PHASES[0]),
+      getPhaseIndex: vi.fn().mockReturnValue(0),
+      getPhases: vi.fn().mockReturnValue(PHASES),
+      getStatusConfig: vi.fn().mockReturnValue({ label: 'OPR.STATUS_NEW', color: '#e3f2fd', icon: 'fiber_new' }),
     };
 
     routerSpy = { navigate: vi.fn() };
@@ -74,6 +108,7 @@ describe('OperatorCaseDetailComponent', () => {
       imports: [OperatorCaseDetailComponent, NoopAnimationsModule],
       providers: [
         { provide: CaseService, useValue: caseServiceSpy },
+        { provide: StatusWorkflowService, useValue: workflowSpy },
         { provide: Router, useValue: routerSpy },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'c1' } } } },
         provideTranslateService(),

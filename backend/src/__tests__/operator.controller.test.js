@@ -19,7 +19,7 @@ let chain;
 function buildChain(arrayResult = { data: [], error: null, count: 0 }) {
   chain = {};
   const plain = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'in', 'is',
-    'gte', 'lte', 'order', 'limit', 'head'];
+    'not', 'gte', 'lte', 'order', 'limit', 'head'];
   plain.forEach(m => { chain[m] = jest.fn().mockReturnValue(chain); });
   chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
   chain.maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
@@ -1186,5 +1186,300 @@ describe('batchOcr', () => {
     await ctrl.batchOcr(req, res);
 
     expect(res.json.mock.calls[0][0].data.results[0].data.confidence).toBe(0);
+  });
+});
+
+// ============================================================
+// getTeamCases
+// ============================================================
+describe('getTeamCases', () => {
+  test('returns all non-closed cases with ageHours and operator_name', async () => {
+    const now = Date.now();
+    const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000).toISOString();
+    const teamData = [
+      {
+        id: 't1', case_number: 'CDL-701', status: 'reviewed', state: 'TX',
+        violation_type: 'Speeding', created_at: twoHoursAgo, updated_at: twoHoursAgo,
+        customer_name: 'Team Driver', assigned_operator_id: 'op-2',
+        operator: { id: 'op-2', full_name: 'Other Operator' },
+      },
+    ];
+
+    buildChain({ data: teamData, error: null });
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getTeamCases(req, res);
+
+    expect(res.json).toHaveBeenCalled();
+    const body = res.json.mock.calls[0][0];
+    expect(body.cases).toHaveLength(1);
+    expect(body.cases[0].operator_name).toBe('Other Operator');
+    expect(body.cases[0].ageHours).toBeGreaterThanOrEqual(2);
+    // operator relation should be cleaned up
+    expect(body.cases[0].operator).toBeUndefined();
+  });
+
+  test('returns empty array when no active cases', async () => {
+    buildChain({ data: [], error: null });
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getTeamCases(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.cases).toEqual([]);
+  });
+
+  test('returns 500 on DB error', async () => {
+    const dbErr = new Error('DB fail');
+    buildChain({ data: null, error: null });
+    chain.then = (onFulfilled, onRejected) => Promise.reject(dbErr).then(onFulfilled, onRejected);
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getTeamCases(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_ERROR');
+  });
+
+  test('handles null operator gracefully', async () => {
+    buildChain({
+      data: [{
+        id: 't1', case_number: 'CDL-701', status: 'new', state: 'TX',
+        violation_type: 'Speeding', created_at: new Date().toISOString(),
+        customer_name: 'Unassigned', assigned_operator_id: null, operator: null,
+      }],
+      error: null,
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getTeamCases(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.cases[0].operator_name).toBeNull();
+  });
+});
+
+// ============================================================
+// getClosedCases
+// ============================================================
+describe('getClosedCases', () => {
+  test('returns closed/resolved cases for the requesting operator', async () => {
+    const closedCases = [
+      { id: 'a1', case_number: 'CDL-501', status: 'closed', state: 'FL',
+        violation_type: 'Logbook', customer_name: 'Archived Driver',
+        created_at: '2026-02-01T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' },
+      { id: 'a2', case_number: 'CDL-502', status: 'resolved', state: 'CA',
+        violation_type: 'Equipment', customer_name: 'Resolved Driver',
+        created_at: '2026-01-15T00:00:00Z', updated_at: '2026-02-15T00:00:00Z' },
+    ];
+
+    buildChain({ data: closedCases, error: null });
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getClosedCases(req, res);
+
+    expect(chain.eq).toHaveBeenCalledWith('assigned_operator_id', 'op-1');
+    expect(chain.in).toHaveBeenCalledWith('status', ['closed', 'resolved']);
+    expect(chain.order).toHaveBeenCalledWith('updated_at', { ascending: false });
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.cases).toHaveLength(2);
+    expect(body.cases[0].case_number).toBe('CDL-501');
+  });
+
+  test('returns empty array when operator has no closed cases', async () => {
+    buildChain({ data: [], error: null });
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getClosedCases(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.cases).toEqual([]);
+  });
+
+  test('returns 500 on DB error', async () => {
+    const dbErr = new Error('DB fail');
+    buildChain({ data: null, error: null });
+    chain.then = (onFulfilled, onRejected) => Promise.reject(dbErr).then(onFulfilled, onRejected);
+
+    const req = makeReq();
+    const res = makeRes();
+    await operatorController.getClosedCases(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_ERROR');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// getAllCasesTable — full case table with 19 fields
+// ═══════════════════════════════════════════════
+describe('getAllCasesTable', () => {
+  // Helper: builds mock chains for getAllCasesTable (call 1 = main, call 2 = case_files)
+  function setupCasesTable(rawCases, { total, fileRows = [] } = {}) {
+    let mainChain;
+    let fromCallCount = 0;
+    supabase.from.mockImplementation(() => {
+      fromCallCount++;
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'ilike', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.single = jest.fn().mockResolvedValue({ data: null, error: null });
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+
+      if (fromCallCount === 1) {
+        c.then = (onFulfilled) => Promise.resolve({
+          data: rawCases, count: total ?? rawCases.length, error: null,
+        }).then(onFulfilled);
+        mainChain = c;
+      } else {
+        c.then = (onFulfilled) => Promise.resolve({ data: fileRows, error: null }).then(onFulfilled);
+      }
+      return c;
+    });
+    return { getMainChain: () => mainChain };
+  }
+
+  const fullCase = {
+    id: 'c1', case_number: 'CDL-001', status: 'reviewed', state: 'TX',
+    violation_type: 'Speeding', violation_date: '2026-01-01',
+    customer_name: 'Miguel', customer_email: 'miguel@test.com',
+    driver_phone: '555-1234', customer_type: 'driver',
+    court_date: '2026-04-01', next_action_date: '2026-03-20',
+    assigned_operator_id: 'op-1', assigned_attorney_id: 'att-1',
+    attorney_price: '350.00', price_cdl: '150.00',
+    subscriber_paid: true, court_fee: '75.00', court_fee_paid_by: 'driver',
+    carrier: 'Swift Transport', who_sent: 'driver',
+    operator: { id: 'op-1', full_name: 'Lisa M.' },
+    attorney: { id: 'att-1', full_name: 'James H.' },
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    updated_at: '2026-03-10',
+  };
+
+  test('returns all 19 fields with file count and total', async () => {
+    setupCasesTable([fullCase], { total: 1, fileRows: [{ case_id: 'c1' }, { case_id: 'c1' }, { case_id: 'c1' }] });
+
+    const req = makeReq({ query: {} });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.cases).toHaveLength(1);
+    const c = body.cases[0];
+    expect(c).toMatchObject({
+      case_number: 'CDL-001', status: 'reviewed', state: 'TX',
+      violation_type: 'Speeding', customer_name: 'Miguel',
+      driver_phone: '555-1234', customer_type: 'driver',
+      operator_name: 'Lisa M.', attorney_name: 'James H.',
+      carrier: 'Swift Transport', who_sent: 'driver',
+    });
+    expect(c.attorney_price).toBe(350);
+    expect(c.price_cdl).toBe(150);
+    expect(c.court_fee).toBe(75);
+    expect(c.file_count).toBe(3);
+    expect(c.ageHours).toBeGreaterThanOrEqual(2);
+    expect(body.total).toBe(1);
+  });
+
+  test('applies operator-scoped visibility filter via or()', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: {} });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+
+    expect(getMainChain().or).toHaveBeenCalledWith(
+      expect.stringContaining('assigned_operator_id.eq.op-1'),
+    );
+    expect(getMainChain().or).toHaveBeenCalledWith(
+      expect.stringContaining('status.neq.closed'),
+    );
+  });
+
+  test('applies single status filter', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { status: 'new' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(getMainChain().eq).toHaveBeenCalledWith('status', 'new');
+  });
+
+  test('applies multi-value status filter', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { status: 'new,reviewed' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(getMainChain().in).toHaveBeenCalledWith('status', ['new', 'reviewed']);
+  });
+
+  test('applies state filter (uppercased)', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { state: 'ca' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(getMainChain().eq).toHaveBeenCalledWith('state', 'CA');
+  });
+
+  test('applies carrier ilike filter', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { carrier: 'swift' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(getMainChain().ilike).toHaveBeenCalledWith('carrier', '%swift%');
+  });
+
+  test('applies search across multiple fields via or()', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { search: 'santos' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+
+    // The second or() call is the search (first is the scoping filter)
+    const orCalls = getMainChain().or.mock.calls;
+    const searchCall = orCalls.find(c => c[0].includes('customer_name.ilike'));
+    expect(searchCall).toBeTruthy();
+    expect(searchCall[0]).toContain('carrier.ilike.%santos%');
+  });
+
+  test('applies sort_by and sort_dir', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { sort_by: 'court_date', sort_dir: 'asc' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(getMainChain().order).toHaveBeenCalledWith('court_date', { ascending: true });
+  });
+
+  test('falls back to created_at for invalid sort_by', async () => {
+    const { getMainChain } = setupCasesTable([]);
+    const req = makeReq({ query: { sort_by: 'invalid_column' } });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(getMainChain().order).toHaveBeenCalledWith('created_at', { ascending: false });
+  });
+
+  test('returns 500 on database error', async () => {
+    supabase.from.mockImplementation(() => {
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'ilike', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.then = (onFulfilled) => Promise.resolve({ data: null, error: { message: 'fail' } }).then(onFulfilled);
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+      return c;
+    });
+
+    const req = makeReq({ query: {} });
+    const res = makeRes();
+    await operatorController.getAllCasesTable(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_FAILED');
   });
 });

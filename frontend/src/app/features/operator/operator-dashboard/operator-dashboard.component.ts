@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, DestroyRef, signal, computed, ChangeDetectionStrategy, inject,
+  Component, OnInit, DestroyRef, signal, computed, ChangeDetectionStrategy, inject, effect,
 } from '@angular/core';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
@@ -14,11 +14,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatRippleModule } from '@angular/material/core';
+import { MatTabsModule } from '@angular/material/tabs';
 import { TranslateModule } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
 
 import { CaseService } from '../../../core/services/case.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
+import { OperatorKanbanComponent } from '../kanban/operator-kanban.component';
 
 /* ------------------------------------------------------------------ */
 /*  Mock data — fallback when API returns empty                        */
@@ -52,6 +55,7 @@ const STATUS_LABELS: Record<string, string> = {
   check_with_manager: 'OPR.STATUS_CHECK_MANAGER',
   pay_attorney: 'OPR.STATUS_PAY_ATTORNEY',
   attorney_paid: 'OPR.STATUS_ATTORNEY_PAID',
+  resolved: 'OPR.STATUS_RESOLVED',
   closed: 'OPR.STATUS_CLOSED',
   in_progress: 'OPR.STATUS_IN_PROGRESS',
 };
@@ -64,8 +68,8 @@ const STATUS_LABELS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule,
     MatProgressSpinnerModule, MatTooltipModule,
-    MatChipsModule, MatRippleModule,
-    TranslateModule, SkeletonLoaderComponent,
+    MatChipsModule, MatRippleModule, MatTabsModule,
+    TranslateModule, SkeletonLoaderComponent, OperatorKanbanComponent,
   ],
   template: `
     <div class="op-dash">
@@ -76,13 +80,35 @@ const STATUS_LABELS: Record<string, string> = {
           <h1>{{ 'OPR.DASHBOARD' | translate }}</h1>
           <p class="subtitle">{{ 'OPR.DASHBOARD_SUBTITLE' | translate }}</p>
         </div>
-        <button mat-icon-button
-                class="refresh-btn"
-                (click)="refresh()"
-                [matTooltip]="'OPR.REFRESH' | translate"
-                aria-label="Refresh dashboard">
-          <mat-icon>refresh</mat-icon>
-        </button>
+        <div class="header-actions">
+          @if (activeTab() === 0) {
+            <div class="view-toggle" role="tablist" [attr.aria-label]="'OPR.KANBAN.VIEW_TOGGLE' | translate">
+              <button mat-icon-button
+                      [class.toggle-active]="view() === 'list'"
+                      (click)="view.set('list')"
+                      role="tab"
+                      [attr.aria-selected]="view() === 'list'"
+                      [attr.aria-label]="'OPR.KANBAN.LIST_VIEW' | translate">
+                <mat-icon>view_list</mat-icon>
+              </button>
+              <button mat-icon-button
+                      [class.toggle-active]="view() === 'kanban'"
+                      (click)="view.set('kanban')"
+                      role="tab"
+                      [attr.aria-selected]="view() === 'kanban'"
+                      [attr.aria-label]="'OPR.KANBAN.BOARD_VIEW' | translate">
+                <mat-icon>view_kanban</mat-icon>
+              </button>
+            </div>
+          }
+          <button mat-icon-button
+                  class="refresh-btn"
+                  (click)="refresh()"
+                  [matTooltip]="'OPR.REFRESH' | translate"
+                  aria-label="Refresh dashboard">
+            <mat-icon>refresh</mat-icon>
+          </button>
+        </div>
       </header>
 
       @if (loading()) {
@@ -121,231 +147,384 @@ const STATUS_LABELS: Record<string, string> = {
           </mat-card>
         </div>
 
-        <!-- ====== MY ASSIGNED CASES ====== -->
-        <section class="section-block" aria-label="My assigned cases">
-          <div class="section-header">
-            <div class="section-title-row">
-              <mat-icon class="section-icon">folder_open</mat-icon>
-              <h2>{{ 'OPR.MY_ASSIGNED' | translate }}</h2>
-            </div>
-            <span class="badge-count">{{ myCases().length }}</span>
-          </div>
+        <!-- ====== TABBED NAVIGATION ====== -->
+        <mat-tab-group [selectedIndex]="activeTab()"
+                       (selectedIndexChange)="onTabChange($event)"
+                       animationDuration="200ms"
+                       class="dash-tabs">
+          <!-- TAB 0: My Cases -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>folder_open</mat-icon>
+              <span class="tab-label-text">{{ 'OPR.TAB_MY_CASES' | translate }}</span>
+              <span class="tab-badge">{{ myCases().length }}</span>
+            </ng-template>
 
-          <mat-form-field appearance="outline" class="search-field">
-            <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
-            <input matInput
-                   [ngModel]="mySearch()"
-                   (ngModelChange)="mySearch.set($event)" />
-            <mat-icon matPrefix>search</mat-icon>
-          </mat-form-field>
-
-          @if (filteredMyCases().length === 0) {
-            <div class="empty-state" role="status">
-              <div class="empty-icon-wrap">
-                <mat-icon aria-hidden="true">inbox</mat-icon>
-              </div>
-              <p class="empty-title">{{ 'OPR.NO_ASSIGNED_CASES' | translate }}</p>
-            </div>
-          } @else {
-            <!-- Table header -->
-            <div class="table-header" aria-hidden="true">
-              <span class="th-case">{{ 'OPR.CASE' | translate: { Default: 'Case' } }}</span>
-              <span class="th-violation">{{ 'OPR.VIOLATION' | translate: { Default: 'Violation' } }}</span>
-              <span class="th-status">{{ 'OPR.STATUS' | translate: { Default: 'Status' } }}</span>
-              <span class="th-court">{{ 'OPR.COURT_DATE' | translate: { Default: 'Court' } }}</span>
-              <span class="th-fine">{{ 'OPR.FINE' | translate: { Default: 'Fine' } }}</span>
-              <span class="th-age">{{ 'OPR.AGE' | translate: { Default: 'Age' } }}</span>
-            </div>
-
-            @for (c of filteredMyCases(); track c.id) {
-              <div class="case-row"
-                   matRipple
-                   role="button"
-                   tabindex="0"
-                   (click)="viewCase(c.id)"
-                   (keydown.enter)="viewCase(c.id)"
-                   [attr.aria-label]="'View case ' + c.case_number">
-                <!-- Priority indicator + Case + Client -->
-                <div class="cell-case">
-                  <div class="case-name-row">
-                    <span class="priority-dot"
-                          [class.priority-critical]="c.priority === 'critical'"
-                          [class.priority-high]="c.priority === 'high'"
-                          [class.priority-medium]="c.priority === 'medium'"
-                          [class.priority-low]="c.priority === 'low'"
-                          [matTooltip]="getPriorityLabel(c.priority)"
-                          role="img"
-                          [attr.aria-label]="(c.priority || 'low') + ' priority'"></span>
-                    <span class="case-num">{{ c.case_number }}</span>
-                  </div>
-                  <span class="case-client">{{ c.customer_name }}</span>
-                </div>
-                <!-- Violation + State -->
-                <div class="cell-violation">
-                  <span class="violation-text">{{ c.violation_type }}</span>
-                  <span class="state-badge">{{ c.state }}</span>
-                </div>
-                <!-- Status chip -->
-                <div class="cell-status">
-                  <span [class]="'status-chip status-' + c.status">
-                    {{ getStatusKey(c.status) | translate }}
-                  </span>
-                </div>
-                <!-- Court date -->
-                <div class="cell-court">
-                  @if (c.court_date) {
-                    <span class="court-text" [matTooltip]="c.courthouse || ''">
-                      {{ c.court_date | date:'mediumDate' }}
-                    </span>
-                  } @else {
-                    <span class="cell-dash">&mdash;</span>
-                  }
-                </div>
-                <!-- Fine amount -->
-                <div class="cell-fine">
-                  @if (c.fine_amount != null) {
-                    <span class="fine-text">{{ c.fine_amount | currency:'USD':'symbol':'1.0-0' }}</span>
-                  } @else {
-                    <span class="cell-dash">&mdash;</span>
-                  }
-                </div>
-                <!-- Age -->
-                <div class="cell-age"
-                     [matTooltip]="'Created ' + c.created_at">
-                  <mat-icon class="age-icon"
-                            [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
-                            [class.age-urgent]="c.ageHours >= 48">
-                    schedule
-                  </mat-icon>
-                  <span class="age-text"
-                        [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
-                        [class.age-urgent]="c.ageHours >= 48">
-                    {{ formatAge(c.ageHours ?? 0) }}
-                  </span>
-                </div>
-                <!-- Arrow -->
-                <mat-icon class="row-arrow">chevron_right</mat-icon>
-              </div>
+            <!-- KANBAN VIEW -->
+            @if (view() === 'kanban') {
+              <section class="tab-content" aria-label="Kanban board">
+                <app-operator-kanban
+                  [cases]="myCases()"
+                  (caseUpdated)="refresh()">
+                </app-operator-kanban>
+              </section>
             }
-          }
-        </section>
 
-        <!-- ====== UNASSIGNED QUEUE ====== -->
-        <section class="section-block" aria-label="Unassigned case queue">
-          <div class="section-header">
-            <div class="section-title-row">
-              <mat-icon class="section-icon queue-icon">queue</mat-icon>
-              <h2>{{ 'OPR.UNASSIGNED_QUEUE' | translate }}</h2>
-            </div>
-            <span class="badge-count queue-badge">{{ unassignedCases().length }}</span>
-          </div>
+            <!-- LIST VIEW -->
+            @if (view() === 'list') {
+              <section class="tab-content" aria-label="My assigned cases">
+                <mat-form-field appearance="outline" class="search-field">
+                  <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
+                  <input matInput
+                         [ngModel]="mySearch()"
+                         (ngModelChange)="mySearch.set($event)" />
+                  <mat-icon matPrefix>search</mat-icon>
+                </mat-form-field>
 
-          <!-- Priority legend -->
-          <div class="priority-legend" role="img" aria-label="Priority color legend">
-            <span class="legend-item"><span class="legend-dot priority-critical"></span> {{ 'OPR.PRIORITY_CRITICAL' | translate: { Default: 'Critical' } }}</span>
-            <span class="legend-item"><span class="legend-dot priority-high"></span> {{ 'OPR.PRIORITY_HIGH' | translate: { Default: 'High' } }}</span>
-            <span class="legend-item"><span class="legend-dot priority-medium"></span> {{ 'OPR.PRIORITY_MEDIUM' | translate: { Default: 'Medium' } }}</span>
-            <span class="legend-item"><span class="legend-dot priority-low"></span> {{ 'OPR.PRIORITY_LOW' | translate: { Default: 'Low' } }}</span>
-          </div>
-
-          <mat-form-field appearance="outline" class="search-field">
-            <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
-            <input matInput
-                   [ngModel]="queueSearch()"
-                   (ngModelChange)="queueSearch.set($event)" />
-            <mat-icon matPrefix>search</mat-icon>
-          </mat-form-field>
-
-          @if (sortedUnassigned().length === 0) {
-            <div class="empty-state" role="status">
-              <div class="empty-icon-wrap">
-                <mat-icon aria-hidden="true">playlist_add_check</mat-icon>
-              </div>
-              <p class="empty-title">{{ 'OPR.NO_UNASSIGNED_CASES' | translate }}</p>
-            </div>
-          } @else {
-            <div class="queue-grid">
-              @for (c of sortedUnassigned(); track c.id) {
-                <mat-card class="queue-card" appearance="outlined"
-                          data-cy="queue-card"
-                          [class.queue-card--requested]="c.requested">
-                  <!-- Priority color bar -->
-                  <div class="priority-bar"
-                       data-cy="priority-indicator"
-                       [class.priority-bar-critical]="c.priority === 'critical'"
-                       [class.priority-bar-high]="c.priority === 'high'"
-                       [class.priority-bar-medium]="c.priority === 'medium'"
-                       [class.priority-bar-low]="c.priority === 'low'"></div>
-
-                  <div class="queue-card-body">
-                    <!-- Header row: case number + age -->
-                    <div class="qc-header">
-                      <span class="qc-number">{{ c.case_number }}</span>
-                      <span class="qc-age"
-                            [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
-                            [class.age-urgent]="c.ageHours >= 48"
-                            [matTooltip]="'Created ' + c.created_at">
-                        <mat-icon class="qc-age-icon">schedule</mat-icon>
-                        {{ formatAge(c.ageHours ?? 0) }}
-                      </span>
+                @if (filteredMyCases().length === 0) {
+                  <div class="empty-state" role="status">
+                    <div class="empty-icon-wrap">
+                      <mat-icon aria-hidden="true">inbox</mat-icon>
                     </div>
-
-                    <!-- Client name -->
-                    <p class="qc-client">{{ c.customer_name }}</p>
-
-                    <!-- Details row -->
-                    <div class="qc-details">
-                      <span class="qc-detail-item" data-cy="violation-type">
-                        <mat-icon class="qc-detail-icon">description</mat-icon>
-                        {{ c.violation_type }}
-                      </span>
-                      <span class="qc-detail-item" data-cy="state">
-                        <mat-icon class="qc-detail-icon">location_on</mat-icon>
-                        {{ c.state }}
-                      </span>
-                      @if (c.court_date) {
-                        <span class="qc-detail-item" data-cy="court-date">
-                          <mat-icon class="qc-detail-icon">event</mat-icon>
-                          {{ c.court_date | date:'mediumDate' }}
-                        </span>
-                      }
-                      @if (c.fine_amount != null) {
-                        <span class="qc-detail-item" data-cy="fine-amount">
-                          <mat-icon class="qc-detail-icon">payments</mat-icon>
-                          {{ c.fine_amount | currency:'USD':'symbol':'1.0-0' }}
-                        </span>
-                      }
-                    </div>
-
-                    <!-- Action -->
-                    <div class="qc-action">
-                      @if (c.requested) {
-                        <button mat-stroked-button disabled class="qc-requested-btn">
-                          <mat-icon>hourglass_top</mat-icon>
-                          {{ 'OPR.REQUESTED' | translate }}
-                        </button>
-                      } @else {
-                        <button mat-flat-button
-                                class="qc-claim-btn"
-                                (click)="requestAssignment(c.id)"
-                                [disabled]="requestingId() === c.id">
-                          @if (requestingId() === c.id) {
-                            <mat-spinner diameter="18"></mat-spinner>
-                          } @else {
-                            <ng-container>
-                              <mat-icon>person_add</mat-icon>
-                              {{ 'OPR.REQUEST_ASSIGNMENT' | translate }}
-                            </ng-container>
-                          }
-                        </button>
-                      }
-                    </div>
+                    <p class="empty-title">{{ 'OPR.NO_ASSIGNED_CASES' | translate }}</p>
                   </div>
-                </mat-card>
+                } @else {
+                  <div class="table-header" aria-hidden="true">
+                    <span class="th-case">{{ 'OPR.CASE' | translate: { Default: 'Case' } }}</span>
+                    <span class="th-violation">{{ 'OPR.VIOLATION' | translate: { Default: 'Violation' } }}</span>
+                    <span class="th-status">{{ 'OPR.STATUS' | translate: { Default: 'Status' } }}</span>
+                    <span class="th-court">{{ 'OPR.COURT_DATE' | translate: { Default: 'Court' } }}</span>
+                    <span class="th-fine">{{ 'OPR.FINE' | translate: { Default: 'Fine' } }}</span>
+                    <span class="th-age">{{ 'OPR.AGE' | translate: { Default: 'Age' } }}</span>
+                  </div>
+
+                  @for (c of filteredMyCases(); track c.id) {
+                    <div class="case-row"
+                         matRipple
+                         role="button"
+                         tabindex="0"
+                         (click)="viewCase(c.id)"
+                         (keydown.enter)="viewCase(c.id)"
+                         [attr.aria-label]="'View case ' + c.case_number">
+                      <div class="cell-case">
+                        <div class="case-name-row">
+                          <span class="priority-dot"
+                                [class.priority-critical]="c.priority === 'critical'"
+                                [class.priority-high]="c.priority === 'high'"
+                                [class.priority-medium]="c.priority === 'medium'"
+                                [class.priority-low]="c.priority === 'low'"
+                                [matTooltip]="getPriorityLabel(c.priority)"
+                                role="img"
+                                [attr.aria-label]="(c.priority || 'low') + ' priority'"></span>
+                          <span class="case-num">{{ c.case_number }}</span>
+                        </div>
+                        <span class="case-client">{{ c.customer_name }}</span>
+                      </div>
+                      <div class="cell-violation">
+                        <span class="violation-text">{{ c.violation_type }}</span>
+                        <span class="state-badge">{{ c.state }}</span>
+                      </div>
+                      <div class="cell-status">
+                        <span [class]="'status-chip status-' + c.status">
+                          {{ getStatusKey(c.status) | translate }}
+                        </span>
+                      </div>
+                      <div class="cell-court">
+                        @if (c.court_date) {
+                          <span class="court-text" [matTooltip]="c.courthouse || ''">
+                            {{ c.court_date | date:'mediumDate' }}
+                          </span>
+                        } @else {
+                          <span class="cell-dash">&mdash;</span>
+                        }
+                      </div>
+                      <div class="cell-fine">
+                        @if (c.fine_amount != null) {
+                          <span class="fine-text">{{ c.fine_amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                        } @else {
+                          <span class="cell-dash">&mdash;</span>
+                        }
+                      </div>
+                      <div class="cell-age" [matTooltip]="'Created ' + c.created_at">
+                        <mat-icon class="age-icon"
+                                  [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                                  [class.age-urgent]="c.ageHours >= 48">schedule</mat-icon>
+                        <span class="age-text"
+                              [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                              [class.age-urgent]="c.ageHours >= 48">
+                          {{ formatAge(c.ageHours ?? 0) }}
+                        </span>
+                      </div>
+                      <mat-icon class="row-arrow">chevron_right</mat-icon>
+                    </div>
+                  }
+                }
+              </section>
+            }
+          </mat-tab>
+
+          <!-- TAB 1: Unassigned Queue -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>queue</mat-icon>
+              <span class="tab-label-text">{{ 'OPR.TAB_QUEUE' | translate }}</span>
+              <span class="tab-badge queue-tab-badge">{{ unassignedCases().length }}</span>
+            </ng-template>
+
+            <section class="tab-content" aria-label="Unassigned case queue">
+              <div class="priority-legend" role="img" aria-label="Priority color legend">
+                <span class="legend-item"><span class="legend-dot priority-critical"></span> {{ 'OPR.PRIORITY_CRITICAL' | translate: { Default: 'Critical' } }}</span>
+                <span class="legend-item"><span class="legend-dot priority-high"></span> {{ 'OPR.PRIORITY_HIGH' | translate: { Default: 'High' } }}</span>
+                <span class="legend-item"><span class="legend-dot priority-medium"></span> {{ 'OPR.PRIORITY_MEDIUM' | translate: { Default: 'Medium' } }}</span>
+                <span class="legend-item"><span class="legend-dot priority-low"></span> {{ 'OPR.PRIORITY_LOW' | translate: { Default: 'Low' } }}</span>
+              </div>
+
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
+                <input matInput
+                       [ngModel]="queueSearch()"
+                       (ngModelChange)="queueSearch.set($event)" />
+                <mat-icon matPrefix>search</mat-icon>
+              </mat-form-field>
+
+              @if (sortedUnassigned().length === 0) {
+                <div class="empty-state" role="status">
+                  <div class="empty-icon-wrap">
+                    <mat-icon aria-hidden="true">playlist_add_check</mat-icon>
+                  </div>
+                  <p class="empty-title">{{ 'OPR.NO_UNASSIGNED_CASES' | translate }}</p>
+                </div>
+              } @else {
+                <div class="queue-grid">
+                  @for (c of sortedUnassigned(); track c.id) {
+                    <mat-card class="queue-card" appearance="outlined"
+                              data-cy="queue-card"
+                              [class.queue-card--requested]="c.requested">
+                      <div class="priority-bar"
+                           data-cy="priority-indicator"
+                           [class.priority-bar-critical]="c.priority === 'critical'"
+                           [class.priority-bar-high]="c.priority === 'high'"
+                           [class.priority-bar-medium]="c.priority === 'medium'"
+                           [class.priority-bar-low]="c.priority === 'low'"></div>
+                      <div class="queue-card-body">
+                        <div class="qc-header">
+                          <span class="qc-number">{{ c.case_number }}</span>
+                          <span class="qc-age"
+                                [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                                [class.age-urgent]="c.ageHours >= 48"
+                                [matTooltip]="'Created ' + c.created_at">
+                            <mat-icon class="qc-age-icon">schedule</mat-icon>
+                            {{ formatAge(c.ageHours ?? 0) }}
+                          </span>
+                        </div>
+                        <p class="qc-client">{{ c.customer_name }}</p>
+                        <div class="qc-details">
+                          <span class="qc-detail-item" data-cy="violation-type">
+                            <mat-icon class="qc-detail-icon">description</mat-icon>
+                            {{ c.violation_type }}
+                          </span>
+                          <span class="qc-detail-item" data-cy="state">
+                            <mat-icon class="qc-detail-icon">location_on</mat-icon>
+                            {{ c.state }}
+                          </span>
+                          @if (c.court_date) {
+                            <span class="qc-detail-item" data-cy="court-date">
+                              <mat-icon class="qc-detail-icon">event</mat-icon>
+                              {{ c.court_date | date:'mediumDate' }}
+                            </span>
+                          }
+                          @if (c.fine_amount != null) {
+                            <span class="qc-detail-item" data-cy="fine-amount">
+                              <mat-icon class="qc-detail-icon">payments</mat-icon>
+                              {{ c.fine_amount | currency:'USD':'symbol':'1.0-0' }}
+                            </span>
+                          }
+                        </div>
+                        <div class="qc-action">
+                          @if (c.requested) {
+                            <button mat-stroked-button disabled class="qc-requested-btn">
+                              <mat-icon>hourglass_top</mat-icon>
+                              {{ 'OPR.REQUESTED' | translate }}
+                            </button>
+                          } @else {
+                            <button mat-flat-button
+                                    class="qc-claim-btn"
+                                    (click)="requestAssignment(c.id)"
+                                    [disabled]="requestingId() === c.id">
+                              @if (requestingId() === c.id) {
+                                <mat-spinner diameter="18"></mat-spinner>
+                              } @else {
+                                <ng-container>
+                                  <mat-icon>person_add</mat-icon>
+                                  {{ 'OPR.REQUEST_ASSIGNMENT' | translate }}
+                                </ng-container>
+                              }
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    </mat-card>
+                  }
+                </div>
               }
-            </div>
-          }
-        </section>
+            </section>
+          </mat-tab>
+
+          <!-- TAB 2: All Active Cases (Team View) -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>groups</mat-icon>
+              <span class="tab-label-text">{{ 'OPR.TAB_ALL_CASES' | translate }}</span>
+              @if (teamCasesLoaded()) {
+                <span class="tab-badge">{{ teamCases().length }}</span>
+              }
+            </ng-template>
+
+            <section class="tab-content" aria-label="All active cases">
+              @if (teamCasesLoading()) {
+                <app-skeleton-loader [rows]="4" [height]="52"></app-skeleton-loader>
+              } @else {
+                <mat-form-field appearance="outline" class="search-field">
+                  <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
+                  <input matInput
+                         [ngModel]="teamSearch()"
+                         (ngModelChange)="teamSearch.set($event)" />
+                  <mat-icon matPrefix>search</mat-icon>
+                </mat-form-field>
+
+                @if (filteredTeamCases().length === 0) {
+                  <div class="empty-state" role="status">
+                    <div class="empty-icon-wrap">
+                      <mat-icon aria-hidden="true">groups</mat-icon>
+                    </div>
+                    <p class="empty-title">{{ 'OPR.NO_TEAM_CASES' | translate }}</p>
+                  </div>
+                } @else {
+                  <div class="table-header team-header" aria-hidden="true">
+                    <span class="th-case">{{ 'OPR.CASE' | translate: { Default: 'Case' } }}</span>
+                    <span class="th-violation">{{ 'OPR.VIOLATION' | translate: { Default: 'Violation' } }}</span>
+                    <span class="th-status">{{ 'OPR.STATUS' | translate: { Default: 'Status' } }}</span>
+                    <span class="th-operator">{{ 'OPR.OPERATOR' | translate: { Default: 'Operator' } }}</span>
+                    <span class="th-age">{{ 'OPR.AGE' | translate: { Default: 'Age' } }}</span>
+                  </div>
+
+                  @for (c of filteredTeamCases(); track c.id) {
+                    <div class="case-row team-row"
+                         [class.case-row--mine]="c.assigned_operator_id === currentUserId"
+                         matRipple
+                         role="button"
+                         tabindex="0"
+                         (click)="viewCase(c.id)"
+                         (keydown.enter)="viewCase(c.id)"
+                         [attr.aria-label]="'View case ' + c.case_number">
+                      <div class="cell-case">
+                        <div class="case-name-row">
+                          <span class="case-num">{{ c.case_number }}</span>
+                          @if (c.assigned_operator_id === currentUserId) {
+                            <span class="mine-badge">{{ 'OPR.MINE_BADGE' | translate }}</span>
+                          }
+                        </div>
+                        <span class="case-client">{{ c.customer_name }}</span>
+                      </div>
+                      <div class="cell-violation">
+                        <span class="violation-text">{{ c.violation_type }}</span>
+                        <span class="state-badge">{{ c.state }}</span>
+                      </div>
+                      <div class="cell-status">
+                        <span [class]="'status-chip status-' + c.status">
+                          {{ getStatusKey(c.status) | translate }}
+                        </span>
+                      </div>
+                      <div class="cell-operator">
+                        <span class="operator-name">{{ c.operator_name || '—' }}</span>
+                      </div>
+                      <div class="cell-age" [matTooltip]="'Created ' + c.created_at">
+                        <mat-icon class="age-icon"
+                                  [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                                  [class.age-urgent]="c.ageHours >= 48">schedule</mat-icon>
+                        <span class="age-text"
+                              [class.age-warning]="c.ageHours >= 24 && c.ageHours < 48"
+                              [class.age-urgent]="c.ageHours >= 48">
+                          {{ formatAge(c.ageHours ?? 0) }}
+                        </span>
+                      </div>
+                      <mat-icon class="row-arrow">chevron_right</mat-icon>
+                    </div>
+                  }
+                }
+              }
+            </section>
+          </mat-tab>
+
+          <!-- TAB 3: Closed Archive -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>archive</mat-icon>
+              <span class="tab-label-text">{{ 'OPR.TAB_ARCHIVE' | translate }}</span>
+              @if (archiveLoaded()) {
+                <span class="tab-badge archive-tab-badge">{{ archiveCases().length }}</span>
+              }
+            </ng-template>
+
+            <section class="tab-content" aria-label="Closed archive">
+              @if (archiveLoading()) {
+                <app-skeleton-loader [rows]="4" [height]="52"></app-skeleton-loader>
+              } @else {
+                <mat-form-field appearance="outline" class="search-field">
+                  <mat-label>{{ 'OPR.SEARCH_PLACEHOLDER' | translate }}</mat-label>
+                  <input matInput
+                         [ngModel]="archiveSearch()"
+                         (ngModelChange)="archiveSearch.set($event)" />
+                  <mat-icon matPrefix>search</mat-icon>
+                </mat-form-field>
+
+                @if (filteredArchiveCases().length === 0) {
+                  <div class="empty-state" role="status">
+                    <div class="empty-icon-wrap">
+                      <mat-icon aria-hidden="true">archive</mat-icon>
+                    </div>
+                    <p class="empty-title">{{ 'OPR.NO_ARCHIVE_CASES' | translate }}</p>
+                  </div>
+                } @else {
+                  <div class="table-header archive-header" aria-hidden="true">
+                    <span class="th-case">{{ 'OPR.CASE' | translate: { Default: 'Case' } }}</span>
+                    <span class="th-violation">{{ 'OPR.VIOLATION' | translate: { Default: 'Violation' } }}</span>
+                    <span class="th-status">{{ 'OPR.STATUS' | translate: { Default: 'Status' } }}</span>
+                    <span class="th-closed">{{ 'OPR.CLOSED_DATE' | translate: { Default: 'Closed' } }}</span>
+                  </div>
+
+                  @for (c of filteredArchiveCases(); track c.id) {
+                    <div class="case-row archive-row"
+                         matRipple
+                         role="button"
+                         tabindex="0"
+                         (click)="viewCase(c.id)"
+                         (keydown.enter)="viewCase(c.id)"
+                         [attr.aria-label]="'View case ' + c.case_number">
+                      <div class="cell-case">
+                        <span class="case-num">{{ c.case_number }}</span>
+                        <span class="case-client">{{ c.customer_name }}</span>
+                      </div>
+                      <div class="cell-violation">
+                        <span class="violation-text">{{ c.violation_type }}</span>
+                        <span class="state-badge">{{ c.state }}</span>
+                      </div>
+                      <div class="cell-status">
+                        <span [class]="'status-chip status-' + c.status">
+                          {{ getStatusKey(c.status) | translate }}
+                        </span>
+                      </div>
+                      <div class="cell-closed">
+                        <span class="court-text">{{ c.updated_at | date:'mediumDate' }}</span>
+                      </div>
+                      <mat-icon class="row-arrow">chevron_right</mat-icon>
+                    </div>
+                  }
+                }
+              }
+            </section>
+          </mat-tab>
+        </mat-tab-group>
 
       }
     </div>
@@ -379,6 +558,26 @@ const STATUS_LABELS: Record<string, string> = {
       margin: 4px 0 0;
       font-size: 0.85rem;
       color: var(--mat-sys-outline, #717680);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .view-toggle {
+      display: flex;
+      background: var(--mat-sys-surface-container, #eef0f5);
+      border-radius: 8px;
+      padding: 2px;
+    }
+    .view-toggle button {
+      color: var(--mat-sys-outline, #717680);
+      transition: all 0.2s;
+    }
+    .toggle-active {
+      background: var(--mat-sys-primary, #1976d2) !important;
+      color: #fff !important;
+      border-radius: 6px;
     }
     .refresh-btn {
       color: var(--mat-sys-outline, #717680);
@@ -434,6 +633,47 @@ const STATUS_LABELS: Record<string, string> = {
     }
     .amber-text { color: #e65100; }
     .green-text { color: #2e7d32; }
+
+    /* ============================================================
+       TABS
+       ============================================================ */
+    .dash-tabs {
+      margin-bottom: 20px;
+    }
+    .dash-tabs ::ng-deep .mat-mdc-tab-labels {
+      gap: 4px;
+    }
+    .dash-tabs ::ng-deep .mat-mdc-tab {
+      min-width: 0;
+    }
+    .tab-label-text {
+      margin: 0 6px;
+      font-weight: 600;
+    }
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 11px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+    .queue-tab-badge {
+      background: #fff3e0;
+      color: #e65100;
+    }
+    .archive-tab-badge {
+      background: #f3f3f3;
+      color: #616161;
+    }
+    .tab-content {
+      padding: 16px 0 0;
+    }
 
     /* ============================================================
        SECTION BLOCKS
@@ -633,6 +873,7 @@ const STATUS_LABELS: Record<string, string> = {
     .status-check_with_manager           { background: #fff8e1; color: #f57f17; }
     .status-pay_attorney,
     .status-attorney_paid                { background: #e8eaf6; color: #283593; }
+    .status-resolved                     { background: #e8f5e9; color: #1b5e20; }
     .status-closed                       { background: #f3f3f3; color: #616161; }
 
     /* Cell: Court date */
@@ -796,6 +1037,49 @@ const STATUS_LABELS: Record<string, string> = {
     }
 
     /* ============================================================
+       TEAM VIEW & ARCHIVE
+       ============================================================ */
+    .team-header {
+      grid-template-columns: 2fr 1.5fr 1fr 1fr 80px 32px;
+    }
+    .team-row {
+      grid-template-columns: 2fr 1.5fr 1fr 1fr 80px 32px;
+    }
+    .archive-header {
+      grid-template-columns: 2fr 1.5fr 1fr 120px 32px;
+    }
+    .archive-row {
+      grid-template-columns: 2fr 1.5fr 1fr 120px 32px;
+    }
+    .case-row--mine {
+      background: rgba(21, 101, 192, 0.04);
+    }
+    .case-row--mine:hover {
+      background: rgba(21, 101, 192, 0.08);
+    }
+    .mine-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #e3f2fd;
+      color: #1565c0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cell-operator { min-width: 0; }
+    .operator-name {
+      font-size: 0.82rem;
+      color: var(--mat-sys-on-surface-variant, #44474e);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cell-closed { min-width: 0; }
+
+    /* ============================================================
        EMPTY STATE
        ============================================================ */
     .empty-state {
@@ -857,20 +1141,52 @@ const STATUS_LABELS: Record<string, string> = {
 })
 export class OperatorDashboardComponent implements OnInit {
   private caseService = inject(CaseService);
+  private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
 
+  /* --- Current user ID for "Mine" badge in team view --- */
+  currentUserId = this.authService.getCurrentUser()?.id ?? '';
+
   /* --- State --- */
   myCases = signal<any[]>([]);
   unassignedCases = signal<any[]>([]);
+  teamCases = signal<any[]>([]);
+  archiveCases = signal<any[]>([]);
   summary = signal<any>(MOCK_SUMMARY);
   loading = signal(true);
   requestingId = signal<string | null>(null);
 
+  /* --- Tab & view state (persisted) --- */
+  activeTab = signal(
+    typeof localStorage !== 'undefined'
+      ? parseInt(localStorage.getItem('opr_active_tab') ?? '0', 10)
+      : 0
+  );
+  view = signal<'list' | 'kanban'>(
+    (typeof localStorage !== 'undefined' && localStorage.getItem('opr_view') as 'list' | 'kanban') || 'list'
+  );
+
+  /* --- Lazy-load flags --- */
+  teamCasesLoaded = signal(false);
+  teamCasesLoading = signal(false);
+  archiveLoaded = signal(false);
+  archiveLoading = signal(false);
+
+  /* --- Persistence effects --- */
+  private viewEffect = effect(() => {
+    localStorage.setItem('opr_view', this.view());
+  });
+  private tabEffect = effect(() => {
+    localStorage.setItem('opr_active_tab', String(this.activeTab()));
+  });
+
   /* --- Search filters --- */
   mySearch = signal('');
   queueSearch = signal('');
+  teamSearch = signal('');
+  archiveSearch = signal('');
 
   /* --- Computed filtered lists --- */
   filteredMyCases = computed(() => {
@@ -905,14 +1221,51 @@ export class OperatorDashboardComponent implements OnInit {
     });
   });
 
+  filteredTeamCases = computed(() => {
+    const term = this.teamSearch().toLowerCase().trim();
+    const cases = this.teamCases();
+    if (!term) return cases;
+    return cases.filter((c: any) =>
+      (c.case_number || '').toLowerCase().includes(term) ||
+      (c.customer_name || '').toLowerCase().includes(term) ||
+      (c.violation_type || '').toLowerCase().includes(term) ||
+      (c.operator_name || '').toLowerCase().includes(term)
+    );
+  });
+
+  filteredArchiveCases = computed(() => {
+    const term = this.archiveSearch().toLowerCase().trim();
+    const cases = this.archiveCases();
+    if (!term) return cases;
+    return cases.filter((c: any) =>
+      (c.case_number || '').toLowerCase().includes(term) ||
+      (c.customer_name || '').toLowerCase().includes(term) ||
+      (c.violation_type || '').toLowerCase().includes(term)
+    );
+  });
+
   ngOnInit(): void {
     this.loadAll();
     const interval = setInterval(() => this.loadAll(), 60_000);
     this.destroyRef.onDestroy(() => clearInterval(interval));
+
+    // If user returns to a lazy tab that was previously loaded, reload it
+    const tab = this.activeTab();
+    if (tab === 2) this.loadTeamCases();
+    if (tab === 3) this.loadArchive();
   }
 
   refresh(): void {
     this.loadAll();
+    // Also reload lazy tabs if they were previously loaded
+    if (this.teamCasesLoaded()) this.loadTeamCases();
+    if (this.archiveLoaded()) this.loadArchive();
+  }
+
+  onTabChange(index: number): void {
+    this.activeTab.set(index);
+    if (index === 2 && !this.teamCasesLoaded()) this.loadTeamCases();
+    if (index === 3 && !this.archiveLoaded()) this.loadArchive();
   }
 
   private loadAll(): void {
@@ -937,6 +1290,28 @@ export class OperatorDashboardComponent implements OnInit {
     });
   }
 
+  private loadTeamCases(): void {
+    this.teamCasesLoading.set(true);
+    this.caseService.getTeamCases().pipe(
+      catchError(() => of({ cases: [] }))
+    ).subscribe((res: any) => {
+      this.teamCases.set(res.cases ?? []);
+      this.teamCasesLoaded.set(true);
+      this.teamCasesLoading.set(false);
+    });
+  }
+
+  private loadArchive(): void {
+    this.archiveLoading.set(true);
+    this.caseService.getClosedCases().pipe(
+      catchError(() => of({ cases: [] }))
+    ).subscribe((res: any) => {
+      this.archiveCases.set(res.cases ?? []);
+      this.archiveLoaded.set(true);
+      this.archiveLoading.set(false);
+    });
+  }
+
   /* --- Actions --- */
 
   viewCase(caseId: string): void {
@@ -952,11 +1327,9 @@ export class OperatorDashboardComponent implements OnInit {
           'OK',
           { duration: 4000 }
         );
-        // Mark as requested locally
         this.unassignedCases.update(cases =>
           cases.map(c => c.id === caseId ? { ...c, requested: true } : c)
         );
-        // Increment pending count
         this.summary.update(s => ({ ...s, pendingApproval: (s.pendingApproval || 0) + 1 }));
         this.requestingId.set(null);
       },

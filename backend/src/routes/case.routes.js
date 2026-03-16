@@ -57,7 +57,16 @@ const publicSubmitValidation = [
 const updateCaseValidation = [
   body('status').optional().isString(),
   body('court_date').optional().isISO8601(),
-  body('attorney_price').optional().isFloat({ min: 0 })
+  body('attorney_price').optional().isFloat({ min: 0 }),
+  body('court_fee').optional().isFloat({ min: 0 }),
+  body('violation_type').optional().isString(),
+  body('violation_date').optional().isISO8601(),
+  body('violation_details').optional().isString().isLength({ max: 2000 }),
+  body('state').optional().isLength({ min: 2, max: 2 }),
+  body('county').optional().isString().isLength({ max: 100 }),
+  body('town').optional().isString().isLength({ max: 100 }),
+  body('carrier').optional().isString().isLength({ max: 255 }),
+  body('next_action_date').optional().isISO8601(),
 ];
 
 // ============================================
@@ -204,6 +213,18 @@ router.post(
 );
 
 /**
+ * GET /api/cases/:id/next-statuses
+ * Get allowed status transitions for the case's current status
+ * Access: Anyone who can access the case
+ */
+router.get(
+  '/:id/next-statuses',
+  authenticate,
+  canAccessCase,
+  caseController.getNextStatuses
+);
+
+/**
  * GET /api/cases/:id/activity
  * Get activity log for case
  * Access: Anyone who can access the case
@@ -229,13 +250,13 @@ router.get(
 
 /**
  * POST /api/cases/:id/documents
- * Upload a document to a case (driver only, max 10MB)
- * Access: Driver who owns the case
+ * Upload a document to a case (max 10MB)
+ * Access: Driver (own case), Operator (assigned case), Admin (any case)
  */
 router.post(
   '/:id/documents',
   authenticate,
-  authorize(['driver']),
+  authorize(['driver', 'operator', 'admin']),
   (req, res, next) => documentUpload(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     next();
@@ -245,13 +266,13 @@ router.post(
 
 /**
  * DELETE /api/cases/:id/documents/:documentId
- * Delete a document (driver who uploaded only)
- * Access: Driver who owns the case
+ * Delete a document (uploader or admin)
+ * Access: Driver (own case), Operator (own uploads), Admin (any)
  */
 router.delete(
   '/:id/documents/:documentId',
   authenticate,
-  authorize(['driver']),
+  authorize(['driver', 'operator', 'admin']),
   caseController.deleteDocument
 );
 

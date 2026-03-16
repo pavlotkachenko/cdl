@@ -31,6 +31,42 @@ router.get(
 );
 
 /**
+ * GET /api/operator/team-cases
+ * All non-closed cases across all operators (read-only team view)
+ * Access: Operators, Admins
+ */
+router.get(
+  '/team-cases',
+  authenticate,
+  authorize(['operator', 'admin']),
+  operatorController.getTeamCases
+);
+
+/**
+ * GET /api/operator/closed-cases
+ * Operator's own closed/resolved cases (archive)
+ * Access: Operators, Admins
+ */
+router.get(
+  '/closed-cases',
+  authenticate,
+  authorize(['operator', 'admin']),
+  operatorController.getClosedCases
+);
+
+/**
+ * GET /api/operator/all-cases
+ * Full case table with all 19 fields, server-side sorting, filtering & pagination
+ * Access: Operators, Admins
+ */
+router.get(
+  '/all-cases',
+  authenticate,
+  authorize(['operator', 'admin']),
+  operatorController.getAllCasesTable
+);
+
+/**
  * GET /api/operator/unassigned
  * Get unassigned cases for the queue
  * Access: Operators, Admins

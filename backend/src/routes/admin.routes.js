@@ -16,4 +16,22 @@ router.get('/assignment-requests', adminOnly, adminController.getAssignmentReque
 router.post('/assignment-requests/:requestId/approve', adminOnly, adminController.approveAssignmentRequest);
 router.post('/assignment-requests/:requestId/reject', adminOnly, adminController.rejectAssignmentRequest);
 
+// Staff management
+router.get('/staff', adminOnly, adminController.getStaff);
+router.get('/staff/:id', adminOnly, adminController.getStaffMember);
+router.patch('/staff/:id', adminOnly, adminController.updateStaffMember);
+
+// Dashboard (AC-1)
+router.get('/dashboard/stats', adminOnly, adminController.getDashboardStats);
+router.get('/workload', adminOnly, adminController.getWorkloadDistribution);
+router.get('/charts/:type', adminOnly, adminController.getChartData);
+
+// Cases — admin-wide (AC-1)
+router.get('/cases', adminOnly, adminController.getAllCases);
+router.get('/cases/:id', adminOnly, adminController.getAdminCaseDetail);
+router.patch('/cases/:id/status', adminOnly, adminController.updateCaseStatus);
+
+// Operators (AC-1)
+router.get('/operators', adminOnly, adminController.getOperators);
+
 module.exports = router;

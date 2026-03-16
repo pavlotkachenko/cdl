@@ -23,6 +23,23 @@ jest.mock('../services/payment.service', () => ({
   createPaymentIntent: jest.fn(),
 }));
 
+jest.mock('../services/email.service', () => ({
+  sendCaseStatusEmail: jest.fn(),
+  sendWelcomeEmail: jest.fn(),
+}));
+
+jest.mock('../services/sms.service', () => ({
+  sendStatusChangeSms: jest.fn().mockResolvedValue({}),
+}));
+
+jest.mock('../services/onesignal.service', () => ({
+  notifyUser: jest.fn().mockResolvedValue({}),
+}));
+
+jest.mock('../services/webhook.service', () => ({
+  dispatch: jest.fn(),
+}));
+
 const { supabase } = require('../config/supabase');
 const storageService = require('../services/storage.service');
 const assignmentService = require('../services/assignment.service');
@@ -323,9 +340,9 @@ describe('uploadDocument', () => {
     await caseController.uploadDocument(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: expect.stringContaining('10') })
-    );
+    expect(res.json).toHaveBeenCalledWith({
+      error: { code: 'MAX_FILES', message: 'Maximum 10 documents per case reached' }
+    });
   });
 });
 
@@ -574,5 +591,337 @@ describe('getCaseById — attorney phone masking', () => {
     await caseController.getCaseById(req, res);
 
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+// ============================================================
+// uploadDocument — operator access (CM-1)
+// ============================================================
+describe('uploadDocument', () => {
+  const mockFile = { buffer: Buffer.from('test'), originalname: 'doc.pdf', mimetype: 'application/pdf', size: 1234 };
+
+  test('allows operator to upload to their assigned case', async () => {
+    // First .single() → case lookup
+    chain.single
+      .mockResolvedValueOnce({ data: { id: 'case-1', driver_id: 'drv-1', assigned_operator_id: 'op-1' }, error: null })
+      // After count chain, .single() → insert result
+      .mockResolvedValueOnce({ data: { id: 'f1', file_name: 'doc.pdf', uploaded_at: '2026-01-01' }, error: null });
+
+    // Count query → thenable
+    const countResult = { count: 2 };
+    let callCount = 0;
+    chain.then = (onFulfilled) => {
+      callCount++;
+      return Promise.resolve(callCount === 1 ? countResult : { data: null, error: null }).then(onFulfilled);
+    };
+
+    storageService.uploadToSupabase.mockResolvedValue({ path: 'cases/case-1/doc.pdf' });
+    storageService.generateSignedUrl.mockResolvedValue('https://signed-url');
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      file: mockFile,
+    });
+    const res = makeRes();
+
+    await caseController.uploadDocument(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalled();
+    const response = res.json.mock.calls[0][0];
+    expect(response.fileName).toBe('doc.pdf');
+  });
+
+  test('returns 403 for operator not assigned to the case', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-1', driver_id: 'drv-1', assigned_operator_id: 'op-other' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      file: mockFile,
+    });
+    const res = makeRes();
+
+    await caseController.uploadDocument(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  test('returns 400 when no file is provided', async () => {
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+    });
+    // Ensure req.file is falsy
+    delete req.file;
+    const res = makeRes();
+
+    await caseController.uploadDocument(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+});
+
+// ============================================================
+// deleteDocument — operator access (CM-1)
+// ============================================================
+describe('deleteDocument', () => {
+  test('allows operator to delete their own upload', async () => {
+    // Case lookup
+    chain.single
+      .mockResolvedValueOnce({ data: { driver_id: 'drv-1', assigned_operator_id: 'op-1' }, error: null })
+      // File record lookup
+      .mockResolvedValueOnce({ data: { file_url: 'cases/case-1/doc.pdf', uploaded_by: 'op-1' }, error: null });
+
+    storageService.deleteFromSupabase.mockResolvedValue();
+    // delete chain result
+    chain.then = (onFulfilled) => Promise.resolve({ data: null, error: null }).then(onFulfilled);
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      params: { id: 'case-1', documentId: 'doc-1' },
+    });
+    const res = makeRes();
+
+    await caseController.deleteDocument(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ message: 'Document deleted' });
+  });
+
+  test('returns 403 when operator tries to delete another users upload', async () => {
+    chain.single
+      .mockResolvedValueOnce({ data: { driver_id: 'drv-1', assigned_operator_id: 'op-1' }, error: null })
+      .mockResolvedValueOnce({ data: { file_url: 'cases/case-1/doc.pdf', uploaded_by: 'op-other' }, error: null });
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      params: { id: 'case-1', documentId: 'doc-1' },
+    });
+    const res = makeRes();
+
+    await caseController.deleteDocument(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  test('returns 403 for operator not assigned to the case', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { driver_id: 'drv-1', assigned_operator_id: 'op-other' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      params: { id: 'case-1', documentId: 'doc-1' },
+    });
+    const res = makeRes();
+
+    await caseController.deleteDocument(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+});
+
+// ============================================================
+// updateCase — field blocklist (CM-1)
+// ============================================================
+describe('updateCase — field blocklist', () => {
+  test('strips assigned_operator_id and assigned_attorney_id from payload', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-1', status: 'reviewed' },
+      error: null,
+    });
+    // Activity log insert
+    chain.then = (onFulfilled) => Promise.resolve({ data: null, error: null }).then(onFulfilled);
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      body: {
+        violation_type: 'speeding',
+        assigned_operator_id: 'should-be-stripped',
+        assigned_attorney_id: 'should-be-stripped',
+        updated_at: 'should-be-stripped',
+        case_number: 'should-be-stripped',
+      },
+    });
+    const res = makeRes();
+
+    await caseController.updateCase(req, res);
+
+    // The update call receives only violation_type
+    const updateArg = chain.update.mock.calls[0][0];
+    expect(updateArg).not.toHaveProperty('assigned_operator_id');
+    expect(updateArg).not.toHaveProperty('assigned_attorney_id');
+    expect(updateArg).not.toHaveProperty('updated_at');
+    expect(updateArg).not.toHaveProperty('case_number');
+    expect(updateArg).toHaveProperty('violation_type', 'speeding');
+  });
+});
+
+// ============================================================
+// changeStatus — workflow transition enforcement
+// ============================================================
+describe('changeStatus — workflow transitions', () => {
+  beforeEach(() => { jest.resetAllMocks(); buildChain(); });
+
+  test('rejects invalid transition (new → closed) with INVALID_TRANSITION', async () => {
+    // First .single() call: fetch current case
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-1', status: 'new', driver_id: 'd1' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      body: { status: 'closed', comment: 'closing' },
+    });
+    const res = makeRes();
+
+    await caseController.changeStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: { code: 'INVALID_TRANSITION', message: expect.stringContaining('Cannot transition') },
+    });
+  });
+
+  test('rejects transition to closed without note (NOTE_REQUIRED)', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-1', status: 'call_court', driver_id: 'd1' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      body: { status: 'closed' }, // no comment
+    });
+    const res = makeRes();
+
+    await caseController.changeStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: { code: 'NOTE_REQUIRED', message: expect.stringContaining('note is required') },
+    });
+  });
+
+  test('allows valid transition (new → reviewed) and returns success', async () => {
+    const updatedCase = { id: 'case-1', status: 'reviewed', case_number: 'CDL-001' };
+    // First .single(): fetch current case
+    chain.single
+      .mockResolvedValueOnce({ data: { id: 'case-1', status: 'new', driver_id: 'd1' }, error: null })
+      // Second .single(): update result
+      .mockResolvedValueOnce({ data: updatedCase, error: null });
+
+    // activity log insert (thenable)
+    chain.then = (onFulfilled) => Promise.resolve({ data: null, error: null }).then(onFulfilled);
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      body: { status: 'reviewed' },
+    });
+    const res = makeRes();
+
+    await caseController.changeStatus(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Status updated successfully' }),
+    );
+  });
+
+  test('allows transition to closed with note', async () => {
+    const updatedCase = { id: 'case-1', status: 'closed', case_number: 'CDL-001' };
+    chain.single
+      .mockResolvedValueOnce({ data: { id: 'case-1', status: 'resolved', driver_id: 'd1' }, error: null })
+      .mockResolvedValueOnce({ data: updatedCase, error: null });
+
+    chain.then = (onFulfilled) => Promise.resolve({ data: null, error: null }).then(onFulfilled);
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      body: { status: 'closed', comment: 'Case completed successfully' },
+    });
+    const res = makeRes();
+
+    await caseController.changeStatus(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Status updated successfully' }),
+    );
+  });
+
+  test('returns 404 when case not found', async () => {
+    chain.single.mockResolvedValueOnce({ data: null, error: { message: 'not found' } });
+
+    const req = makeReq({
+      user: { id: 'op-1', role: 'operator' },
+      body: { status: 'reviewed' },
+    });
+    const res = makeRes();
+
+    await caseController.changeStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      error: { code: 'NOT_FOUND', message: 'Case not found' },
+    });
+  });
+});
+
+// ============================================================
+// getNextStatuses
+// ============================================================
+describe('getNextStatuses', () => {
+  beforeEach(() => { jest.resetAllMocks(); buildChain(); });
+
+  test('returns next statuses and requiresNote map for current status', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { status: 'assigned_to_attorney' },
+      error: null,
+    });
+
+    const req = makeReq({ user: { id: 'op-1', role: 'operator' } });
+    const res = makeRes();
+
+    await caseController.getNextStatuses(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      currentStatus: 'assigned_to_attorney',
+      nextStatuses: ['send_info_to_attorney', 'waiting_for_driver', 'call_court', 'check_with_manager', 'closed'],
+      requiresNote: { closed: true, check_with_manager: true },
+    });
+  });
+
+  test('returns empty array for terminal status', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { status: 'closed' },
+      error: null,
+    });
+
+    const req = makeReq({ user: { id: 'op-1', role: 'operator' } });
+    const res = makeRes();
+
+    await caseController.getNextStatuses(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      currentStatus: 'closed',
+      nextStatuses: [],
+      requiresNote: {},
+    });
+  });
+
+  test('returns 404 when case not found', async () => {
+    chain.single.mockResolvedValueOnce({ data: null, error: { message: 'not found' } });
+
+    const req = makeReq({ user: { id: 'op-1', role: 'operator' } });
+    const res = makeRes();
+
+    await caseController.getNextStatuses(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      error: { code: 'NOT_FOUND', message: 'Case not found' },
+    });
   });
 });

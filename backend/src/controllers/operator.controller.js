@@ -259,7 +259,7 @@ exports.requestAssignment = async (req, res) => {
 const VALID_STATUSES = [
   'new', 'reviewed', 'assigned_to_attorney', 'waiting_for_driver',
   'send_info_to_attorney', 'attorney_paid', 'call_court',
-  'check_with_manager', 'pay_attorney', 'closed',
+  'check_with_manager', 'pay_attorney', 'resolved', 'closed',
 ];
 
 /**
@@ -448,7 +448,7 @@ exports.getAvailableAttorneys = async (req, res) => {
     res.json({ attorneys: result });
   } catch (error) {
     console.error('Get available attorneys error:', error);
-    res.status(500).json({ error: 'Failed to fetch attorneys' });
+    res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Failed to fetch attorneys' } });
   }
 };
 
@@ -723,5 +723,180 @@ exports.batchOcr = async (req, res) => {
   } catch (error) {
     console.error('batchOcr error:', error);
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Batch OCR processing failed' } });
+  }
+};
+
+/**
+ * GET /api/operator/team-cases
+ * All non-closed cases across all operators (read-only team view)
+ */
+exports.getTeamCases = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('cases')
+      .select(`
+        id, case_number, status, state, violation_type, created_at, updated_at,
+        customer_name, assigned_operator_id,
+        operator:assigned_operator_id(id, full_name)
+      `)
+      .not('status', 'in', '("closed","resolved")')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const now = Date.now();
+    const cases = (data || []).map(c => ({
+      ...c,
+      ageHours: Math.floor((now - new Date(c.created_at).getTime()) / (1000 * 60 * 60)),
+      operator_name: c.operator?.full_name || null,
+      operator: undefined,
+    }));
+
+    res.json({ cases });
+  } catch (error) {
+    console.error('Get team cases error:', error);
+    res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Failed to fetch team cases' } });
+  }
+};
+
+/**
+ * GET /api/operator/closed-cases
+ * Operator's own resolved/closed cases (archive)
+ */
+exports.getClosedCases = async (req, res) => {
+  try {
+    const operatorId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('cases')
+      .select(`
+        id, case_number, status, state, violation_type, created_at, updated_at,
+        customer_name
+      `)
+      .eq('assigned_operator_id', operatorId)
+      .in('status', ['closed', 'resolved'])
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ cases: data || [] });
+  } catch (error) {
+    console.error('Get closed cases error:', error);
+    res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Failed to fetch closed cases' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/operator/all-cases
+// Full case table with 19 fields, operator-scoped visibility,
+// server-side sorting, filtering, search, and pagination.
+// ─────────────────────────────────────────────
+const SORTABLE_COLUMNS = new Set([
+  'case_number', 'customer_name', 'status', 'state', 'violation_type',
+  'violation_date', 'court_date', 'next_action_date', 'attorney_price',
+  'price_cdl', 'court_fee', 'carrier', 'created_at', 'updated_at',
+]);
+
+exports.getAllCasesTable = async (req, res) => {
+  try {
+    const operatorId = req.user.id;
+    const {
+      status, state, carrier,
+      search, sort_by, sort_dir, limit = '50', offset = '0',
+    } = req.query;
+    const lim = Math.min(parseInt(limit, 10) || 50, 500);
+    const off = parseInt(offset, 10) || 0;
+
+    const sortBy = SORTABLE_COLUMNS.has(sort_by) ? sort_by : 'created_at';
+    const sortAsc = sort_dir === 'asc';
+
+    let query = supabase
+      .from('cases')
+      .select(`
+        id, case_number, status, state, violation_type, violation_date,
+        customer_name, customer_email, driver_phone, customer_type,
+        court_date, next_action_date,
+        assigned_operator_id, assigned_attorney_id,
+        attorney_price, price_cdl, subscriber_paid, court_fee, court_fee_paid_by,
+        carrier, who_sent,
+        created_at, updated_at,
+        operator:assigned_operator_id(id, full_name),
+        attorney:assigned_attorney_id(id, full_name)
+      `, { count: 'exact' })
+      // Operator sees: own assigned cases + all non-closed team cases
+      .or(`assigned_operator_id.eq.${operatorId},and(status.neq.closed,status.neq.resolved)`)
+      .order(sortBy, { ascending: sortAsc })
+      .range(off, off + lim - 1);
+
+    // Filters
+    if (status) {
+      const statuses = status.split(',').filter(Boolean);
+      if (statuses.length === 1) query = query.eq('status', statuses[0]);
+      else if (statuses.length > 1) query = query.in('status', statuses);
+    }
+    if (state) {
+      const states = state.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (states.length === 1) query = query.eq('state', states[0]);
+      else if (states.length > 1) query = query.in('state', states);
+    }
+    if (carrier) query = query.ilike('carrier', `%${carrier}%`);
+    if (search) {
+      query = query.or(
+        `case_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_email.ilike.%${search}%,carrier.ilike.%${search}%`
+      );
+    }
+
+    const { data, count: total, error } = await query;
+    if (error) throw error;
+
+    // Batch file counts
+    const caseIds = (data || []).map(c => c.id);
+    let fileCounts = {};
+    if (caseIds.length > 0) {
+      const { data: fileData } = await supabase
+        .from('case_files')
+        .select('case_id')
+        .in('case_id', caseIds);
+      fileCounts = (fileData || []).reduce((acc, f) => {
+        acc[f.case_id] = (acc[f.case_id] || 0) + 1;
+        return acc;
+      }, {});
+    }
+
+    const now = Date.now();
+    const cases = (data || []).map(c => ({
+      id: c.id,
+      case_number: c.case_number,
+      status: c.status,
+      state: c.state,
+      violation_type: c.violation_type,
+      violation_date: c.violation_date,
+      customer_name: c.customer_name,
+      customer_email: c.customer_email,
+      driver_phone: c.driver_phone || null,
+      customer_type: c.customer_type || null,
+      court_date: c.court_date || null,
+      next_action_date: c.next_action_date || null,
+      assigned_operator_id: c.assigned_operator_id,
+      operator_name: c.operator?.full_name || null,
+      assigned_attorney_id: c.assigned_attorney_id,
+      attorney_name: c.attorney?.full_name || null,
+      attorney_price: c.attorney_price != null ? Number(c.attorney_price) : null,
+      price_cdl: c.price_cdl != null ? Number(c.price_cdl) : null,
+      subscriber_paid: c.subscriber_paid ?? null,
+      court_fee: c.court_fee != null ? Number(c.court_fee) : null,
+      court_fee_paid_by: c.court_fee_paid_by || null,
+      carrier: c.carrier || null,
+      who_sent: c.who_sent || null,
+      file_count: fileCounts[c.id] || 0,
+      created_at: c.created_at,
+      updated_at: c.updated_at,
+      ageHours: Math.floor((now - new Date(c.created_at).getTime()) / (1000 * 60 * 60)),
+    }));
+
+    res.json({ cases, total: total || 0 });
+  } catch (error) {
+    console.error('getAllCasesTable error:', error);
+    res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch cases' } });
   }
 };
