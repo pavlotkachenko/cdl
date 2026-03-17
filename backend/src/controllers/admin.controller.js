@@ -996,6 +996,302 @@ exports.getChartData = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
+// GET /api/admin/clients
+// Query params: search, status (active | inactive)
+// ─────────────────────────────────────────────
+exports.getAllClients = async (req, res) => {
+  try {
+    const { search, status } = req.query;
+
+    let query = supabase
+      .from('users')
+      .select('id, full_name, email, phone, cdl_number, address, city, state, zip_code, created_at')
+      .eq('role', 'driver')
+      .order('created_at', { ascending: false });
+
+    if (search) {
+      query = query.or(
+        `full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
+      );
+    }
+
+    const { data: drivers, error } = await query;
+    if (error) throw error;
+
+    const clients = [];
+    for (const u of (drivers || [])) {
+      // Total cases
+      const { count: totalCases } = await supabase
+        .from('cases')
+        .select('id', { count: 'exact', head: true })
+        .eq('driver_id', u.id);
+
+      // Active cases (not closed/resolved)
+      const { count: activeCases } = await supabase
+        .from('cases')
+        .select('id', { count: 'exact', head: true })
+        .eq('driver_id', u.id)
+        .not('status', 'in', '("closed","resolved")');
+
+      // Last contact — most recent case update
+      const { data: lastCase } = await supabase
+        .from('cases')
+        .select('updated_at')
+        .eq('driver_id', u.id)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      const total = totalCases || 0;
+      const active = activeCases || 0;
+
+      // Filter by status if requested
+      if (status === 'active' && active === 0) continue;
+      if (status === 'inactive' && active > 0) continue;
+
+      clients.push({
+        id: u.id,
+        name: u.full_name,
+        email: u.email,
+        phone: u.phone || null,
+        cdlNumber: u.cdl_number || null,
+        address: u.address || null,
+        city: u.city || null,
+        state: u.state || null,
+        zipCode: u.zip_code || null,
+        totalCases: total,
+        activeCases: active,
+        createdAt: u.created_at,
+        lastContact: lastCase?.[0]?.updated_at || null,
+      });
+    }
+
+    res.json({ clients });
+  } catch (error) {
+    console.error('getAllClients error:', error);
+    res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch clients' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/admin/clients/:id
+// Single client with full details + recent cases
+// ─────────────────────────────────────────────
+exports.getClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: u, error } = await supabase
+      .from('users')
+      .select('id, full_name, email, phone, cdl_number, address, city, state, zip_code, created_at')
+      .eq('id', id)
+      .eq('role', 'driver')
+      .single();
+
+    if (error || !u) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Client not found' } });
+    }
+
+    // Total cases
+    const { count: totalCases } = await supabase
+      .from('cases')
+      .select('id', { count: 'exact', head: true })
+      .eq('driver_id', u.id);
+
+    // Active cases
+    const { count: activeCases } = await supabase
+      .from('cases')
+      .select('id', { count: 'exact', head: true })
+      .eq('driver_id', u.id)
+      .not('status', 'in', '("closed","resolved")');
+
+    // Recent cases
+    const { data: recentCases } = await supabase
+      .from('cases')
+      .select('id, case_number, status, violation_type, state, court_date, created_at, updated_at')
+      .eq('driver_id', u.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    res.json({
+      client: {
+        id: u.id,
+        name: u.full_name,
+        email: u.email,
+        phone: u.phone || null,
+        cdlNumber: u.cdl_number || null,
+        address: u.address || null,
+        city: u.city || null,
+        state: u.state || null,
+        zipCode: u.zip_code || null,
+        totalCases: totalCases || 0,
+        activeCases: activeCases || 0,
+        createdAt: u.created_at,
+        lastContact: recentCases?.[0]?.updated_at || null,
+      },
+      recentCases: (recentCases || []).map(c => ({
+        id: c.id,
+        caseNumber: c.case_number,
+        status: c.status,
+        violationType: c.violation_type,
+        state: c.state,
+        courtDate: c.court_date || null,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error('getClient error:', error);
+    res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch client' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PATCH /api/admin/clients/:id
+// Update client fields (phone, address, etc.)
+// ─────────────────────────────────────────────
+exports.updateClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { phone, email, address, city, state, zipCode, cdlNumber } = req.body;
+
+    const updates = {};
+    if (phone !== undefined) updates.phone = phone;
+    if (email !== undefined) updates.email = email;
+    if (address !== undefined) updates.address = address;
+    if (city !== undefined) updates.city = city;
+    if (state !== undefined) updates.state = state;
+    if (zipCode !== undefined) updates.zip_code = zipCode;
+    if (cdlNumber !== undefined) updates.cdl_number = cdlNumber;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'No valid fields to update' } });
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    // Verify user is a driver
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .eq('role', 'driver')
+      .single();
+
+    if (!existing) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Client not found' } });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', id)
+      .select('id, full_name, email, phone, cdl_number')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      client: {
+        id: data.id,
+        name: data.full_name,
+        email: data.email,
+        phone: data.phone || null,
+        cdlNumber: data.cdl_number || null,
+      },
+    });
+  } catch (error) {
+    console.error('updateClient error:', error);
+    res.status(500).json({ error: { code: 'UPDATE_FAILED', message: 'Failed to update client' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/admin/performance
+// Staff performance metrics; optional ?staffId= filter
+// ─────────────────────────────────────────────
+exports.getStaffPerformance = async (req, res) => {
+  try {
+    const { staffId } = req.query;
+
+    let staffQuery = supabase
+      .from('users')
+      .select('id, full_name, email, role')
+      .in('role', ['admin', 'attorney', 'paralegal', 'operator'])
+      .order('full_name', { ascending: true });
+
+    if (staffId) {
+      staffQuery = staffQuery.eq('id', staffId);
+    }
+
+    const { data: staffUsers, error: staffErr } = await staffQuery;
+    if (staffErr) throw staffErr;
+
+    const metrics = [];
+    for (const u of (staffUsers || [])) {
+      const assignField = u.role === 'attorney' ? 'assigned_attorney_id' : 'assigned_operator_id';
+
+      // Total cases
+      const { count: totalCases } = await supabase
+        .from('cases')
+        .select('id', { count: 'exact', head: true })
+        .eq(assignField, u.id);
+
+      // Active cases
+      const { count: activeCases } = await supabase
+        .from('cases')
+        .select('id', { count: 'exact', head: true })
+        .eq(assignField, u.id)
+        .not('status', 'in', '("closed","resolved")');
+
+      // Resolved/closed cases
+      const { count: resolvedCases } = await supabase
+        .from('cases')
+        .select('id', { count: 'exact', head: true })
+        .eq(assignField, u.id)
+        .in('status', ['resolved', 'closed']);
+
+      // Avg resolution time — fetch resolved cases with dates
+      const { data: resolvedData } = await supabase
+        .from('cases')
+        .select('created_at, updated_at')
+        .eq(assignField, u.id)
+        .in('status', ['resolved', 'closed']);
+
+      let avgResolutionDays = 0;
+      if (resolvedData && resolvedData.length > 0) {
+        const totalDays = resolvedData.reduce((sum, c) => {
+          const created = new Date(c.created_at).getTime();
+          const updated = new Date(c.updated_at).getTime();
+          return sum + (updated - created) / (1000 * 60 * 60 * 24);
+        }, 0);
+        avgResolutionDays = Math.round((totalDays / resolvedData.length) * 10) / 10;
+      }
+
+      const total = totalCases || 0;
+      const resolved = resolvedCases || 0;
+      const successRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+      metrics.push({
+        id: u.id,
+        name: u.full_name,
+        email: u.email,
+        role: u.role,
+        casesHandled: total,
+        activeCases: activeCases || 0,
+        resolvedCases: resolved,
+        successRate,
+        avgResolutionDays,
+      });
+    }
+
+    res.json({ metrics });
+  } catch (error) {
+    console.error('getStaffPerformance error:', error);
+    res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch staff performance' } });
+  }
+};
+
+// ─────────────────────────────────────────────
 // GET /api/admin/workload
 // Staff utilization — operators + attorneys with active caseloads
 // ─────────────────────────────────────────────

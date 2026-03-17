@@ -21,5 +21,9 @@ router.post('/me/cases/bulk-archive', authenticate, carrierController.bulkArchiv
 router.get('/me/compliance-report', authenticate, carrierController.getComplianceReport);
 router.get('/me/compliance-report/pdf', authenticate, carrierController.downloadComplianceReport);
 router.get('/me/csa-score', authenticate, carrierController.getCsaScore);
+router.get('/me/payments', authenticate, carrierController.getPayments);
+router.get('/me/notifications', authenticate, carrierController.getNotifications);
+router.patch('/me/notifications/read-all', authenticate, carrierController.markAllNotificationsRead);
+router.patch('/me/notifications/:id/read', authenticate, carrierController.markNotificationRead);
 
 module.exports = router;

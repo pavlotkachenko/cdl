@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed, ChangeDetectionStrategy,
+  Component, OnInit, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -11,6 +11,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatBadgeModule } from '@angular/material/badge';
 import { TranslateModule } from '@ngx-translate/core';
+import { catchError, of } from 'rxjs';
+
+import { NotificationService, Notification } from '../../../core/services/notification.service';
 
 interface AdminNotification {
   id: string;
@@ -20,89 +23,6 @@ interface AdminNotification {
   read: boolean;
   created_at: string;
 }
-
-const MOCK_NOTIFICATIONS: AdminNotification[] = [
-  {
-    id: 'an-001',
-    title: 'New Case Submitted',
-    message: 'New case CDL-2024-089 submitted by Miguel Rivera',
-    type: 'info',
-    read: false,
-    created_at: '2024-12-10T14:32:00Z',
-  },
-  {
-    id: 'an-002',
-    title: 'Case Escalated',
-    message: 'Case CDL-2024-045 escalated to urgent priority',
-    type: 'warning',
-    read: false,
-    created_at: '2024-12-10T13:15:00Z',
-  },
-  {
-    id: 'an-003',
-    title: 'Attorney Case Accepted',
-    message: 'Attorney Sarah Johnson accepted case CDL-2024-078',
-    type: 'success',
-    read: false,
-    created_at: '2024-12-10T11:48:00Z',
-  },
-  {
-    id: 'an-004',
-    title: 'Payment Received',
-    message: 'Payment of $450 received for case CDL-2024-032',
-    type: 'success',
-    read: true,
-    created_at: '2024-12-10T10:22:00Z',
-  },
-  {
-    id: 'an-005',
-    title: 'Staff Request',
-    message: 'Staff member Emily Rodriguez requested time off',
-    type: 'info',
-    read: false,
-    created_at: '2024-12-10T09:05:00Z',
-  },
-  {
-    id: 'an-006',
-    title: 'Security Alert',
-    message: 'Failed login attempt detected from unknown IP',
-    type: 'error',
-    read: false,
-    created_at: '2024-12-09T23:47:00Z',
-  },
-  {
-    id: 'an-007',
-    title: 'Report Ready',
-    message: 'Monthly revenue report ready for review',
-    type: 'info',
-    read: true,
-    created_at: '2024-12-09T18:00:00Z',
-  },
-  {
-    id: 'an-008',
-    title: 'Upcoming Court Date',
-    message: 'Case CDL-2024-056 court date in 3 days',
-    type: 'warning',
-    read: false,
-    created_at: '2024-12-09T15:30:00Z',
-  },
-  {
-    id: 'an-009',
-    title: 'Registration Pending',
-    message: 'New attorney registration pending approval',
-    type: 'info',
-    read: true,
-    created_at: '2024-12-09T12:10:00Z',
-  },
-  {
-    id: 'an-010',
-    title: 'Backup Complete',
-    message: 'System backup completed successfully',
-    type: 'success',
-    read: true,
-    created_at: '2024-12-09T06:00:00Z',
-  },
-];
 
 @Component({
   selector: 'app-admin-notifications',
@@ -238,6 +158,8 @@ const MOCK_NOTIFICATIONS: AdminNotification[] = [
   `],
 })
 export class AdminNotificationsComponent implements OnInit {
+  private readonly notificationService = inject(NotificationService);
+
   loading = signal(true);
   notifications = signal<AdminNotification[]>([]);
   showSearch = signal(false);
@@ -255,21 +177,56 @@ export class AdminNotificationsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Simulate async load from mock data
-    setTimeout(() => {
-      this.notifications.set(MOCK_NOTIFICATIONS.map(n => ({ ...n })));
-      this.loading.set(false);
-    }, 400);
+    this.loadNotifications();
+  }
+
+  private loadNotifications(): void {
+    this.loading.set(true);
+    this.notificationService.getNotifications({ limit: 50 }).pipe(
+      catchError(() => of({ notifications: [] as Notification[], total: 0 })),
+    ).subscribe({
+      next: (response) => {
+        const mapped: AdminNotification[] = response.notifications.map(n => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: this.mapNotificationType(n.type),
+          read: n.read,
+          created_at: n.createdAt || n.timestamp || '',
+        }));
+        this.notifications.set(mapped);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.notifications.set([]);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private mapNotificationType(type: string): 'info' | 'warning' | 'success' | 'error' {
+    switch (type) {
+      case 'payment': case 'case_update': return 'success';
+      case 'court': case 'court_date': return 'warning';
+      case 'system': return 'error';
+      default: return 'info';
+    }
   }
 
   markRead(n: AdminNotification): void {
     if (n.read) return;
+    this.notificationService.markAsRead(n.id).pipe(
+      catchError(() => of(null)),
+    ).subscribe();
     this.notifications.update(list =>
       list.map(item => item.id === n.id ? { ...item, read: true } : item)
     );
   }
 
   markAllRead(): void {
+    this.notificationService.markAllAsRead().pipe(
+      catchError(() => of(null)),
+    ).subscribe();
     this.notifications.update(list => list.map(item => ({ ...item, read: true })));
   }
 }

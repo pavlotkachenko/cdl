@@ -1,14 +1,39 @@
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
+import { of } from 'rxjs';
 
 import { AttorneyClientsComponent } from './attorney-clients.component';
+import { AttorneyService } from '../../../core/services/attorney.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateModule } from '@ngx-translate/core';
 
-async function setup() {
+// 10 unique drivers: 8 with active (non-closed) cases, 2 with only closed
+const MOCK_CASES = [
+  { id: 'c1', case_number: 'C-001', status: 'new', driver_name: 'Marcus Johnson', state: 'TX', created_at: '2026-01-01T00:00:00Z' },
+  { id: 'c2', case_number: 'C-002', status: 'assigned_to_attorney', driver_name: 'Priya Patel', state: 'CA', created_at: '2026-01-02T00:00:00Z' },
+  { id: 'c3', case_number: 'C-003', status: 'reviewed', driver_name: "James O'Brien", state: 'FL', created_at: '2026-01-03T00:00:00Z' },
+  { id: 'c4', case_number: 'C-004', status: 'new', driver_name: 'Rosa Gutierrez', state: 'NY', created_at: '2026-01-04T00:00:00Z' },
+  { id: 'c5', case_number: 'C-005', status: 'closed', driver_name: 'Chen Wei', state: 'TX', created_at: '2026-01-05T00:00:00Z' },
+  { id: 'c6', case_number: 'C-006', status: 'closed', driver_name: 'Anna Petrova', state: 'IL', created_at: '2026-01-06T00:00:00Z' },
+  { id: 'c7', case_number: 'C-007', status: 'new', driver_name: 'Kevin Brown', state: 'OH', created_at: '2026-01-07T00:00:00Z' },
+  { id: 'c8', case_number: 'C-008', status: 'assigned_to_attorney', driver_name: 'Maria Santos', state: 'AZ', created_at: '2026-01-08T00:00:00Z' },
+  { id: 'c9', case_number: 'C-009', status: 'reviewed', driver_name: 'David Lee', state: 'WA', created_at: '2026-01-09T00:00:00Z' },
+  { id: 'c10', case_number: 'C-010', status: 'new', driver_name: 'Sarah Kim', state: 'GA', created_at: '2026-01-10T00:00:00Z' },
+];
+
+function makeServiceSpy() {
+  return {
+    getMyCases: vi.fn().mockReturnValue(of({ cases: MOCK_CASES })),
+  };
+}
+
+async function setup(spy = makeServiceSpy()) {
   await TestBed.configureTestingModule({
     imports: [AttorneyClientsComponent, NoopAnimationsModule, TranslateModule.forRoot()],
+    providers: [
+      { provide: AttorneyService, useValue: spy },
+    ],
   }).compileComponents();
 
   const fixture = TestBed.createComponent(AttorneyClientsComponent);
@@ -16,7 +41,7 @@ async function setup() {
   vi.spyOn(snackBar, 'open').mockReturnValue(null as any);
   fixture.detectChanges();
 
-  return { fixture, component: fixture.componentInstance, snackBar };
+  return { fixture, component: fixture.componentInstance, snackBar, spy };
 }
 
 describe('AttorneyClientsComponent', () => {
@@ -38,10 +63,6 @@ describe('AttorneyClientsComponent', () => {
     expect(component.filteredClients().length).toBe(1);
     expect(component.filteredClients()[0].name).toBe('Marcus Johnson');
 
-    component.searchTerm.set('gmail');
-    expect(component.filteredClients().length).toBeGreaterThan(0);
-    expect(component.filteredClients().every(c => c.email.includes('gmail'))).toBe(true);
-
     component.searchTerm.set('xyznotfound');
     expect(component.filteredClients().length).toBe(0);
   });
@@ -53,7 +74,7 @@ describe('AttorneyClientsComponent', () => {
 
   it('activeClients returns count with activeCases > 0', async () => {
     const { component } = await setup();
-    // From mock data: ac-005 (0 active), ac-006 (0 active) => 8 active
+    // Chen Wei and Anna Petrova have only closed cases => 8 active
     const expectedActive = component.clients().filter(c => c.activeCases > 0).length;
     expect(component.activeClients()).toBe(expectedActive);
     expect(component.activeClients()).toBe(8);

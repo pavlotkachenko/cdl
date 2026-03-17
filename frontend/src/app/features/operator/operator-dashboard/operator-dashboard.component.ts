@@ -23,22 +23,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { OperatorKanbanComponent } from '../kanban/operator-kanban.component';
 
-/* ------------------------------------------------------------------ */
-/*  Mock data — fallback when API returns empty                        */
-/* ------------------------------------------------------------------ */
-const MOCK_MY_CASES: any[] = [
-  { id: 'c1', case_number: 'CDL-2026-601', status: 'reviewed', state: 'TX', violation_type: 'Speeding 20+ Over', created_at: '2026-03-08T10:30:00Z', customer_name: 'Marcus Rivera', ageHours: 72, fine_amount: 350, court_date: '2026-04-10T09:00:00Z', courthouse: 'Harris County Court', priority: 'high' },
-  { id: 'c2', case_number: 'CDL-2026-602', status: 'assigned_to_attorney', state: 'CA', violation_type: 'Overweight Load', created_at: '2026-03-09T14:15:00Z', customer_name: 'Jennifer Walsh', ageHours: 44, fine_amount: 500, court_date: '2026-03-20T10:00:00Z', courthouse: 'LA Traffic Court', priority: 'medium' },
-  { id: 'c3', case_number: 'CDL-2026-603', status: 'waiting_for_driver', state: 'FL', violation_type: 'Logbook Violation', created_at: '2026-03-10T08:45:00Z', customer_name: 'Ahmed Hassan', ageHours: 26, fine_amount: null, court_date: null, courthouse: null, priority: 'medium' },
-];
-
-const MOCK_UNASSIGNED: any[] = [
-  { id: 'u1', case_number: 'CDL-2026-610', status: 'new', state: 'NY', violation_type: 'Improper Lane Change', created_at: '2026-03-10T16:20:00Z', customer_name: 'Sarah Kim', ageHours: 18, requested: false, fine_amount: 200, court_date: null, courthouse: null, priority: 'low' },
-  { id: 'u2', case_number: 'CDL-2026-611', status: 'new', state: 'IL', violation_type: 'Following Too Closely', created_at: '2026-03-09T11:00:00Z', customer_name: 'Robert Jackson', ageHours: 47, requested: false, fine_amount: 450, court_date: '2026-03-15T14:00:00Z', courthouse: 'Cook County Court', priority: 'high' },
-  { id: 'u3', case_number: 'CDL-2026-612', status: 'submitted', state: 'GA', violation_type: 'Equipment Violation', created_at: '2026-03-10T09:30:00Z', customer_name: 'Maria Gonzalez', ageHours: 24, requested: true, fine_amount: null, court_date: null, courthouse: null, priority: 'medium' },
-];
-
-const MOCK_SUMMARY = { assignedToMe: 3, inProgress: 2, resolvedToday: 0, pendingApproval: 1 };
+const EMPTY_SUMMARY = { assignedToMe: 0, inProgress: 0, resolvedToday: 0, pendingApproval: 0 };
 
 const PRIORITY_ORDER: Record<string, number> = {
   critical: 0, high: 1, medium: 2, low: 3,
@@ -1154,7 +1139,7 @@ export class OperatorDashboardComponent implements OnInit {
   unassignedCases = signal<any[]>([]);
   teamCases = signal<any[]>([]);
   archiveCases = signal<any[]>([]);
-  summary = signal<any>(MOCK_SUMMARY);
+  summary = signal<any>(EMPTY_SUMMARY);
   loading = signal(true);
   requestingId = signal<string | null>(null);
 
@@ -1273,21 +1258,37 @@ export class OperatorDashboardComponent implements OnInit {
 
     // Load operator's own cases
     this.caseService.getOperatorCases().pipe(
-      catchError(() => of({ cases: MOCK_MY_CASES, summary: MOCK_SUMMARY }))
+      catchError(() => of({ cases: [], summary: null }))
     ).subscribe((res: any) => {
-      const cases = res.cases?.length ? res.cases : MOCK_MY_CASES;
+      const cases = res.cases ?? [];
       this.myCases.set(cases);
-      this.summary.set(res.summary ?? MOCK_SUMMARY);
+      this.summary.set(res.summary ?? this.deriveSummary(cases));
       this.loading.set(false);
     });
 
     // Load unassigned queue
     this.caseService.getUnassignedCases().pipe(
-      catchError(() => of({ cases: MOCK_UNASSIGNED }))
+      catchError(() => of({ cases: [] }))
     ).subscribe((res: any) => {
-      const cases = res.cases?.length ? res.cases : MOCK_UNASSIGNED;
-      this.unassignedCases.set(cases);
+      this.unassignedCases.set(res.cases ?? []);
     });
+  }
+
+  private deriveSummary(cases: any[]): any {
+    const inProgressStatuses = new Set([
+      'reviewed', 'send_info_to_attorney', 'waiting_for_driver',
+      'call_court', 'check_with_manager', 'in_progress',
+    ]);
+    const today = new Date().toDateString();
+    return {
+      assignedToMe: cases.length,
+      inProgress: cases.filter((c: any) => inProgressStatuses.has(c.status)).length,
+      resolvedToday: cases.filter((c: any) =>
+        (c.status === 'resolved' || c.status === 'closed') &&
+        c.updated_at && new Date(c.updated_at).toDateString() === today
+      ).length,
+      pendingApproval: cases.filter((c: any) => c.status === 'pay_attorney' || c.status === 'attorney_paid').length,
+    };
   }
 
   private loadTeamCases(): void {

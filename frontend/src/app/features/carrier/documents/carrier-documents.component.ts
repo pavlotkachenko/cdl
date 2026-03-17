@@ -17,18 +17,6 @@ interface Document {
   category: string;
 }
 
-const MOCK_DOCUMENTS: Document[] = [
-  { id: 'doc1', name: 'Q1 2025 Compliance Report.pdf', type: 'pdf', size: '2.4 MB', date: '2025-03-01', category: 'Compliance' },
-  { id: 'doc2', name: 'Fleet Insurance Certificate.pdf', type: 'pdf', size: '1.8 MB', date: '2025-02-15', category: 'Insurance' },
-  { id: 'doc3', name: 'Driver Import - March 2025.csv', type: 'csv', size: '45 KB', date: '2025-03-05', category: 'Import' },
-  { id: 'doc4', name: 'CDL-2025-0471 Ticket Photo.jpg', type: 'image', size: '3.2 MB', date: '2025-03-08', category: 'Tickets' },
-  { id: 'doc5', name: 'DOT Audit Checklist.pdf', type: 'pdf', size: '890 KB', date: '2025-02-20', category: 'Compliance' },
-  { id: 'doc6', name: 'Fleet Analytics Export.csv', type: 'csv', size: '128 KB', date: '2025-02-28', category: 'Reports' },
-  { id: 'doc7', name: 'CDL-2025-0445 Court Notice.pdf', type: 'pdf', size: '420 KB', date: '2025-03-03', category: 'Tickets' },
-  { id: 'doc8', name: 'Vehicle Maintenance Log.pdf', type: 'pdf', size: '1.1 MB', date: '2025-02-10', category: 'Maintenance' },
-  { id: 'doc9', name: 'Q4 2024 Compliance Report.pdf', type: 'pdf', size: '2.1 MB', date: '2024-12-31', category: 'Compliance' },
-];
-
 @Component({
   selector: 'app-carrier-documents',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,7 +104,7 @@ const MOCK_DOCUMENTS: Document[] = [
 export class CarrierDocumentsComponent {
   private router = inject(Router);
 
-  documents = signal(MOCK_DOCUMENTS);
+  documents = signal<Document[]>([]);
   activeCategory = signal('All');
 
   categories: { value: string; key: string }[] = [

@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, of, from } from 'rxjs';
+import { tap, switchMap } from 'rxjs/operators';
+import { SupabaseService } from './supabase.service';
 
 // Support ALL 6 roles
 type UserRole = 'driver' | 'carrier' | 'attorney' | 'admin' | 'paralegal' | 'operator';
@@ -45,6 +46,8 @@ export class AuthService {
   get currentUserValue(): User | null {
     return this.currentUserSubject.value;
   }
+
+  private supabaseService = inject(SupabaseService);
 
   constructor(
     private http: HttpClient,
@@ -223,6 +226,51 @@ export class AuthService {
         const updated = { ...this.currentUserSubject.value!, avatar_url: response.avatar_url };
         this.currentUserSubject.next(updated);
         localStorage.setItem('currentUser', JSON.stringify(updated));
+      })
+    );
+  }
+
+  signInWithGoogle(): Observable<SignInResponse> {
+    return from(
+      this.supabaseService.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      })
+    ).pipe(
+      switchMap(({ error }) => {
+        if (error) throw error;
+        // Supabase redirects the browser — this observable won't emit further.
+        // The callback component handles the rest.
+        return of(null as unknown as SignInResponse);
+      })
+    );
+  }
+
+  signInWithFacebook(): Observable<SignInResponse> {
+    return from(
+      this.supabaseService.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      })
+    ).pipe(
+      switchMap(({ error }) => {
+        if (error) throw error;
+        return of(null as unknown as SignInResponse);
+      })
+    );
+  }
+
+  exchangeOAuthToken(supabaseAccessToken: string): Observable<SignInResponse> {
+    return this.http.post<SignInResponse>(
+      `${this.apiUrl}/auth/oauth/callback`,
+      { access_token: supabaseAccessToken }
+    ).pipe(
+      tap(response => {
+        this.storeAuthData(response);
       })
     );
   }

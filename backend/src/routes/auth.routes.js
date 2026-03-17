@@ -17,4 +17,7 @@ router.post('/reset-password', authController.resetPassword);
 // Refresh token
 router.post('/refresh', authController.refresh);
 
+// OAuth callback (exchange Supabase OAuth token for app JWT)
+router.post('/oauth/callback', authController.oauthCallback);
+
 module.exports = router;

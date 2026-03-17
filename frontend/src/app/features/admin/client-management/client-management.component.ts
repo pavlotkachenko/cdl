@@ -18,158 +18,6 @@ import { of } from 'rxjs';
 
 import { AdminService, Client } from '../../../core/services/admin.service';
 
-const MOCK_CLIENTS: Client[] = [
-  {
-    id: 'c-001',
-    name: 'Marcus Johnson',
-    email: 'marcus.johnson@gmail.com',
-    phone: '(312) 555-0147',
-    cdlNumber: 'CDL-IL-884210',
-    address: '4521 W Madison St',
-    city: 'Chicago',
-    state: 'IL',
-    zipCode: '60624',
-    totalCases: 4,
-    activeCases: 2,
-    createdAt: new Date('2024-08-12'),
-    lastContact: new Date('2026-03-08'),
-  },
-  {
-    id: 'c-002',
-    name: 'Priya Patel',
-    email: 'priya.patel@outlook.com',
-    phone: '(214) 555-0293',
-    cdlNumber: 'CDL-TX-337891',
-    address: '1809 Elm St',
-    city: 'Dallas',
-    state: 'TX',
-    zipCode: '75201',
-    totalCases: 1,
-    activeCases: 1,
-    createdAt: new Date('2026-02-20'),
-    lastContact: new Date('2026-03-05'),
-  },
-  {
-    id: 'c-003',
-    name: 'Carlos Menendez',
-    email: 'carlos.m@yahoo.com',
-    phone: '(305) 555-0418',
-    cdlNumber: 'CDL-FL-556023',
-    address: '730 NW 3rd Ave',
-    city: 'Miami',
-    state: 'FL',
-    zipCode: '33136',
-    totalCases: 6,
-    activeCases: 3,
-    createdAt: new Date('2023-11-03'),
-    lastContact: new Date('2026-02-28'),
-  },
-  {
-    id: 'c-004',
-    name: 'Aisha Williams',
-    email: 'aisha.w@protonmail.com',
-    phone: '(404) 555-0562',
-    cdlNumber: 'CDL-GA-221074',
-    address: '2200 Peachtree Rd NE',
-    city: 'Atlanta',
-    state: 'GA',
-    zipCode: '30309',
-    totalCases: 2,
-    activeCases: 1,
-    createdAt: new Date('2025-06-14'),
-    lastContact: new Date('2026-03-10'),
-  },
-  {
-    id: 'c-005',
-    name: 'Tomasz Kowalski',
-    email: 'tkowalski@gmail.com',
-    phone: '(718) 555-0831',
-    cdlNumber: 'CDL-NY-449382',
-    address: '88-12 Queens Blvd',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '11373',
-    totalCases: 3,
-    activeCases: 0,
-    createdAt: new Date('2024-03-22'),
-    lastContact: new Date('2025-08-15'),
-  },
-  {
-    id: 'c-006',
-    name: 'Fatima Al-Rashid',
-    email: 'fatima.alrashid@gmail.com',
-    phone: '(313) 555-0177',
-    cdlNumber: 'CDL-MI-773401',
-    address: '6345 Michigan Ave',
-    city: 'Detroit',
-    state: 'MI',
-    zipCode: '48210',
-    totalCases: 1,
-    activeCases: 0,
-    createdAt: new Date('2025-09-08'),
-    lastContact: new Date('2025-11-02'),
-  },
-  {
-    id: 'c-007',
-    name: 'James O\'Brien',
-    email: 'jobrien@truckers.net',
-    phone: '(503) 555-0624',
-    cdlNumber: 'CDL-OR-118956',
-    address: '1420 SE Belmont St',
-    city: 'Portland',
-    state: 'OR',
-    zipCode: '97214',
-    totalCases: 5,
-    activeCases: 2,
-    createdAt: new Date('2024-01-17'),
-    lastContact: new Date('2026-03-01'),
-  },
-  {
-    id: 'c-008',
-    name: 'Rosa Gutierrez',
-    email: 'rosa.g@hotmail.com',
-    phone: '(602) 555-0953',
-    cdlNumber: 'CDL-AZ-665847',
-    address: '3800 N Central Ave',
-    city: 'Phoenix',
-    state: 'AZ',
-    zipCode: '85012',
-    totalCases: 0,
-    activeCases: 0,
-    createdAt: new Date('2026-03-02'),
-  },
-  {
-    id: 'c-009',
-    name: 'Darnell Washington',
-    email: 'dwashington@gmail.com',
-    phone: '(901) 555-0246',
-    cdlNumber: 'CDL-TN-992310',
-    address: '550 Beale St',
-    city: 'Memphis',
-    state: 'TN',
-    zipCode: '38103',
-    totalCases: 7,
-    activeCases: 4,
-    createdAt: new Date('2023-05-29'),
-    lastContact: new Date('2026-03-09'),
-  },
-  {
-    id: 'c-010',
-    name: 'Linh Nguyen',
-    email: 'linh.nguyen@gmail.com',
-    phone: '(206) 555-0715',
-    cdlNumber: 'CDL-WA-504129',
-    address: '1225 S King St',
-    city: 'Seattle',
-    state: 'WA',
-    zipCode: '98144',
-    totalCases: 2,
-    activeCases: 1,
-    createdAt: new Date('2025-12-01'),
-    lastContact: new Date('2026-02-18'),
-  },
-];
-
 type ClientStatus = 'active' | 'at-risk' | 'inactive';
 
 @Component({
@@ -752,14 +600,14 @@ export class ClientManagementComponent implements OnInit {
   loadClients(): void {
     this.loading.set(true);
     this.adminService.getAllClients().pipe(
-      catchError(() => of(MOCK_CLIENTS))
+      catchError(() => of([] as Client[]))
     ).subscribe({
       next: (clients) => {
         this.clients.set(clients);
         this.loading.set(false);
       },
       error: () => {
-        this.clients.set(MOCK_CLIENTS);
+        this.clients.set([]);
         this.loading.set(false);
       },
     });

@@ -58,6 +58,7 @@ function isPublicEndpoint(url: string): boolean {
     '/auth/reset-password',
     '/auth/refresh',
     '/auth/verify-email',
+    '/auth/oauth/callback',
     '/public/',
     '/cases/public-submit',
     '/carriers/register'

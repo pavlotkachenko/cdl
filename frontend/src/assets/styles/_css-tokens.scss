@@ -1,0 +1,265 @@
+// ============================================
+// CDL Ticket Management - CSS Custom Properties Theme System
+// ============================================
+// Enables runtime theme switching via data-theme attribute on <html>.
+// Usage: var(--cdl-accent) instead of $accent-green
+// Switch theme: document.documentElement.setAttribute('data-theme', 'dark')
+// ============================================
+
+// ---- DEFAULT / LIGHT THEME ----
+:root,
+[data-theme="light"] {
+  // -- Brand Colors --
+  --cdl-primary-black: #090000;
+  --cdl-title-black: #020000;
+  --cdl-accent: #1DAD8C;
+  --cdl-accent-alt: #21AD8C;
+  --cdl-accent-hover: #179b7c;
+  --cdl-white: #FFFFFF;
+
+  // -- Neutrals --
+  --cdl-light-grey: #EFF3F6;
+  --cdl-grey: #E5EAEE;
+  --cdl-dark-grey: #9C9C9C;
+  --cdl-footer-grey: #98A8B4;
+  --cdl-copyright-grey: #E7E7E7;
+
+  // -- Semantic --
+  --cdl-success: #1DAD8C;
+  --cdl-warning: #F59E0B;
+  --cdl-error: #EF4444;
+  --cdl-info: #3B82F6;
+
+  // -- Status --
+  --cdl-status-new: #3B82F6;
+  --cdl-status-reviewed: #8B5CF6;
+  --cdl-status-assigned: #EC4899;
+  --cdl-status-waiting: #F59E0B;
+  --cdl-status-in-progress: #06B6D4;
+  --cdl-status-completed: #10B981;
+  --cdl-status-closed: #6B7280;
+
+  // -- Surfaces --
+  --cdl-bg-page: #FFFFFF;
+  --cdl-bg-surface: #FFFFFF;
+  --cdl-bg-surface-variant: #EFF3F6;
+  --cdl-bg-sidebar: #FFFFFF;
+  --cdl-bg-card: #FFFFFF;
+  --cdl-bg-input: #FFFFFF;
+  --cdl-bg-hover: rgba(29, 173, 140, 0.05);
+
+  // -- Text --
+  --cdl-text-primary: #090000;
+  --cdl-text-secondary: #6B7280;
+  --cdl-text-disabled: #9C9C9C;
+  --cdl-text-on-accent: #FFFFFF;
+  --cdl-text-heading: #020000;
+  --cdl-text-link: #1DAD8C;
+
+  // -- Borders --
+  --cdl-border-color: #E5EAEE;
+  --cdl-border-strong: #9C9C9C;
+  --cdl-border-focus: #1DAD8C;
+
+  // -- Shadows --
+  --cdl-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --cdl-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --cdl-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --cdl-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  // -- Typography --
+  --cdl-font-primary: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --cdl-font-weight-light: 300;
+  --cdl-font-weight-regular: 400;
+  --cdl-font-weight-medium: 500;
+  --cdl-font-weight-semibold: 600;
+  --cdl-font-weight-bold: 700;
+
+  // -- Font Sizes (desktop) --
+  --cdl-fs-h1: 60px;
+  --cdl-fs-h2: 50px;
+  --cdl-fs-h3: 40px;
+  --cdl-fs-h4: 25px;
+  --cdl-fs-body: 16px;
+  --cdl-fs-small: 14px;
+  --cdl-fs-tiny: 12px;
+
+  // -- Line Heights --
+  --cdl-lh-tight: 1.2;
+  --cdl-lh-normal: 1.375;
+  --cdl-lh-relaxed: 1.6;
+
+  // -- Spacing --
+  --cdl-space-xs: 5px;
+  --cdl-space-sm: 10px;
+  --cdl-space-md: 15px;
+  --cdl-space-lg: 20px;
+  --cdl-space-xl: 30px;
+  --cdl-space-2xl: 40px;
+  --cdl-space-3xl: 60px;
+  --cdl-space-4xl: 80px;
+
+  // -- Border Radius --
+  --cdl-radius-sm: 3px;
+  --cdl-radius-md: 4px;
+  --cdl-radius-lg: 8px;
+  --cdl-radius-xl: 12px;
+  --cdl-radius-pill: 31.5px;
+
+  // -- Transitions --
+  --cdl-transition-fast: 150ms ease-in-out;
+  --cdl-transition-base: 200ms ease-in-out;
+  --cdl-transition-slow: 300ms ease-in-out;
+
+  // -- Layout --
+  --cdl-sidebar-width: 260px;
+  --cdl-sidebar-width-collapsed: 70px;
+  --cdl-container-padding: 80px;
+}
+
+// ---- DARK THEME ----
+[data-theme="dark"] {
+  // -- Brand Colors --
+  --cdl-primary-black: #F0F0F0;
+  --cdl-title-black: #FFFFFF;
+  --cdl-accent: #2EE8B6;
+  --cdl-accent-alt: #34E8B8;
+  --cdl-accent-hover: #5AEDC8;
+  --cdl-white: #1A1A2E;
+
+  // -- Neutrals --
+  --cdl-light-grey: #2A2A3E;
+  --cdl-grey: #353550;
+  --cdl-dark-grey: #8888A0;
+  --cdl-footer-grey: #7E8EA0;
+  --cdl-copyright-grey: #404060;
+
+  // -- Semantic (brighter for dark bg) --
+  --cdl-success: #34D399;
+  --cdl-warning: #FBBF24;
+  --cdl-error: #F87171;
+  --cdl-info: #60A5FA;
+
+  // -- Status --
+  --cdl-status-new: #60A5FA;
+  --cdl-status-reviewed: #A78BFA;
+  --cdl-status-assigned: #F472B6;
+  --cdl-status-waiting: #FBBF24;
+  --cdl-status-in-progress: #22D3EE;
+  --cdl-status-completed: #34D399;
+  --cdl-status-closed: #9CA3AF;
+
+  // -- Surfaces --
+  --cdl-bg-page: #0F0F1A;
+  --cdl-bg-surface: #1A1A2E;
+  --cdl-bg-surface-variant: #252540;
+  --cdl-bg-sidebar: #16162B;
+  --cdl-bg-card: #1E1E35;
+  --cdl-bg-input: #252540;
+  --cdl-bg-hover: rgba(46, 232, 182, 0.08);
+
+  // -- Text --
+  --cdl-text-primary: #E8E8F0;
+  --cdl-text-secondary: #A0A0B8;
+  --cdl-text-disabled: #606078;
+  --cdl-text-on-accent: #0F0F1A;
+  --cdl-text-heading: #FFFFFF;
+  --cdl-text-link: #2EE8B6;
+
+  // -- Borders --
+  --cdl-border-color: #353550;
+  --cdl-border-strong: #505068;
+  --cdl-border-focus: #2EE8B6;
+
+  // -- Shadows (stronger for dark bg) --
+  --cdl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --cdl-shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --cdl-shadow-lg: 0 10px 20px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --cdl-shadow-xl: 0 20px 30px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+}
+
+// ---- HIGH CONTRAST THEME ----
+[data-theme="high-contrast"] {
+  // -- Brand Colors --
+  --cdl-primary-black: #000000;
+  --cdl-title-black: #000000;
+  --cdl-accent: #006644;
+  --cdl-accent-alt: #006644;
+  --cdl-accent-hover: #004D33;
+  --cdl-white: #FFFFFF;
+
+  // -- Neutrals --
+  --cdl-light-grey: #F0F0F0;
+  --cdl-grey: #D0D0D0;
+  --cdl-dark-grey: #555555;
+  --cdl-footer-grey: #444444;
+  --cdl-copyright-grey: #CCCCCC;
+
+  // -- Semantic --
+  --cdl-success: #006633;
+  --cdl-warning: #CC7700;
+  --cdl-error: #CC0000;
+  --cdl-info: #0055CC;
+
+  // -- Status --
+  --cdl-status-new: #0055CC;
+  --cdl-status-reviewed: #6633CC;
+  --cdl-status-assigned: #CC0066;
+  --cdl-status-waiting: #CC7700;
+  --cdl-status-in-progress: #007799;
+  --cdl-status-completed: #006633;
+  --cdl-status-closed: #444444;
+
+  // -- Surfaces --
+  --cdl-bg-page: #FFFFFF;
+  --cdl-bg-surface: #FFFFFF;
+  --cdl-bg-surface-variant: #F0F0F0;
+  --cdl-bg-sidebar: #FFFFFF;
+  --cdl-bg-card: #FFFFFF;
+  --cdl-bg-input: #FFFFFF;
+  --cdl-bg-hover: rgba(0, 102, 68, 0.08);
+
+  // -- Text --
+  --cdl-text-primary: #000000;
+  --cdl-text-secondary: #333333;
+  --cdl-text-disabled: #777777;
+  --cdl-text-on-accent: #FFFFFF;
+  --cdl-text-heading: #000000;
+  --cdl-text-link: #004499;
+
+  // -- Borders --
+  --cdl-border-color: #000000;
+  --cdl-border-strong: #000000;
+  --cdl-border-focus: #0055CC;
+
+  // -- Shadows (none for clarity) --
+  --cdl-shadow-sm: 0 0 0 1px #000000;
+  --cdl-shadow-md: 0 0 0 2px #000000;
+  --cdl-shadow-lg: 0 0 0 2px #000000;
+  --cdl-shadow-xl: 0 0 0 3px #000000;
+}
+
+// ---- RESPONSIVE FONT SIZES ----
+@media (max-width: 768px) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"],
+  [data-theme="high-contrast"] {
+    --cdl-fs-h1: 32px;
+    --cdl-fs-h2: 26px;
+    --cdl-fs-h3: 26px;
+    --cdl-fs-h4: 20px;
+    --cdl-container-padding: 15px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"],
+  [data-theme="high-contrast"] {
+    --cdl-fs-h2: 35px;
+    --cdl-fs-h3: 30px;
+    --cdl-container-padding: 40px;
+  }
+}

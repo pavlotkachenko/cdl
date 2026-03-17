@@ -24,55 +24,6 @@ const ACTIVE_STATUSES = new Set([
   'send_info_to_attorney', 'waiting_for_driver', 'call_court', 'check_with_manager',
 ]);
 
-const MOCK_CASES: AttorneyCase[] = [
-  {
-    id: 'mc-001', case_number: 'CDL-2026-401', status: 'assigned_to_attorney',
-    violation_type: 'Speeding 15+ Over', state: 'TX', driver_name: 'Marcus Rivera',
-    created_at: '2026-03-08T14:22:00Z', attorney_price: 750,
-  },
-  {
-    id: 'mc-002', case_number: 'CDL-2026-415', status: 'assigned_to_attorney',
-    violation_type: 'Overweight Load', state: 'IL', driver_name: 'Dmitri Volkov',
-    created_at: '2026-03-10T09:15:00Z', attorney_price: 1200,
-  },
-  {
-    id: 'mc-003', case_number: 'CDL-2026-378', status: 'send_info_to_attorney',
-    violation_type: 'Logbook Violation', state: 'FL', driver_name: 'James Patterson',
-    created_at: '2026-02-28T11:40:00Z', attorney_price: 900,
-  },
-  {
-    id: 'mc-004', case_number: 'CDL-2026-392', status: 'waiting_for_driver',
-    violation_type: 'Lane Violation', state: 'CA', driver_name: 'Aisha Thompson',
-    created_at: '2026-03-02T16:05:00Z', attorney_price: 650,
-  },
-  {
-    id: 'mc-005', case_number: 'CDL-2026-347', status: 'call_court',
-    violation_type: 'Failure to Signal', state: 'NY', driver_name: 'Carlos Mendez',
-    created_at: '2026-02-20T08:30:00Z', attorney_price: 550,
-  },
-  {
-    id: 'mc-006', case_number: 'CDL-2026-298', status: 'closed',
-    violation_type: 'Speeding 10 Over', state: 'GA', driver_name: 'Linh Nguyen',
-    created_at: '2026-01-15T13:20:00Z', attorney_price: 500,
-  },
-  {
-    id: 'mc-007', case_number: 'CDL-2026-312', status: 'resolved',
-    violation_type: 'Overweight Axle', state: 'OH', driver_name: 'Fatima Al-Rashid',
-    created_at: '2026-02-01T10:45:00Z', attorney_price: 1100,
-  },
-  {
-    id: 'mc-008', case_number: 'CDL-2026-265', status: 'closed',
-    violation_type: 'Improper Lane Change', state: 'PA', driver_name: 'Robert O\'Brien',
-    created_at: '2026-01-05T15:10:00Z', attorney_price: 800,
-  },
-];
-
-const MOCK_RATING: AttorneyRating = {
-  attorney_id: 'att-1',
-  average_score: 4.7,
-  total_ratings: 89,
-};
-
 @Component({
   selector: 'app-attorney-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -990,9 +941,9 @@ export class AttorneyDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadCases();
     this.attorneyService.getMyRating().pipe(
-      catchError(() => of(MOCK_RATING)),
+      catchError(() => of(null)),
     ).subscribe({
-      next: (r) => this.rating.set(r ?? MOCK_RATING),
+      next: (r) => this.rating.set(r ?? null),
     });
   }
 
@@ -1000,15 +951,14 @@ export class AttorneyDashboardComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
     this.attorneyService.getMyCases().pipe(
-      catchError(() => of({ cases: MOCK_CASES })),
+      catchError(() => of({ cases: [] as AttorneyCase[] })),
     ).subscribe({
       next: (r) => {
-        const cases = r.cases?.length ? r.cases : MOCK_CASES;
-        this.cases.set(cases);
+        this.cases.set(r.cases ?? []);
         this.loading.set(false);
       },
       error: () => {
-        this.cases.set(MOCK_CASES);
+        this.error.set('Failed to load cases. Please try again.');
         this.loading.set(false);
       },
     });

@@ -35,6 +35,11 @@ export const routes: Routes = [
     path: 'reset-password',
     component: ResetPasswordComponent
   },
+  {
+    path: 'auth/callback',
+    loadComponent: () => import('./features/auth/oauth-callback/oauth-callback.component')
+      .then(m => m.OAuthCallbackComponent)
+  },
 
   // Sign-up entry points
   {

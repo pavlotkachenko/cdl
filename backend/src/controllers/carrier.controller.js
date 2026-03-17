@@ -712,6 +712,116 @@ const downloadComplianceReport = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/payments
+// ─────────────────────────────────────────────
+const getPayments = async (req, res) => {
+  const carrierId = req.user?.carrierId;
+  if (!carrierId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Carrier ID missing from token' } });
+
+  try {
+    // Try payments table joined with cases first
+    const result = await pool.query(
+      `SELECT p.id, p.amount, p.status, p.payment_method, p.created_at,
+              c.case_number, d.full_name AS driver_name
+       FROM payments p
+       JOIN cases c ON c.id = p.case_id
+       JOIN drivers d ON d.id = c.driver_id
+       WHERE c.carrier_id = $1
+       ORDER BY p.created_at DESC`,
+      [carrierId]
+    );
+    res.json({ payments: result.rows });
+  } catch (err) {
+    // If payments table doesn't exist, fall back to fee_amount from cases
+    if (err.code === '42P01') {
+      try {
+        const fallback = await pool.query(
+          `SELECT c.id, c.fee_amount AS amount, c.status, NULL AS payment_method, c.created_at,
+                  c.case_number, d.full_name AS driver_name
+           FROM cases c
+           JOIN drivers d ON d.id = c.driver_id
+           WHERE c.carrier_id = $1 AND c.fee_amount IS NOT NULL
+           ORDER BY c.created_at DESC`,
+          [carrierId]
+        );
+        return res.json({ payments: fallback.rows });
+      } catch (fallbackErr) {
+        console.error('getPayments fallback error:', fallbackErr);
+        return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch payments' } });
+      }
+    }
+    console.error('getPayments error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch payments' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/carriers/me/notifications
+// ─────────────────────────────────────────────
+const getNotifications = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'User ID missing from token' } });
+
+  try {
+    const result = await pool.query(
+      `SELECT id, title, message, type, read, created_at
+       FROM notifications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+    res.json({ notifications: result.rows });
+  } catch (err) {
+    console.error('getNotifications error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to fetch notifications' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PATCH /api/carriers/me/notifications/:id/read
+// ─────────────────────────────────────────────
+const markNotificationRead = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'User ID missing from token' } });
+
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `UPDATE notifications SET read = true WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [id, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Notification not found' } });
+    }
+    res.json({ message: 'Notification marked as read' });
+  } catch (err) {
+    console.error('markNotificationRead error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to update notification' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PATCH /api/carriers/me/notifications/read-all
+// ─────────────────────────────────────────────
+const markAllNotificationsRead = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'User ID missing from token' } });
+
+  try {
+    const result = await pool.query(
+      `UPDATE notifications SET read = true WHERE user_id = $1 AND read = false`,
+      [userId]
+    );
+    res.json({ message: 'All notifications marked as read', updated: result.rowCount });
+  } catch (err) {
+    console.error('markAllNotificationsRead error:', err);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to update notifications' } });
+  }
+};
+
 module.exports = {
   register,
   getProfile,
@@ -728,4 +838,8 @@ module.exports = {
   getComplianceReport,
   downloadComplianceReport,
   getCsaScore,
+  getPayments,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
 };

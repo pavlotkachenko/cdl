@@ -885,7 +885,7 @@ export class MessagesComponent implements OnInit {
     this.convError.set('');
     this.messagingService.getConversations().subscribe({
       next: (list) => {
-        this.conversations.set(list.length > 0 ? list : this.getMockConversations());
+        this.conversations.set(list);
         this.loadingConvs.set(false);
         const id = this.route.snapshot.paramMap.get('conversationId');
         if (id) {
@@ -893,144 +893,11 @@ export class MessagesComponent implements OnInit {
           if (found) this.selectConversation(found);
         }
       },
-      error: () => {
-        this.conversations.set(this.getMockConversations());
+      error: (err) => {
+        this.convError.set('Failed to load conversations. Please try again.');
         this.loadingConvs.set(false);
       },
     });
-  }
-
-  private getMockConversations(): Conversation[] {
-    const now = new Date();
-    return [
-      {
-        id: 'mock-conv-1',
-        driverId: 'mock-driver',
-        attorneyId: 'mock-attorney-1',
-        attorney: { id: 'mock-attorney-1', name: 'James Wilson, Esq.' },
-        driver: { id: 'mock-driver', name: 'You' },
-        lastMessage: 'Your court date has been rescheduled to March 25.',
-        lastMessageAt: new Date(now.getTime() - 15 * 60000).toISOString(),
-        unreadCount: 2,
-        createdAt: new Date(now.getTime() - 3 * 86400000).toISOString(),
-      },
-      {
-        id: 'mock-conv-2',
-        driverId: 'mock-driver',
-        attorneyId: 'mock-attorney-2',
-        attorney: { id: 'mock-attorney-2', name: 'Sarah Chen, Esq.' },
-        driver: { id: 'mock-driver', name: 'You' },
-        lastMessage: 'I reviewed the ticket photo. We have a strong case.',
-        lastMessageAt: new Date(now.getTime() - 3 * 3600000).toISOString(),
-        unreadCount: 0,
-        createdAt: new Date(now.getTime() - 7 * 86400000).toISOString(),
-      },
-      {
-        id: 'mock-conv-3',
-        driverId: 'mock-driver',
-        attorneyId: 'mock-attorney-3',
-        attorney: { id: 'mock-attorney-3', name: 'Michael Torres, Esq.' },
-        driver: { id: 'mock-driver', name: 'You' },
-        lastMessage: 'The case has been resolved. Charges dismissed!',
-        lastMessageAt: new Date(now.getTime() - 2 * 86400000).toISOString(),
-        unreadCount: 0,
-        createdAt: new Date(now.getTime() - 14 * 86400000).toISOString(),
-      },
-    ];
-  }
-
-  private getMockMessages(convId: string): Message[] {
-    const now = new Date();
-    const myId = this.currentUserId() || 'mock-driver';
-
-    if (convId === 'mock-conv-1') {
-      return [
-        {
-          id: 'msg-1a', conversationId: convId, senderId: 'mock-attorney-1',
-          content: 'Hi, I\'ve been assigned to your speeding ticket case. I\'ve reviewed the details.',
-          isRead: true, createdAt: new Date(now.getTime() - 86400000 - 7200000).toISOString(),
-        },
-        {
-          id: 'msg-1b', conversationId: convId, senderId: 'mock-attorney-1',
-          content: 'The officer noted 78 in a 65 zone. However, I noticed the calibration records for the radar unit are overdue.',
-          isRead: true, createdAt: new Date(now.getTime() - 86400000 - 7100000).toISOString(),
-        },
-        {
-          id: 'msg-1c', conversationId: convId, senderId: myId,
-          content: 'That\'s great to hear! What does that mean for the case?',
-          isRead: true, createdAt: new Date(now.getTime() - 86400000 - 3600000).toISOString(),
-        },
-        {
-          id: 'msg-1d', conversationId: convId, senderId: 'mock-attorney-1',
-          content: 'It means we can challenge the accuracy of the reading. I\'ll file a motion to request the full calibration log.',
-          isRead: true, createdAt: new Date(now.getTime() - 86400000 - 3500000).toISOString(),
-        },
-        {
-          id: 'msg-1e', conversationId: convId, senderId: myId,
-          content: 'Perfect, thank you. When is the court date?',
-          isRead: true, createdAt: new Date(now.getTime() - 86400000).toISOString(),
-        },
-        {
-          id: 'msg-1f', conversationId: convId, senderId: 'mock-attorney-1',
-          content: 'Your court date has been rescheduled to March 25.',
-          isRead: false, createdAt: new Date(now.getTime() - 15 * 60000).toISOString(),
-        },
-        {
-          id: 'msg-1g', conversationId: convId, senderId: 'mock-attorney-1',
-          content: 'I\'ll have the motion filed before then. No action needed from your end right now.',
-          isRead: false, createdAt: new Date(now.getTime() - 14 * 60000).toISOString(),
-        },
-      ];
-    }
-    if (convId === 'mock-conv-2') {
-      return [
-        {
-          id: 'msg-2a', conversationId: convId, senderId: myId,
-          content: 'Hi Sarah, I just uploaded the photo of my ticket. Can you take a look?',
-          isRead: true, createdAt: new Date(now.getTime() - 5 * 3600000).toISOString(),
-        },
-        {
-          id: 'msg-2b', conversationId: convId, senderId: 'mock-attorney-2',
-          content: 'Thanks for sending that over. Let me review it now.',
-          isRead: true, createdAt: new Date(now.getTime() - 4.5 * 3600000).toISOString(),
-        },
-        {
-          id: 'msg-2c', conversationId: convId, senderId: 'mock-attorney-2',
-          content: 'I reviewed the ticket photo. We have a strong case.',
-          isRead: true, createdAt: new Date(now.getTime() - 3 * 3600000).toISOString(),
-        },
-        {
-          id: 'msg-2d', conversationId: convId, senderId: 'mock-attorney-2',
-          content: 'The sign was partially obscured by tree branches. I can see it clearly in your photo. That\'s a valid defense.',
-          isRead: true, createdAt: new Date(now.getTime() - 3 * 3600000 + 30000).toISOString(),
-        },
-      ];
-    }
-    if (convId === 'mock-conv-3') {
-      return [
-        {
-          id: 'msg-3a', conversationId: convId, senderId: 'mock-attorney-3',
-          content: 'Good news -- I just got out of court.',
-          isRead: true, createdAt: new Date(now.getTime() - 2 * 86400000 - 1800000).toISOString(),
-        },
-        {
-          id: 'msg-3b', conversationId: convId, senderId: 'mock-attorney-3',
-          content: 'The case has been resolved. Charges dismissed!',
-          isRead: true, createdAt: new Date(now.getTime() - 2 * 86400000).toISOString(),
-        },
-        {
-          id: 'msg-3c', conversationId: convId, senderId: myId,
-          content: 'That\'s amazing! Thank you so much for your help!',
-          isRead: true, createdAt: new Date(now.getTime() - 2 * 86400000 + 600000).toISOString(),
-        },
-        {
-          id: 'msg-3d', conversationId: convId, senderId: 'mock-attorney-3',
-          content: 'Happy to help. Drive safe out there!',
-          isRead: true, createdAt: new Date(now.getTime() - 2 * 86400000 + 900000).toISOString(),
-        },
-      ];
-    }
-    return [];
   }
 
   selectConversation(conv: Conversation): void {
@@ -1044,11 +911,11 @@ export class MessagesComponent implements OnInit {
     );
     this.messagingService.getMessages(conv.id).subscribe({
       next: (msgs) => {
-        this.messages.set(msgs.length > 0 ? msgs : this.getMockMessages(conv.id));
+        this.messages.set(msgs);
         this.loadingMsgs.set(false);
       },
       error: () => {
-        this.messages.set(this.getMockMessages(conv.id));
+        this.messages.set([]);
         this.loadingMsgs.set(false);
       },
     });
@@ -1083,7 +950,7 @@ export class MessagesComponent implements OnInit {
         const localMsg: Message = {
           id: `local-${Date.now()}`,
           conversationId: convId,
-          senderId: this.currentUserId() || 'mock-driver',
+          senderId: this.currentUserId(),
           content: displayContent,
           isRead: false,
           createdAt: new Date().toISOString(),
@@ -1131,7 +998,7 @@ export class MessagesComponent implements OnInit {
   }
 
   isMyMessage(msg: Message): boolean {
-    return msg.senderId === this.currentUserId() || msg.senderId === 'mock-driver';
+    return msg.senderId === this.currentUserId();
   }
 
   getInitials(name: string): string {

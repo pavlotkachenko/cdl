@@ -2,6 +2,7 @@ import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { RevenueDashboardComponent } from './revenue-dashboard.component';
 import { RevenueService, RevenueMetrics } from '../../../services/revenue.service';
@@ -36,6 +37,7 @@ describe('RevenueDashboardComponent', () => {
     getDailyRevenue: ReturnType<typeof vi.fn>;
     getRevenueByMethod: ReturnType<typeof vi.fn>;
     getRevenueByAttorney: ReturnType<typeof vi.fn>;
+    getRecentTransactions: ReturnType<typeof vi.fn>;
     exportToCsv: ReturnType<typeof vi.fn>;
   };
   let snackBar: { open: ReturnType<typeof vi.fn> };
@@ -46,12 +48,13 @@ describe('RevenueDashboardComponent', () => {
       getDailyRevenue: vi.fn().mockReturnValue(of([])),
       getRevenueByMethod: vi.fn().mockReturnValue(of([])),
       getRevenueByAttorney: vi.fn().mockReturnValue(of([])),
+      getRecentTransactions: vi.fn().mockReturnValue(of([])),
       exportToCsv: vi.fn().mockReturnValue(of(new Blob())),
     };
     snackBar = { open: vi.fn() };
 
     await TestBed.configureTestingModule({
-      imports: [RevenueDashboardComponent],
+      imports: [RevenueDashboardComponent, TranslateModule.forRoot()],
       providers: [
         provideAnimationsAsync(),
         { provide: RevenueService, useValue: revenueService },
@@ -92,12 +95,12 @@ describe('RevenueDashboardComponent', () => {
   it('exportToCsv calls service and shows snackBar on success', () => {
     component.exportToCsv();
     expect(revenueService.exportToCsv).toHaveBeenCalled();
-    expect(snackBar.open).toHaveBeenCalledWith('Report exported successfully', 'Close', { duration: 3000 });
+    expect(snackBar.open).toHaveBeenCalledWith('ADMIN.EXPORT_SUCCESS', 'Close', { duration: 3000 });
   });
 
   it('exportToCsv shows error snackBar on failure', () => {
     revenueService.exportToCsv.mockReturnValue(throwError(() => new Error('fail')));
     component.exportToCsv();
-    expect(snackBar.open).toHaveBeenCalledWith('Error exporting report', 'Close', { duration: 3000 });
+    expect(snackBar.open).toHaveBeenCalledWith('ADMIN.EXPORT_ERROR', 'Close', { duration: 3000 });
   });
 });

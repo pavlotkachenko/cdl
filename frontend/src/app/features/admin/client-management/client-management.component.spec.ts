@@ -82,13 +82,13 @@ describe('ClientManagementComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/admin/cases'], { queryParams: { clientId: 'c1' } });
   });
 
-  it('falls back to mock data when getAllClients fails', () => {
+  it('falls back to empty list when getAllClients fails', () => {
     adminService.getAllClients.mockReturnValue(throwError(() => new Error('fail')));
     component.loadClients();
-    // The component uses catchError to fall back to internal mock data, so loading should complete
+    // The component uses catchError to fall back to empty array, so loading should complete
     expect(component.loading()).toBe(false);
-    // clients should be populated with the fallback mock data (not empty)
-    expect(component.clients().length).toBeGreaterThan(0);
+    // catchError returns [] so clients are empty
+    expect(component.clients().length).toBe(0);
   });
 
   it('getInitials extracts up to 2 initials', () => {
