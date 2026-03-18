@@ -126,41 +126,42 @@ import {
     </div>
   `,
   styles: [`
-    .sub-page { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
-    h1 { margin: 0 0 20px; font-size: 1.4rem; }
-    h2 { margin: 24px 0 12px; font-size: 1.1rem; }
+    .sub-page { max-width: 680px; margin: 0 auto; padding: 24px 16px; font-family: 'Mulish', sans-serif; }
+    h1 { margin: 0 0 20px; font-size: 1.4rem; font-weight: 700; color: #0f2137; }
+    h2 { margin: 24px 0 12px; font-size: 1.1rem; font-weight: 700; color: #0f2137; }
     .loading { display: flex; justify-content: center; padding: 48px; }
-    .current-plan { margin-bottom: 8px; }
+    .current-plan { margin-bottom: 8px; border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
     .plan-row { display: flex; justify-content: space-between; align-items: flex-start; }
     .plan-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-    .plan-name { margin: 0; font-size: 1.1rem; font-weight: 600; }
-    .plan-status { margin: 4px 0 0; font-size: 0.75rem; font-weight: 600; }
-    .status-active { color: #388e3c; }
-    .status-trialing { color: #1976d2; }
+    .plan-name { margin: 0; font-size: 1.1rem; font-weight: 600; color: #0f2137; }
+    .plan-status { margin: 4px 0 0; font-size: 0.75rem; font-weight: 700; }
+    .status-active { color: #1dad8c; }
+    .status-trialing { color: #1dad8c; }
     .status-past_due { color: #d32f2f; }
-    .status-canceled { color: #757575; }
+    .status-canceled { color: #8a94a6; }
     .cancel-notice { display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
       color: #f57c00; margin: 10px 0 0; }
     .cancel-notice mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .no-sub { color: #999; margin: 0; }
+    .no-sub { color: #8a94a6; margin: 0; }
     .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-    .plan-card { border: 2px solid transparent; }
-    .plan-card.current { border-color: #1976d2; }
-    .plan-card-name { margin: 0 0 4px; font-weight: 600; font-size: 0.95rem; }
-    .plan-price { font-size: 1.4rem; font-weight: 700; margin: 4px 0 8px; }
-    .interval { font-size: 0.8rem; font-weight: 400; color: #666; }
+    .plan-card { border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); transition: border-color 0.15s; }
+    .plan-card:hover { border-color: #c0e8dd; }
+    .plan-card.current { border-color: #1dad8c; background: #f0faf7; }
+    .plan-card-name { margin: 0 0 4px; font-weight: 600; font-size: 0.95rem; color: #0f2137; }
+    .plan-price { font-size: 1.4rem; font-weight: 700; margin: 4px 0 8px; color: #0f2137; }
+    .interval { font-size: 0.8rem; font-weight: 400; color: #8a94a6; }
     .features { list-style: none; padding: 0; margin: 0 0 12px; font-size: 0.8rem; }
-    .features li { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
-    .features mat-icon { font-size: 14px; width: 14px; height: 14px; color: #388e3c; }
-    .current-badge { font-size: 0.75rem; font-weight: 600; color: #1976d2; margin: 0; }
-    .invoices-card { margin-top: 4px; }
+    .features li { display: flex; align-items: center; gap: 4px; padding: 2px 0; color: #5a6578; }
+    .features mat-icon { font-size: 14px; width: 14px; height: 14px; color: #1dad8c; }
+    .current-badge { font-size: 0.75rem; font-weight: 700; color: #1dad8c; margin: 0; }
+    .invoices-card { margin-top: 4px; border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
     .invoice-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .invoice-table th { text-align: left; padding: 8px 12px; font-weight: 600;
-      border-bottom: 2px solid #e0e0e0; color: #555; }
-    .invoice-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
-    .invoice-table a { color: #1976d2; text-decoration: none; margin-right: 8px; }
+    .invoice-table th { text-align: left; padding: 8px 12px; font-weight: 700;
+      border-bottom: 1.5px solid #edf2f6; color: #8a94a6; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .invoice-table td { padding: 8px 12px; border-bottom: 1px solid #f4f7f9; color: #0f2137; }
+    .invoice-table a { color: #1dad8c; text-decoration: none; margin-right: 8px; font-weight: 600; }
     .invoice-table a:hover { text-decoration: underline; }
-    .inv-status { font-size: 0.75rem; font-weight: 600; color: #388e3c; }
+    .inv-status { font-size: 0.75rem; font-weight: 700; color: #1dad8c; }
   `],
 })
 export class SubscriptionManagementComponent implements OnInit {

@@ -26,6 +26,7 @@ interface NavigationItem {
   link: string;
   badge?: number;
   dividerBefore?: boolean;
+  sectionLabel?: string;
 }
 
 @Component({
@@ -52,81 +53,86 @@ export class SidebarComponent implements OnInit, OnDestroy {
   userRole: string = 'driver';
   userName: string = '';
 
+  get initials(): string {
+    if (!this.userName) return 'U';
+    return this.userName.split(' ').map(w => w.charAt(0)).join('').toUpperCase().substring(0, 2);
+  }
+
   // Driver Navigation
   private driverNavigation: NavigationItem[] = [
-    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/driver/dashboard' },
-    { name: 'NAV.MY_CASES', icon: 'gavel', link: '/driver/tickets' },
-    { name: 'NAV.MESSAGES', icon: 'forum', link: '/driver/messages', badge: 0 },
-    { name: 'NAV.SUBMIT_TICKET', icon: 'add_circle', link: '/driver/submit-ticket' },
-    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/driver/documents', dividerBefore: true },
+    { name: 'NAV.DASHBOARD', icon: 'dashboard_outlined', link: '/driver/dashboard', sectionLabel: 'MAIN' },
+    { name: 'NAV.MY_CASES', icon: 'description', link: '/driver/tickets' },
+    { name: 'NAV.MESSAGES', icon: 'chat_bubble_outline', link: '/driver/messages', badge: 0 },
+    { name: 'NAV.SUBMIT_TICKET', icon: 'edit_note', link: '/driver/submit-ticket' },
+    { name: 'NAV.DOCUMENTS', icon: 'folder_open', link: '/driver/documents', dividerBefore: true, sectionLabel: 'ACCOUNT' },
     { name: 'NAV.ANALYTICS', icon: 'bar_chart', link: '/driver/analytics' },
-    { name: 'NAV.PAYMENTS', icon: 'payment', link: '/driver/payments' },
-    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/driver/notifications', badge: 0 },
-    { name: 'NAV.PROFILE', icon: 'person', link: '/driver/profile', dividerBefore: true },
-    { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/driver/subscription' },
-    { name: 'NAV.HELP', icon: 'help', link: '/driver/help' }
+    { name: 'NAV.PAYMENTS', icon: 'credit_card', link: '/driver/payments' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications_none', link: '/driver/notifications', badge: 0 },
+    { name: 'NAV.PROFILE', icon: 'person_outline', link: '/driver/profile', dividerBefore: true },
+    { name: 'NAV.SUBSCRIPTION', icon: 'star_outline', link: '/driver/subscription' },
+    { name: 'NAV.HELP', icon: 'help_outline', link: '/driver/help' }
   ];
 
   // Admin Navigation
   private adminNavigation: NavigationItem[] = [
-    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/admin/dashboard' },
+    { name: 'NAV.DASHBOARD', icon: 'dashboard_outlined', link: '/admin/dashboard', sectionLabel: 'MAIN' },
     { name: 'NAV.CASE_MANAGEMENT', icon: 'gavel', link: '/admin/cases' },
     { name: 'NAV.CASE_TABLE', icon: 'table_view', link: '/admin/case-table' },
-    { name: 'NAV.STAFF_MANAGEMENT', icon: 'groups', link: '/admin/staff' },
-    { name: 'NAV.CLIENT_MANAGEMENT', icon: 'people', link: '/admin/clients' },
-    { name: 'NAV.REPORTS', icon: 'assessment', link: '/admin/reports' },
+    { name: 'NAV.STAFF_MANAGEMENT', icon: 'group_outlined', link: '/admin/staff' },
+    { name: 'NAV.CLIENT_MANAGEMENT', icon: 'people_outline', link: '/admin/clients' },
+    { name: 'NAV.REPORTS', icon: 'bar_chart', link: '/admin/reports', dividerBefore: true, sectionLabel: 'INSIGHTS' },
     { name: 'NAV.REVENUE', icon: 'attach_money', link: '/admin/revenue' },
-    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/admin/documents', dividerBefore: true },
-    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/admin/notifications', badge: 0 },
-    { name: 'NAV.SETTINGS', icon: 'settings', link: '/admin/settings', dividerBefore: true }
+    { name: 'NAV.DOCUMENTS', icon: 'folder_open', link: '/admin/documents', dividerBefore: true, sectionLabel: 'ACCOUNT' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications_none', link: '/admin/notifications', badge: 0 },
+    { name: 'NAV.SETTINGS', icon: 'settings_outlined', link: '/admin/settings' }
   ];
 
   // Attorney Navigation
   private attorneyNavigation: NavigationItem[] = [
-    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/attorney/dashboard' },
+    { name: 'NAV.DASHBOARD', icon: 'dashboard_outlined', link: '/attorney/dashboard', sectionLabel: 'MAIN' },
     { name: 'NAV.MY_CASES', icon: 'gavel', link: '/attorney/cases' },
-    { name: 'NAV.CLIENTS', icon: 'people', link: '/attorney/clients' },
+    { name: 'NAV.CLIENTS', icon: 'people_outline', link: '/attorney/clients' },
     { name: 'NAV.CALENDAR', icon: 'calendar_today', link: '/attorney/calendar' },
-    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/attorney/documents', dividerBefore: true },
-    { name: 'NAV.REPORTS', icon: 'assessment', link: '/attorney/reports' },
-    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/attorney/notifications', badge: 0 },
-    { name: 'NAV.PROFILE', icon: 'person', link: '/attorney/profile', dividerBefore: true }
+    { name: 'NAV.DOCUMENTS', icon: 'folder_open', link: '/attorney/documents', dividerBefore: true, sectionLabel: 'RESOURCES' },
+    { name: 'NAV.REPORTS', icon: 'bar_chart', link: '/attorney/reports' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications_none', link: '/attorney/notifications', badge: 0, dividerBefore: true, sectionLabel: 'ACCOUNT' },
+    { name: 'NAV.PROFILE', icon: 'person_outline', link: '/attorney/profile' }
   ];
 
   // Carrier Navigation
   private carrierNavigation: NavigationItem[] = [
-    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/carrier/dashboard' },
-    { name: 'NAV.MY_DRIVERS', icon: 'groups', link: '/carrier/drivers' },
+    { name: 'NAV.DASHBOARD', icon: 'dashboard_outlined', link: '/carrier/dashboard', sectionLabel: 'MAIN' },
+    { name: 'NAV.MY_DRIVERS', icon: 'group_outlined', link: '/carrier/drivers' },
     { name: 'NAV.FLEET_CASES', icon: 'gavel', link: '/carrier/cases' },
-    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/carrier/documents', dividerBefore: true },
-    { name: 'NAV.ANALYTICS', icon: 'bar_chart', link: '/carrier/analytics' },
-    { name: 'NAV.PAYMENTS', icon: 'payment', link: '/carrier/payments' },
+    { name: 'NAV.ANALYTICS', icon: 'bar_chart', link: '/carrier/analytics', dividerBefore: true, sectionLabel: 'INSIGHTS' },
+    { name: 'NAV.PAYMENTS', icon: 'credit_card', link: '/carrier/payments' },
     { name: 'NAV.WEBHOOKS', icon: 'webhook', link: '/carrier/webhooks' },
-    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/carrier/notifications', badge: 0 },
-    { name: 'NAV.SETTINGS', icon: 'settings', link: '/carrier/settings', dividerBefore: true },
-    { name: 'NAV.SUBSCRIPTION', icon: 'credit_card', link: '/carrier/subscription' }
+    { name: 'NAV.DOCUMENTS', icon: 'folder_open', link: '/carrier/documents', dividerBefore: true, sectionLabel: 'ACCOUNT' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications_none', link: '/carrier/notifications', badge: 0 },
+    { name: 'NAV.SETTINGS', icon: 'settings_outlined', link: '/carrier/settings' },
+    { name: 'NAV.SUBSCRIPTION', icon: 'star_outline', link: '/carrier/subscription' }
   ];
 
   // Operator Navigation
   private operatorNavigation: NavigationItem[] = [
-    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/operator/dashboard' },
+    { name: 'NAV.DASHBOARD', icon: 'dashboard_outlined', link: '/operator/dashboard', sectionLabel: 'MAIN' },
     { name: 'NAV.MY_CASES', icon: 'gavel', link: '/operator/cases' },
     { name: 'NAV.ALL_CASES', icon: 'table_view', link: '/operator/all-cases' },
     { name: 'NAV.UNASSIGNED_QUEUE', icon: 'queue', link: '/operator/queue' },
-    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/operator/notifications', badge: 0 },
-    { name: 'NAV.PROFILE', icon: 'person', link: '/operator/profile', dividerBefore: true }
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications_none', link: '/operator/notifications', badge: 0, dividerBefore: true, sectionLabel: 'ACCOUNT' },
+    { name: 'NAV.PROFILE', icon: 'person_outline', link: '/operator/profile' }
   ];
 
   // Paralegal Navigation
   private paralegalNavigation: NavigationItem[] = [
-    { name: 'NAV.DASHBOARD', icon: 'dashboard', link: '/paralegal/dashboard' },
+    { name: 'NAV.DASHBOARD', icon: 'dashboard_outlined', link: '/paralegal/dashboard', sectionLabel: 'MAIN' },
     { name: 'NAV.MY_CASES', icon: 'gavel', link: '/paralegal/cases' },
     { name: 'NAV.TASKS', icon: 'checklist', link: '/paralegal/tasks' },
-    { name: 'NAV.DOCUMENTS', icon: 'folder', link: '/paralegal/documents', dividerBefore: true },
+    { name: 'NAV.DOCUMENTS', icon: 'folder_open', link: '/paralegal/documents', dividerBefore: true, sectionLabel: 'RESOURCES' },
     { name: 'NAV.CALENDAR', icon: 'calendar_today', link: '/paralegal/calendar' },
-    { name: 'NAV.MESSAGES', icon: 'forum', link: '/paralegal/messages', badge: 0 },
-    { name: 'NAV.NOTIFICATIONS', icon: 'notifications', link: '/paralegal/notifications', badge: 0 },
-    { name: 'NAV.PROFILE', icon: 'person', link: '/paralegal/profile', dividerBefore: true }
+    { name: 'NAV.MESSAGES', icon: 'chat_bubble_outline', link: '/paralegal/messages', badge: 0, dividerBefore: true, sectionLabel: 'ACCOUNT' },
+    { name: 'NAV.NOTIFICATIONS', icon: 'notifications_none', link: '/paralegal/notifications', badge: 0 },
+    { name: 'NAV.PROFILE', icon: 'person_outline', link: '/paralegal/profile' }
   ];
 
   constructor(

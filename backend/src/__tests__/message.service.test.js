@@ -28,6 +28,15 @@ function setupChain() {
   supabase.from.mockReturnValue(chain);
 }
 
+/**
+ * Mock resolveAuthUserId — the service calls
+ * supabase.from('users').select('auth_user_id').eq('id', id).single()
+ * We return the same ID (identity mapping in tests).
+ */
+function mockResolveAuth(userId) {
+  chain.single.mockResolvedValueOnce({ data: { auth_user_id: userId }, error: null });
+}
+
 beforeEach(() => {
   jest.resetAllMocks();
   setupChain();
@@ -46,6 +55,7 @@ describe('createMessage', () => {
   };
 
   test('throws AppError 404 when conversation not found', async () => {
+    mockResolveAuth('driver-1');
     chain.single.mockResolvedValueOnce({ data: null, error: null });
 
     await expect(createMessage(params)).rejects.toMatchObject({
@@ -55,6 +65,7 @@ describe('createMessage', () => {
   });
 
   test('throws AppError 400 when conversation has closed_at set', async () => {
+    mockResolveAuth('driver-1');
     chain.single.mockResolvedValueOnce({
       data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: new Date().toISOString() },
       error: null
@@ -64,6 +75,7 @@ describe('createMessage', () => {
   });
 
   test('throws AppError 403 when sender is neither driver nor attorney', async () => {
+    mockResolveAuth('intruder-99');
     chain.single.mockResolvedValueOnce({
       data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null },
       error: null
@@ -75,6 +87,7 @@ describe('createMessage', () => {
   });
 
   test('throws AppError 400 when content exceeds 10,000 characters', async () => {
+    mockResolveAuth('driver-1');
     chain.single.mockResolvedValueOnce({
       data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null },
       error: null
@@ -89,6 +102,7 @@ describe('createMessage', () => {
 
   test('updates last_message_at on conversation after message created', async () => {
     const message = { id: 'msg-1', content: 'Hello' };
+    mockResolveAuth('driver-1');
     chain.single
       .mockResolvedValueOnce({ data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null }, error: null }) // conversation
       .mockResolvedValueOnce({ data: message, error: null }); // insert message
@@ -105,6 +119,7 @@ describe('createMessage', () => {
 
   test('attorney can also send messages (is valid sender)', async () => {
     const message = { id: 'msg-2', content: 'Reply from attorney' };
+    mockResolveAuth('atty-1');
     chain.single
       .mockResolvedValueOnce({ data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null }, error: null })
       .mockResolvedValueOnce({ data: message, error: null });
@@ -128,6 +143,7 @@ describe('createMessageWithFile', () => {
   };
 
   test('throws AppError 400 when conversation is closed', async () => {
+    mockResolveAuth('driver-1');
     chain.single.mockResolvedValueOnce({
       data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: new Date().toISOString() },
       error: null
@@ -137,6 +153,7 @@ describe('createMessageWithFile', () => {
   });
 
   test('throws AppError 403 when sender is unauthorized', async () => {
+    mockResolveAuth('intruder');
     chain.single.mockResolvedValueOnce({
       data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null },
       error: null
@@ -149,6 +166,7 @@ describe('createMessageWithFile', () => {
 
   test('calls storageService.deleteFile when DB message insert fails', async () => {
     storageService.uploadFile.mockResolvedValue('https://storage/doc.pdf');
+    mockResolveAuth('driver-1');
 
     chain.single
       .mockResolvedValueOnce({ data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null }, error: null }) // conversation
@@ -163,6 +181,7 @@ describe('createMessageWithFile', () => {
     const attachment = { id: 'att-1', file_name: 'doc.pdf', file_url: 'https://storage/doc.pdf' };
 
     storageService.uploadFile.mockResolvedValue('https://storage/doc.pdf');
+    mockResolveAuth('driver-1');
 
     chain.single
       .mockResolvedValueOnce({ data: { driver_id: 'driver-1', attorney_id: 'atty-1', closed_at: null }, error: null })

@@ -18,7 +18,17 @@ const getConversations = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    const result = await conversationService.getUserConversations(userId, limit, offset);
+    const type = req.query.type || undefined;
+    const unreadOnly = req.query.unread === 'true';
+    const search = req.query.search || undefined;
+
+    const result = await conversationService.getUserConversations(userId, {
+      limit,
+      offset,
+      type,
+      unreadOnly,
+      search
+    });
 
     res.json({
       success: true,
@@ -68,13 +78,14 @@ const getConversationById = async (req, res, next) => {
 const createConversation = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { caseId, attorneyId } = req.body;
+    const { caseId, attorneyId, operatorId, conversationType } = req.body;
 
-    // Validate user can create conversation for this case
     const conversation = await conversationService.createConversation({
       caseId,
       driverId: userId,
-      attorneyId
+      attorneyId,
+      operatorId,
+      conversationType
     });
 
     res.status(201).json({

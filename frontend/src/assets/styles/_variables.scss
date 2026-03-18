@@ -181,11 +181,60 @@ $table-padding: 12px;
 // SIDEBAR
 // ============================================
 
-$sidebar-width: 260px;
+$sidebar-width: 220px;
 $sidebar-width-collapsed: 70px;
-$sidebar-bg: #ffffff;
+$sidebar-bg: #0a1e30;
+$sidebar-hover: rgba(255, 255, 255, 0.06);
+$sidebar-active: rgba(29, 173, 140, 0.18);
 $sidebar-item-hover: $light-grey;
 $sidebar-item-active: $accent-green;
+
+// ============================================
+// NEW DESIGN SYSTEM TOKENS
+// ============================================
+
+// Core palette
+$teal: #1dad8c;
+$teal-mid: #17a07f;
+$teal-dark: #0f7a60;
+$teal-bg: #f0faf7;
+$teal-bg2: #e4f5f1;
+$teal-border: #c0e8dd;
+
+$navy: #0f2137;
+
+// Surfaces
+$bg: #f4f7f9;
+$surface: #ffffff;
+$border: #e2e8ee;
+$border-light: #edf2f6;
+
+// Text hierarchy
+$text-primary: #0f2137;
+$text-secondary: #5a6e82;
+$text-muted: #98a8b4;
+
+// Status system
+$status-new-color: #3b82f6;
+$status-new-bg: #eff6ff;
+$status-reviewed-color: #8b5cf6;
+$status-reviewed-bg: #f5f3ff;
+$status-progress-color: #f59e0b;
+$status-progress-bg: #fffbeb;
+$status-completed-color: #10b981;
+$status-completed-bg: #ecfdf5;
+$status-closed-color: #6b7280;
+$status-closed-bg: #f9fafb;
+
+// Radii
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 14px;
+
+// Shadows
+$shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-card-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+$shadow-teal: 0 4px 16px rgba(29, 173, 140, 0.25);
 
 // ============================================
 // NOTIFICATIONS

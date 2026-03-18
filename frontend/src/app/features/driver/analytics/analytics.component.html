@@ -1,30 +1,31 @@
-<!-- Analytics Dashboard Template -->
-<div class="analytics-container">
+<div class="analytics-page">
 
   <!-- Page Header -->
   <div class="page-header">
-    <div class="header-content">
-      <div>
-        <h1>Analytics Dashboard</h1>
-        <p>Track performance, trends, and insights</p>
+    <div>
+      <div class="page-label">
+        <mat-icon>bar_chart</mat-icon>
+        Performance Report
       </div>
+      <div class="page-title">Analytics Dashboard</div>
+      <div class="page-sub">Track performance, trends, and insights across all your cases</div>
     </div>
-    <div class="header-actions">
-      <mat-form-field appearance="outline" class="period-selector">
-        <mat-label>Time Period</mat-label>
-        <mat-select [formControl]="periodControl">
-          <mat-option value="week">Last 7 Days</mat-option>
-          <mat-option value="month">Last 30 Days</mat-option>
-          <mat-option value="quarter">Last 3 Months</mat-option>
-          <mat-option value="year">Last 12 Months</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button mat-stroked-button (click)="refreshData()" [disabled]="loading">
+    <div class="header-controls">
+      <div class="period-select-wrap">
+        <label class="period-label" for="periodSelect">Time Period</label>
+        <select id="periodSelect" class="period-select" [formControl]="periodControl" aria-label="Select time period">
+          @for (opt of periodOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+        <span class="select-arr"><mat-icon>expand_more</mat-icon></span>
+      </div>
+      <button class="btn btn-secondary" (click)="refreshData()" [disabled]="loading">
         <mat-icon>refresh</mat-icon>
         Refresh
       </button>
-      <button mat-raised-button color="primary" (click)="generatePDFReport()">
-        <mat-icon>picture_as_pdf</mat-icon>
+      <button class="btn btn-primary" (click)="generatePDFReport()">
+        <mat-icon>cloud_download</mat-icon>
         Export Report
       </button>
     </div>
@@ -33,259 +34,295 @@
   <!-- Loading State -->
   @if (loading) {
     <div class="loading-state">
-      <mat-spinner diameter="60"></mat-spinner>
+      <mat-spinner diameter="48"></mat-spinner>
       <p>Loading analytics...</p>
     </div>
   }
 
   @if (!loading && summary) {
 
-    <!-- Summary Statistics Cards -->
-    <div class="stats-grid">
+    <!-- KPI Cards -->
+    <div class="kpi-row">
 
       <!-- Total Cases -->
-      <mat-card class="stat-card primary">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>gavel</mat-icon>
-          </div>
-          <div class="stat-content">
-            <h3>Total Cases</h3>
-            <div class="stat-value">{{ summary.totalCases }}</div>
-            @if (trends) {
-              <div class="stat-trend">
-                <mat-icon [style.color]="getChangeColor(trends.caseVolume.change)">
-                  {{ getChangeIcon(trends.caseVolume.change) }}
-                </mat-icon>
-                <span [style.color]="getChangeColor(trends.caseVolume.change)">
-                  {{ trends.caseVolume.change > 0 ? '+' : '' }}{{ trends.caseVolume.change }}
-                  ({{ formatPercentage(trends.caseVolume.changePercent) }})
-                </span>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <div class="kpi-card k-total">
+        <div class="kpi-top">
+          <div class="kpi-icon total"><mat-icon>folder_open</mat-icon></div>
+          @if (trends) {
+            <div [class]="'kpi-change ' + getChangeBgClass(trends.caseVolume.change)">
+              <mat-icon>{{ getChangeIcon(trends.caseVolume.change) }}</mat-icon>
+              +{{ formatPercentage(trends.caseVolume.changePercent) }}
+            </div>
+          }
+        </div>
+        <div class="kpi-num kpi-teal">{{ summary.totalCases }}</div>
+        <div class="kpi-label">Total Cases</div>
+        @if (trends) {
+          <div class="kpi-sub">+{{ trends.caseVolume.change }} from last period</div>
+        }
+      </div>
 
       <!-- Win Rate -->
-      <mat-card class="stat-card success">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>emoji_events</mat-icon>
-          </div>
-          <div class="stat-content">
-            <h3>Win Rate</h3>
-            <div class="stat-value">{{ formatPercentage(summary.winRate) }}</div>
-            @if (trends) {
-              <div class="stat-trend">
-                <mat-icon [style.color]="getChangeColor(trends.winRate.change)">
-                  {{ getChangeIcon(trends.winRate.change) }}
-                </mat-icon>
-                <span [style.color]="getChangeColor(trends.winRate.change)">
-                  {{ trends.winRate.change > 0 ? '+' : '' }}{{ trends.winRate.change.toFixed(1) }}%
-                </span>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <div class="kpi-card k-win">
+        <div class="kpi-top">
+          <div class="kpi-icon win"><mat-icon>emoji_events</mat-icon></div>
+          @if (trends) {
+            <div [class]="'kpi-change ' + getChangeBgClass(trends.winRate.change)">
+              <mat-icon>{{ getChangeIcon(trends.winRate.change) }}</mat-icon>
+              +{{ trends.winRate.change.toFixed(1) }}%
+            </div>
+          }
+        </div>
+        <div class="kpi-num kpi-green">{{ formatPercentage(summary.winRate) }}</div>
+        <div class="kpi-label">Win Rate</div>
+        <div class="kpi-sub">Industry avg: 75%</div>
+      </div>
 
       <!-- Active Cases -->
-      <mat-card class="stat-card warning">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>pending_actions</mat-icon>
+      <div class="kpi-card k-active">
+        <div class="kpi-top">
+          <div class="kpi-icon active"><mat-icon>bolt</mat-icon></div>
+          <div class="kpi-change change-up">
+            <mat-icon>trending_up</mat-icon>
+            Active now
           </div>
-          <div class="stat-content">
-            <h3>Active Cases</h3>
-            <div class="stat-value">{{ summary.activeCases }}</div>
-            <div class="stat-meta">
-              <span>{{ summary.pendingCases }} pending review</span>
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Avg Resolution Time -->
-      <mat-card class="stat-card info">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>schedule</mat-icon>
-          </div>
-          <div class="stat-content">
-            <h3>Avg Resolution Time</h3>
-            <div class="stat-value">{{ summary.avgResolutionDays }} days</div>
-            @if (trends) {
-              <div class="stat-trend">
-                <mat-icon [style.color]="getChangeColor(trends.resolutionTime.change, true)">
-                  {{ getChangeIcon(trends.resolutionTime.change) }}
-                </mat-icon>
-                <span [style.color]="getChangeColor(trends.resolutionTime.change, true)">
-                  {{ trends.resolutionTime.change > 0 ? '+' : '' }}{{ trends.resolutionTime.change }} days
-                </span>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-    </div>
-
-    <!-- Charts Grid -->
-    <div class="charts-grid">
-
-      <!-- Cases by Type (CSS Donut) -->
-      <mat-card class="chart-card">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>pie_chart</mat-icon>
-            Cases by Type
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="type-chart-wrapper">
-            <div class="donut-chart">
-              <div class="donut-center">
-                <span class="donut-total">{{ summary.totalCases }}</span>
-                <span class="donut-label">Total</span>
-              </div>
-            </div>
-            <div class="chart-legend">
-              @for (item of casesByType; track item.type) {
-                <div class="legend-item">
-                  <span class="legend-dot" [style.background]="item.color"></span>
-                  <span class="legend-text">{{ item.type }}</span>
-                  <span class="legend-count">{{ item.count }}</span>
-                  <span class="legend-pct">{{ item.pct }}%</span>
-                </div>
-              }
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Cases by Status (Horizontal bars) -->
-      <mat-card class="chart-card">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>bar_chart</mat-icon>
-            Cases by Status
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="status-bars">
-            @for (item of casesByStatus; track item.status) {
-              <div class="status-bar-row">
-                <div class="status-bar-label">
-                  <span class="status-dot" [style.background]="item.color"></span>
-                  <span>{{ item.status }}</span>
-                </div>
-                <div class="status-bar-track">
-                  <div class="status-bar-fill" [style.width.%]="item.pct" [style.background]="item.color"></div>
-                </div>
-                <span class="status-bar-value">{{ item.count }} ({{ item.pct }}%)</span>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Timeline (Vertical bar chart) -->
-      <mat-card class="chart-card full-width">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>show_chart</mat-icon>
-            Case Timeline
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="timeline-chart">
-            @for (m of timeline; track m.month) {
-              <div class="timeline-col">
-                <span class="timeline-count">{{ m.count }}</span>
-                <div class="timeline-bar" [style.height.%]="barHeight(m.count)"></div>
-                <span class="timeline-label">{{ m.month }}</span>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Location Analysis -->
-      <mat-card class="chart-card full-width">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>location_on</mat-icon>
-            Cases by Location
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="location-list">
-            @for (loc of locationData; track loc.state) {
-              <div class="location-row">
-                <span class="location-state">{{ loc.state }}</span>
-                <div class="location-bar-track">
-                  <div class="location-bar-fill" [style.width.%]="loc.pct"></div>
-                </div>
-                <span class="location-count">{{ loc.count }} cases</span>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-    </div>
-
-    <!-- Insights Section -->
-    <div class="insights-section">
-      <h2>
-        <mat-icon>lightbulb</mat-icon>
-        Key Insights
-      </h2>
-
-      <div class="insights-grid">
-
-        <mat-card class="insight-card">
-          <mat-card-content>
-            <div class="insight-icon success">
-              <mat-icon>thumb_up</mat-icon>
-            </div>
-            <div class="insight-content">
-              <h4>Strong Performance</h4>
-              <p>Your win rate of {{ formatPercentage(summary.winRate) }} is above the industry average of 75%.</p>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="insight-card">
-          <mat-card-content>
-            <div class="insight-icon warning">
-              <mat-icon>trending_up</mat-icon>
-            </div>
-            <div class="insight-content">
-              <h4>Increasing Volume</h4>
-              @if (trends) {
-                <p>Case volume has increased by {{ trends.caseVolume.changePercent.toFixed(0) }}% this period.</p>
-              }
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="insight-card">
-          <mat-card-content>
-            <div class="insight-icon info">
-              <mat-icon>speed</mat-icon>
-            </div>
-            <div class="insight-content">
-              <h4>Faster Resolutions</h4>
-              @if (trends) {
-                <p>Average resolution time improved by {{ absValue(trends.resolutionTime.change) }} days.</p>
-              }
-            </div>
-          </mat-card-content>
-        </mat-card>
-
+        </div>
+        <div class="kpi-num kpi-amber">{{ summary.activeCases }}</div>
+        <div class="kpi-label">Active Cases</div>
+        <div class="kpi-sub">{{ summary.pendingCases }} pending attorney review</div>
       </div>
+
+      <!-- Avg Resolution -->
+      <div class="kpi-card k-time">
+        <div class="kpi-top">
+          <div class="kpi-icon time"><mat-icon>schedule</mat-icon></div>
+          @if (trends) {
+            <div [class]="'kpi-change ' + getChangeBgClass(trends.resolutionTime.change, true)">
+              <mat-icon>{{ getChangeIcon(trends.resolutionTime.change) }}</mat-icon>
+              {{ trends.resolutionTime.change }} days
+            </div>
+          }
+        </div>
+        <div class="kpi-num kpi-cyan">{{ summary.avgResolutionDays }}</div>
+        <div class="kpi-label">Avg Resolution</div>
+        <div class="kpi-sub">Days per case</div>
+      </div>
+
+    </div>
+
+    <!-- Chart Row: Donut + Status Bars -->
+    <div class="chart-row">
+
+      <!-- Cases by Type (SVG Donut) -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-header-icon type-icon"><mat-icon>donut_large</mat-icon></div>
+          <div>
+            <div class="chart-title">Cases by Type</div>
+            <div class="chart-sub">Violation breakdown</div>
+          </div>
+          <div class="chart-badge">{{ summary.totalCases }} total</div>
+        </div>
+        <div class="chart-body">
+          <div class="donut-layout">
+            <div class="donut-center-wrap">
+              <svg class="donut-svg" viewBox="0 0 160 160" aria-hidden="true">
+                <circle cx="80" cy="80" r="58" fill="none" stroke="#edf2f6" stroke-width="22"/>
+                @for (seg of donutSegments; track seg.color) {
+                  <circle cx="80" cy="80" r="58"
+                    fill="none"
+                    [attr.stroke]="seg.color"
+                    stroke-width="22"
+                    [attr.stroke-dasharray]="seg.dasharray"
+                    [attr.stroke-dashoffset]="seg.dashoffset"
+                    transform="rotate(-90 80 80)"/>
+                }
+                <circle cx="80" cy="80" r="48" fill="white"/>
+              </svg>
+              <div class="donut-label-center">
+                <div class="donut-n">{{ summary.totalCases }}</div>
+                <div class="donut-l">Total</div>
+              </div>
+            </div>
+
+            <div class="type-legend">
+              @for (item of casesByType; track item.type) {
+                <div class="legend-row">
+                  <div class="leg-dot" [style.background]="item.color"></div>
+                  <span class="leg-name">{{ item.type }}</span>
+                  <div class="leg-bar-wrap">
+                    <div class="leg-bar" [style.width.%]="typeBarWidth(item.count)" [style.background]="item.color"></div>
+                  </div>
+                  <span class="leg-count">{{ item.count }}</span>
+                  <span class="leg-pct">{{ item.pct }}%</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cases by Status -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-header-icon status-icon"><mat-icon>show_chart</mat-icon></div>
+          <div>
+            <div class="chart-title">Cases by Status</div>
+            <div class="chart-sub">Current resolution breakdown</div>
+          </div>
+          <div class="chart-badge win-badge">{{ formatPercentage(summary.winRate) }} won</div>
+        </div>
+        <div class="chart-body">
+          <div class="status-list">
+            @for (item of casesByStatus; track item.status) {
+              <div class="status-row">
+                <div class="status-top">
+                  <div class="status-dot" [style.background]="item.color"></div>
+                  <span class="status-name">{{ item.status }}</span>
+                  <span class="status-count">{{ item.count }}</span>
+                  <span class="status-pct">{{ item.pct }}%</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width.%]="item.pct" [style.background]="item.gradient"></div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Summary boxes -->
+          <div class="status-summary">
+            <div class="summary-box box-teal">
+              <div class="summary-num">{{ formatPercentage(summary.winRate) }}</div>
+              <div class="summary-label">Win Rate</div>
+            </div>
+            <div class="summary-box box-green">
+              <div class="summary-num">{{ resolvedCount }}</div>
+              <div class="summary-label">Resolved</div>
+            </div>
+            <div class="summary-box box-amber">
+              <div class="summary-num">{{ inProgressCount }}</div>
+              <div class="summary-label">In Progress</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Case Timeline -->
+    <div class="chart-card full-card">
+      <div class="chart-header">
+        <div class="chart-header-icon timeline-icon"><mat-icon>insights</mat-icon></div>
+        <div>
+          <div class="chart-title">Case Timeline</div>
+          <div class="chart-sub">Monthly submission volume</div>
+        </div>
+        <div class="timeline-legend">
+          <div class="tl-dot"></div>
+          <span class="tl-legend-text">Cases submitted</span>
+          <div class="chart-badge timeline-badge">{{ summary.totalCases }} total</div>
+        </div>
+      </div>
+      <div class="chart-body">
+        <div class="timeline-chart">
+          @for (m of timeline; track m.month) {
+            <div class="bar-col">
+              <span [class]="'bar-val' + (isCurrentMonth(m.month) || isPeakMonth(m.count) ? ' bar-val-highlight' : '')">{{ m.count }}</span>
+              <div [class]="'bar-body' + (isCurrentMonth(m.month) ? ' bar-current' : '')"
+                   [style.height.px]="barPixelHeight(m.count)"
+                   [attr.aria-label]="m.month + ': ' + m.count + ' cases'">
+              </div>
+              <span [class]="'bar-month' + (isCurrentMonth(m.month) ? ' bar-month-current' : '')">{{ m.month }}</span>
+            </div>
+          }
+        </div>
+        <div class="timeline-axis"></div>
+        @if (trends) {
+          <div class="timeline-trend">
+            <mat-icon>trending_up</mat-icon>
+            <span class="trend-pct">+{{ trends.caseVolume.changePercent.toFixed(0) }}% volume</span>
+            <span class="trend-note">compared to previous period · Peak: {{ peakMonths }} with {{ timeline.length > 0 ? (timeline | slice:-1)[0].count : 0 }} cases</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Cases by Location -->
+    <div class="chart-card full-card">
+      <div class="chart-header">
+        <div class="chart-header-icon location-icon"><mat-icon>place</mat-icon></div>
+        <div>
+          <div class="chart-title">Cases by Location</div>
+          <div class="chart-sub">State distribution across all tickets</div>
+        </div>
+        <div class="chart-badge location-badge">{{ locationData.length }} states</div>
+      </div>
+      <div class="chart-body">
+        <div class="location-list">
+          @for (loc of locationData; track loc.state) {
+            <div class="loc-row">
+              <span class="loc-name">{{ loc.state }}</span>
+              <div class="loc-track">
+                <div class="loc-fill" [style.width.%]="locationBarWidth(loc.count)"></div>
+              </div>
+              <span class="loc-count">{{ loc.count }} {{ loc.count === 1 ? 'case' : 'cases' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="insights-row">
+
+      <div class="insight-card">
+        <div class="insight-icon i-green"><mat-icon>emoji_events</mat-icon></div>
+        <div>
+          <div class="insight-title">Strong Performance</div>
+          <div class="insight-text">Your win rate of {{ formatPercentage(summary.winRate) }} is above the industry average of 75%. You're in the top tier of CDL case outcomes.</div>
+          <div class="insight-badge badge-green">
+            <mat-icon>trending_up</mat-icon>
+            +12.5% above avg
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon i-amber"><mat-icon>trending_up</mat-icon></div>
+        <div>
+          <div class="insight-title">Increasing Volume</div>
+          <div class="insight-text">
+            @if (trends) {
+              Case volume increased {{ trends.caseVolume.changePercent.toFixed(0) }}% this period, driven by a surge in speeding violations and DOT inspections across the Southwest.
+            }
+          </div>
+          @if (trends) {
+            <div class="insight-badge badge-amber">
+              <mat-icon>trending_up</mat-icon>
+              +{{ trends.caseVolume.changePercent.toFixed(0) }}% this period
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon i-blue"><mat-icon>bolt</mat-icon></div>
+        <div>
+          <div class="insight-title">Faster Resolutions</div>
+          <div class="insight-text">
+            @if (trends) {
+              Average resolution time improved by {{ absValue(trends.resolutionTime.change) }} days to {{ summary.avgResolutionDays }} days. Your attorney responded 40% faster than the platform average.
+            }
+          </div>
+          @if (trends) {
+            <div class="insight-badge badge-blue">
+              <mat-icon>trending_up</mat-icon>
+              {{ trends.resolutionTime.change }} days faster
+            </div>
+          }
+        </div>
+      </div>
+
     </div>
 
   }

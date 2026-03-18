@@ -103,7 +103,7 @@ describe('DriverDashboardComponent', () => {
     expect(component.cases().length).toBeGreaterThan(0);
     expect(component.loading()).toBe(false);
     // Stat values should be rendered
-    expect(el.querySelector('.stat-value')).toBeTruthy();
+    expect(el.querySelector('.stat-num')).toBeTruthy();
   });
 
   it('reloads successfully after previous API failure', async () => {

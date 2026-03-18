@@ -1,36 +1,47 @@
-<!-- Sidebar Navigation -->
+<!-- Sidebar Navigation — Dark Navy Theme -->
 <div class="sidebar-wrapper">
 
-  <!-- User Profile Section -->
-  <div class="sidebar-profile">
-    <div class="profile-avatar">
-      <mat-icon>person</mat-icon>
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-mark" aria-hidden="true">
+      <mat-icon>shield</mat-icon>
     </div>
-    <div class="profile-info">
-      <span class="profile-name">{{ userName }}</span>
-      <span class="profile-role">{{ userRole | titlecase }}</span>
+    <div>
+      <div class="sidebar-logo-text">CDL Advisor</div>
+      <div class="sidebar-logo-sub">{{ userRole | titlecase }} Portal</div>
     </div>
   </div>
 
-  <mat-divider></mat-divider>
+  <!-- User card -->
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">{{ initials }}</div>
+    <div class="user-info">
+      <div class="user-name">{{ userName || 'User' }}</div>
+      <div class="user-role">{{ userRole | titlecase }}</div>
+    </div>
+  </div>
 
   <!-- Navigation -->
-  <mat-nav-list class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Main navigation">
     @for (item of navigation; track item.link) {
       @if (item.dividerBefore) {
-        <mat-divider class="nav-divider"></mat-divider>
+        <div class="sidebar-divider"></div>
+      }
+      @if (item.sectionLabel) {
+        <div class="nav-label">{{ item.sectionLabel }}</div>
       }
       <a [routerLink]="item.link"
-         mat-list-item
+         class="nav-item"
          routerLinkActive="active"
          [routerLinkActiveOptions]="{exact: item.name === 'NAV.DASHBOARD'}">
-        @if (item.badge && item.badge > 0) {
-          <mat-icon [matBadge]="item.badge" matBadgeColor="warn" matBadgeSize="small">{{ item.icon }}</mat-icon>
-        } @else {
+        <span class="nav-icon">
           <mat-icon>{{ item.icon }}</mat-icon>
-        }
+        </span>
         <span>{{ item.name | translate }}</span>
+        @if (item.badge && item.badge > 0) {
+          <span class="nav-badge">{{ item.badge }}</span>
+        }
       </a>
     }
-  </mat-nav-list>
+  </nav>
 </div>

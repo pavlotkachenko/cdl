@@ -8,31 +8,171 @@ const { AppError } = require('../utils/errors');
 const { v4: uuidv4 } = require('uuid');
 
 /**
- * Get all conversations for a user
+ * Resolve public.users.id to auth_user_id (used by conversations FK).
+ * Conversations store auth.users UUIDs; the app uses public.users UUIDs.
  */
-const getUserConversations = async (userId, limit = 20, offset = 0) => {
+async function resolveAuthUserId(publicUserId) {
+  const { data } = await supabase
+    .from('users')
+    .select('auth_user_id')
+    .eq('id', publicUserId)
+    .single();
+  return data?.auth_user_id || publicUserId;
+}
+
+/**
+ * Check if a user is a participant in a conversation.
+ * Works for all conversation types (attorney_case, operator, support).
+ */
+function isParticipant(conversation, authId) {
+  return (
+    conversation.driver_id === authId ||
+    conversation.attorney_id === authId ||
+    conversation.operator_id === authId
+  );
+}
+
+/**
+ * Hydrate conversations with user and case data via separate queries.
+ * conversation.driver_id / attorney_id / operator_id are auth.users UUIDs,
+ * so we look up public.users by auth_user_id to get profile info.
+ */
+async function hydrateConversations(conversations) {
+  if (!conversations || conversations.length === 0) return [];
+
+  const authUserIds = [...new Set(
+    conversations.flatMap(c => [c.driver_id, c.attorney_id, c.operator_id].filter(Boolean))
+  )];
+  const caseIds = [...new Set(
+    conversations.map(c => c.case_id).filter(Boolean)
+  )];
+
+  const [usersResult, casesResult] = await Promise.all([
+    authUserIds.length > 0
+      ? supabase.from('users').select('id, auth_user_id, full_name, email, role').in('auth_user_id', authUserIds)
+      : { data: [] },
+    caseIds.length > 0
+      ? supabase.from('cases').select('id, case_number, status, violation_type').in('id', caseIds)
+      : { data: [] },
+  ]);
+
+  // Map by auth_user_id since that's what conversations store
+  const usersMap = {};
+  const authToPublicId = {};
+  (usersResult.data || []).forEach(u => {
+    usersMap[u.auth_user_id] = { id: u.id, name: u.full_name, email: u.email, role: u.role };
+    authToPublicId[u.auth_user_id] = u.id;
+  });
+
+  const casesMap = {};
+  (casesResult.data || []).forEach(c => { casesMap[c.id] = c; });
+
+  // Translate auth IDs back to public.users IDs so frontend can match against currentUserId
+  return conversations.map(conv => ({
+    ...conv,
+    driver_id: authToPublicId[conv.driver_id] || conv.driver_id,
+    attorney_id: conv.attorney_id ? (authToPublicId[conv.attorney_id] || conv.attorney_id) : null,
+    operator_id: conv.operator_id ? (authToPublicId[conv.operator_id] || conv.operator_id) : null,
+    driver: usersMap[conv.driver_id] || null,
+    attorney: conv.attorney_id ? (usersMap[conv.attorney_id] || null) : null,
+    operator: conv.operator_id ? (usersMap[conv.operator_id] || null) : null,
+    case: casesMap[conv.case_id] || null,
+  }));
+}
+
+/**
+ * Hydrate messages with sender/recipient user data via separate queries.
+ * sender_id / recipient_id are auth.users UUIDs.
+ */
+async function hydrateMessages(messages) {
+  if (!messages || messages.length === 0) return [];
+
+  const authUserIds = [...new Set(
+    messages.flatMap(m => [m.sender_id, m.recipient_id].filter(Boolean))
+  )];
+
+  const usersResult = authUserIds.length > 0
+    ? await supabase.from('users').select('id, auth_user_id, full_name, email, role').in('auth_user_id', authUserIds)
+    : { data: [] };
+
+  const usersMap = {};
+  const authToPublicId = {};
+  (usersResult.data || []).forEach(u => {
+    usersMap[u.auth_user_id] = { id: u.id, name: u.full_name, email: u.email, role: u.role };
+    authToPublicId[u.auth_user_id] = u.id;
+  });
+
+  // Translate auth IDs to public.users IDs so frontend can match against currentUserId
+  return messages.map(msg => ({
+    ...msg,
+    sender_id: authToPublicId[msg.sender_id] || msg.sender_id,
+    recipient_id: authToPublicId[msg.recipient_id] || msg.recipient_id,
+    sender: usersMap[msg.sender_id] || null,
+    recipient: usersMap[msg.recipient_id] || null,
+  }));
+}
+
+/**
+ * Get all conversations for a user.
+ * Supports filtering by conversation type, unread-only, and name search.
+ */
+const getUserConversations = async (userId, options = {}) => {
+  const { limit = 20, offset = 0, type, unreadOnly, search } = options;
+
   try {
-    // Get conversations where user is either driver or attorney
-    const { data: conversations, error, count } = await supabase
+    // Translate public.users.id to auth_user_id for the filter
+    const authId = await resolveAuthUserId(userId);
+
+    let query = supabase
       .from('conversations')
-      .select(`
-        *,
-        driver:users!driver_id(id, name, email, avatar_url),
-        attorney:users!attorney_id(id, name, email, avatar_url),
-        case:cases(id, case_number, status)
-      `, { count: 'exact' })
-      .or(`driver_id.eq.${userId},attorney_id.eq.${userId}`)
+      .select('*', { count: 'exact' })
+      .or(`driver_id.eq.${authId},attorney_id.eq.${authId},operator_id.eq.${authId}`);
+
+    // Filter by conversation_type
+    if (type && type !== 'all') {
+      if (type === 'support') {
+        // "support" tab includes both operator and support types
+        query = query.in('conversation_type', ['operator', 'support']);
+      } else {
+        query = query.eq('conversation_type', type);
+      }
+    }
+
+    // Filter to unread only
+    if (unreadOnly) {
+      query = query.gt('unread_count', 0);
+    }
+
+    query = query
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    const { data: conversations, error, count } = await query;
 
     if (error) {
       throw new AppError(`Database error: ${error.message}`, 500);
     }
 
+    const hydrated = await hydrateConversations(conversations || []);
+
+    // Apply search filter (post-query, since it requires hydrated user names)
+    let filtered = hydrated;
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = hydrated.filter(conv => {
+        const attorney = conv.attorney;
+        const operator = conv.operator;
+        return (
+          (attorney?.name && attorney.name.toLowerCase().includes(q)) ||
+          (operator?.name && operator.name.toLowerCase().includes(q))
+        );
+      });
+    }
+
     return {
-      conversations: conversations || [],
-      total: count || 0
+      conversations: filtered,
+      total: search ? filtered.length : (count || 0)
     };
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -45,16 +185,13 @@ const getUserConversations = async (userId, limit = 20, offset = 0) => {
  */
 const getConversationById = async (conversationId, userId) => {
   try {
+    const authId = await resolveAuthUserId(userId);
+
     const { data: conversation, error } = await supabase
       .from('conversations')
-      .select(`
-        *,
-        driver:users!driver_id(id, name, email, avatar_url),
-        attorney:users!attorney_id(id, name, email, avatar_url),
-        case:cases(id, case_number, status, ticket_number)
-      `)
+      .select('*')
       .eq('id', conversationId)
-      .or(`driver_id.eq.${userId},attorney_id.eq.${userId}`)
+      .or(`driver_id.eq.${authId},attorney_id.eq.${authId},operator_id.eq.${authId}`)
       .single();
 
     if (error) {
@@ -64,17 +201,22 @@ const getConversationById = async (conversationId, userId) => {
       throw new AppError(`Database error: ${error.message}`, 500);
     }
 
-    // Update accessed_by array
-    if (conversation) {
+    // Hydrate with user/case data
+    const hydrated = await hydrateConversations([conversation]);
+
+    // Update accessed_by array (best-effort, don't fail on error)
+    try {
       await supabase
         .from('conversations')
-        .update({ 
-          accessed_by: supabase.raw(`array_append(accessed_by, '${userId}')`)
+        .update({
+          accessed_by: supabase.raw(`array_append(accessed_by, '${authId}')`)
         })
         .eq('id', conversationId);
+    } catch (_) {
+      // Non-critical — don't fail the request
     }
 
-    return conversation;
+    return hydrated[0] || conversation;
   } catch (error) {
     if (error instanceof AppError) throw error;
     throw new AppError('Failed to fetch conversation', 500);
@@ -82,73 +224,68 @@ const getConversationById = async (conversationId, userId) => {
 };
 
 /**
- * Create new conversation
+ * Create new conversation.
+ * Supports attorney_case (linked to a case), operator, and support types.
  */
-const createConversation = async ({ caseId, driverId, attorneyId }) => {
+const createConversation = async ({ caseId, driverId, attorneyId, operatorId, conversationType = 'attorney_case' }) => {
   try {
-    // Check if conversation already exists
-    const { data: existing } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('case_id', caseId)
-      .eq('driver_id', driverId)
-      .eq('attorney_id', attorneyId)
-      .single();
+    const driverAuthId = await resolveAuthUserId(driverId);
 
-    if (existing) {
-      throw new AppError('Conversation already exists for this case', 400);
+    // Validate based on conversation type
+    if (conversationType === 'attorney_case') {
+      return await createAttorneyCaseConversation({ caseId, driverId, driverAuthId, attorneyId });
     }
 
-    // Verify case exists and driver is authorized
-    const { data: caseData, error: caseError } = await supabase
-      .from('cases')
-      .select('id, driver_id, assigned_attorney_id, status')
-      .eq('id', caseId)
-      .single();
-
-    if (caseError || !caseData) {
-      throw new AppError('Case not found', 404);
+    // Operator or support conversation
+    if (!operatorId && conversationType !== 'support') {
+      throw new AppError('operatorId is required for operator conversations', 400);
     }
 
-    if (caseData.driver_id !== driverId) {
-      throw new AppError('Unauthorized to create conversation for this case', 403);
+    const otherAuthId = operatorId ? await resolveAuthUserId(operatorId) : null;
+
+    // Check for existing conversation between this driver and operator
+    if (otherAuthId) {
+      let dupQuery = supabase
+        .from('conversations')
+        .select('id')
+        .eq('driver_id', driverAuthId)
+        .eq('operator_id', otherAuthId)
+        .eq('conversation_type', conversationType);
+
+      if (caseId) {
+        dupQuery = dupQuery.eq('case_id', caseId);
+      }
+
+      const { data: existing } = await dupQuery.maybeSingle();
+      if (existing) {
+        throw new AppError('Conversation already exists', 400);
+      }
     }
 
-    if (caseData.assigned_attorney_id !== attorneyId) {
-      throw new AppError('Attorney not assigned to this case', 400);
-    }
-
-    if (caseData.status === 'closed') {
-      throw new AppError('Cannot create conversation for closed case', 400);
-    }
-
-    // Calculate retention date (7 years from now)
     const retentionDate = new Date();
     retentionDate.setFullYear(retentionDate.getFullYear() + 7);
 
-    // Create conversation
+    const insertData = {
+      driver_id: driverAuthId,
+      conversation_type: conversationType,
+      retention_until: retentionDate.toISOString(),
+      accessed_by: [driverAuthId]
+    };
+    if (caseId) insertData.case_id = caseId;
+    if (otherAuthId) insertData.operator_id = otherAuthId;
+
     const { data: conversation, error } = await supabase
       .from('conversations')
-      .insert([{
-        case_id: caseId,
-        driver_id: driverId,
-        attorney_id: attorneyId,
-        retention_until: retentionDate.toISOString(),
-        accessed_by: [driverId]
-      }])
-      .select(`
-        *,
-        driver:users!driver_id(id, name, email),
-        attorney:users!attorney_id(id, name, email),
-        case:cases(id, case_number)
-      `)
+      .insert([insertData])
+      .select('*')
       .single();
 
     if (error) {
       throw new AppError(`Failed to create conversation: ${error.message}`, 500);
     }
 
-    return conversation;
+    const hydrated = await hydrateConversations([conversation]);
+    return hydrated[0] || conversation;
   } catch (error) {
     if (error instanceof AppError) throw error;
     throw new AppError('Failed to create conversation', 500);
@@ -156,14 +293,89 @@ const createConversation = async ({ caseId, driverId, attorneyId }) => {
 };
 
 /**
+ * Create an attorney_case conversation (existing logic, extracted for clarity).
+ */
+async function createAttorneyCaseConversation({ caseId, driverId, driverAuthId, attorneyId }) {
+  if (!attorneyId) {
+    throw new AppError('attorneyId is required for attorney_case conversations', 400);
+  }
+  if (!caseId) {
+    throw new AppError('caseId is required for attorney_case conversations', 400);
+  }
+
+  const attorneyAuthId = await resolveAuthUserId(attorneyId);
+
+  // Check if conversation already exists
+  const { data: existing } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('case_id', caseId)
+    .eq('driver_id', driverAuthId)
+    .eq('attorney_id', attorneyAuthId)
+    .single();
+
+  if (existing) {
+    throw new AppError('Conversation already exists for this case', 400);
+  }
+
+  // Verify case exists and driver is authorized
+  const { data: caseData, error: caseError } = await supabase
+    .from('cases')
+    .select('id, driver_id, assigned_attorney_id, status')
+    .eq('id', caseId)
+    .single();
+
+  if (caseError || !caseData) {
+    throw new AppError('Case not found', 404);
+  }
+
+  if (caseData.driver_id !== driverId) {
+    throw new AppError('Unauthorized to create conversation for this case', 403);
+  }
+
+  if (caseData.assigned_attorney_id !== attorneyId) {
+    throw new AppError('Attorney not assigned to this case', 400);
+  }
+
+  if (caseData.status === 'closed') {
+    throw new AppError('Cannot create conversation for closed case', 400);
+  }
+
+  const retentionDate = new Date();
+  retentionDate.setFullYear(retentionDate.getFullYear() + 7);
+
+  const { data: conversation, error } = await supabase
+    .from('conversations')
+    .insert([{
+      case_id: caseId,
+      driver_id: driverAuthId,
+      attorney_id: attorneyAuthId,
+      conversation_type: 'attorney_case',
+      retention_until: retentionDate.toISOString(),
+      accessed_by: [driverAuthId]
+    }])
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new AppError(`Failed to create conversation: ${error.message}`, 500);
+  }
+
+  const hydrated = await hydrateConversations([conversation]);
+  return hydrated[0] || conversation;
+}
+
+/**
  * Delete conversation
  */
 const deleteConversation = async (conversationId, userId) => {
   try {
+    const authId = await resolveAuthUserId(userId);
+
     // Verify user has permission to delete
     const { data: conversation } = await supabase
       .from('conversations')
-      .select('driver_id, attorney_id')
+      .select('driver_id, attorney_id, operator_id')
       .eq('id', conversationId)
       .single();
 
@@ -171,7 +383,7 @@ const deleteConversation = async (conversationId, userId) => {
       throw new AppError('Conversation not found', 404);
     }
 
-    if (conversation.driver_id !== userId && conversation.attorney_id !== userId) {
+    if (!isParticipant(conversation, authId)) {
       throw new AppError('Unauthorized to delete this conversation', 403);
     }
 
@@ -197,12 +409,14 @@ const deleteConversation = async (conversationId, userId) => {
  */
 const generateVideoLink = async (conversationId, attorneyId) => {
   try {
+    const authId = await resolveAuthUserId(attorneyId);
+
     // Verify conversation exists and attorney is participant
     const { data: conversation } = await supabase
       .from('conversations')
       .select('id, attorney_id')
       .eq('id', conversationId)
-      .eq('attorney_id', attorneyId)
+      .eq('attorney_id', authId)
       .single();
 
     if (!conversation) {
@@ -219,7 +433,7 @@ const generateVideoLink = async (conversationId, attorneyId) => {
       .from('video_call_links')
       .insert([{
         conversation_id: conversationId,
-        generated_by: attorneyId,
+        generated_by: authId,
         video_url: videoUrl,
         expires_at: expiresAt.toISOString()
       }])
@@ -242,10 +456,12 @@ const generateVideoLink = async (conversationId, attorneyId) => {
  */
 const getConversationMessages = async (conversationId, userId, limit = 50, offset = 0) => {
   try {
+    const authId = await resolveAuthUserId(userId);
+
     // Verify user has access to conversation
     const { data: conversation } = await supabase
       .from('conversations')
-      .select('driver_id, attorney_id')
+      .select('driver_id, attorney_id, operator_id')
       .eq('id', conversationId)
       .single();
 
@@ -253,34 +469,55 @@ const getConversationMessages = async (conversationId, userId, limit = 50, offse
       throw new AppError('Conversation not found', 404);
     }
 
-    if (conversation.driver_id !== userId && conversation.attorney_id !== userId) {
+    if (!isParticipant(conversation, authId)) {
       throw new AppError('Unauthorized to view this conversation', 403);
     }
 
-    // Get messages
+    // Get messages — plain select, no FK joins
     const { data: messages, error, count } = await supabase
       .from('messages')
-      .select(`
-        *,
-        sender:users!sender_id(id, name, email, avatar_url),
-        recipient:users!recipient_id(id, name, email),
-        attachments:message_attachments(*)
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .range(offset, offset + limit - 1);
 
     if (error) {
       throw new AppError(`Database error: ${error.message}`, 500);
     }
 
+    const hydrated = await hydrateMessages(messages || []);
+
     return {
-      messages: messages || [],
+      messages: hydrated,
       total: count || 0
     };
   } catch (error) {
     if (error instanceof AppError) throw error;
     throw new AppError('Failed to fetch messages', 500);
+  }
+};
+
+/**
+ * Get total unread message count across all conversations for a user.
+ */
+const getUnreadCountForUser = async (userId) => {
+  try {
+    const authId = await resolveAuthUserId(userId);
+
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', authId)
+      .eq('is_read', false);
+
+    if (error) {
+      throw new AppError(`Database error: ${error.message}`, 500);
+    }
+
+    return count || 0;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError('Failed to fetch unread count', 500);
   }
 };
 
@@ -290,5 +527,6 @@ module.exports = {
   createConversation,
   deleteConversation,
   generateVideoLink,
-  getConversationMessages
+  getConversationMessages,
+  getUnreadCountForUser
 };

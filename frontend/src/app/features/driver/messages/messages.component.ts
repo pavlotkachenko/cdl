@@ -1,1042 +1,930 @@
 import {
-  Component, OnInit, inject, signal, computed, ChangeDetectionStrategy,
+  Component, OnInit, OnDestroy, inject, signal, computed,
+  ChangeDetectionStrategy, ElementRef, viewChild,
 } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatBadgeModule } from '@angular/material/badge';
-import { MatRippleModule } from '@angular/material/core';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
-import { MessagingService, Conversation, Message } from '../../../core/services/messaging.service';
+import {
+  MessagingService, Conversation, Message, ConversationType,
+} from './messaging.service';
 import { AuthService } from '../../../core/services/auth.service';
+
+type FilterTab = 'all' | 'attorneys' | 'support' | 'unread';
 
 @Component({
   selector: 'app-messages',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ReactiveFormsModule,
-    MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
-    MatBadgeModule, MatRippleModule, MatTooltipModule,
-    TranslateModule,
-  ],
-  template: `
-    <div class="messages-page">
+  imports: [ReactiveFormsModule, DatePipe, TranslateModule],
+  styles: `
+    /* ====================== Layout ====================== */
+    .messages-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: calc(100vh - 60px);
+      background: #f8fafc;
+    }
 
-      <!-- Conversation list -->
-      @if (!selectedConv()) {
-        <header class="page-header">
-          <div class="header-content">
-            <mat-icon class="header-icon" aria-hidden="true">forum</mat-icon>
-            <div>
-              <h1>{{ 'MESSAGING.TITLE' | translate }}</h1>
-              <p class="header-subtitle">{{ conversations().length }} conversations</p>
-            </div>
-          </div>
-        </header>
-
-        @if (loadingConvs()) {
-          <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
-        } @else if (convError()) {
-          <div class="error-state" role="alert">
-            <mat-icon class="error-icon">error_outline</mat-icon>
-            <p>{{ convError() }}</p>
-            <button mat-raised-button color="primary" (click)="loadConversations()">{{ 'COMMON.RETRY' | translate }}</button>
-          </div>
-        } @else if (conversations().length === 0) {
-          <div class="empty-state">
-            <div class="empty-icon-wrapper">
-              <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
-            </div>
-            <p class="empty-title">{{ 'MESSAGING.NO_CONVERSATIONS' | translate }}</p>
-            <p class="empty-subtitle">Your conversations will appear here</p>
-          </div>
-        } @else {
-          <div class="conv-list" role="list">
-            @for (c of conversations(); track c.id) {
-              <div class="conv-item" role="listitem" matRipple
-                   (click)="selectConversation(c)"
-                   (keydown.enter)="selectConversation(c)"
-                   tabindex="0"
-                   [class.unread]="c.unreadCount > 0">
-                <div class="conv-avatar" [class.online]="c.unreadCount > 0">
-                  {{ getInitials(otherPartyName(c)) }}
-                </div>
-                <div class="conv-body">
-                  <div class="conv-top-row">
-                    <span class="conv-name">{{ otherPartyName(c) }}</span>
-                    <span class="conv-time">{{ formatRelativeTime(c.lastMessageAt) }}</span>
-                  </div>
-                  <div class="conv-bottom-row">
-                    @if (c.lastMessage) {
-                      <p class="conv-preview">{{ c.lastMessage }}</p>
-                    }
-                    @if (c.unreadCount > 0) {
-                      <span class="unread-badge" [attr.aria-label]="c.unreadCount + ' unread messages'">
-                        {{ c.unreadCount }}
-                      </span>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      }
-
-      <!-- Message thread -->
-      @if (selectedConv()) {
-        <header class="thread-header">
-          <button mat-icon-button (click)="closeThread()" aria-label="Back to conversations" class="back-btn">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          <div class="thread-avatar">
-            {{ getInitials(otherPartyName(selectedConv()!)) }}
-          </div>
-          <div class="thread-info">
-            <h2>{{ otherPartyName(selectedConv()!) }}</h2>
-            @if (typingIndicator()) {
-              <span class="typing-label">{{ 'MESSAGING.TYPING' | translate }}</span>
-            } @else {
-              <span class="status-label">Attorney</span>
-            }
-          </div>
-          <div class="thread-actions">
-            <button mat-icon-button aria-label="Call" matTooltip="Call">
-              <mat-icon>phone</mat-icon>
-            </button>
-            <button mat-icon-button aria-label="More options" matTooltip="More">
-              <mat-icon>more_vert</mat-icon>
-            </button>
-          </div>
-        </header>
-
-        @if (loadingMsgs()) {
-          <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
-        } @else {
-          <div class="message-thread" role="log" aria-live="polite">
-            @if (messages().length === 0) {
-              <div class="empty-thread-wrapper">
-                <div class="empty-thread-icon">
-                  <mat-icon>lock</mat-icon>
-                </div>
-                <p class="empty-thread">{{ 'MESSAGING.EMPTY' | translate }}</p>
-                <p class="empty-thread-sub">Messages are end-to-end encrypted</p>
-              </div>
-            }
-
-            @for (m of messages(); track m.id; let i = $index) {
-              @if (shouldShowDateSeparator(i)) {
-                <div class="date-separator">
-                  <span>{{ formatDateLabel(m.createdAt) }}</span>
-                </div>
-              }
-              <div [class]="'msg-row ' + (isMyMessage(m) ? 'mine' : 'theirs')"
-                   [class.grouped]="isGroupedWithPrevious(i)">
-                @if (!isMyMessage(m) && !isGroupedWithPrevious(i)) {
-                  <div class="msg-avatar">
-                    {{ getInitials(otherPartyName(selectedConv()!)) }}
-                  </div>
-                } @else if (!isMyMessage(m)) {
-                  <div class="msg-avatar-spacer"></div>
-                }
-                <div class="msg-content">
-                  <div [class]="'bubble ' + (isMyMessage(m) ? 'mine' : 'theirs')"
-                       [class.tail]="!isGroupedWithNext(i)"
-                       [attr.aria-label]="(isMyMessage(m) ? 'You' : otherPartyName(selectedConv()!)) + ': ' + m.content">
-                    {{ m.content }}
-                  </div>
-                  @if (!isGroupedWithNext(i)) {
-                    <div [class]="'msg-meta ' + (isMyMessage(m) ? 'mine' : 'theirs')">
-                      <span class="msg-time">{{ formatTime(m.createdAt) }}</span>
-                      @if (isMyMessage(m)) {
-                        <mat-icon class="delivery-icon" [class.read]="m.isRead">
-                          {{ m.isRead ? 'done_all' : 'done' }}
-                        </mat-icon>
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (typingIndicator()) {
-              <div class="msg-row theirs">
-                <div class="msg-avatar">
-                  {{ getInitials(otherPartyName(selectedConv()!)) }}
-                </div>
-                <div class="msg-content">
-                  <div class="bubble theirs typing-bubble" aria-live="polite">
-                    <div class="typing-dots">
-                      <span></span><span></span><span></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-
-          <form [formGroup]="msgForm" (ngSubmit)="sendMessage()" class="send-area">
-            <button mat-icon-button type="button" class="attach-btn"
-                    aria-label="Attach file" matTooltip="Attach file"
-                    (click)="fileInput.click()">
-              <mat-icon>attach_file</mat-icon>
-            </button>
-            <input #fileInput type="file" class="hidden-file-input"
-                   accept="image/*,.pdf,.doc,.docx,.txt"
-                   (change)="onFileSelected($event)"
-                   aria-hidden="true" />
-            @if (attachedFile()) {
-              <div class="attached-preview">
-                <mat-icon>description</mat-icon>
-                <span class="attached-name">{{ attachedFile()!.name }}</span>
-                <button mat-icon-button type="button" (click)="removeAttachment()" aria-label="Remove attachment" class="remove-attach">
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-            }
-            <div class="input-wrapper">
-              <input formControlName="content"
-                     placeholder="Type a message..."
-                     autocomplete="off"
-                     class="msg-input"
-                     (keydown.enter)="$event.preventDefault(); sendMessage()">
-            </div>
-            <button mat-mini-fab type="submit"
-                    [disabled]="sending() || (!msgForm.value.content?.trim() && !attachedFile())"
-                    class="send-btn"
-                    [class.ready]="!!msgForm.value.content?.trim() || !!attachedFile()"
-                    aria-label="Send message">
-              @if (sending()) {
-                <mat-spinner diameter="20"></mat-spinner>
-              } @else {
-                <mat-icon>send</mat-icon>
-              }
-            </button>
-          </form>
-        }
-      }
-    </div>
-  `,
-  styles: [`
-    /* ───── Layout ───── */
-    .messages-page {
-      max-width: 680px;
-      margin: 0 auto;
+    /* ====================== Left Panel ====================== */
+    .conv-panel {
+      background: #fff;
+      border-right: 1px solid #e2e8f0;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 64px);
-      background: #fafbfd;
-      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
-
-    /* ───── Page Header (conversations list) ───── */
-    .page-header {
-      background: linear-gradient(135deg, #1565c0 0%, #1e88e5 50%, #42a5f5 100%);
-      color: #fff;
-      padding: 28px 24px 22px;
-      border-radius: 0 0 24px 24px;
-      box-shadow: 0 4px 20px rgba(21,101,192,0.25);
+    .conv-header {
+      padding: 20px 16px 12px;
+      border-bottom: 1px solid #f1f5f9;
     }
-    .header-content {
+    .conv-header-row {
       display: flex;
       align-items: center;
-      gap: 16px;
-    }
-    .header-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      opacity: 0.9;
-    }
-    .page-header h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-    .header-subtitle {
-      margin: 2px 0 0;
-      font-size: 0.82rem;
-      opacity: 0.8;
-      font-weight: 400;
-    }
-
-    /* ───── Loading / Error / Empty ───── */
-    .loading {
-      display: flex;
-      justify-content: center;
-      padding: 48px;
-    }
-    .error-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      padding: 48px 24px;
-      color: #c62828;
-    }
-    .error-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: #ef5350;
-    }
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 64px 24px;
-      text-align: center;
-    }
-    .empty-icon-wrapper {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-    .empty-icon-wrapper mat-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
-      color: #1976d2;
-    }
-    .empty-title {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 500;
-      color: #555;
-    }
-    .empty-subtitle {
-      margin: 6px 0 0;
-      font-size: 0.85rem;
-      color: #999;
-    }
-
-    /* ───── Conversation List ───── */
-    .conv-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .conv-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-      outline: none;
-    }
-    .conv-item:hover,
-    .conv-item:focus-visible {
-      background: #e8eef6;
-    }
-    .conv-item:focus-visible {
-      box-shadow: 0 0 0 2px #1976d2;
-    }
-    .conv-item.unread {
-      background: #edf4fd;
-    }
-    .conv-item.unread:hover {
-      background: #dde9f8;
-    }
-
-    /* Avatar circle */
-    .conv-avatar {
-      width: 52px;
-      height: 52px;
-      min-width: 52px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #5c6bc0, #7e57c2);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 1.05rem;
-      letter-spacing: 0.5px;
-      position: relative;
-    }
-    .conv-avatar.online::after {
-      content: '';
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #4caf50;
-      border: 2.5px solid #fafbfd;
-    }
-    .conv-body {
-      flex: 1;
-      min-width: 0;
-    }
-    .conv-top-row {
-      display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-    }
-    .conv-name {
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: #1a1a2e;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .conv-item.unread .conv-name {
-      color: #0d47a1;
-    }
-    .conv-time {
-      font-size: 0.73rem;
-      color: #999;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .conv-item.unread .conv-time {
-      color: #1976d2;
-      font-weight: 600;
-    }
-    .conv-bottom-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-top: 3px;
-    }
-    .conv-preview {
-      margin: 0;
-      font-size: 0.84rem;
-      color: #777;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-      min-width: 0;
-    }
-    .conv-item.unread .conv-preview {
-      color: #444;
-      font-weight: 500;
-    }
-    .unread-badge {
-      background: linear-gradient(135deg, #1565c0, #1e88e5);
-      color: #fff;
-      border-radius: 12px;
-      padding: 1px 8px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      min-width: 22px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    /* ───── Thread Header ───── */
-    .thread-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 12px 12px 8px;
-      background: linear-gradient(135deg, #1565c0 0%, #1e88e5 100%);
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(21,101,192,0.2);
-    }
-    .back-btn {
-      color: #fff;
-    }
-    .thread-avatar {
-      width: 40px;
-      height: 40px;
-      min-width: 40px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 0.9rem;
-      letter-spacing: 0.5px;
-    }
-    .thread-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .thread-info h2 {
-      margin: 0;
-      font-size: 1.05rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .status-label {
-      font-size: 0.75rem;
-      opacity: 0.8;
-    }
-    .typing-label {
-      font-size: 0.75rem;
-      color: #a5d6a7;
-      font-style: italic;
-    }
-    .thread-actions {
-      display: flex;
-      gap: 2px;
-      color: rgba(255,255,255,0.85);
-    }
-    .thread-actions button {
-      color: inherit;
-    }
-
-    /* ───── Message Thread ───── */
-    .message-thread {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      padding: 16px 14px 8px;
-      min-height: 200px;
-      max-height: calc(100vh - 260px);
-      background: #eef2f7;
-      background-image:
-        radial-gradient(circle at 20% 80%, rgba(25,118,210,0.03) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(126,87,194,0.03) 0%, transparent 50%);
-    }
-    .empty-thread-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      padding: 40px 20px;
-    }
-    .empty-thread-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.06);
-      display: flex;
-      align-items: center;
-      justify-content: center;
       margin-bottom: 12px;
     }
-    .empty-thread-icon mat-icon {
-      color: #aaa;
-      font-size: 26px;
-      width: 26px;
-      height: 26px;
+    .conv-header-row h2 { margin: 0; font-size: 20px; font-weight: 700; color: #1e293b; }
+    .unread-badge {
+      background: #0d9488; color: #fff; border-radius: 12px;
+      padding: 2px 8px; font-size: 12px; font-weight: 600; margin-left: 8px;
     }
-    .empty-thread {
-      color: #888;
-      text-align: center;
-      font-size: 0.9rem;
-      margin: 0;
+    .new-conv-btn {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: #f1f5f9; color: #64748b; cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
     }
-    .empty-thread-sub {
-      color: #bbb;
-      font-size: 0.78rem;
-      margin: 4px 0 0;
+    .new-conv-btn:hover { background: #e2e8f0; }
+
+    /* Search */
+    .search-wrap {
+      position: relative; margin-bottom: 12px;
+    }
+    .search-wrap input {
+      width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; background: #f8fafc;
+      box-sizing: border-box;
+    }
+    .search-wrap input:focus { outline: none; border-color: #0d9488; background: #fff; }
+    .search-icon {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: #94a3b8; font-size: 16px; pointer-events: none;
+    }
+
+    /* Filter tabs */
+    .filter-tabs {
+      display: flex; gap: 4px; padding: 0;
+      border-bottom: 1px solid #f1f5f9; margin: 0 0 4px;
+    }
+    .filter-tab {
+      flex: 1; padding: 8px 0; border: none; background: none;
+      font-size: 12px; font-weight: 500; color: #64748b; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .filter-tab:hover { color: #0d9488; }
+    .filter-tab.active { color: #0d9488; border-bottom-color: #0d9488; font-weight: 600; }
+
+    /* Conversation list */
+    .conv-list {
+      flex: 1; overflow-y: auto; padding: 4px 0;
+    }
+    .conv-group-label {
+      padding: 8px 16px 4px; font-size: 11px; font-weight: 600;
+      color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .conv-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent;
+      transition: background 0.15s;
+    }
+    .conv-item:hover { background: #f8fafc; }
+    .conv-item:focus-visible { outline: 2px solid #0d9488; outline-offset: -2px; }
+    .conv-item.active { background: #f0fdfa; border-left-color: #0d9488; }
+    .conv-item.closed { opacity: 0.65; }
+
+    /* Avatar */
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 14px; position: relative;
+    }
+    .avatar.attorney { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .avatar.operator { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+    .avatar.support { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .avatar.system { background: linear-gradient(135deg, #6b7280, #374151); }
+    .avatar.driver { background: linear-gradient(135deg, #10b981, #059669); }
+    .online-dot {
+      position: absolute; bottom: 0; right: 0; width: 10px; height: 10px;
+      border-radius: 50%; border: 2px solid #fff; background: #22c55e;
+    }
+
+    /* Conv item text */
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-top { display: flex; justify-content: space-between; align-items: center; }
+    .conv-name {
+      font-size: 14px; font-weight: 500; color: #1e293b;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .conv-name.unread { font-weight: 700; }
+    .conv-time { font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-left: 8px; }
+    .conv-preview {
+      font-size: 12px; color: #64748b; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .conv-preview.unread { color: #0d9488; font-weight: 500; }
+    .conv-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .case-tag {
+      font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500;
+    }
+    .tag-attorney { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+    .tag-operator { background: #f5f3ff; color: #8b5cf6; }
+    .tag-support { background: #fffbeb; color: #f59e0b; }
+    .tag-closed { background: #edf2f6; color: #98a8b4; }
+    .unread-count {
+      background: #0d9488; color: #fff; border-radius: 10px;
+      padding: 1px 7px; font-size: 11px; font-weight: 600;
+    }
+
+    /* ====================== Right Panel ====================== */
+    .chat-panel {
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* Chat header */
+    .chat-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 20px; background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .chat-user-info { flex: 1; }
+    .chat-user-name { font-size: 16px; font-weight: 600; color: #1e293b; }
+    .chat-user-role { font-size: 12px; color: #64748b; }
+    .chat-actions { display: flex; gap: 8px; }
+    .action-btn {
+      width: 36px; height: 36px; border-radius: 8px; border: 1px solid #e2e8f0;
+      background: #fff; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; color: #64748b; font-size: 16px;
+    }
+    .action-btn:hover { background: #f8fafc; color: #1e293b; }
+
+    /* Case context strip */
+    .case-strip {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 20px; background: #f0fdf4;
+      border-bottom: 1px solid #bbf7d0; font-size: 12px;
+    }
+    .case-strip-icon { color: #16a34a; font-size: 14px; }
+    .case-strip-text { color: #166534; flex: 1; }
+    .case-strip-link {
+      color: #16a34a; font-weight: 600; cursor: pointer;
+      text-decoration: none; border: none; background: none; font-size: 12px;
+    }
+
+    /* Messages area */
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 4px;
     }
 
     /* Date separator */
-    .date-separator {
-      display: flex;
-      justify-content: center;
-      padding: 12px 0 8px;
+    .date-sep {
+      display: flex; align-items: center; gap: 12px;
+      margin: 16px 0; color: #94a3b8; font-size: 12px;
     }
-    .date-separator span {
-      background: rgba(0,0,0,0.08);
-      color: #666;
-      font-size: 0.72rem;
-      font-weight: 500;
-      padding: 4px 14px;
-      border-radius: 10px;
-      letter-spacing: 0.02em;
+    .date-sep::before, .date-sep::after {
+      content: ''; flex: 1; height: 1px; background: #e2e8f0;
     }
 
-    /* Message row */
-    .msg-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      padding: 1px 0;
-    }
-    .msg-row.mine {
-      flex-direction: row-reverse;
-    }
-    .msg-row.grouped {
-      padding-top: 0;
+    /* System message */
+    .system-msg {
+      text-align: center; padding: 6px 16px; margin: 4px auto;
+      background: #f1f5f9; border-radius: 8px; font-size: 12px;
+      color: #64748b; max-width: 80%;
     }
 
-    /* Small avatar in thread */
+    /* Message bubbles */
+    .msg-row { display: flex; gap: 8px; margin-bottom: 2px; max-width: 75%; }
+    .msg-row.mine { margin-left: auto; flex-direction: row-reverse; }
+    .msg-row.theirs { margin-right: auto; }
     .msg-avatar {
-      width: 30px;
-      height: 30px;
-      min-width: 30px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #5c6bc0, #7e57c2);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 0.65rem;
-      letter-spacing: 0.3px;
-      margin-bottom: 18px;
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 10px;
     }
-    .msg-avatar-spacer {
-      width: 30px;
-      min-width: 30px;
+    .msg-bubble {
+      padding: 10px 14px; border-radius: 12px; font-size: 14px;
+      line-height: 1.5; word-break: break-word;
     }
+    .msg-row.theirs .msg-bubble {
+      background: #fff; border: 1px solid #e2e8f0;
+      border-top-left-radius: 4px;
+    }
+    .msg-row.mine .msg-bubble {
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: #fff; border-top-right-radius: 4px;
+    }
+    .msg-sender-name {
+      font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 2px;
+    }
+    .msg-role-badge {
+      font-size: 9px; padding: 1px 5px; border-radius: 3px;
+      font-weight: 600; margin-left: 6px;
+    }
+    .msg-role-badge.attorney { background: #eff6ff; color: #3b82f6; }
+    .msg-role-badge.operator { background: #f5f3ff; color: #8b5cf6; }
+    .msg-footer {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 4px; font-size: 11px; color: #94a3b8;
+    }
+    .msg-row.mine .msg-footer { color: rgba(255,255,255,0.7); justify-content: flex-end; }
 
-    .msg-content {
-      max-width: 72%;
-      min-width: 60px;
+    /* Attachment */
+    .attachment-block {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: #f8fafc; border-radius: 8px;
+      border: 1px solid #e2e8f0; margin-top: 6px; font-size: 12px;
     }
+    .attachment-block .file-icon { font-size: 18px; color: #3b82f6; }
+    .attachment-info { flex: 1; }
+    .attachment-name { font-weight: 500; color: #1e293b; }
+    .attachment-size { color: #94a3b8; font-size: 11px; }
 
-    /* Bubbles */
-    .bubble {
-      padding: 10px 14px;
-      font-size: 0.9rem;
-      line-height: 1.45;
-      word-break: break-word;
-      position: relative;
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; font-size: 12px; color: #64748b;
     }
-    .bubble.mine {
-      background: linear-gradient(135deg, #1565c0, #1e88e5);
-      color: #fff;
-      border-radius: 18px 18px 4px 18px;
-      box-shadow: 0 1px 3px rgba(21,101,192,0.18);
-    }
-    .bubble.mine.tail {
-      border-radius: 18px 18px 4px 18px;
-    }
-    .bubble.theirs {
-      background: #fff;
-      color: #1a1a2e;
-      border-radius: 18px 18px 18px 4px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .bubble.theirs.tail {
-      border-radius: 18px 18px 18px 4px;
-    }
-
-    /* Grouped bubble shapes -- not first, not last */
-    .msg-row.grouped .bubble.mine {
-      border-radius: 18px 4px 4px 18px;
-    }
-    .msg-row.grouped .bubble.mine.tail {
-      border-radius: 18px 4px 4px 18px;
-    }
-    .msg-row.grouped .bubble.theirs {
-      border-radius: 4px 18px 18px 4px;
-    }
-    .msg-row.grouped .bubble.theirs.tail {
-      border-radius: 4px 18px 18px 4px;
-    }
-
-    /* Message meta (time + delivery status) */
-    .msg-meta {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      padding: 3px 4px 0;
-    }
-    .msg-meta.mine {
-      justify-content: flex-end;
-    }
-    .msg-meta.theirs {
-      justify-content: flex-start;
-    }
-    .msg-time {
-      font-size: 0.68rem;
-      color: #999;
-    }
-    .delivery-icon {
-      font-size: 14px !important;
-      width: 14px !important;
-      height: 14px !important;
-      color: #bbb;
-      transition: color 0.2s;
-    }
-    .delivery-icon.read {
-      color: #1e88e5;
-    }
-
-    /* Typing dots animation */
-    .typing-bubble {
-      padding: 12px 18px;
-    }
-    .typing-dots {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
+    .typing-dots { display: flex; gap: 3px; }
     .typing-dots span {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #aaa;
-      animation: typingBounce 1.4s ease-in-out infinite;
+      width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;
+      animation: bounce 1.4s infinite ease-in-out;
     }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes typingBounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30%           { transform: translateY(-4px); opacity: 1; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.16s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
     }
 
-    /* ───── Send Area ───── */
-    .send-area {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px 14px;
-      background: #fff;
-      border-top: 1px solid #e8ecf2;
-      flex-wrap: wrap;
+    /* Input area */
+    .chat-input-area {
+      padding: 12px 20px; background: #fff;
+      border-top: 1px solid #e2e8f0;
     }
-    .hidden-file-input {
-      position: absolute;
-      width: 0;
-      height: 0;
-      opacity: 0;
-      pointer-events: none;
+    .input-toolbar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
     }
-    .attached-preview {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #e3f2fd;
-      border-radius: 16px;
-      padding: 4px 6px 4px 10px;
-      font-size: 0.8rem;
-      color: #1565c0;
-      max-width: 200px;
+    .toolbar-btn {
+      width: 32px; height: 32px; border-radius: 6px; border: none;
+      background: none; cursor: pointer; color: #94a3b8; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
     }
-    .attached-preview mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
+    .toolbar-btn:hover { background: #f1f5f9; color: #475569; }
+    .encrypt-note {
+      margin-left: auto; font-size: 11px; color: #94a3b8;
+      display: flex; align-items: center; gap: 4px;
     }
-    .attached-name {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-      min-width: 0;
+    .input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .input-row textarea {
+      flex: 1; resize: none; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 10px 14px; font-size: 14px; font-family: inherit;
+      min-height: 20px; max-height: 120px; line-height: 1.4;
+      box-sizing: border-box;
     }
-    .remove-attach {
-      width: 24px !important;
-      height: 24px !important;
-      line-height: 24px !important;
-    }
-    .remove-attach mat-icon {
-      font-size: 14px !important;
-      width: 14px !important;
-      height: 14px !important;
-    }
-    .attach-btn {
-      color: #777;
-      transition: color 0.15s;
-    }
-    .attach-btn:hover {
-      color: #1976d2;
-    }
-    .input-wrapper {
-      flex: 1;
-      background: #f1f3f8;
-      border-radius: 24px;
-      padding: 0 18px;
-      display: flex;
-      align-items: center;
-      transition: background-color 0.15s, box-shadow 0.15s;
-    }
-    .input-wrapper:focus-within {
-      background: #eaecf4;
-      box-shadow: 0 0 0 2px rgba(25,118,210,0.2);
-    }
-    .msg-input {
-      width: 100%;
-      border: none;
-      outline: none;
-      background: transparent;
-      padding: 12px 0;
-      font-size: 0.9rem;
-      font-family: inherit;
-      color: #333;
-    }
-    .msg-input::placeholder {
-      color: #aaa;
-    }
-
+    .input-row textarea:focus { outline: none; border-color: #0d9488; }
     .send-btn {
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      background-color: #ccc !important;
-      box-shadow: none !important;
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: #0d9488; color: #fff; cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: opacity 0.15s;
     }
-    .send-btn.ready {
-      background: linear-gradient(135deg, #1565c0, #1e88e5) !important;
-      box-shadow: 0 3px 12px rgba(21,101,192,0.3) !important;
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn:not(:disabled):hover { background: #0f766e; }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; color: #94a3b8;
+      gap: 12px; font-size: 15px;
     }
-    .send-btn.ready:hover {
-      transform: scale(1.08);
-      box-shadow: 0 4px 16px rgba(21,101,192,0.4) !important;
+    .empty-state-icon { font-size: 48px; opacity: 0.5; }
+
+    /* Loading */
+    .loading-state {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; color: #94a3b8;
     }
-    .send-btn:disabled {
-      transform: none !important;
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid #e2e8f0;
+      border-top-color: #0d9488; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
-    .send-btn mat-icon {
-      margin-left: 2px;
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state {
+      padding: 24px; text-align: center; color: #ef4444;
     }
 
-    /* ───── Scrollbar styling ───── */
-    .message-thread::-webkit-scrollbar,
-    .conv-list::-webkit-scrollbar {
-      width: 5px;
+    /* Responsive */
+    @media (max-width: 768px) {
+      .messages-layout { grid-template-columns: 1fr; }
+      .conv-panel { display: flex; }
+      .conv-panel.hidden { display: none; }
+      .chat-panel.hidden { display: none; }
+      .back-btn { display: flex; }
     }
-    .message-thread::-webkit-scrollbar-thumb,
-    .conv-list::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.12);
-      border-radius: 4px;
+    @media (min-width: 769px) {
+      .back-btn { display: none; }
     }
-    .message-thread::-webkit-scrollbar-track,
-    .conv-list::-webkit-scrollbar-track {
-      background: transparent;
-    }
+  `,
+  template: `
+    <div class="messages-layout">
+      <!-- Left Panel: Conversation List -->
+      <div class="conv-panel" [class.hidden]="selectedConv() && isMobile()">
+        <div class="conv-header">
+          <div class="conv-header-row">
+            <h2>
+              Messages
+              @if (totalUnread() > 0) {
+                <span class="unread-badge">{{ totalUnread() }}</span>
+              }
+            </h2>
+            <button class="new-conv-btn" aria-label="New conversation" type="button">+</button>
+          </div>
 
-    /* ───── Responsive ───── */
-    @media (max-width: 600px) {
-      .messages-page {
-        height: 100vh;
-        border-radius: 0;
+          <div class="search-wrap">
+            <span class="search-icon" aria-hidden="true">&#128269;</span>
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              aria-label="Search conversations"
+              [formControl]="searchControl"
+            />
+          </div>
+
+          <div class="filter-tabs" role="tablist" aria-label="Conversation filters">
+            @for (tab of filterTabs; track tab.key) {
+              <button
+                class="filter-tab"
+                [class.active]="activeTab() === tab.key"
+                role="tab"
+                [attr.aria-selected]="activeTab() === tab.key"
+                (click)="activeTab.set(tab.key)"
+                type="button"
+              >{{ tab.label }}</button>
+            }
+          </div>
+        </div>
+
+        <div class="conv-list" role="list" aria-label="Conversations">
+          @if (loadingConvs()) {
+            <div class="loading-state"><div class="spinner"></div></div>
+          } @else if (convError()) {
+            <div class="error-state" role="alert">{{ convError() }}</div>
+          } @else {
+            @if (activeCaseConvs().length > 0) {
+              <div class="conv-group-label" role="heading" aria-level="3">Active Cases</div>
+              @for (conv of activeCaseConvs(); track conv.id) {
+                <div
+                  class="conv-item"
+                  [class.active]="selectedConv()?.id === conv.id"
+                  role="listitem"
+                  tabindex="0"
+                  (click)="selectConversation(conv)"
+                  (keydown.enter)="selectConversation(conv)"
+                  (keydown.space)="selectConversation(conv); $event.preventDefault()"
+                >
+                  <div class="avatar" [class]="msgSvc.getAvatarClass(conv)">
+                    {{ getInitials(conv) }}
+                    <span class="online-dot" aria-hidden="true"></span>
+                  </div>
+                  <div class="conv-info">
+                    <div class="conv-top">
+                      <span class="conv-name" [class.unread]="conv.unread_count > 0">
+                        {{ msgSvc.getOtherPartyName(conv) }}
+                      </span>
+                      <span class="conv-time">{{ formatTime(conv.last_message_at || conv.created_at) }}</span>
+                    </div>
+                    <div class="conv-preview" [class.unread]="conv.unread_count > 0">
+                      {{ conv.last_message || 'No messages yet' }}
+                    </div>
+                    <div class="conv-bottom">
+                      @if (msgSvc.getCaseTagLabel(conv)) {
+                        <span class="case-tag" [class]="msgSvc.getCaseTagClass(conv)">
+                          {{ msgSvc.getCaseTagLabel(conv) }}
+                        </span>
+                      }
+                      @if (conv.unread_count > 0) {
+                        <span class="unread-count">{{ conv.unread_count }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            @if (supportConvs().length > 0) {
+              <div class="conv-group-label" role="heading" aria-level="3">Support & Operations</div>
+              @for (conv of supportConvs(); track conv.id) {
+                <div
+                  class="conv-item"
+                  [class.active]="selectedConv()?.id === conv.id"
+                  role="listitem"
+                  tabindex="0"
+                  (click)="selectConversation(conv)"
+                  (keydown.enter)="selectConversation(conv)"
+                  (keydown.space)="selectConversation(conv); $event.preventDefault()"
+                >
+                  <div class="avatar" [class]="msgSvc.getAvatarClass(conv)">
+                    {{ getInitials(conv) }}
+                  </div>
+                  <div class="conv-info">
+                    <div class="conv-top">
+                      <span class="conv-name" [class.unread]="conv.unread_count > 0">
+                        {{ msgSvc.getOtherPartyName(conv) }}
+                      </span>
+                      <span class="conv-time">{{ formatTime(conv.last_message_at || conv.created_at) }}</span>
+                    </div>
+                    <div class="conv-preview" [class.unread]="conv.unread_count > 0">
+                      {{ conv.last_message || 'No messages yet' }}
+                    </div>
+                    <div class="conv-bottom">
+                      <span class="case-tag" [class]="msgSvc.getCaseTagClass(conv)">
+                        {{ msgSvc.getCaseTagLabel(conv) }}
+                      </span>
+                      @if (conv.unread_count > 0) {
+                        <span class="unread-count">{{ conv.unread_count }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            @if (closedConvs().length > 0) {
+              <div class="conv-group-label" role="heading" aria-level="3">Closed Cases</div>
+              @for (conv of closedConvs(); track conv.id) {
+                <div
+                  class="conv-item closed"
+                  [class.active]="selectedConv()?.id === conv.id"
+                  role="listitem"
+                  tabindex="0"
+                  (click)="selectConversation(conv)"
+                  (keydown.enter)="selectConversation(conv)"
+                  (keydown.space)="selectConversation(conv); $event.preventDefault()"
+                >
+                  <div class="avatar system">{{ getInitials(conv) }}</div>
+                  <div class="conv-info">
+                    <div class="conv-top">
+                      <span class="conv-name">{{ msgSvc.getOtherPartyName(conv) }}</span>
+                      <span class="conv-time">{{ formatTime(conv.last_message_at || conv.created_at) }}</span>
+                    </div>
+                    <div class="conv-preview">{{ conv.last_message || 'Conversation closed' }}</div>
+                    <div class="conv-bottom">
+                      <span class="case-tag tag-closed">Closed</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            @if (activeCaseConvs().length === 0 && supportConvs().length === 0 && closedConvs().length === 0) {
+              <div class="empty-state" style="padding: 32px">
+                <span>No conversations match your filters</span>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- Right Panel: Chat or Empty State -->
+      @if (selectedConv(); as conv) {
+        <div class="chat-panel" [class.hidden]="!selectedConv() && isMobile()">
+          <!-- Chat header -->
+          <div class="chat-header">
+            <button class="action-btn back-btn" aria-label="Back to conversations" (click)="selectedConv.set(null)" type="button">
+              &#8592;
+            </button>
+            <div class="avatar" [class]="msgSvc.getAvatarClass(conv)">
+              {{ getInitials(conv) }}
+            </div>
+            <div class="chat-user-info">
+              <div class="chat-user-name">{{ msgSvc.getOtherPartyName(conv) }}</div>
+              <div class="chat-user-role">
+                @switch (conv.conversation_type) {
+                  @case ('attorney_case') { Defense Attorney }
+                  @case ('operator') { Case Coordinator }
+                  @case ('support') { Support Agent }
+                }
+                @if (!conv.closed_at) {
+                  &middot; <span style="color: #22c55e">Online</span>
+                }
+              </div>
+            </div>
+            <div class="chat-actions">
+              @if (conv.conversation_type === 'attorney_case') {
+                <button class="action-btn" aria-label="View case" type="button">&#128196;</button>
+              }
+              <button class="action-btn" aria-label="More options" type="button">&#8942;</button>
+            </div>
+          </div>
+
+          <!-- Case context strip -->
+          @if (conv.conversation_type === 'attorney_case' && conv.case) {
+            <div class="case-strip">
+              <span class="case-strip-icon">&#9679;</span>
+              <span class="case-strip-text">
+                {{ conv.case.case_number }}
+                @if (conv.case.violation_type) {
+                  &middot; {{ conv.case.violation_type }}
+                }
+                &middot; {{ conv.case.status }}
+              </span>
+              <button class="case-strip-link" type="button">View Case</button>
+            </div>
+          }
+
+          <!-- Messages area -->
+          <div class="chat-messages" role="log" aria-live="polite" aria-label="Messages" #messagesContainer>
+            @if (loadingMsgs()) {
+              <div class="loading-state"><div class="spinner"></div></div>
+            } @else {
+              @for (msg of messages(); track msg.id; let i = $index) {
+                <!-- Date separator -->
+                @if (shouldShowDateSeparator(i)) {
+                  <div class="date-sep">{{ formatDateLabel(msg.created_at) }}</div>
+                }
+
+                <!-- Message bubble -->
+                @if (msg.message_type === 'system') {
+                  <div class="system-msg">{{ msg.content }}</div>
+                } @else {
+                  <div class="msg-row" [class.mine]="msg.sender_id === currentUserId()" [class.theirs]="msg.sender_id !== currentUserId()">
+                    @if (msg.sender_id !== currentUserId() && !isGroupedWithPrevious(i)) {
+                      <div class="msg-avatar" [class]="msgSvc.getSenderAvatarClass(msg)">
+                        {{ getSenderInitials(msg) }}
+                      </div>
+                    } @else if (msg.sender_id !== currentUserId()) {
+                      <div style="width: 28px; flex-shrink: 0"></div>
+                    }
+                    <div>
+                      @if (msg.sender_id !== currentUserId() && !isGroupedWithPrevious(i)) {
+                        <div class="msg-sender-name">
+                          {{ msg.sender?.name || msg.sender?.full_name || 'Unknown' }}
+                          @if (msgSvc.getSenderRole(msg)) {
+                            <span class="msg-role-badge" [class]="msgSvc.getSenderAvatarClass(msg)">
+                              {{ msgSvc.getSenderRole(msg) }}
+                            </span>
+                          }
+                        </div>
+                      }
+                      <div class="msg-bubble">{{ msg.content }}</div>
+                      @if (msg.attachments && msg.attachments.length > 0) {
+                        @for (att of msg.attachments; track att.id) {
+                          <div class="attachment-block">
+                            <span class="file-icon">&#128196;</span>
+                            <div class="attachment-info">
+                              <div class="attachment-name">{{ att.file_name }}</div>
+                              <div class="attachment-size">{{ formatFileSize(att.file_size) }}</div>
+                            </div>
+                          </div>
+                        }
+                      }
+                      @if (!isGroupedWithNext(i)) {
+                        <div class="msg-footer">
+                          <span>{{ msg.created_at | date:'shortTime' }}</span>
+                          @if (msg.sender_id === currentUserId()) {
+                            <span>{{ msg.is_read ? '&#10003;&#10003;' : '&#10003;' }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            }
+          </div>
+
+          <!-- Typing indicator -->
+          @if (typingIndicator()) {
+            <div class="typing-indicator">
+              <div class="typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <span>{{ msgSvc.getOtherPartyName(conv) }} is typing...</span>
+            </div>
+          }
+
+          <!-- Input area -->
+          @if (!conv.closed_at) {
+            <div class="chat-input-area">
+              <div class="input-toolbar">
+                <button class="toolbar-btn" aria-label="Attach file" type="button">&#128206;</button>
+                <button class="toolbar-btn" aria-label="Upload document" type="button">&#128196;</button>
+                <span class="encrypt-note">&#128274; End-to-end encrypted</span>
+              </div>
+              <div class="input-row">
+                <textarea
+                  placeholder="Type a message..."
+                  aria-label="Message input"
+                  [formControl]="messageControl"
+                  (keydown.enter)="onEnterKey($event)"
+                  rows="1"
+                ></textarea>
+                <button
+                  class="send-btn"
+                  aria-label="Send message"
+                  [disabled]="!messageControl.value?.trim() || sending()"
+                  (click)="sendMessage()"
+                  type="button"
+                >&#9654;</button>
+              </div>
+            </div>
+          } @else {
+            <div class="chat-input-area" style="text-align: center; color: #94a3b8; padding: 16px;">
+              This conversation is closed
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">
+          <span class="empty-state-icon">&#128172;</span>
+          <span>Select a conversation to start messaging</span>
+        </div>
       }
-      .msg-content {
-        max-width: 82%;
-      }
-    }
-  `],
+    </div>
+  `,
 })
-export class MessagesComponent implements OnInit {
-  private messagingService = inject(MessagingService);
-  private authService      = inject(AuthService);
-  private route            = inject(ActivatedRoute);
-  private fb               = inject(FormBuilder);
+export class MessagesComponent implements OnInit, OnDestroy {
+  // Services
+  protected msgSvc = inject(MessagingService);
+  private authService = inject(AuthService);
+  private messagesContainer = viewChild<ElementRef<HTMLElement>>('messagesContainer');
 
-  conversations   = signal<Conversation[]>([]);
-  messages        = signal<Message[]>([]);
-  selectedConv    = signal<Conversation | null>(null);
-  loadingConvs    = signal(true);
-  loadingMsgs     = signal(false);
-  sending         = signal(false);
-  convError       = signal('');
+  // State signals
+  conversations = signal<Conversation[]>([]);
+  messages = signal<Message[]>([]);
+  selectedConv = signal<Conversation | null>(null);
+  loadingConvs = signal(true);
+  loadingMsgs = signal(false);
+  sending = signal(false);
+  convError = signal('');
   typingIndicator = signal(false);
-  attachedFile    = signal<File | null>(null);
+  activeTab = signal<FilterTab>('all');
+  searchQuery = signal('');
 
-  currentUserId = computed(() => this.authService.currentUserValue?.id ?? '');
+  // Form controls
+  searchControl = new FormControl('');
+  messageControl = new FormControl('');
 
-  msgForm = this.fb.group({ content: [''] });
+  // Computed: total unread across all conversations
+  totalUnread = computed(() =>
+    this.conversations().reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
+  );
+
+  // Computed: filtered conversations based on tab + search
+  filteredConversations = computed(() => {
+    let convs = this.conversations();
+    const tab = this.activeTab();
+    const query = this.searchQuery().toLowerCase();
+
+    // Tab filter
+    if (tab === 'attorneys') {
+      convs = convs.filter(c => c.conversation_type === 'attorney_case');
+    } else if (tab === 'support') {
+      convs = convs.filter(c => c.conversation_type === 'operator' || c.conversation_type === 'support');
+    } else if (tab === 'unread') {
+      convs = convs.filter(c => (c.unread_count ?? 0) > 0);
+    }
+
+    // Search filter
+    if (query) {
+      convs = convs.filter(c => {
+        const name = this.msgSvc.getOtherPartyName(c);
+        return name.toLowerCase().includes(query);
+      });
+    }
+
+    return convs;
+  });
+
+  // Grouped conversations
+  activeCaseConvs = computed(() =>
+    this.filteredConversations().filter(c => c.conversation_type === 'attorney_case' && !c.closed_at)
+  );
+  supportConvs = computed(() =>
+    this.filteredConversations().filter(c => c.conversation_type === 'operator' || c.conversation_type === 'support')
+  );
+  closedConvs = computed(() =>
+    this.filteredConversations().filter(c => !!c.closed_at)
+  );
+
+  // Mobile detection
+  isMobile = signal(false);
+
+  // Current user
+  currentUserId = computed(() => this.authService.getCurrentUser()?.id ?? '');
+
+  // Tab definitions
+  filterTabs: { key: FilterTab; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'attorneys', label: 'Attorneys' },
+    { key: 'support', label: 'Support' },
+    { key: 'unread', label: 'Unread' },
+  ];
+
+  // Search debounce
+  private searchTimeout: ReturnType<typeof setTimeout> | null = null;
+  private subs: Subscription[] = [];
 
   ngOnInit(): void {
     this.loadConversations();
-    // Subscribe to real-time events
-    this.messagingService.newMessage$.subscribe(msg => {
-      if (this.selectedConv()?.id === msg.conversationId) {
-        this.messages.update(list => [...list, msg]);
-      }
-      // Update unread count on conversation list
-      this.conversations.update(list =>
-        list.map(c => c.id === msg.conversationId && c.id !== this.selectedConv()?.id
-          ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: msg.content }
-          : c),
-      );
-    });
-    this.messagingService.typing$.subscribe(e => {
-      if (this.selectedConv()?.id === e.conversationId) {
-        this.typingIndicator.set(true);
-        setTimeout(() => this.typingIndicator.set(false), 3000);
-      }
-    });
+    this.checkMobile();
+
+    // Debounced search
+    this.subs.push(
+      this.searchControl.valueChanges.subscribe(val => {
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+          this.searchQuery.set(val ?? '');
+        }, 300);
+      })
+    );
+
+    // Real-time: new message
+    this.subs.push(
+      this.msgSvc.newMessage$.subscribe(msg => {
+        if (this.selectedConv()?.id === msg.conversation_id) {
+          this.messages.update(list => [...list, msg]);
+          this.scrollToBottom();
+        }
+        // Update conversation preview in list
+        this.conversations.update(convs =>
+          convs.map(c => c.id === msg.conversation_id
+            ? { ...c, last_message: msg.content ?? '', last_message_at: msg.created_at }
+            : c
+          )
+        );
+      })
+    );
+
+    // Real-time: typing
+    this.subs.push(
+      this.msgSvc.typing$.subscribe(evt => {
+        if (evt.conversation_id === this.selectedConv()?.id) {
+          this.typingIndicator.set(true);
+          setTimeout(() => this.typingIndicator.set(false), 3000);
+        }
+      })
+    );
+
+    // Listen for resize
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => this.checkMobile());
+    }
   }
+
+  ngOnDestroy(): void {
+    this.subs.forEach(s => s.unsubscribe());
+    if (this.searchTimeout) clearTimeout(this.searchTimeout);
+    const conv = this.selectedConv();
+    if (conv) this.msgSvc.leaveConversation(conv.id);
+  }
+
+  // ---- Data loading ----
 
   loadConversations(): void {
     this.loadingConvs.set(true);
     this.convError.set('');
-    this.messagingService.getConversations().subscribe({
-      next: (list) => {
-        this.conversations.set(list);
+
+    this.msgSvc.getConversations().subscribe({
+      next: (res) => {
+        this.conversations.set(res.data ?? []);
         this.loadingConvs.set(false);
-        const id = this.route.snapshot.paramMap.get('conversationId');
-        if (id) {
-          const found = this.conversations().find(c => c.id === id);
-          if (found) this.selectConversation(found);
-        }
       },
-      error: (err) => {
+      error: () => {
         this.convError.set('Failed to load conversations. Please try again.');
         this.loadingConvs.set(false);
-      },
+      }
     });
   }
 
   selectConversation(conv: Conversation): void {
-    if (this.selectedConv()) this.messagingService.leaveConversation(this.selectedConv()!.id);
+    const prev = this.selectedConv();
+    if (prev) this.msgSvc.leaveConversation(prev.id);
+
     this.selectedConv.set(conv);
+    this.loadMessages(conv.id);
+    this.msgSvc.joinConversation(conv.id);
+  }
+
+  loadMessages(conversationId: string): void {
     this.loadingMsgs.set(true);
-    this.messagingService.joinConversation(conv.id);
-    this.messagingService.markAsRead(conv.id).subscribe();
-    this.conversations.update(list =>
-      list.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c),
-    );
-    this.messagingService.getMessages(conv.id).subscribe({
-      next: (msgs) => {
-        this.messages.set(msgs);
+    this.msgSvc.getMessages(conversationId).subscribe({
+      next: (res) => {
+        this.messages.set(res.data ?? []);
         this.loadingMsgs.set(false);
+        setTimeout(() => this.scrollToBottom(), 50);
       },
       error: () => {
         this.messages.set([]);
         this.loadingMsgs.set(false);
-      },
+      }
     });
   }
 
-  closeThread(): void {
-    if (this.selectedConv()) this.messagingService.leaveConversation(this.selectedConv()!.id);
-    this.selectedConv.set(null);
-    this.messages.set([]);
-  }
+  // ---- Sending ----
 
   sendMessage(): void {
-    const content = this.msgForm.value.content?.trim() ?? '';
-    const file = this.attachedFile();
-    if (!content && !file) return;
-    if (!this.selectedConv()) return;
+    const content = this.messageControl.value?.trim();
+    if (!content) return;
 
-    const convId = this.selectedConv()!.id;
+    const conv = this.selectedConv();
+    if (!conv) return;
+
     this.sending.set(true);
+    const recipientId = conv.driver_id === this.currentUserId()
+      ? (conv.attorney_id ?? conv.operator_id ?? undefined)
+      : conv.driver_id;
 
-    const displayContent = file
-      ? (content ? `${content}\n📎 ${file.name}` : `📎 ${file.name}`)
-      : content;
-
-    this.messagingService.sendMessage(convId, displayContent).subscribe({
-      next: (msg) => {
-        this.messages.update(list => [...list, msg]);
-        this.afterSend(displayContent);
+    this.msgSvc.sendMessage(conv.id, content, recipientId).subscribe({
+      next: (res) => {
+        this.messages.update(list => [...list, res.data]);
+        this.messageControl.setValue('');
+        this.sending.set(false);
+        this.scrollToBottom();
+        // Update conversation preview
+        this.conversations.update(convs =>
+          convs.map(c => c.id === conv.id
+            ? { ...c, last_message: content, last_message_at: new Date().toISOString() }
+            : c
+          )
+        );
       },
       error: () => {
-        // Fallback: add message locally so UI reflects it immediately
+        // Add local message as fallback
         const localMsg: Message = {
           id: `local-${Date.now()}`,
-          conversationId: convId,
-          senderId: this.currentUserId(),
-          content: displayContent,
-          isRead: false,
-          createdAt: new Date().toISOString(),
+          conversation_id: conv.id,
+          sender_id: this.currentUserId(),
+          content,
+          message_type: 'text',
+          created_at: new Date().toISOString(),
+          is_read: false,
         };
         this.messages.update(list => [...list, localMsg]);
-        this.afterSend(displayContent);
-      },
+        this.messageControl.setValue('');
+        this.sending.set(false);
+        this.scrollToBottom();
+      }
     });
   }
 
-  private afterSend(content: string): void {
-    this.msgForm.reset();
-    this.attachedFile.set(null);
-    this.sending.set(false);
-    // Update conversation preview
-    this.conversations.update(list =>
-      list.map(c => c.id === this.selectedConv()?.id
-        ? { ...c, lastMessage: content, lastMessageAt: new Date().toISOString() }
-        : c),
-    );
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    const maxSize = 10 * 1024 * 1024; // 10 MB
-    if (file.size > maxSize) {
-      this.attachedFile.set(null);
-      input.value = '';
-      return;
+  onEnterKey(event: Event): void {
+    const ke = event as KeyboardEvent;
+    if (!ke.shiftKey) {
+      ke.preventDefault();
+      this.sendMessage();
     }
-    this.attachedFile.set(file);
-    input.value = '';
   }
 
-  removeAttachment(): void {
-    this.attachedFile.set(null);
+  // ---- UI helpers ----
+
+  getInitials(conv: Conversation): string {
+    const name = this.msgSvc.getOtherPartyName(conv);
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   }
 
-  otherPartyName(conv: Conversation): string {
-    const uid = this.currentUserId();
-    return conv.driverId === uid ? (conv.attorney?.name ?? 'Attorney') : (conv.driver?.name ?? 'Driver');
+  getSenderInitials(msg: Message): string {
+    const name = msg.sender?.name ?? msg.sender?.full_name ?? '?';
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   }
 
-  isMyMessage(msg: Message): boolean {
-    return msg.senderId === this.currentUserId();
+  formatTime(dateStr: string): string {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffDays === 0) {
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  getInitials(name: string): string {
-    return name
-      .split(/[\s,]+/)
-      .filter(p => p && !p.endsWith('.'))
-      .map(p => p[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  }
-
-  formatRelativeTime(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'now';
-    if (mins < 60) return `${mins}m`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    const d = new Date(iso);
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  }
-
-  formatTime(iso: string): string {
-    const d = new Date(iso);
-    const h = d.getHours();
-    const m = d.getMinutes().toString().padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${h % 12 || 12}:${m} ${ampm}`;
-  }
-
-  formatDateLabel(iso: string): string {
-    const d = new Date(iso);
+  formatDateLabel(dateStr: string): string {
+    const d = new Date(dateStr);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -1045,9 +933,7 @@ export class MessagesComponent implements OnInit {
   shouldShowDateSeparator(index: number): boolean {
     const msgs = this.messages();
     if (index === 0) return true;
-    const curr = new Date(msgs[index].createdAt).toDateString();
-    const prev = new Date(msgs[index - 1].createdAt).toDateString();
-    return curr !== prev;
+    return new Date(msgs[index].created_at).toDateString() !== new Date(msgs[index - 1].created_at).toDateString();
   }
 
   isGroupedWithPrevious(index: number): boolean {
@@ -1055,9 +941,8 @@ export class MessagesComponent implements OnInit {
     if (index === 0) return false;
     const curr = msgs[index];
     const prev = msgs[index - 1];
-    if (curr.senderId !== prev.senderId) return false;
-    const gap = new Date(curr.createdAt).getTime() - new Date(prev.createdAt).getTime();
-    return gap < 120000; // 2 minutes
+    if (curr.sender_id !== prev.sender_id) return false;
+    return new Date(curr.created_at).getTime() - new Date(prev.created_at).getTime() < 120000;
   }
 
   isGroupedWithNext(index: number): boolean {
@@ -1065,8 +950,26 @@ export class MessagesComponent implements OnInit {
     if (index >= msgs.length - 1) return false;
     const curr = msgs[index];
     const next = msgs[index + 1];
-    if (curr.senderId !== next.senderId) return false;
-    const gap = new Date(next.createdAt).getTime() - new Date(curr.createdAt).getTime();
-    return gap < 120000; // 2 minutes
+    if (curr.sender_id !== next.sender_id) return false;
+    return new Date(next.created_at).getTime() - new Date(curr.created_at).getTime() < 120000;
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  private scrollToBottom(): void {
+    const container = this.messagesContainer()?.nativeElement;
+    if (container) {
+      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 0);
+    }
+  }
+
+  private checkMobile(): void {
+    if (typeof window !== 'undefined') {
+      this.isMobile.set(window.innerWidth < 769);
+    }
   }
 }

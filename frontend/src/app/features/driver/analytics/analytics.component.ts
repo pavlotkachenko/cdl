@@ -1,9 +1,4 @@
-// ============================================
-// Analytics Dashboard Component
-// Location: frontend/src/app/features/driver/analytics/analytics.component.ts
-// ============================================
-
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,14 +6,8 @@ import { Subject } from 'rxjs';
 import { takeUntil, timeout, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { DriverAnalyticsService, DriverAnalytics } from '../../../core/services/driver-analytics.service';
@@ -49,6 +38,7 @@ interface CaseByStatus {
   count: number;
   pct: number;
   color: string;
+  gradient: string;
 }
 
 interface TimelineMonth {
@@ -62,6 +52,12 @@ interface LocationData {
   pct: number;
 }
 
+interface DonutSegment {
+  color: string;
+  dasharray: string;
+  dashoffset: number;
+}
+
 @Component({
   selector: 'app-analytics',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,19 +66,16 @@ interface LocationData {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatMenuModule,
-    MatTooltipModule,
     TranslateModule,
   ],
 })
 export class AnalyticsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private analyticsService = inject(DriverAnalyticsService);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = true;
   summary: AnalyticsSummary | null = null;
@@ -91,14 +84,16 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   casesByStatus: CaseByStatus[] = [];
   timeline: TimelineMonth[] = [];
   locationData: LocationData[] = [];
+  donutSegments: DonutSegment[] = [];
 
   periodControl = new FormControl('quarter');
 
-  constructor(
-    private analyticsService: DriverAnalyticsService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+  periodOptions = [
+    { value: 'quarter', label: 'Last 3 Months' },
+    { value: 'half', label: 'Last 6 Months' },
+    { value: 'year', label: 'Last 12 Months' },
+    { value: 'all', label: 'All Time' },
+  ];
 
   ngOnInit(): void {
     this.loadData();
@@ -129,11 +124,13 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
           } else {
             this.applyMockData();
           }
+          this.computeDonutSegments();
           this.loading = false;
           this.cdr.markForCheck();
         },
         error: () => {
           this.applyMockData();
+          this.computeDonutSegments();
           this.loading = false;
           this.cdr.markForCheck();
         },
@@ -148,9 +145,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     // Stub — would trigger PDF generation
   }
 
-  // ============================================
-  // Formatting helpers
-  // ============================================
+  // ── Formatting helpers ──
 
   formatPercentage(value: number): string {
     return value.toFixed(1) + '%';
@@ -168,6 +163,12 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     return 'trending_flat';
   }
 
+  getChangeBgClass(change: number, invertBetter = false): string {
+    if (change === 0) return 'change-neutral';
+    const positive = invertBetter ? change < 0 : change > 0;
+    return positive ? 'change-up' : 'change-down';
+  }
+
   absValue(n: number): number {
     return Math.abs(n);
   }
@@ -179,13 +180,80 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     return max > 0 ? Math.round((count / max) * 100) : 0;
   }
 
+  barPixelHeight(count: number): number {
+    return Math.round((this.barHeight(count) / 100) * 140);
+  }
+
+  isCurrentMonth(month: string): boolean {
+    return this.timeline.length > 0 && month === this.timeline[this.timeline.length - 1].month;
+  }
+
+  isPeakMonth(count: number): boolean {
+    const max = this.timeline.length > 0
+      ? Math.max(...this.timeline.map(t => t.count))
+      : 0;
+    return count === max && max > 0;
+  }
+
+  locationBarWidth(count: number): number {
+    const max = this.locationData.length > 0
+      ? Math.max(...this.locationData.map(l => l.count))
+      : 1;
+    return max > 0 ? Math.round((count / max) * 100) : 0;
+  }
+
+  typeBarWidth(count: number): number {
+    const max = this.casesByType.length > 0
+      ? Math.max(...this.casesByType.map(t => t.count))
+      : 1;
+    return max > 0 ? Math.round((count / max) * 100) : 0;
+  }
+
+  get resolvedCount(): number {
+    const found = this.casesByStatus.find(s => s.status === 'Resolved');
+    return found ? found.count : 0;
+  }
+
+  get inProgressCount(): number {
+    return this.casesByStatus
+      .filter(s => s.status !== 'Resolved' && s.status !== 'Rejected')
+      .reduce((sum, s) => sum + s.count, 0);
+  }
+
+  get peakMonths(): string {
+    const max = this.timeline.length > 0
+      ? Math.max(...this.timeline.map(t => t.count))
+      : 0;
+    return this.timeline
+      .filter(t => t.count === max)
+      .map(t => t.month)
+      .join(' & ');
+  }
+
   goBack(): void {
     this.router.navigate(['/driver/dashboard']);
   }
 
-  // ============================================
-  // Data application
-  // ============================================
+  // ── Donut computation ──
+
+  private computeDonutSegments(): void {
+    const total = this.summary?.totalCases || 1;
+    const circumference = 2 * Math.PI * 58;
+    let offset = 0;
+    this.donutSegments = this.casesByType.map(item => {
+      const pct = item.count / total;
+      const dashLen = pct * circumference;
+      const seg: DonutSegment = {
+        color: item.color,
+        dasharray: `${dashLen} ${circumference - dashLen}`,
+        dashoffset: -offset,
+      };
+      offset += dashLen;
+      return seg;
+    });
+  }
+
+  // ── Data application ──
 
   private applyApiData(data: DriverAnalytics): void {
     this.summary = {
@@ -250,11 +318,11 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   private getMockCasesByStatus(): CaseByStatus[] {
     return [
-      { status: 'Resolved', count: 14, pct: 58.3, color: '#10b981' },
-      { status: 'In Progress', count: 4, pct: 16.7, color: '#3b82f6' },
-      { status: 'Under Review', count: 3, pct: 12.5, color: '#f59e0b' },
-      { status: 'New', count: 2, pct: 8.3, color: '#06b6d4' },
-      { status: 'Rejected', count: 1, pct: 4.2, color: '#ef4444' },
+      { status: 'Resolved', count: 14, pct: 58.3, color: '#10b981', gradient: 'linear-gradient(90deg,#10b981,#34d399)' },
+      { status: 'In Progress', count: 4, pct: 16.7, color: '#3b82f6', gradient: 'linear-gradient(90deg,#3b82f6,#60a5fa)' },
+      { status: 'Under Review', count: 3, pct: 12.5, color: '#f59e0b', gradient: 'linear-gradient(90deg,#f59e0b,#fbbf24)' },
+      { status: 'New', count: 2, pct: 8.3, color: '#06b6d4', gradient: 'linear-gradient(90deg,#06b6d4,#22d3ee)' },
+      { status: 'Rejected', count: 1, pct: 4.2, color: '#ef4444', gradient: 'linear-gradient(90deg,#ef4444,#f87171)' },
     ];
   }
 

@@ -1,177 +1,127 @@
-<!-- Layout Component Template -->
-<!-- Location: frontend/src/app/core/layout/layout.component.html -->
-
+<!-- Layout Component — Dark Sidebar + White Topbar -->
 <div class="app-layout">
 
-  <!-- Header -->
-  <mat-toolbar class="app-header" color="primary">
-    <button mat-icon-button (click)="toggleSidebar()" class="menu-toggle">
-      <mat-icon>menu</mat-icon>
-    </button>
-
-    <a class="header-left" routerLink="/">
-      <img src="assets/icons/logo.svg" alt="CDL Ticket Management" class="logo">
-    </a>
-
-    <span class="spacer"></span>
-
-    <div class="header-right">
-      <!-- Search (Optional) -->
-      <button mat-icon-button class="header-action" matTooltip="Search">
-        <mat-icon>search</mat-icon>
-      </button>
-
-      <!-- Language switcher -->
-      <app-language-switcher></app-language-switcher>
-
-      <!-- Notification Bell -->
-      <app-notification-bell></app-notification-bell>
-
-      <!-- User Menu -->
-      <button mat-button [matMenuTriggerFor]="userMenu" class="user-button">
-        <mat-icon class="user-avatar">account_circle</mat-icon>
-        <span class="user-name" *ngIf="!isMobile">{{ userName }}</span>
-        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
-      </button>
-      <mat-menu #userMenu="matMenu" xPosition="before">
-        <div class="user-menu-header">
-          <div class="user-info">
-            <mat-icon class="user-avatar-large">account_circle</mat-icon>
-            <div>
-              <div class="user-menu-name">{{ userName }}</div>
-              <div class="user-menu-email">{{ userEmail }}</div>
-            </div>
-          </div>
-        </div>
-        <mat-divider></mat-divider>
-        <button mat-menu-item [routerLink]="'/' + userRole + '/profile'">
-          <mat-icon>person</mat-icon>
-          <span>{{ 'HEADER.MY_PROFILE' | translate }}</span>
-        </button>
-        <button mat-menu-item [routerLink]="'/' + userRole + '/settings'">
-          <mat-icon>settings</mat-icon>
-          <span>{{ 'HEADER.SETTINGS' | translate }}</span>
-        </button>
-        <button mat-menu-item [routerLink]="'/' + userRole + '/help'">
-          <mat-icon>help</mat-icon>
-          <span>{{ 'HEADER.HELP_SUPPORT' | translate }}</span>
-        </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="logout()">
-          <mat-icon>logout</mat-icon>
-          <span>{{ 'HEADER.LOGOUT' | translate }}</span>
-        </button>
-      </mat-menu>
-    </div>
-  </mat-toolbar>
-
-  <!-- Sidenav Container -->
+  <!-- Sidebar -->
   <mat-sidenav-container class="sidenav-container">
 
-    <!-- Sidebar -->
     <mat-sidenav
       #sidenav
       [mode]="sidenavMode"
       [opened]="sidenavOpened"
-      [fixedInViewport]="true"
-      [fixedTopGap]="64"
+      [fixedInViewport]="false"
       class="app-sidenav">
       <app-sidebar></app-sidebar>
     </mat-sidenav>
 
     <!-- Main Content Area -->
-    <mat-sidenav-content class="main-content">
+    <mat-sidenav-content class="main-area">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <button mat-icon-button (click)="toggleSidebar()" class="menu-toggle" aria-label="Toggle navigation">
+          <mat-icon>{{ sidebarCollapsed ? 'menu' : 'menu_open' }}</mat-icon>
+        </button>
+
+        <div class="topbar-search">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input type="text" placeholder="Search tickets, violations, locations…" aria-label="Search">
+        </div>
+
+        <div class="topbar-right">
+          <!-- Language switcher -->
+          <app-language-switcher></app-language-switcher>
+
+          <!-- Notification Bell -->
+          <app-notification-bell></app-notification-bell>
+
+          <!-- User Menu -->
+          <button mat-icon-button [matMenuTriggerFor]="userMenu" class="topbar-icon" aria-label="User menu">
+            <mat-icon>settings</mat-icon>
+          </button>
+          <mat-menu #userMenu="matMenu" xPosition="before">
+            <div class="user-menu-header">
+              <div class="user-info">
+                <mat-icon class="user-avatar-large">account_circle</mat-icon>
+                <div>
+                  <div class="user-menu-name">{{ userName }}</div>
+                  <div class="user-menu-email">{{ userEmail }}</div>
+                </div>
+              </div>
+            </div>
+            <mat-divider></mat-divider>
+            <button mat-menu-item [routerLink]="'/' + userRole + '/profile'">
+              <mat-icon>person</mat-icon>
+              <span>{{ 'HEADER.MY_PROFILE' | translate }}</span>
+            </button>
+            <button mat-menu-item [routerLink]="'/' + userRole + '/settings'">
+              <mat-icon>settings</mat-icon>
+              <span>{{ 'HEADER.SETTINGS' | translate }}</span>
+            </button>
+            <button mat-menu-item [routerLink]="'/' + userRole + '/help'">
+              <mat-icon>help</mat-icon>
+              <span>{{ 'HEADER.HELP_SUPPORT' | translate }}</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="logout()">
+              <mat-icon>logout</mat-icon>
+              <span>{{ 'HEADER.LOGOUT' | translate }}</span>
+            </button>
+          </mat-menu>
+        </div>
+      </header>
+
+      <!-- Page Content -->
       <div class="content-wrapper">
         <router-outlet></router-outlet>
       </div>
 
       <!-- Collapsible Footer -->
       <footer class="app-footer" [class.collapsed]="footerCollapsed">
-        <!-- Toggle bar -->
         <button class="footer-toggle" (click)="toggleFooter()"
                 [attr.aria-label]="footerCollapsed ? 'Expand footer' : 'Collapse footer'"
                 [attr.aria-expanded]="!footerCollapsed">
           <mat-icon>{{ footerCollapsed ? 'expand_less' : 'expand_more' }}</mat-icon>
-          <span class="footer-toggle-label" *ngIf="footerCollapsed">
+          <span class="footer-toggle-label">
             &copy; {{ currentYear }} {{ 'FOOTER.COMPANY_NAME' | translate }}
-          </span>
-          <span class="footer-toggle-label" *ngIf="!footerCollapsed">
-            {{ 'FOOTER.COMPANY_NAME' | translate }}
           </span>
         </button>
 
-        <div class="footer-content" *ngIf="!footerCollapsed">
-
-          <!-- Footer Grid -->
-          <div class="footer-grid">
-
-            <!-- Company Info -->
-            <div class="footer-section">
-              <h3>{{ 'FOOTER.COMPANY_NAME' | translate }}</h3>
-              <p>{{ 'FOOTER.COMPANY_DESC' | translate }}</p>
-              <div class="social-links">
-                <a href="https://facebook.com" target="_blank" aria-label="Facebook">
-                  <mat-icon>facebook</mat-icon>
-                </a>
-                <a href="https://twitter.com" target="_blank" aria-label="Twitter">
-                  <mat-icon>tag</mat-icon>
-                </a>
-                <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn">
-                  <mat-icon>business</mat-icon>
-                </a>
+        @if (!footerCollapsed) {
+          <div class="footer-content">
+            <div class="footer-grid">
+              <div class="footer-section">
+                <h3>{{ 'FOOTER.COMPANY_NAME' | translate }}</h3>
+                <p>{{ 'FOOTER.COMPANY_DESC' | translate }}</p>
+              </div>
+              <div class="footer-section">
+                <h4>{{ 'FOOTER.QUICK_LINKS' | translate }}</h4>
+                <ul>
+                  <li><a routerLink="/driver/dashboard">{{ 'NAV.DASHBOARD' | translate }}</a></li>
+                  <li><a routerLink="/driver/tickets">{{ 'NAV.MY_CASES' | translate }}</a></li>
+                  <li><a routerLink="/driver/submit-ticket">{{ 'NAV.SUBMIT_TICKET' | translate }}</a></li>
+                </ul>
+              </div>
+              <div class="footer-section">
+                <h4>{{ 'FOOTER.SUPPORT' | translate }}</h4>
+                <ul>
+                  <li><a routerLink="/driver/help">{{ 'FOOTER.HELP_CENTER' | translate }}</a></li>
+                  <li><a routerLink="/driver/contact">{{ 'FOOTER.CONTACT_US' | translate }}</a></li>
+                  <li><a href="tel:1-800-235-4357">1-800-CDL-HELP</a></li>
+                </ul>
+              </div>
+              <div class="footer-section">
+                <h4>{{ 'FOOTER.LEGAL' | translate }}</h4>
+                <ul>
+                  <li><a routerLink="/privacy">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a></li>
+                  <li><a routerLink="/terms">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a></li>
+                </ul>
               </div>
             </div>
-
-            <!-- Quick Links -->
-            <div class="footer-section">
-              <h4>{{ 'FOOTER.QUICK_LINKS' | translate }}</h4>
-              <ul>
-                <li><a routerLink="/driver/dashboard">{{ 'NAV.DASHBOARD' | translate }}</a></li>
-                <li><a routerLink="/driver/tickets">{{ 'NAV.MY_CASES' | translate }}</a></li>
-                <li><a routerLink="/driver/submit-ticket">{{ 'NAV.SUBMIT_TICKET' | translate }}</a></li>
-                <li><a routerLink="/driver/analytics">{{ 'NAV.ANALYTICS' | translate }}</a></li>
-              </ul>
-            </div>
-
-            <!-- Support -->
-            <div class="footer-section">
-              <h4>{{ 'FOOTER.SUPPORT' | translate }}</h4>
-              <ul>
-                <li><a routerLink="/driver/help">{{ 'FOOTER.HELP_CENTER' | translate }}</a></li>
-                <li><a routerLink="/driver/contact">{{ 'FOOTER.CONTACT_US' | translate }}</a></li>
-                <li><a href="tel:1-800-235-4357">1-800-CDL-HELP</a></li>
-                <li><a href="mailto:support@cdltickets.com">{{ 'FOOTER.EMAIL_SUPPORT' | translate }}</a></li>
-              </ul>
-            </div>
-
-            <!-- Legal -->
-            <div class="footer-section">
-              <h4>{{ 'FOOTER.LEGAL' | translate }}</h4>
-              <ul>
-                <li><a routerLink="/privacy">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a></li>
-                <li><a routerLink="/terms">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a></li>
-                <li><a routerLink="/cookies">{{ 'FOOTER.COOKIE_POLICY' | translate }}</a></li>
-                <li><a routerLink="/accessibility">{{ 'FOOTER.ACCESSIBILITY' | translate }}</a></li>
-              </ul>
-            </div>
-
-          </div>
-
-          <!-- Footer Bottom -->
-          <div class="footer-bottom">
-            <p>&copy; {{ currentYear }} {{ 'FOOTER.COPYRIGHT' | translate }}</p>
-            <div class="footer-links">
-              <a routerLink="/privacy">{{ 'FOOTER.PRIVACY' | translate }}</a>
-              <span class="separator">•</span>
-              <a routerLink="/terms">{{ 'FOOTER.TERMS' | translate }}</a>
-              <span class="separator">•</span>
-              <a routerLink="/driver/contact">{{ 'FOOTER.CONTACT' | translate }}</a>
-              <span class="separator">•</span>
-              <a routerLink="/driver/help">{{ 'FOOTER.HELP' | translate }}</a>
+            <div class="footer-bottom">
+              <p>&copy; {{ currentYear }} {{ 'FOOTER.COPYRIGHT' | translate }}</p>
             </div>
           </div>
-
-        </div>
+        }
       </footer>
     </mat-sidenav-content>
 
