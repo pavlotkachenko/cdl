@@ -8,14 +8,66 @@ const { AppError } = require('../utils/errors');
 const storageService = require('./storage.service');
 
 /**
+ * Resolve public.users.id to auth_user_id (used by conversations/messages FKs).
+ */
+async function resolveAuthUserId(publicUserId) {
+  const { data } = await supabase
+    .from('users')
+    .select('auth_user_id')
+    .eq('id', publicUserId)
+    .single();
+  return data?.auth_user_id || publicUserId;
+}
+
+/**
+ * Check if a user is a participant in a conversation.
+ */
+function isParticipant(conversation, authId) {
+  return (
+    conversation.driver_id === authId ||
+    conversation.attorney_id === authId ||
+    conversation.operator_id === authId
+  );
+}
+
+/**
+ * Determine the recipient auth ID from a conversation.
+ * For two-party conversations, the recipient is the other participant.
+ */
+function getRecipientAuthId(conversation, senderAuthId) {
+  if (conversation.driver_id === senderAuthId) {
+    // Driver is sending — recipient is attorney or operator
+    return conversation.attorney_id || conversation.operator_id;
+  }
+  // Attorney or operator is sending — recipient is driver
+  return conversation.driver_id;
+}
+
+/**
+ * Update conversation preview fields after a message is sent.
+ */
+async function updateConversationPreview(conversationId, content) {
+  const preview = content && content.length > 100 ? content.substring(0, 100) + '...' : content;
+  await supabase
+    .from('conversations')
+    .update({
+      last_message: preview,
+      last_message_at: new Date().toISOString()
+    })
+    .eq('id', conversationId);
+}
+
+/**
  * Create new message
  */
 const createMessage = async ({ conversationId, senderId, recipientId, content, messageType, priority }) => {
   try {
+    const senderAuthId = await resolveAuthUserId(senderId);
+
     // Verify conversation exists and user has access
     const { data: conversation } = await supabase
       .from('conversations')
-      .select('driver_id, attorney_id, closed_at')
+      .select('driver_id, attorney_id, operator_id, closed_at')
       .eq('id', conversationId)
       .single();
 
@@ -27,7 +79,7 @@ const createMessage = async ({ conversationId, senderId, recipientId, content, m
       throw new AppError('Cannot send messages to closed conversation', 400);
     }
 
-    if (conversation.driver_id !== senderId && conversation.attorney_id !== senderId) {
+    if (!isParticipant(conversation, senderAuthId)) {
       throw new AppError('Unauthorized to send message in this conversation', 403);
     }
 
@@ -36,34 +88,30 @@ const createMessage = async ({ conversationId, senderId, recipientId, content, m
       throw new AppError('Message content exceeds 10,000 character limit', 400);
     }
 
+    // Determine recipient auth ID from conversation
+    const recipientAuthId = getRecipientAuthId(conversation, senderAuthId);
+
     // Create message
     const { data: message, error } = await supabase
       .from('messages')
       .insert([{
         conversation_id: conversationId,
-        sender_id: senderId,
-        recipient_id: recipientId,
+        sender_id: senderAuthId,
+        recipient_id: recipientAuthId,
         content,
         message_type: messageType,
         priority: priority || 'normal',
         encrypted: true
       }])
-      .select(`
-        *,
-        sender:users!sender_id(id, name, email, avatar_url),
-        recipient:users!recipient_id(id, name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) {
       throw new AppError(`Failed to create message: ${error.message}`, 500);
     }
 
-    // Update conversation last_message_at
-    await supabase
-      .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
-      .eq('id', conversationId);
+    // Update conversation preview and timestamp
+    await updateConversationPreview(conversationId, content);
 
     return message;
   } catch (error) {
@@ -77,10 +125,12 @@ const createMessage = async ({ conversationId, senderId, recipientId, content, m
  */
 const createMessageWithFile = async ({ conversationId, senderId, recipientId, content, file }) => {
   try {
+    const senderAuthId = await resolveAuthUserId(senderId);
+
     // Verify conversation access
     const { data: conversation } = await supabase
       .from('conversations')
-      .select('driver_id, attorney_id, closed_at')
+      .select('driver_id, attorney_id, operator_id, closed_at')
       .eq('id', conversationId)
       .single();
 
@@ -92,30 +142,29 @@ const createMessageWithFile = async ({ conversationId, senderId, recipientId, co
       throw new AppError('Cannot send messages to closed conversation', 400);
     }
 
-    if (conversation.driver_id !== senderId && conversation.attorney_id !== senderId) {
+    if (!isParticipant(conversation, senderAuthId)) {
       throw new AppError('Unauthorized to send message in this conversation', 403);
     }
 
     // Upload file to storage
     const fileUrl = await storageService.uploadFile(file, 'message-attachments');
 
+    // Determine recipient auth ID from conversation
+    const recipientAuthId = getRecipientAuthId(conversation, senderAuthId);
+
     // Create message
     const { data: message, error: messageError } = await supabase
       .from('messages')
       .insert([{
         conversation_id: conversationId,
-        sender_id: senderId,
-        recipient_id: recipientId,
+        sender_id: senderAuthId,
+        recipient_id: recipientAuthId,
         content: content || 'Sent a file',
         message_type: 'file',
         priority: 'normal',
         encrypted: true
       }])
-      .select(`
-        *,
-        sender:users!sender_id(id, name, email, avatar_url),
-        recipient:users!recipient_id(id, name, email)
-      `)
+      .select('*')
       .single();
 
     if (messageError) {
@@ -142,11 +191,8 @@ const createMessageWithFile = async ({ conversationId, senderId, recipientId, co
       throw new AppError(`Failed to create attachment: ${attachmentError.message}`, 500);
     }
 
-    // Update conversation
-    await supabase
-      .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
-      .eq('id', conversationId);
+    // Update conversation preview and timestamp
+    await updateConversationPreview(conversationId, content || `Sent a file: ${file.originalname}`);
 
     // Add attachment to message object
     message.attachments = [attachment];
@@ -163,6 +209,8 @@ const createMessageWithFile = async ({ conversationId, senderId, recipientId, co
  */
 const markAsRead = async (messageId, userId) => {
   try {
+    const authId = await resolveAuthUserId(userId);
+
     // Verify message exists and user is recipient
     const { data: message } = await supabase
       .from('messages')
@@ -174,7 +222,7 @@ const markAsRead = async (messageId, userId) => {
       throw new AppError('Message not found', 404);
     }
 
-    if (message.recipient_id !== userId) {
+    if (message.recipient_id !== authId) {
       throw new AppError('Only the recipient can mark message as read', 403);
     }
 
@@ -209,6 +257,8 @@ const markAsRead = async (messageId, userId) => {
  */
 const deleteMessage = async (messageId, userId) => {
   try {
+    const authId = await resolveAuthUserId(userId);
+
     // Verify message exists and user is sender
     const { data: message } = await supabase
       .from('messages')
@@ -220,7 +270,7 @@ const deleteMessage = async (messageId, userId) => {
       throw new AppError('Message not found', 404);
     }
 
-    if (message.sender_id !== userId) {
+    if (message.sender_id !== authId) {
       throw new AppError('Only the sender can delete this message', 403);
     }
 
@@ -263,15 +313,12 @@ const deleteMessage = async (messageId, userId) => {
  */
 const getMessageById = async (messageId, userId) => {
   try {
+    const authId = await resolveAuthUserId(userId);
+
+    // Plain select, no FK joins
     const { data: message, error } = await supabase
       .from('messages')
-      .select(`
-        *,
-        sender:users!sender_id(id, name, email, avatar_url),
-        recipient:users!recipient_id(id, name, email),
-        attachments:message_attachments(*),
-        conversation:conversations(id, driver_id, attorney_id)
-      `)
+      .select('*')
       .eq('id', messageId)
       .single();
 
@@ -282,13 +329,32 @@ const getMessageById = async (messageId, userId) => {
       throw new AppError(`Database error: ${error.message}`, 500);
     }
 
-    // Verify user has access
-    if (
-      message.conversation.driver_id !== userId &&
-      message.conversation.attorney_id !== userId
-    ) {
+    // Get conversation to verify access
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('id, driver_id, attorney_id, operator_id')
+      .eq('id', message.conversation_id)
+      .single();
+
+    if (!conversation || !isParticipant(conversation, authId)) {
       throw new AppError('Unauthorized to view this message', 403);
     }
+
+    // Hydrate sender/recipient
+    const userIds = [message.sender_id, message.recipient_id].filter(Boolean);
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, auth_user_id, full_name, email')
+      .in('auth_user_id', userIds);
+
+    const usersMap = {};
+    (users || []).forEach(u => {
+      usersMap[u.auth_user_id] = { id: u.id, name: u.full_name, email: u.email };
+    });
+
+    message.sender = usersMap[message.sender_id] || null;
+    message.recipient = usersMap[message.recipient_id] || null;
+    message.conversation = conversation;
 
     return message;
   } catch (error) {

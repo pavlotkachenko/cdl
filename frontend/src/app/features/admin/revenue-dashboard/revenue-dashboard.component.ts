@@ -16,63 +16,13 @@ import { TranslateModule } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
 
 import {
-  RevenueService, RevenueMetrics, RevenueByDate, RevenueByMethod, RevenueByAttorney, DateRange,
+  RevenueService, RevenueMetrics, RevenueByDate, RevenueByMethod, RevenueByAttorney, RecentTransaction, DateRange,
 } from '../../../services/revenue.service';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
 
-// ── Inline mock data (fallback when API fails) ──────────────────────────
-
-function generateMockDailyRevenue(): RevenueByDate[] {
-  const points: RevenueByDate[] = [];
-  const now = Date.now();
-  const baseRevenue = 450_00; // $450 base in cents
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now - i * 24 * 60 * 60 * 1000);
-    const dayOfWeek = date.getDay();
-    const weekdayMultiplier = (dayOfWeek === 0 || dayOfWeek === 6) ? 0.6 : 1.0;
-    const noise = 0.7 + Math.sin(i * 0.5) * 0.3 + (((i * 7 + 13) % 17) / 17) * 0.4;
-    const revenue = Math.round(baseRevenue * weekdayMultiplier * noise);
-    const transactions = Math.round(8 + noise * 6);
-    points.push({
-      date: date.toISOString().split('T')[0],
-      revenue,
-      transactions,
-    });
-  }
-  return points;
-}
-
-const MOCK_METRICS: RevenueMetrics = {
-  total_revenue: 15_640_000,
-  refunded_amount: 234_000,
-  total_transactions: 342,
-  failed_transactions: 11,
-  success_rate: 96.8,
-  monthly_recurring_revenue: 4_850_000,
-  average_transaction: 45_731,
-};
-
-const MOCK_DAILY_REVENUE: RevenueByDate[] = generateMockDailyRevenue();
-
-const MOCK_METHODS: RevenueByMethod[] = [
-  { method: 'Credit Card', revenue: 9_696_800, percentage: 62.0 },
-  { method: 'ACH Transfer', revenue: 3_284_400, percentage: 21.0 },
-  { method: 'Payment Plan', revenue: 1_876_800, percentage: 12.0 },
-  { method: 'Wire Transfer', revenue: 782_000, percentage: 5.0 },
-];
-
-const MOCK_ATTORNEYS: RevenueByAttorney[] = [
-  { attorney_id: 'a1', attorney_name: 'Sarah Mitchell', revenue: 1_850_000, transactions: 52 },
-  { attorney_id: 'a2', attorney_name: 'James Rodriguez', revenue: 1_620_000, transactions: 45 },
-  { attorney_id: 'a3', attorney_name: 'Linda Chen', revenue: 1_340_000, transactions: 38 },
-  { attorney_id: 'a4', attorney_name: 'Robert Thompson', revenue: 1_150_000, transactions: 34 },
-  { attorney_id: 'a5', attorney_name: 'Angela Davis', revenue: 980_000, transactions: 29 },
-  { attorney_id: 'a6', attorney_name: 'Michael Park', revenue: 720_000, transactions: 22 },
-  { attorney_id: 'a7', attorney_name: 'Diana Foster', revenue: 480_000, transactions: 15 },
-  { attorney_id: 'a8', attorney_name: 'Kevin O\'Brien', revenue: 240_000, transactions: 8 },
-];
+// ── Interfaces ───────────────────────────────────────────────────────────
 
 interface MetricCard {
   icon: string;
@@ -82,29 +32,6 @@ interface MetricCard {
   trendPercent: string;
   colorClass: string;
 }
-
-interface RecentTransaction {
-  date: string;
-  client: string;
-  amount: number;
-  status: 'completed' | 'pending' | 'refunded' | 'failed';
-  method: string;
-}
-
-const MOCK_RECENT_TRANSACTIONS: RecentTransaction[] = [
-  { date: '2026-03-10', client: 'Carlos Mendez', amount: 85000, status: 'completed', method: 'Credit Card' },
-  { date: '2026-03-10', client: 'Fleet Dynamics LLC', amount: 245000, status: 'completed', method: 'ACH Transfer' },
-  { date: '2026-03-09', client: 'James Walker', amount: 62500, status: 'completed', method: 'Credit Card' },
-  { date: '2026-03-09', client: 'Maria Santos', amount: 45000, status: 'pending', method: 'Payment Plan' },
-  { date: '2026-03-08', client: 'TruckLine Corp', amount: 180000, status: 'completed', method: 'Wire Transfer' },
-  { date: '2026-03-08', client: 'David Kim', amount: 75000, status: 'refunded', method: 'Credit Card' },
-  { date: '2026-03-07', client: 'Interstate Haulers', amount: 320000, status: 'completed', method: 'ACH Transfer' },
-  { date: '2026-03-07', client: 'Anna Petrova', amount: 55000, status: 'completed', method: 'Credit Card' },
-  { date: '2026-03-06', client: 'Mike Johnson', amount: 48000, status: 'failed', method: 'Credit Card' },
-  { date: '2026-03-06', client: 'Pacific Freight Inc', amount: 195000, status: 'completed', method: 'ACH Transfer' },
-];
-
-const MOCK_GROWTH = 12.4;
 
 // ── Component ────────────────────────────────────────────────────────────
 
@@ -695,7 +622,6 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
   };
 
   ngOnInit(): void {
-    this.recentTransactions.set(MOCK_RECENT_TRANSACTIONS);
     this.loadDashboardData();
   }
 
@@ -723,6 +649,7 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
       this.loadRevenueOverTime(dateRange),
       this.loadRevenueByMethod(dateRange),
       this.loadRevenueByAttorney(dateRange),
+      this.loadRecentTransactions(dateRange),
     ]).then(() => {
       this.loading.set(false);
     }).catch(() => {
@@ -779,9 +706,13 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private async loadMetrics(dateRange: DateRange): Promise<void> {
+    const emptyMetrics: RevenueMetrics = {
+      total_revenue: 0, refunded_amount: 0, total_transactions: 0,
+      failed_transactions: 0, success_rate: 0, monthly_recurring_revenue: 0, average_transaction: 0,
+    };
     const m = await new Promise<RevenueMetrics>((resolve) => {
       this.revenueService.getRevenueMetrics(dateRange).pipe(
-        catchError(() => of(MOCK_METRICS)),
+        catchError(() => of(emptyMetrics)),
       ).subscribe((data) => resolve(data));
     });
     this.metrics.set(m);
@@ -858,9 +789,9 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
       {
         icon: 'trending_up',
         labelKey: 'ADMIN.GROWTH',
-        value: `${MOCK_GROWTH}%`,
-        trendDirection: MOCK_GROWTH >= 0 ? 'up' : 'down',
-        trendPercent: `${MOCK_GROWTH >= 0 ? '+' : ''}${MOCK_GROWTH}%`,
+        value: m.total_revenue > 0 ? `${((m.total_revenue - m.refunded_amount) / m.total_revenue * 100).toFixed(1)}%` : '0%',
+        trendDirection: m.total_revenue > m.refunded_amount ? 'up' : 'down',
+        trendPercent: m.total_revenue > 0 ? `${((m.total_revenue - m.refunded_amount) / m.total_revenue * 100).toFixed(1)}%` : '0%',
         colorClass: 'color-cyan',
       },
     ];
@@ -873,7 +804,7 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
   private async loadRevenueOverTime(dateRange: DateRange): Promise<void> {
     const data = await new Promise<RevenueByDate[]>((resolve) => {
       this.revenueService.getDailyRevenue(dateRange).pipe(
-        catchError(() => of(MOCK_DAILY_REVENUE)),
+        catchError(() => of([] as RevenueByDate[])),
       ).subscribe((d) => resolve(d));
     });
     if (this.viewReady) {
@@ -886,7 +817,7 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
   private async loadRevenueByMethod(dateRange: DateRange): Promise<void> {
     const data = await new Promise<RevenueByMethod[]>((resolve) => {
       this.revenueService.getRevenueByMethod(dateRange).pipe(
-        catchError(() => of(MOCK_METHODS)),
+        catchError(() => of([] as RevenueByMethod[])),
       ).subscribe((d) => resolve(d));
     });
     this.paymentMethods.set(data);
@@ -900,7 +831,7 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
   private async loadRevenueByAttorney(dateRange: DateRange): Promise<void> {
     const data = await new Promise<RevenueByAttorney[]>((resolve) => {
       this.revenueService.getRevenueByAttorney(dateRange).pipe(
-        catchError(() => of(MOCK_ATTORNEYS)),
+        catchError(() => of([] as RevenueByAttorney[])),
       ).subscribe((d) => resolve(d));
     });
     if (this.viewReady) {
@@ -908,6 +839,15 @@ export class RevenueDashboardComponent implements OnInit, AfterViewInit, OnDestr
     } else {
       this.pendingChartData.attorneys = data;
     }
+  }
+
+  private async loadRecentTransactions(dateRange: DateRange): Promise<void> {
+    const data = await new Promise<RecentTransaction[]>((resolve) => {
+      this.revenueService.getRecentTransactions(dateRange).pipe(
+        catchError(() => of([] as RecentTransaction[])),
+      ).subscribe((d) => resolve(d));
+    });
+    this.recentTransactions.set(data);
   }
 
   private createRevenueChart(data: RevenueByDate[]): void {

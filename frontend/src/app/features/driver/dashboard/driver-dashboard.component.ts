@@ -54,6 +54,14 @@ const STATUS_CLASSES: Record<string, string> = {
   waiting_for_driver: 'status-warning',
 };
 
+interface ActivityItem {
+  caseNumber: string;
+  text: string;
+  time: string;
+  color: string;
+  isLast: boolean;
+}
+
 @Component({
   selector: 'app-driver-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -91,14 +99,19 @@ export class DriverDashboardComponent implements OnInit, OnDestroy {
     };
   });
 
+  todayFormatted = computed(() => {
+    const d = new Date();
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  });
+
   /** SVG donut chart segments */
   donutSegments = computed(() => {
     const s = this.stats();
     const total = s.total || 1;
     const segments = [
-      { value: s.active, color: '#1976d2', label: 'Active' },
-      { value: s.pending, color: '#f57c00', label: 'Pending' },
-      { value: s.resolved, color: '#1dad8c', label: 'Resolved' },
+      { value: s.active, color: '#3b82f6', label: 'Active' },
+      { value: s.pending, color: '#f59e0b', label: 'Pending' },
+      { value: s.resolved, color: '#10b981', label: 'Resolved' },
       { value: s.rejected, color: '#ef4444', label: 'Rejected' },
     ];
     const circumference = 2 * Math.PI * 40;
@@ -116,6 +129,23 @@ export class DriverDashboardComponent implements OnInit, OnDestroy {
         offset += dashLen;
         return result;
       });
+  });
+
+  activityItems = computed<ActivityItem[]>(() => {
+    const items = this.recentCases().map(c => {
+      const num = c.case_number || c.ticketNumber || c.id;
+      return {
+        caseNumber: num,
+        text: this.getActivityText(c),
+        time: this.formatRelativeTime(c.created_at || c.createdAt || ''),
+        color: this.getActivityColor(c.status),
+        isLast: false,
+      };
+    });
+    if (items.length > 0) {
+      items[items.length - 1].isLast = true;
+    }
+    return items;
   });
 
   ngOnInit(): void {
@@ -182,6 +212,14 @@ export class DriverDashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/driver/profile']);
   }
 
+  navigateToMessages(): void {
+    this.router.navigate(['/driver/messages']);
+  }
+
+  navigateToHelp(): void {
+    this.router.navigate(['/driver/help']);
+  }
+
   getStatusLabel(status: string): string {
     return STATUS_LABELS[status]
       ?? status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -189,5 +227,79 @@ export class DriverDashboardComponent implements OnInit, OnDestroy {
 
   getStatusClass(status: string): string {
     return STATUS_CLASSES[status] ?? 'status-default';
+  }
+
+  getViolationIcon(type?: string): string {
+    if (!type) return 'description';
+    const t = type.toLowerCase();
+    if (t.includes('speed')) return 'speed';
+    if (t.includes('hos') || t.includes('log')) return 'assignment';
+    if (t.includes('dot') || t.includes('inspect')) return 'search';
+    if (t.includes('cdl')) return 'gavel';
+    if (t.includes('weight')) return 'fitness_center';
+    if (t.includes('park')) return 'local_parking';
+    if (t.includes('traffic')) return 'traffic';
+    return 'description';
+  }
+
+  getViolationIconClass(type?: string): string {
+    if (!type) return 'case-icon-default';
+    const t = type.toLowerCase();
+    if (t.includes('speed')) return 'case-icon-speed';
+    if (t.includes('hos') || t.includes('log')) return 'case-icon-hos';
+    if (t.includes('dot') || t.includes('inspect')) return 'case-icon-dot';
+    return 'case-icon-default';
+  }
+
+  getTypeChipClass(type?: string): string {
+    if (!type) return 'type-other';
+    const t = type.toLowerCase();
+    if (t.includes('speed')) return 'type-speed';
+    if (t.includes('hos') || t.includes('log')) return 'type-hos';
+    if (t.includes('dot') || t.includes('inspect')) return 'type-dot';
+    return 'type-other';
+  }
+
+  formatDate(dateStr?: string | Date): string {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  formatRelativeTime(dateStr?: string | Date): string {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  getStatBarWidth(count: number): number {
+    const total = this.stats().total;
+    if (total === 0) return 0;
+    return Math.round((count / total) * 100);
+  }
+
+  private getActivityText(c: Case): string {
+    const num = c.case_number || c.ticketNumber || c.id;
+    if (c.status === 'new') return `${num} submitted successfully`;
+    if (c.status === 'assigned_to_attorney') return `Attorney assigned to ${num}`;
+    if (c.status === 'in_progress') return `${num} is being reviewed`;
+    if (PENDING_STATUSES.has(c.status)) return `Awaiting info for ${num}`;
+    if (RESOLVED_STATUSES.has(c.status)) return `${num} has been resolved`;
+    if (REJECTED_STATUSES.has(c.status)) return `${num} was rejected`;
+    return `${num} status updated`;
+  }
+
+  private getActivityColor(status: string): string {
+    if (status === 'new') return '#1dad8c';
+    if (ACTIVE_STATUSES.has(status)) return '#3b82f6';
+    if (PENDING_STATUSES.has(status)) return '#f59e0b';
+    if (RESOLVED_STATUSES.has(status)) return '#10b981';
+    if (REJECTED_STATUSES.has(status)) return '#ef4444';
+    return '#e5e7eb';
   }
 }

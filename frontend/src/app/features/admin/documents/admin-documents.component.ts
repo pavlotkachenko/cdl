@@ -1,6 +1,7 @@
 import {
-  Component, signal, computed, ChangeDetectionStrategy,
+  Component, OnInit, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, UpperCasePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -11,6 +12,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule } from '@ngx-translate/core';
+import { catchError, of } from 'rxjs';
+
+import { environment } from '../../../../environments/environment';
 
 interface AdminDocument {
   id: string;
@@ -20,21 +24,6 @@ interface AdminDocument {
   date: string;
   category: string;
 }
-
-const MOCK_DOCUMENTS: AdminDocument[] = [
-  { id: 'adoc1', name: 'Case Brief - CDL-2024-001.pdf', type: 'pdf', size: '245 KB', date: '2024-02-10', category: 'Legal' },
-  { id: 'adoc2', name: 'Court Filing - Smith v. State.pdf', type: 'pdf', size: '1.2 MB', date: '2024-02-08', category: 'Court Filings' },
-  { id: 'adoc3', name: 'Driver License Records.xlsx', type: 'xlsx', size: '890 KB', date: '2024-02-05', category: 'Client Documents' },
-  { id: 'adoc4', name: 'Monthly Revenue Report - Feb 2024.pdf', type: 'pdf', size: '3.1 MB', date: '2024-02-28', category: 'Internal' },
-  { id: 'adoc5', name: 'Attorney Agreement Template.docx', type: 'docx', size: '156 KB', date: '2024-01-15', category: 'Templates' },
-  { id: 'adoc6', name: 'Case Evidence Photos - CDL-2024-045.zip', type: 'zip', size: '15.4 MB', date: '2024-02-12', category: 'Legal' },
-  { id: 'adoc7', name: 'Staff Performance Report Q1.pdf', type: 'pdf', size: '2.3 MB', date: '2024-03-01', category: 'Internal' },
-  { id: 'adoc8', name: 'Client Intake Form Template.docx', type: 'docx', size: '89 KB', date: '2024-01-20', category: 'Templates' },
-  { id: 'adoc9', name: 'Court Appearance Schedule.pdf', type: 'pdf', size: '178 KB', date: '2024-02-18', category: 'Court Filings' },
-  { id: 'adoc10', name: 'Insurance Verification - Doe.pdf', type: 'pdf', size: '342 KB', date: '2024-02-22', category: 'Client Documents' },
-  { id: 'adoc11', name: 'Compliance Audit Report.pdf', type: 'pdf', size: '4.5 MB', date: '2024-02-25', category: 'Internal' },
-  { id: 'adoc12', name: 'Plea Agreement Draft.docx', type: 'docx', size: '234 KB', date: '2024-02-14', category: 'Legal' },
-];
 
 @Component({
   selector: 'app-admin-documents',
@@ -287,8 +276,12 @@ const MOCK_DOCUMENTS: AdminDocument[] = [
     }
   `],
 })
-export class AdminDocumentsComponent {
-  documents = signal(MOCK_DOCUMENTS);
+export class AdminDocumentsComponent implements OnInit {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl || 'http://localhost:3000/api';
+
+  documents = signal<AdminDocument[]>([]);
+  loading = signal(false);
   activeCategory = signal('All');
   showSearch = signal(false);
   searchTerm = signal('');
@@ -317,4 +310,57 @@ export class AdminDocumentsComponent {
     }
     return docs;
   });
+
+  ngOnInit(): void {
+    this.loadDocuments();
+  }
+
+  private loadDocuments(): void {
+    this.loading.set(true);
+    this.http.get<{ files: Array<{ id: string; file_name: string; file_type: string; file_size: number; created_at: string; category?: string }> }>(
+      `${this.apiUrl}/admin/documents`
+    ).pipe(
+      catchError(() => of({ files: [] as Array<{ id: string; file_name: string; file_type: string; file_size: number; created_at: string; category?: string }> })),
+    ).subscribe({
+      next: (response) => {
+        const docs: AdminDocument[] = (response.files || []).map(f => ({
+          id: f.id,
+          name: f.file_name,
+          type: this.mapFileType(f.file_type || f.file_name),
+          size: this.formatFileSize(f.file_size),
+          date: f.created_at ? f.created_at.split('T')[0] : '',
+          category: f.category || 'General',
+        }));
+        this.documents.set(docs);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.documents.set([]);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private mapFileType(typeOrName: string): AdminDocument['type'] {
+    const lower = typeOrName.toLowerCase();
+    if (lower.includes('pdf') || lower.endsWith('.pdf')) return 'pdf';
+    if (lower.includes('doc') || lower.endsWith('.docx') || lower.endsWith('.doc')) return 'docx';
+    if (lower.includes('xls') || lower.endsWith('.xlsx') || lower.endsWith('.xls')) return 'xlsx';
+    if (lower.includes('csv') || lower.endsWith('.csv')) return 'csv';
+    if (lower.includes('zip') || lower.endsWith('.zip') || lower.endsWith('.rar')) return 'zip';
+    if (lower.includes('image') || lower.endsWith('.jpg') || lower.endsWith('.png') || lower.endsWith('.jpeg')) return 'image';
+    return 'pdf';
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let size = bytes;
+    while (size >= 1024 && i < units.length - 1) {
+      size /= 1024;
+      i++;
+    }
+    return `${size.toFixed(size < 10 ? 1 : 0)} ${units[i]}`;
+  }
 }

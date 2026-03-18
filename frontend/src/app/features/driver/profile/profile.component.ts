@@ -143,16 +143,17 @@ import { AuthService } from '../../../core/services/auth.service';
     </div>
   `,
   styles: [`
-    .profile-page { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
+    .profile-page { max-width: 560px; margin: 0 auto; padding: 24px 16px; font-family: 'Mulish', sans-serif; }
     .profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-    .profile-header h1 { margin: 0; font-size: 1.4rem; }
-    .member-since { margin: 2px 0 0; font-size: 0.85rem; color: #888; }
-    .profile-card { margin-bottom: 16px; }
+    .profile-header h1 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #0f2137; }
+    .member-since { margin: 2px 0 0; font-size: 0.85rem; color: #8a94a6; }
+    .profile-card { margin-bottom: 16px; border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
     mat-card-header { display: flex; justify-content: space-between; align-items: center; }
     .card-header-action { margin-left: auto; }
     .info-grid { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
     .info-grid div { display: flex; flex-direction: column; gap: 2px; }
-    .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+    .info-grid div span:last-child { color: #0f2137; font-weight: 500; }
+    .lbl { font-size: 0.7rem; color: #8a94a6; text-transform: uppercase; font-weight: 600; letter-spacing: 0.04em; }
     .edit-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
     .full-width { width: 100%; }
 
@@ -163,8 +164,8 @@ import { AuthService } from '../../../core/services/auth.service';
       width: 64px;
       height: 64px;
       border-radius: 50%;
-      border: 2px solid #e0e0e0;
-      background: #f5f5f5;
+      border: 2px solid #edf2f6;
+      background: #f4f7f9;
       cursor: pointer;
       overflow: hidden;
       padding: 0;
@@ -183,12 +184,12 @@ import { AuthService } from '../../../core/services/auth.service';
       font-size: 56px;
       width: 56px;
       height: 56px;
-      color: #bbb;
+      color: #b0b8c9;
     }
     .avatar-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(15, 33, 55, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;

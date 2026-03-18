@@ -270,3 +270,94 @@ exports.refresh = async (req, res) => {
 
 // Exported for unit testing (see HARD_BUGS_REGISTRY.md BUG-004)
 exports._testExports = { dbRole, VALID_DB_ROLES };
+
+// POST /api/auth/oauth/callback
+// Exchanges a Supabase OAuth access token for our app JWT.
+exports.oauthCallback = async (req, res) => {
+  try {
+    const { access_token } = req.body;
+    if (!access_token) {
+      return res.status(400).json({ error: 'access_token is required' });
+    }
+
+    // 1. Verify the Supabase access token to get the authenticated user
+    const { data: userData, error: userError } = await supabase.auth.getUser(access_token);
+    if (userError || !userData.user) {
+      return res.status(401).json({ error: 'Invalid or expired OAuth token' });
+    }
+
+    const authUser = userData.user;
+    const email = authUser.email?.toLowerCase();
+    if (!email) {
+      return res.status(400).json({ error: 'OAuth account has no email' });
+    }
+
+    // 2. Look up existing user profile
+    let userProfile = null;
+    const { data: profileByEmail } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    userProfile = profileByEmail;
+
+    if (!userProfile) {
+      const { data: profileById } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .maybeSingle();
+      userProfile = profileById;
+    }
+
+    // 3. If no profile exists, create one (first-time OAuth user)
+    if (!userProfile) {
+      const oauthName = authUser.user_metadata?.full_name
+        || authUser.user_metadata?.name
+        || email.split('@')[0];
+      const requestedRole = 'driver'; // default role for new OAuth users
+      const profileRole = dbRole(requestedRole);
+
+      const { data: newProfile, error: profileError } = await supabase
+        .from('users')
+        .insert({
+          email,
+          full_name: oauthName,
+          role: profileRole,
+          auth_user_id: authUser.id,
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('OAuth profile creation error:', profileError);
+        return res.status(500).json({ error: 'Failed to create user profile' });
+      }
+      userProfile = newProfile;
+    }
+
+    // 4. Determine the effective role
+    const role = authUser.user_metadata?.role || userProfile.role || 'driver';
+
+    // 5. Generate our app JWT
+    const token = jwt.sign(
+      { userId: userProfile.id, email, role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: userProfile.id,
+        email,
+        role,
+        name: userProfile.full_name || '',
+        phone: userProfile.phone || '',
+      },
+    });
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    res.status(500).json({ error: 'OAuth authentication failed' });
+  }
+};

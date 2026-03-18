@@ -3,7 +3,7 @@
 // Location: frontend/src/app/features/driver/tickets/tickets.component.ts
 // ============================================
 
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -37,7 +37,7 @@ import { Case } from '../../../core/models';
 
 @Component({
   selector: 'app-tickets',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tickets.component.html',
   styleUrls: ['./tickets.component.scss'],
   imports: [
@@ -64,6 +64,9 @@ import { Case } from '../../../core/models';
 })
 export class TicketsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private caseService = inject(CaseService);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   cases: Case[] = [];
   filteredCases: Case[] = [];
@@ -108,15 +111,14 @@ export class TicketsComponent implements OnInit, OnDestroy {
   showHistory = false;
   showAdvancedFilters = false;
   selectedPresetId: string | null = null;
-  
+
   filterTemplates: any[] = [];
   filterHistory: any[] = [];
   filterPresets: any[] = [];
 
-  constructor(
-    private caseService: CaseService,
-    private router: Router
-  ) {}
+  // Pagination
+  currentPage = 1;
+  pageSize = 10;
 
   ngOnInit(): void {
     this.loadCases();
@@ -144,11 +146,13 @@ export class TicketsComponent implements OnInit, OnDestroy {
           this.cases = data.length > 0 ? data : this.getMockCases();
           this.applyFilters();
           this.loading = false;
+          this.cdr.markForCheck();
         },
         error: () => {
           this.cases = this.getMockCases();
           this.applyFilters();
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -167,6 +171,23 @@ export class TicketsComponent implements OnInit, OnDestroy {
     // Type filter
     this.typeFilter.valueChanges
       .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.applyFilters());
+
+    // Advanced filters
+    this.dateFromControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.applyFilters());
+
+    this.dateToControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.applyFilters());
+
+    this.locationControl.valueChanges
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe(() => this.applyFilters());
+
+    this.citationControl.valueChanges
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
       .subscribe(() => this.applyFilters());
   }
 
@@ -196,7 +217,49 @@ export class TicketsComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(c => c.type === type);
     }
 
+    // Date from filter
+    const dateFrom = this.dateFromControl.value;
+    if (dateFrom) {
+      const from = new Date(dateFrom).getTime();
+      filtered = filtered.filter(c => {
+        const d = c.violationDate || c.violation_date || c.createdAt || c.created_at;
+        return d ? new Date(d).getTime() >= from : true;
+      });
+    }
+
+    // Date to filter
+    const dateTo = this.dateToControl.value;
+    if (dateTo) {
+      const to = new Date(dateTo).getTime() + 86400000; // end of day
+      filtered = filtered.filter(c => {
+        const d = c.violationDate || c.violation_date || c.createdAt || c.created_at;
+        return d ? new Date(d).getTime() <= to : true;
+      });
+    }
+
+    // Location filter
+    const loc = this.locationControl.value?.toLowerCase() || '';
+    if (loc) {
+      filtered = filtered.filter(c => c.location?.toLowerCase().includes(loc));
+    }
+
+    // Citation number filter
+    const citation = this.citationControl.value?.toLowerCase() || '';
+    if (citation) {
+      filtered = filtered.filter(c => c.citationNumber?.toLowerCase().includes(citation));
+    }
+
     this.filteredCases = filtered;
+    this.currentPage = 1;
+  }
+
+  get advancedFiltersCount(): number {
+    let count = 0;
+    if (this.dateFromControl.value) count++;
+    if (this.dateToControl.value) count++;
+    if (this.locationControl.value) count++;
+    if (this.citationControl.value) count++;
+    return count;
   }
 
   get activeFiltersCount(): number {
@@ -204,10 +267,7 @@ export class TicketsComponent implements OnInit, OnDestroy {
     if (this.statusFilter.value !== 'all') count++;
     if (this.typeFilter.value !== 'all') count++;
     if (this.searchControl.value) count++;
-    if (this.dateFromControl.value) count++;
-    if (this.dateToControl.value) count++;
-    if (this.locationControl.value) count++;
-    if (this.citationControl.value) count++;
+    count += this.advancedFiltersCount;
     return count;
   }
 
@@ -272,6 +332,14 @@ formatDate(date: Date | string | undefined): string {
     this.searchControl.setValue('');
     this.statusFilter.setValue('all');
     this.typeFilter.setValue('all');
+    this.clearAdvancedFilters();
+  }
+
+  clearAdvancedFilters(): void {
+    this.dateFromControl.setValue(null);
+    this.dateToControl.setValue(null);
+    this.locationControl.setValue('');
+    this.citationControl.setValue('');
   }
 
   refresh(): void {
@@ -297,6 +365,79 @@ formatDate(date: Date | string | undefined): string {
   loadFilterPreset(preset: any): void {}
   deleteFilterPreset(preset: any, event: Event): void { event.stopPropagation(); }
   saveCurrentFiltersAsPreset(): void {}
+
+  // ── Stats ──
+  getStatusCount(status: string): number {
+    const statusGroups: Record<string, string[]> = {
+      'new': ['new', 'submitted'],
+      'in_progress': ['in_progress', 'under_review', 'reviewed', 'assigned_to_attorney', 'waiting_for_driver'],
+      'resolved': ['resolved'],
+      'closed': ['closed'],
+    };
+    const statuses = statusGroups[status] || [status];
+    return this.cases.filter(c => statuses.includes(c.status)).length;
+  }
+
+  // ── Pagination ──
+  get totalPages(): number {
+    return Math.ceil(this.filteredCases.length / this.pageSize) || 1;
+  }
+
+  get pagedCases(): Case[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredCases.slice(start, start + this.pageSize);
+  }
+
+  get pageStart(): number {
+    return this.filteredCases.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredCases.length);
+  }
+
+  get pageNumbers(): number[] {
+    const total = this.totalPages;
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: number[] = [1];
+    const start = Math.max(2, this.currentPage - 1);
+    const end = Math.min(total - 1, this.currentPage + 1);
+    if (start > 2) pages.push(-1); // ellipsis placeholder
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push(-1);
+    pages.push(total);
+    return pages;
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+  }
+
+  // ── Labels ──
+  getTypeLabel(type: string | undefined): string {
+    const labels: Record<string, string> = {
+      'speeding': 'Speeding',
+      'cdl_violation': 'CDL Violation',
+      'traffic': 'Traffic',
+      'accident': 'Accident',
+      'parking': 'Parking',
+      'weight_station': 'Weight Station',
+      'other': 'Other',
+    };
+    if (!type) return 'Unknown';
+    return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  formatRelative(date: Date | string | undefined): string {
+    if (!date) return '';
+    const diff = Date.now() - new Date(date).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days < 1) return 'Today';
+    if (days === 1) return '1 day ago';
+    if (days < 30) return `${days} days ago`;
+    return '';
+  }
 
   private getMockCases(): Case[] {
     return [

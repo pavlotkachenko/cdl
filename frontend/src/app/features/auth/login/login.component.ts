@@ -142,11 +142,23 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   loginWithGoogle(): void {
-    this.snackBar.open('Google login coming soon!', 'Close', { duration: 3000 });
+    this.loading = true;
+    this.authService.signInWithGoogle().subscribe({
+      error: () => {
+        this.loading = false;
+        this.snackBar.open('Google login failed. Please try again.', 'Close', { duration: 4000 });
+      }
+    });
   }
 
   loginWithFacebook(): void {
-    this.snackBar.open('Facebook login coming soon!', 'Close', { duration: 3000 });
+    this.loading = true;
+    this.authService.signInWithFacebook().subscribe({
+      error: () => {
+        this.loading = false;
+        this.snackBar.open('Facebook login failed. Please try again.', 'Close', { duration: 4000 });
+      }
+    });
   }
 
   async loginWithBiometric(): Promise<void> {

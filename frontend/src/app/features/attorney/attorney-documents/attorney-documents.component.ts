@@ -1,5 +1,5 @@
 import {
-  Component, signal, computed, ChangeDetectionStrategy,
+  Component, OnInit, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,6 +11,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule } from '@ngx-translate/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
+
+import { AttorneyService, CaseDocument } from '../../../core/services/attorney.service';
 
 interface AttorneyDocument {
   id: string;
@@ -20,23 +24,6 @@ interface AttorneyDocument {
   date: string;
   category: string;
 }
-
-const MOCK_DOCUMENTS: AttorneyDocument[] = [
-  { id: 'atdoc1', name: 'Case Brief - CDL-2026-112.pdf', type: 'pdf', size: '312 KB', date: '2026-03-11', category: 'Case Files' },
-  { id: 'atdoc2', name: 'Motion to Dismiss - Rivera.pdf', type: 'pdf', size: '1.4 MB', date: '2026-03-10', category: 'Court Filings' },
-  { id: 'atdoc3', name: 'Plea Agreement Draft - Kowalski.docx', type: 'docx', size: '198 KB', date: '2026-03-09', category: 'Court Filings' },
-  { id: 'atdoc4', name: 'Client Intake Form - David Park.docx', type: 'docx', size: '95 KB', date: '2026-03-08', category: 'Client Documents' },
-  { id: 'atdoc5', name: 'Evidence Photos - CDL-2026-078.zip', type: 'zip', size: '22.7 MB', date: '2026-03-07', category: 'Case Files' },
-  { id: 'atdoc6', name: 'Driver License Records - Chen.xlsx', type: 'xlsx', size: '445 KB', date: '2026-03-06', category: 'Client Documents' },
-  { id: 'atdoc7', name: 'Fee Agreement Template.docx', type: 'docx', size: '78 KB', date: '2026-02-28', category: 'Templates' },
-  { id: 'atdoc8', name: 'Court Filing - State v. Rivera.pdf', type: 'pdf', size: '2.1 MB', date: '2026-03-05', category: 'Court Filings' },
-  { id: 'atdoc9', name: 'Case Summary - CDL-2026-045.pdf', type: 'pdf', size: '567 KB', date: '2026-03-04', category: 'Case Files' },
-  { id: 'atdoc10', name: 'Client Correspondence Template.docx', type: 'docx', size: '64 KB', date: '2026-02-20', category: 'Templates' },
-  { id: 'atdoc11', name: 'Speeding Ticket Dismissal Brief.pdf', type: 'pdf', size: '890 KB', date: '2026-03-03', category: 'Case Files' },
-  { id: 'atdoc12', name: 'Letter to Court - CDL-2026-056.pdf', type: 'pdf', size: '234 KB', date: '2026-03-02', category: 'Correspondence' },
-  { id: 'atdoc13', name: 'Insurance Verification - Kowalski.pdf', type: 'pdf', size: '178 KB', date: '2026-03-01', category: 'Client Documents' },
-  { id: 'atdoc14', name: 'Discovery Response Template.docx', type: 'docx', size: '112 KB', date: '2026-02-15', category: 'Templates' },
-];
 
 @Component({
   selector: 'app-attorney-documents',
@@ -276,8 +263,11 @@ const MOCK_DOCUMENTS: AttorneyDocument[] = [
     }
   `],
 })
-export class AttorneyDocumentsComponent {
-  documents = signal(MOCK_DOCUMENTS);
+export class AttorneyDocumentsComponent implements OnInit {
+  private readonly attorneyService = inject(AttorneyService);
+
+  documents = signal<AttorneyDocument[]>([]);
+  loading = signal(true);
   activeCategory = signal('All');
   searchTerm = signal('');
 
@@ -289,6 +279,66 @@ export class AttorneyDocumentsComponent {
     { value: 'Templates', key: 'ATT.CAT_TEMPLATES' },
     { value: 'Correspondence', key: 'ATT.CAT_CORRESPONDENCE' },
   ];
+
+  ngOnInit(): void {
+    this.loadDocuments();
+  }
+
+  loadDocuments(): void {
+    this.loading.set(true);
+    this.attorneyService.getMyCases().pipe(
+      catchError(() => of({ cases: [] })),
+      switchMap(r => {
+        const cases = r.cases ?? [];
+        if (cases.length === 0) {
+          return of([] as CaseDocument[][]);
+        }
+        const docRequests = cases.map(c =>
+          this.attorneyService.getDocuments(c.id).pipe(
+            catchError(() => of({ documents: [] as CaseDocument[] })),
+          ),
+        );
+        return forkJoin(docRequests).pipe(
+          catchError(() => of([] as { documents: CaseDocument[] }[])),
+        );
+      }),
+    ).subscribe(results => {
+      const allDocs: AttorneyDocument[] = [];
+      for (const result of results) {
+        const docs = (result as { documents: CaseDocument[] }).documents ?? [];
+        for (const doc of docs) {
+          allDocs.push({
+            id: doc.id,
+            name: doc.file_name,
+            type: this.mapFileType(doc.file_type),
+            size: this.formatFileSize(doc.file_size),
+            date: doc.uploaded_at?.split('T')[0] ?? '',
+            category: 'Case Files',
+          });
+        }
+      }
+      this.documents.set(allDocs);
+      this.loading.set(false);
+    });
+  }
+
+  private mapFileType(fileType: string): AttorneyDocument['type'] {
+    const t = (fileType ?? '').toLowerCase();
+    if (t.includes('pdf')) return 'pdf';
+    if (t.includes('doc') || t.includes('word')) return 'docx';
+    if (t.includes('xls') || t.includes('sheet')) return 'xlsx';
+    if (t.includes('csv')) return 'csv';
+    if (t.includes('image') || t.includes('png') || t.includes('jpg') || t.includes('jpeg')) return 'image';
+    if (t.includes('zip') || t.includes('archive')) return 'zip';
+    return 'pdf';
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (!bytes || bytes === 0) return '0 KB';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
 
   filteredDocs = computed(() => {
     const cat = this.activeCategory();

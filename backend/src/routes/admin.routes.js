@@ -34,4 +34,12 @@ router.patch('/cases/:id/status', adminOnly, adminController.updateCaseStatus);
 // Operators (AC-1)
 router.get('/operators', adminOnly, adminController.getOperators);
 
+// Client management
+router.get('/clients', adminOnly, adminController.getAllClients);
+router.get('/clients/:id', adminOnly, adminController.getClient);
+router.patch('/clients/:id', adminOnly, adminController.updateClient);
+
+// Staff performance
+router.get('/performance', adminOnly, adminController.getStaffPerformance);
+
 module.exports = router;

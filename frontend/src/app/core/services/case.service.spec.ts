@@ -10,7 +10,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { CaseService } from './case.service';
 
-const API = 'http://localhost:3000/api';
+const API = '/api';
 
 describe('CaseService — Sprint 003 methods', () => {
   let service: CaseService;

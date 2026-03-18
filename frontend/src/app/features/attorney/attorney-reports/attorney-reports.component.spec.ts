@@ -1,13 +1,60 @@
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { HttpClient } from '@angular/common/http';
 import { TranslateModule } from '@ngx-translate/core';
 import { vi, describe, it, expect } from 'vitest';
+import { of } from 'rxjs';
 
 import { AttorneyReportsComponent } from './attorney-reports.component';
+import { AuthService } from '../../../core/services/auth.service';
+
+const MOCK_ANALYTICS = {
+  attorneyId: 'att-1',
+  summary: {
+    totalCases: 48,
+    activeCases: 12,
+    closedCases: 32,
+    successRate: 87.5,
+    totalRevenue: 67450,
+    avgResolutionTime: 12.4,
+  },
+  casesByStatus: [
+    { status: 'Active', count: 12 },
+    { status: 'Won', count: 32 },
+    { status: 'Lost', count: 4 },
+  ],
+  recentActivity: [
+    { month: 'Oct', cases: 7, won: 6, lost: 1, revenue: 9800 },
+    { month: 'Nov', cases: 9, won: 8, lost: 1, revenue: 12650 },
+    { month: 'Dec', cases: 6, won: 5, lost: 1, revenue: 8400 },
+    { month: 'Jan', cases: 10, won: 9, lost: 1, revenue: 13200 },
+    { month: 'Feb', cases: 8, won: 7, lost: 1, revenue: 11400 },
+    { month: 'Mar', cases: 8, won: 7, lost: 1, revenue: 12000 },
+  ],
+};
+
+function makeHttpSpy() {
+  return {
+    get: vi.fn().mockReturnValue(of(MOCK_ANALYTICS)),
+  };
+}
+
+function makeAuthSpy() {
+  return {
+    currentUserValue: { id: 'att-1', role: 'attorney' },
+  };
+}
 
 async function setup() {
+  const httpSpy = makeHttpSpy();
+  const authSpy = makeAuthSpy();
+
   await TestBed.configureTestingModule({
     imports: [AttorneyReportsComponent, NoopAnimationsModule, TranslateModule.forRoot()],
+    providers: [
+      { provide: HttpClient, useValue: httpSpy },
+      { provide: AuthService, useValue: authSpy },
+    ],
   }).compileComponents();
 
   const fixture = TestBed.createComponent(AttorneyReportsComponent);

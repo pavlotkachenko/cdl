@@ -1,5 +1,5 @@
 import {
-  Component, ChangeDetectionStrategy, signal, computed, inject,
+  Component, ChangeDetectionStrategy, OnInit, signal, computed, inject,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateModule } from '@ngx-translate/core';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+import { AttorneyService, AttorneyCase } from '../../../core/services/attorney.service';
 
 interface AttorneyClient {
   id: string;
@@ -23,139 +27,6 @@ interface AttorneyClient {
   createdAt: string;
   satisfaction: number;
 }
-
-const MOCK_CLIENTS: AttorneyClient[] = [
-  {
-    id: 'ac-001',
-    name: 'Marcus Johnson',
-    email: 'marcus.johnson@gmail.com',
-    phone: '(312) 555-0147',
-    cdlNumber: 'CDL-IL-884210',
-    state: 'IL',
-    totalCases: 5,
-    activeCases: 2,
-    lastContact: '2026-03-08',
-    createdAt: '2024-08-12',
-    satisfaction: 4.5,
-  },
-  {
-    id: 'ac-002',
-    name: 'Priya Patel',
-    email: 'priya.patel@outlook.com',
-    phone: '(214) 555-0293',
-    cdlNumber: 'CDL-TX-337891',
-    state: 'TX',
-    totalCases: 2,
-    activeCases: 1,
-    lastContact: '2026-03-05',
-    createdAt: '2026-02-20',
-    satisfaction: 5.0,
-  },
-  {
-    id: 'ac-003',
-    name: 'Carlos Menendez',
-    email: 'carlos.m@yahoo.com',
-    phone: '(305) 555-0418',
-    cdlNumber: 'CDL-FL-556023',
-    state: 'FL',
-    totalCases: 8,
-    activeCases: 3,
-    lastContact: '2026-02-28',
-    createdAt: '2023-11-03',
-    satisfaction: 4.0,
-  },
-  {
-    id: 'ac-004',
-    name: 'Aisha Williams',
-    email: 'aisha.w@protonmail.com',
-    phone: '(404) 555-0562',
-    cdlNumber: 'CDL-GA-221074',
-    state: 'GA',
-    totalCases: 3,
-    activeCases: 1,
-    lastContact: '2026-03-10',
-    createdAt: '2025-06-14',
-    satisfaction: 4.8,
-  },
-  {
-    id: 'ac-005',
-    name: 'Tomasz Kowalski',
-    email: 'tkowalski@gmail.com',
-    phone: '(718) 555-0831',
-    cdlNumber: 'CDL-NY-449382',
-    state: 'NY',
-    totalCases: 4,
-    activeCases: 0,
-    lastContact: '2025-12-15',
-    createdAt: '2024-03-22',
-    satisfaction: 3.5,
-  },
-  {
-    id: 'ac-006',
-    name: 'Fatima Al-Rashid',
-    email: 'fatima.alrashid@gmail.com',
-    phone: '(313) 555-0177',
-    cdlNumber: 'CDL-MI-773401',
-    state: 'MI',
-    totalCases: 1,
-    activeCases: 0,
-    lastContact: '2025-11-02',
-    createdAt: '2025-09-08',
-    satisfaction: 4.2,
-  },
-  {
-    id: 'ac-007',
-    name: 'James O\'Brien',
-    email: 'jobrien@truckers.net',
-    phone: '(503) 555-0624',
-    cdlNumber: 'CDL-OR-118956',
-    state: 'OR',
-    totalCases: 6,
-    activeCases: 2,
-    lastContact: '2026-03-01',
-    createdAt: '2024-01-17',
-    satisfaction: 4.7,
-  },
-  {
-    id: 'ac-008',
-    name: 'Rosa Gutierrez',
-    email: 'rosa.g@hotmail.com',
-    phone: '(602) 555-0953',
-    cdlNumber: 'CDL-AZ-665847',
-    state: 'AZ',
-    totalCases: 1,
-    activeCases: 1,
-    lastContact: '2026-03-09',
-    createdAt: '2026-03-02',
-    satisfaction: 4.9,
-  },
-  {
-    id: 'ac-009',
-    name: 'Darnell Washington',
-    email: 'dwashington@gmail.com',
-    phone: '(901) 555-0246',
-    cdlNumber: 'CDL-TN-992310',
-    state: 'TN',
-    totalCases: 7,
-    activeCases: 5,
-    lastContact: '2026-03-09',
-    createdAt: '2023-05-29',
-    satisfaction: 3.8,
-  },
-  {
-    id: 'ac-010',
-    name: 'Linh Nguyen',
-    email: 'linh.nguyen@gmail.com',
-    phone: '(206) 555-0715',
-    cdlNumber: 'CDL-WA-504129',
-    state: 'WA',
-    totalCases: 3,
-    activeCases: 2,
-    lastContact: '2026-02-18',
-    createdAt: '2025-12-01',
-    satisfaction: 4.3,
-  },
-];
 
 @Component({
   selector: 'app-attorney-clients',
@@ -660,10 +531,12 @@ const MOCK_CLIENTS: AttorneyClient[] = [
     </div>
   `,
 })
-export class AttorneyClientsComponent {
+export class AttorneyClientsComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
+  private readonly attorneyService = inject(AttorneyService);
 
-  readonly clients = signal<AttorneyClient[]>(MOCK_CLIENTS);
+  readonly clients = signal<AttorneyClient[]>([]);
+  readonly loading = signal(true);
   readonly searchTerm = signal('');
 
   readonly filteredClients = computed(() => {
@@ -696,6 +569,55 @@ export class AttorneyClientsComponent {
     const avg = all.reduce((sum, c) => sum + c.totalCases, 0) / all.length;
     return avg.toFixed(1);
   });
+
+  ngOnInit(): void {
+    this.loadClients();
+  }
+
+  loadClients(): void {
+    this.loading.set(true);
+    this.attorneyService.getMyCases().pipe(
+      catchError(() => of({ cases: [] as AttorneyCase[] })),
+    ).subscribe(r => {
+      const cases = r.cases ?? [];
+      const driverMap = new Map<string, AttorneyClient>();
+
+      for (const c of cases) {
+        const key = c.driver_name;
+        if (driverMap.has(key)) {
+          const existing = driverMap.get(key)!;
+          existing.totalCases++;
+          if (c.status !== 'closed' && c.status !== 'resolved') {
+            existing.activeCases++;
+          }
+          if (c.created_at > existing.lastContact) {
+            existing.lastContact = c.created_at.split('T')[0];
+          }
+          if (c.created_at < existing.createdAt) {
+            existing.createdAt = c.created_at.split('T')[0];
+          }
+        } else {
+          const isActive = c.status !== 'closed' && c.status !== 'resolved';
+          driverMap.set(key, {
+            id: c.id,
+            name: c.driver_name,
+            email: '',
+            phone: '',
+            cdlNumber: '',
+            state: c.state,
+            totalCases: 1,
+            activeCases: isActive ? 1 : 0,
+            lastContact: c.created_at.split('T')[0],
+            createdAt: c.created_at.split('T')[0],
+            satisfaction: 0,
+          });
+        }
+      }
+
+      this.clients.set([...driverMap.values()]);
+      this.loading.set(false);
+    });
+  }
 
   getInitials(name: string): string {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);

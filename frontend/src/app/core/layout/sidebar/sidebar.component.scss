@@ -1,180 +1,215 @@
-$primary-color: #1dad8c;
-$text-dark: #1f2937;
-$text-medium: #6b7280;
-$text-light: #9ca3af;
-$hover-bg: #f3f4f6;
-$border-color: #e5e7eb;
+// ============================================
+// Sidebar — Dark Navy Theme
+// ============================================
+
+$teal: #1dad8c;
+$sidebar-bg: #0a1e30;
 
 .sidebar-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: $sidebar-bg;
+  color: rgba(255, 255, 255, 0.5);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
 }
 
-// User Profile Section
-.sidebar-profile {
+// ── LOGO ──
+.sidebar-logo {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 16px;
-  background: linear-gradient(160deg, rgba(29, 173, 140, 0.06) 0%, rgba(29, 173, 140, 0.02) 100%);
+}
 
-  .profile-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, $primary-color 0%, #0f8a6f 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+.sidebar-logo-mark {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, $teal, #17a07f);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(29, 173, 140, 0.4);
+  flex-shrink: 0;
 
-    mat-icon {
-      color: white;
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
-    }
-  }
-
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-
-    .profile-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: $text-dark;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .profile-role {
-      font-size: 12px;
-      color: $primary-color;
-      font-weight: 500;
-    }
+  mat-icon {
+    color: white;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
   }
 }
 
-// Navigation
-.sidebar-nav {
-  padding: 8px;
+.sidebar-logo-text {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.sidebar-logo-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+// ── USER CARD ──
+.sidebar-user {
+  margin: 16px 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $teal, #2dd4bf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(29, 173, 140, 0.4);
+}
+
+.user-info {
   flex: 1;
+  min-width: 0;
+}
 
-  .nav-divider {
-    margin: 8px 0;
-    background-color: $border-color;
+.user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  font-size: 10px;
+  color: $teal;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// ── NAVIGATION ──
+.sidebar-nav {
+  padding: 8px 12px;
+  flex: 1;
+}
+
+.nav-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.25);
+  padding: 0 8px;
+  margin-bottom: 4px;
+  margin-top: 4px;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 8px 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s;
+  text-decoration: none;
+  position: relative;
+  margin-bottom: 2px;
+  min-height: 44px; // WCAG touch target
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
   }
 
-  a[mat-list-item] {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 14px;
-    margin-bottom: 2px;
-    border-radius: 10px;
-    color: $text-medium;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    min-height: 44px;
-    position: relative;
+  &.active {
+    background: rgba(29, 173, 140, 0.18);
+    color: $teal;
 
-    mat-icon {
-      color: $text-light;
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
-      transition: all 0.2s ease;
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      background: $teal;
+      border-radius: 0 3px 3px 0;
     }
 
-    span {
-      flex: 1;
+    .nav-icon mat-icon {
+      color: $teal;
     }
-
-    &:hover {
-      background-color: $hover-bg;
-      color: $text-dark;
-
-      mat-icon {
-        color: $primary-color;
-      }
-    }
-
-    &.active {
-      background: linear-gradient(135deg, rgba(29, 173, 140, 0.12) 0%, rgba(29, 173, 140, 0.04) 100%);
-      color: $primary-color;
-      font-weight: 600;
-
-      mat-icon {
-        color: $primary-color;
-      }
-
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 4px;
-        height: 22px;
-        background: $primary-color;
-        border-radius: 0 4px 4px 0;
-      }
-    }
-
-    ::ng-deep .mat-badge-content {
-      background: #ef4444;
-      color: white;
-      font-size: 10px;
-      font-weight: 600;
-      min-width: 16px;
-      height: 16px;
-      line-height: 16px;
-    }
-  }
-
-  mat-divider {
-    margin: 8px 0;
-    background-color: $border-color;
   }
 }
 
+.nav-icon {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.7;
+    transition: all 0.15s;
+  }
+}
+
+.nav-item.active .nav-icon mat-icon {
+  opacity: 1;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: $teal;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+
+// ── RESPONSIVE ──
 @media (max-width: 768px) {
-  .sidebar-nav a[mat-list-item] {
-    padding: 10px 12px;
-    gap: 12px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .sidebar-profile {
-    background: linear-gradient(160deg, rgba(29, 173, 140, 0.12) 0%, rgba(29, 173, 140, 0.04) 100%);
-
-    .profile-info .profile-name { color: #f9fafb; }
-  }
-
-  .sidebar-nav {
-    a[mat-list-item] {
-      color: #d1d5db;
-
-      &:hover {
-        background-color: #374151;
-        color: #f9fafb;
-      }
-
-      &.active {
-        background: linear-gradient(135deg, rgba(29, 173, 140, 0.2) 0%, rgba(29, 173, 140, 0.1) 100%);
-        color: #1dad8c;
-      }
-
-      mat-icon { color: #9ca3af; }
-      &:hover mat-icon, &.active mat-icon { color: #1dad8c; }
-    }
-
-    mat-divider, .nav-divider { background-color: #374151; }
+  .sidebar-wrapper {
+    width: 260px;
   }
 }

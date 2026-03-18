@@ -12,7 +12,7 @@ import { takeUntil } from 'rxjs/operators';
 
 // Angular Material
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
+// MatToolbarModule removed — using custom topbar
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -38,7 +38,6 @@ import { AuthService } from '../services/auth.service';
     CommonModule,
     RouterModule,
     MatSidenavModule,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
@@ -59,6 +58,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   sidenavMode: 'over' | 'side' = 'side';
   sidenavOpened = true;
   isMobile = false;
+  sidebarCollapsed = false;
 
   // User info
   userName = 'John Doe';
@@ -113,10 +113,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // ============================================
 
   toggleSidebar(): void {
-    if (this.sidenav) {
-      this.sidenav.toggle();
+    if (this.isMobile) {
+      // Mobile: use overlay toggle
+      if (this.sidenav) {
+        this.sidenav.toggle();
+      } else {
+        this.sidenavOpened = !this.sidenavOpened;
+      }
     } else {
-      this.sidenavOpened = !this.sidenavOpened;
+      // Desktop: collapse/expand the sidebar
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+      if (this.sidebarCollapsed) {
+        this.sidenavOpened = false;
+      } else {
+        this.sidenavOpened = true;
+      }
     }
   }
 

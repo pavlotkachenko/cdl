@@ -1,12 +1,18 @@
 import {
-  Component, ChangeDetectionStrategy, signal, computed,
+  Component, ChangeDetectionStrategy, OnInit, signal, computed, inject,
 } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { DecimalPipe, CurrencyPipe } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+import { AuthService } from '../../../core/services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 // ============================================
 // Report Type
@@ -73,84 +79,6 @@ interface TopClient {
   cases: number;
   revenue: number;
 }
-
-// ============================================
-// Mock Data
-// ============================================
-
-const MOCK_PERFORMANCE_KPIS: PerformanceKPI[] = [
-  { key: 'ATT.CASES_WON', value: 47, format: 'number', icon: 'emoji_events', color: '#388e3c' },
-  { key: 'ATT.CASES_LOST', value: 6, format: 'number', icon: 'cancel', color: '#c62828' },
-  { key: 'ATT.WIN_RATE', value: 88.7, format: 'percent', icon: 'trending_up', color: '#1976d2' },
-  { key: 'ATT.AVG_RESOLUTION', value: 12.4, format: 'days', icon: 'schedule', color: '#f57c00' },
-];
-
-const MOCK_MONTHLY_PERFORMANCE: MonthlyPerformance[] = [
-  { month: 'Oct 2025', cases: 9, won: 8, lost: 1, winRate: 88.9 },
-  { month: 'Nov 2025', cases: 11, won: 10, lost: 1, winRate: 90.9 },
-  { month: 'Dec 2025', cases: 7, won: 6, lost: 1, winRate: 85.7 },
-  { month: 'Jan 2026', cases: 10, won: 9, lost: 1, winRate: 90.0 },
-  { month: 'Feb 2026', cases: 8, won: 7, lost: 1, winRate: 87.5 },
-  { month: 'Mar 2026', cases: 8, won: 7, lost: 1, winRate: 87.5 },
-];
-
-const MOCK_RESOLUTION_TREND: ResolutionTrend[] = [
-  { month: 'Oct', days: 14.2 },
-  { month: 'Nov', days: 13.8 },
-  { month: 'Dec', days: 15.1 },
-  { month: 'Jan', days: 11.9 },
-  { month: 'Feb', days: 10.7 },
-  { month: 'Mar', days: 12.4 },
-];
-
-const MOCK_CASES_BY_STATUS: CaseStatusItem[] = [
-  { status: 'New', count: 5, color: '#42a5f5' },
-  { status: 'In Progress', count: 12, color: '#ffa726' },
-  { status: 'Pending Court', count: 8, color: '#ef5350' },
-  { status: 'Won', count: 47, color: '#66bb6a' },
-  { status: 'Lost', count: 6, color: '#78909c' },
-];
-
-const MOCK_CASES_BY_TYPE: ViolationTypeItem[] = [
-  { type: 'Speeding', count: 28 },
-  { type: 'Improper Lane Change', count: 14 },
-  { type: 'Following Too Closely', count: 11 },
-  { type: 'Overweight', count: 9 },
-  { type: 'Log Book Violation', count: 7 },
-  { type: 'Equipment Violation', count: 5 },
-];
-
-const MOCK_CASES_BY_STATE: StateItem[] = [
-  { state: 'Texas', count: 22 },
-  { state: 'California', count: 18 },
-  { state: 'Florida', count: 14 },
-  { state: 'Illinois', count: 11 },
-  { state: 'Georgia', count: 8 },
-];
-
-const MOCK_REVENUE_KPIS: RevenueKPI[] = [
-  { key: 'ATT.TOTAL_REVENUE', value: 67450, icon: 'payments', color: '#1976d2' },
-  { key: 'ATT.AVG_CASE_VALUE', value: 1275, icon: 'receipt_long', color: '#7b1fa2' },
-  { key: 'ATT.OUTSTANDING', value: 8200, icon: 'pending_actions', color: '#f57c00' },
-  { key: 'ATT.COLLECTED', value: 59250, icon: 'price_check', color: '#388e3c' },
-];
-
-const MOCK_MONTHLY_REVENUE: MonthlyRevenue[] = [
-  { month: 'Oct 2025', revenue: 9800, cases: 9 },
-  { month: 'Nov 2025', revenue: 12650, cases: 11 },
-  { month: 'Dec 2025', revenue: 8400, cases: 7 },
-  { month: 'Jan 2026', revenue: 13200, cases: 10 },
-  { month: 'Feb 2026', revenue: 11400, cases: 8 },
-  { month: 'Mar 2026', revenue: 12000, cases: 8 },
-];
-
-const MOCK_TOP_CLIENTS: TopClient[] = [
-  { name: 'James Kowalski', cases: 5, revenue: 6375 },
-  { name: 'Miguel Rivera', cases: 4, revenue: 5100 },
-  { name: 'Lisa Chen', cases: 3, revenue: 3825 },
-  { name: 'David Park', cases: 3, revenue: 3600 },
-  { name: 'Sarah Thompson', cases: 2, revenue: 2550 },
-];
 
 // ============================================
 // Component
@@ -1171,27 +1099,25 @@ const MOCK_TOP_CLIENTS: TopClient[] = [
     }
   `,
 })
-export class AttorneyReportsComponent {
+export class AttorneyReportsComponent implements OnInit {
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+
   // ==================== State ====================
   reportType = signal<ReportType>('performance');
+  loading = signal(true);
 
-  // ==================== Mock Data Signals ====================
-  performanceKPIs = signal<PerformanceKPI[]>(MOCK_PERFORMANCE_KPIS);
-  monthlyPerformance = signal<MonthlyPerformance[]>(MOCK_MONTHLY_PERFORMANCE);
-  resolutionTrend = signal<ResolutionTrend[]>(MOCK_RESOLUTION_TREND);
-  casesByStatus = signal<CaseStatusItem[]>(MOCK_CASES_BY_STATUS);
-  casesByType = signal<ViolationTypeItem[]>(MOCK_CASES_BY_TYPE);
-  casesByState = signal<StateItem[]>(MOCK_CASES_BY_STATE);
-  revenueKPIs = signal<RevenueKPI[]>(MOCK_REVENUE_KPIS);
-  monthlyRevenue = signal<MonthlyRevenue[]>(MOCK_MONTHLY_REVENUE);
-  topClients = signal<TopClient[]>(MOCK_TOP_CLIENTS);
-  satisfactionBreakdown = signal([
-    { label: '5 stars', count: 28, color: '#388e3c' },
-    { label: '4 stars', count: 16, color: '#66bb6a' },
-    { label: '3 stars', count: 6, color: '#ffa726' },
-    { label: '2 stars', count: 2, color: '#ef5350' },
-    { label: '1 star', count: 1, color: '#c62828' },
-  ]);
+  // ==================== Data Signals ====================
+  performanceKPIs = signal<PerformanceKPI[]>([]);
+  monthlyPerformance = signal<MonthlyPerformance[]>([]);
+  resolutionTrend = signal<ResolutionTrend[]>([]);
+  casesByStatus = signal<CaseStatusItem[]>([]);
+  casesByType = signal<ViolationTypeItem[]>([]);
+  casesByState = signal<StateItem[]>([]);
+  revenueKPIs = signal<RevenueKPI[]>([]);
+  monthlyRevenue = signal<MonthlyRevenue[]>([]);
+  topClients = signal<TopClient[]>([]);
+  satisfactionBreakdown = signal<{ label: string; count: number; color: string }[]>([]);
 
   // ==================== Computed ====================
   maxStatusCount = computed(() =>
@@ -1233,6 +1159,84 @@ export class AttorneyReportsComponent {
   totalSatisfaction = computed(() =>
     this.satisfactionBreakdown().reduce((sum, s) => sum + s.count, 0)
   );
+
+  // ==================== Lifecycle ====================
+  ngOnInit(): void {
+    this.loadAnalytics();
+  }
+
+  loadAnalytics(): void {
+    this.loading.set(true);
+    const user = this.authService.currentUserValue;
+    const attorneyId = user?.id ?? 'me';
+    const apiUrl = `${environment.apiUrl}/analytics/attorneys/${attorneyId}`;
+
+    this.http.get<{
+      attorneyId: string;
+      summary: {
+        totalCases: number;
+        activeCases: number;
+        closedCases: number;
+        successRate: number;
+        totalRevenue: number;
+        avgResolutionTime: number;
+      };
+      casesByStatus: { status: string; count: number }[];
+      recentActivity: { month: string; cases: number; won: number; lost: number; revenue: number }[];
+    }>(apiUrl).pipe(
+      catchError(() => of(null)),
+    ).subscribe(data => {
+      if (data) {
+        const s = data.summary;
+
+        this.performanceKPIs.set([
+          { key: 'ATT.CASES_WON', value: s.closedCases, format: 'number', icon: 'emoji_events', color: '#388e3c' },
+          { key: 'ATT.CASES_LOST', value: Math.max(0, s.totalCases - s.closedCases - s.activeCases), format: 'number', icon: 'cancel', color: '#c62828' },
+          { key: 'ATT.WIN_RATE', value: s.successRate, format: 'percent', icon: 'trending_up', color: '#1976d2' },
+          { key: 'ATT.AVG_RESOLUTION', value: s.avgResolutionTime, format: 'days', icon: 'schedule', color: '#f57c00' },
+        ]);
+
+        const statusColors: Record<string, string> = {
+          'New': '#42a5f5', 'In Progress': '#ffa726', 'Pending Court': '#ef5350',
+          'Won': '#66bb6a', 'Lost': '#78909c', 'Active': '#4facfe', 'Closed': '#78909c',
+        };
+        this.casesByStatus.set(
+          (data.casesByStatus ?? []).map(cs => ({
+            status: cs.status,
+            count: cs.count,
+            color: statusColors[cs.status] ?? '#78909c',
+          })),
+        );
+
+        if (data.recentActivity?.length) {
+          this.monthlyPerformance.set(
+            data.recentActivity.map(ra => ({
+              month: ra.month,
+              cases: ra.cases,
+              won: ra.won,
+              lost: ra.lost,
+              winRate: ra.cases > 0 ? (ra.won / ra.cases) * 100 : 0,
+            })),
+          );
+          this.monthlyRevenue.set(
+            data.recentActivity.map(ra => ({
+              month: ra.month,
+              revenue: ra.revenue,
+              cases: ra.cases,
+            })),
+          );
+        }
+
+        this.revenueKPIs.set([
+          { key: 'ATT.TOTAL_REVENUE', value: s.totalRevenue, icon: 'payments', color: '#1976d2' },
+          { key: 'ATT.AVG_CASE_VALUE', value: s.totalCases > 0 ? Math.round(s.totalRevenue / s.totalCases) : 0, icon: 'receipt_long', color: '#7b1fa2' },
+          { key: 'ATT.OUTSTANDING', value: 0, icon: 'pending_actions', color: '#f57c00' },
+          { key: 'ATT.COLLECTED', value: s.totalRevenue, icon: 'price_check', color: '#388e3c' },
+        ]);
+      }
+      this.loading.set(false);
+    });
+  }
 
   // ==================== Methods ====================
   printReport(): void {

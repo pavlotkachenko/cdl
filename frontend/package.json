@@ -3,13 +3,20 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "prestart": "ng cache clean",
     "start": "ng serve",
+    "prebuild": "ng cache clean",
     "build": "ng build",
+    "clean": "ng cache clean && rm -rf dist",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "e2e": "cypress run --spec 'cypress/e2e/auth/**/*.cy.ts'"
+    "e2e": "cypress run --spec 'cypress/e2e/auth/**/*.cy.ts'",
+    "storybook": "ng run frontend:storybook",
+    "build-storybook": "ng run frontend:build-storybook",
+    "dev": "npx concurrently --names FE,SB --prefix-colors blue,magenta \"ng serve\" \"ng run frontend:storybook\"",
+    "dev:all": "npx concurrently --names BE,FE,SB --prefix-colors green,blue,magenta \"cd ../backend && npm run dev\" \"ng serve\" \"ng run frontend:storybook\""
   },
   "prettier": {
     "printWidth": 100,
@@ -40,6 +47,9 @@
     "@ngx-translate/core": "^17.0.0",
     "@ngx-translate/http-loader": "^17.0.0",
     "@simplewebauthn/browser": "^13.2.2",
+    "@storybook/addon-themes": "^10.2.19",
+    "@storybook/addon-toolbars": "^9.0.8",
+    "@storybook/addon-viewport": "^9.0.8",
     "@stripe/stripe-js": "^8.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "chart.js": "^4.5.1",
@@ -50,9 +60,16 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@angular-devkit/architect": "^0.2101.0",
+    "@angular-devkit/build-angular": "^21.1.0",
+    "@angular-devkit/core": "^21.1.0",
     "@angular/build": "^21.1.1",
     "@angular/cli": "^21.1.1",
     "@angular/compiler-cli": "^21.1.0",
+    "@storybook/addon-a11y": "^10.2.19",
+    "@storybook/addon-docs": "^10.2.19",
+    "@storybook/addon-onboarding": "^10.2.19",
+    "@storybook/angular": "^10.2.19",
     "@types/chart.js": "^2.9.41",
     "@types/jspdf": "^1.3.3",
     "@types/node": "^25.3.0",
@@ -62,6 +79,7 @@
     "cypress-axe": "^1.7.0",
     "jsdom": "^27.1.0",
     "postcss": "^8.5.6",
+    "storybook": "^10.2.19",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"

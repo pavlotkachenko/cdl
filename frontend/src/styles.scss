@@ -24,6 +24,9 @@
 @use 'assets/styles/variables' as *;
 @use 'assets/styles/mixins/responsive' as *;
 
+// CSS Custom Properties Theme System (light/dark/high-contrast)
+@use 'assets/styles/css-tokens';
+
 // Angular Material Theme
 @use 'assets/styles/theme';
 

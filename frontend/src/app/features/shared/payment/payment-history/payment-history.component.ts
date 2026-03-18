@@ -47,195 +47,6 @@ export interface PaymentTransaction {
   metadata?: any;
 }
 
-const MOCK_PAYMENTS: PaymentTransaction[] = [
-  {
-    id: 'txn_mock_001',
-    user_id: 'usr_001',
-    attorney_name: 'James Patterson, Esq.',
-    amount: 75000,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Visa ending in 4242',
-    description: 'Attorney fee — Case #CDL-2026-0042 (Speeding 15+ over)',
-    receipt_url: 'https://receipts.example.com/txn_mock_001',
-    created_at: '2026-03-08T14:23:00Z',
-    metadata: { case_number: 'CDL-2026-0042' }
-  },
-  {
-    id: 'txn_mock_002',
-    user_id: 'usr_001',
-    attorney_name: 'James Patterson, Esq.',
-    amount: 18750,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Visa ending in 4242',
-    description: 'Installment 2/4 — Case #CDL-2026-0042',
-    receipt_url: 'https://receipts.example.com/txn_mock_002',
-    created_at: '2026-03-01T10:00:00Z',
-    metadata: { case_number: 'CDL-2026-0042', installment: '2/4' }
-  },
-  {
-    id: 'txn_mock_003',
-    user_id: 'usr_001',
-    attorney_name: 'Lisa Chen, Esq.',
-    amount: 120000,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Mastercard ending in 8888',
-    description: 'Attorney fee — Case #CDL-2026-0031 (Logbook violation)',
-    receipt_url: 'https://receipts.example.com/txn_mock_003',
-    created_at: '2026-02-20T09:15:00Z',
-    metadata: { case_number: 'CDL-2026-0031' }
-  },
-  {
-    id: 'txn_mock_004',
-    user_id: 'usr_001',
-    attorney_name: 'Lisa Chen, Esq.',
-    amount: 120000,
-    currency: 'usd',
-    status: 'pending',
-    payment_method: 'Visa ending in 4242',
-    description: 'Attorney fee — Case #CDL-2026-0055 (Overweight load)',
-    receipt_url: undefined,
-    created_at: '2026-03-09T16:45:00Z',
-    metadata: { case_number: 'CDL-2026-0055' }
-  },
-  {
-    id: 'txn_mock_005',
-    user_id: 'usr_001',
-    attorney_name: 'James Patterson, Esq.',
-    amount: 18750,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Visa ending in 4242',
-    description: 'Installment 1/4 — Case #CDL-2026-0042',
-    receipt_url: 'https://receipts.example.com/txn_mock_005',
-    created_at: '2026-02-22T10:00:00Z',
-    metadata: { case_number: 'CDL-2026-0042', installment: '1/4' }
-  },
-  {
-    id: 'txn_mock_006',
-    user_id: 'usr_001',
-    attorney_name: 'Robert Williams, Esq.',
-    amount: 95000,
-    currency: 'usd',
-    status: 'refunded',
-    payment_method: 'Amex ending in 1234',
-    description: 'Attorney fee — Case #CDL-2025-0189 (Case dismissed)',
-    receipt_url: 'https://receipts.example.com/txn_mock_006',
-    created_at: '2026-01-15T11:30:00Z',
-    metadata: { case_number: 'CDL-2025-0189' }
-  },
-  {
-    id: 'txn_mock_007',
-    user_id: 'usr_001',
-    attorney_name: 'Lisa Chen, Esq.',
-    amount: 85000,
-    currency: 'usd',
-    status: 'failed',
-    payment_method: 'Visa ending in 9999',
-    description: 'Attorney fee — Case #CDL-2026-0048 (Card declined)',
-    receipt_url: undefined,
-    created_at: '2026-03-05T08:20:00Z',
-    metadata: { case_number: 'CDL-2026-0048' }
-  },
-  {
-    id: 'txn_mock_008',
-    user_id: 'usr_001',
-    attorney_name: 'James Patterson, Esq.',
-    amount: 18750,
-    currency: 'usd',
-    status: 'pending',
-    payment_method: 'Visa ending in 4242',
-    description: 'Installment 3/4 — Case #CDL-2026-0042 (Scheduled)',
-    receipt_url: undefined,
-    created_at: '2026-03-15T10:00:00Z',
-    metadata: { case_number: 'CDL-2026-0042', installment: '3/4' }
-  },
-  {
-    id: 'txn_mock_009',
-    user_id: 'usr_001',
-    attorney_name: 'Maria Gonzalez, Esq.',
-    amount: 65000,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Discover ending in 5678',
-    description: 'Attorney fee — Case #CDL-2026-0063 (Lane violation)',
-    receipt_url: 'https://receipts.example.com/txn_mock_009',
-    created_at: '2026-02-14T15:10:00Z',
-    metadata: { case_number: 'CDL-2026-0063' }
-  },
-  {
-    id: 'txn_mock_010',
-    user_id: 'usr_001',
-    attorney_name: 'James Patterson, Esq.',
-    amount: 18750,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Visa ending in 4242',
-    description: 'Installment 4/4 — Case #CDL-2026-0042 (Final)',
-    receipt_url: 'https://receipts.example.com/txn_mock_010',
-    created_at: '2026-03-22T10:00:00Z',
-    metadata: { case_number: 'CDL-2026-0042', installment: '4/4' }
-  },
-  {
-    id: 'txn_mock_011',
-    user_id: 'usr_001',
-    attorney_name: 'Robert Williams, Esq.',
-    amount: 45000,
-    currency: 'usd',
-    status: 'succeeded',
-    payment_method: 'Mastercard ending in 8888',
-    description: 'Attorney fee — Case #CDL-2025-0201 (Red light)',
-    receipt_url: 'https://receipts.example.com/txn_mock_011',
-    created_at: '2025-12-10T09:30:00Z',
-    metadata: { case_number: 'CDL-2025-0201' }
-  },
-  {
-    id: 'txn_mock_012',
-    user_id: 'usr_001',
-    attorney_name: 'Maria Gonzalez, Esq.',
-    amount: 110000,
-    currency: 'usd',
-    status: 'pending',
-    payment_method: 'Amex ending in 1234',
-    description: 'Attorney fee — Case #CDL-2026-0071 (DOT inspection)',
-    receipt_url: undefined,
-    created_at: '2026-03-10T13:00:00Z',
-    metadata: { case_number: 'CDL-2026-0071' }
-  }
-];
-
-const MOCK_UNPAID_CASES: UnpaidCase[] = [
-  {
-    id: 'case_055',
-    case_number: 'CDL-2026-0055',
-    violation_type: 'Overweight load',
-    attorney_name: 'Lisa Chen, Esq.',
-    amount_due: 120000,
-    currency: 'usd',
-    due_date: '2026-03-20T00:00:00Z'
-  },
-  {
-    id: 'case_071',
-    case_number: 'CDL-2026-0071',
-    violation_type: 'DOT inspection failure',
-    attorney_name: 'Maria Gonzalez, Esq.',
-    amount_due: 110000,
-    currency: 'usd',
-    due_date: '2026-03-25T00:00:00Z'
-  },
-  {
-    id: 'case_048',
-    case_number: 'CDL-2026-0048',
-    violation_type: 'Speeding 10+ over',
-    attorney_name: 'Lisa Chen, Esq.',
-    amount_due: 85000,
-    currency: 'usd',
-    due_date: '2026-03-18T00:00:00Z'
-  }
-];
-
 @Component({
   selector: 'app-payment-history',
   standalone: true,
@@ -354,11 +165,11 @@ export class PaymentHistoryComponent implements OnInit {
       catchError(() => of([] as PaymentTransaction[]))
     ).subscribe({
       next: (transactions) => {
-        this.dataSource.data = transactions.length > 0 ? transactions : MOCK_PAYMENTS;
+        this.dataSource.data = transactions;
         this.loading = false;
       },
       error: () => {
-        this.dataSource.data = MOCK_PAYMENTS;
+        this.dataSource.data = [];
         this.loading = false;
       }
     });
@@ -370,10 +181,10 @@ export class PaymentHistoryComponent implements OnInit {
       catchError(() => of([] as UnpaidCase[]))
     ).subscribe({
       next: (cases) => {
-        this.unpaidCases = cases.length > 0 ? cases : MOCK_UNPAID_CASES;
+        this.unpaidCases = cases;
       },
       error: () => {
-        this.unpaidCases = MOCK_UNPAID_CASES;
+        this.unpaidCases = [];
       }
     });
   }

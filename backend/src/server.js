@@ -35,6 +35,7 @@ const ratingRoutes = require('./routes/rating.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 const webauthnRoutes = require('./routes/webauthn.routes');
+const revenueRoutes = require('./routes/revenue.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -193,6 +194,9 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/auth/webauthn', webauthnRoutes);
+
+// Revenue analytics (admin)
+app.use('/api/revenue', revenueRoutes);
 
 // ============================================
 // PRODUCTION STATIC FILE SERVING

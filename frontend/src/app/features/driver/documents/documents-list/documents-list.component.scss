@@ -4,15 +4,19 @@
 
 @use 'sass:color';
 
-$primary-color: #1dad8c;
-$text-dark: #1f2937;
-$text-medium: #6b7280;
-$text-light: #9ca3af;
-$background: #f9fafb;
-$border-color: #e5e7eb;
+$teal: #1dad8c;
+$teal-bg: #f0faf7;
+$teal-border: #c0e8dd;
+$text-primary: #0f2137;
+$text-body: #5a6578;
+$text-secondary: #8a94a6;
+$bg: #f4f7f9;
+$border: #edf2f6;
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
 
 .documents-container {
   padding: 24px;
+  font-family: 'Mulish', sans-serif;
 }
 
 // ============================================
@@ -54,7 +58,7 @@ $border-color: #e5e7eb;
 
       .count {
         margin-left: auto;
-        color: $text-light;
+        color: $text-secondary;
         font-size: 13px;
       }
     }
@@ -100,7 +104,7 @@ $border-color: #e5e7eb;
 
   p {
     font-size: 16px;
-    color: $text-medium;
+    color: $text-body;
     margin: 0;
   }
 }
@@ -117,7 +121,7 @@ $border-color: #e5e7eb;
     font-size: 80px;
     width: 80px;
     height: 80px;
-    color: $text-light;
+    color: $text-secondary;
     opacity: 0.5;
     margin-bottom: 16px;
   }
@@ -125,13 +129,13 @@ $border-color: #e5e7eb;
   h3 {
     font-size: 22px;
     font-weight: 700;
-    color: $text-dark;
+    color: $text-primary;
     margin: 0 0 8px 0;
   }
 
   p {
     font-size: 16px;
-    color: $text-medium;
+    color: $text-body;
     margin: 0;
   }
 }
@@ -153,18 +157,21 @@ $border-color: #e5e7eb;
 
   .document-card {
     cursor: pointer;
-    transition: all 0.3s ease;
-    border-radius: 12px;
+    transition: all 0.2s ease;
+    border-radius: 10px;
     overflow: hidden;
+    border: 1.5px solid $border;
+    box-shadow: $shadow-sm;
 
     &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
+      border-color: $teal-border;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
     .document-thumbnail {
       height: 200px;
-      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      background: linear-gradient(135deg, $bg 0%, $border 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -180,7 +187,7 @@ $border-color: #e5e7eb;
         font-size: 64px;
         width: 64px;
         height: 64px;
-        color: $primary-color;
+        color: $teal;
         opacity: 0.8;
       }
     }
@@ -191,7 +198,7 @@ $border-color: #e5e7eb;
       .document-title {
         font-size: 15px;
         font-weight: 600;
-        color: $text-dark;
+        color: $text-primary;
         margin-bottom: 12px;
         white-space: nowrap;
         overflow: hidden;
@@ -208,8 +215,8 @@ $border-color: #e5e7eb;
           font-size: 12px;
           height: 24px;
           padding: 0 8px;
-          background: #f0fdfa;
-          color: $primary-color;
+          background: $teal-bg;
+          color: $teal;
 
           mat-icon {
             font-size: 14px;
@@ -221,13 +228,13 @@ $border-color: #e5e7eb;
 
         .file-size {
           font-size: 13px;
-          color: $text-medium;
+          color: $text-secondary;
         }
       }
 
       .document-date {
         font-size: 13px;
-        color: $text-light;
+        color: $text-secondary;
       }
     }
 
@@ -235,7 +242,7 @@ $border-color: #e5e7eb;
       padding: 8px 16px !important;
       display: flex;
       justify-content: flex-end;
-      border-top: 1px solid $border-color;
+      border-top: 1.5px solid $border;
     }
   }
 }
@@ -252,12 +259,14 @@ $border-color: #e5e7eb;
 
   .document-list-item {
     cursor: pointer;
-    transition: all 0.3s ease;
-    border-radius: 8px;
+    transition: all 0.2s ease;
+    border-radius: 10px;
+    border: 1.5px solid $border;
+    box-shadow: $shadow-sm;
 
     &:hover {
+      border-color: $teal-border;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      border-color: $primary-color;
     }
 
     mat-card-content {
@@ -270,7 +279,7 @@ $border-color: #e5e7eb;
         font-size: 32px;
         width: 32px;
         height: 32px;
-        color: $primary-color;
+        color: $teal;
         flex-shrink: 0;
       }
 
@@ -281,7 +290,7 @@ $border-color: #e5e7eb;
         .document-name {
           font-size: 15px;
           font-weight: 600;
-          color: $text-dark;
+          color: $text-primary;
           margin-bottom: 6px;
           white-space: nowrap;
           overflow: hidden;
@@ -294,25 +303,25 @@ $border-color: #e5e7eb;
           gap: 8px;
           flex-wrap: wrap;
           font-size: 13px;
-          color: $text-medium;
+          color: $text-body;
           margin-bottom: 4px;
 
           .category-chip-small {
             font-size: 12px;
             height: 20px;
             padding: 0 8px;
-            background: #f0fdfa;
-            color: $primary-color;
+            background: $teal-bg;
+            color: $teal;
           }
 
           .separator {
-            color: $text-light;
+            color: $text-secondary;
           }
         }
 
         .document-description {
           font-size: 13px;
-          color: $text-medium;
+          color: $text-body;
           margin-top: 8px;
           white-space: nowrap;
           overflow: hidden;
@@ -337,9 +346,9 @@ $border-color: #e5e7eb;
   text-align: center;
   padding: 16px;
   font-size: 14px;
-  color: $text-medium;
-  background: $background;
-  border-radius: 8px;
+  color: $text-body;
+  background: $bg;
+  border-radius: 10px;
 }
 
 // ============================================

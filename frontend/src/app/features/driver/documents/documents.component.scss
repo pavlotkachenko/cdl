@@ -2,14 +2,18 @@
 // Documents Page Styles
 // ============================================
 
-$primary-color: #1dad8c;
-$text-dark: #1f2937;
-$text-medium: #6b7280;
-$background: #f9fafb;
+$teal: #1dad8c;
+$teal-border: #c0e8dd;
+$text-primary: #0f2137;
+$text-secondary: #8a94a6;
+$text-body: #5a6578;
+$bg: #f4f7f9;
+$border: #edf2f6;
 
 .documents-page {
   min-height: 100vh;
-  background: $background;
+  background: $bg;
+  font-family: 'Mulish', sans-serif;
 }
 
 // ============================================
@@ -19,7 +23,7 @@ $background: #f9fafb;
 .page-header {
   background: white;
   padding: 24px 32px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1.5px solid $border;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -44,20 +48,20 @@ $background: #f9fafb;
         font-size: 32px;
         width: 32px;
         height: 32px;
-        color: $primary-color;
+        color: $teal;
       }
 
       h1 {
         font-size: 28px;
         font-weight: 700;
-        color: $text-dark;
+        color: $text-primary;
         margin: 0;
       }
     }
 
     p {
       font-size: 15px;
-      color: $text-medium;
+      color: $text-body;
       margin: 0;
     }
   }
@@ -92,7 +96,7 @@ $background: #f9fafb;
 }
 
 .tab-content {
-  background: $background;
+  background: $bg;
   min-height: calc(100vh - 200px);
 }
 

@@ -32,6 +32,14 @@ export interface RevenueByAttorney {
   transactions: number;
 }
 
+export interface RecentTransaction {
+  date: string;
+  client: string;
+  amount: number;
+  status: 'completed' | 'pending' | 'refunded' | 'failed';
+  method: string;
+}
+
 export interface RevenueReport {
   metrics: RevenueMetrics;
   daily_revenue: RevenueByDate[];
@@ -125,6 +133,18 @@ export class RevenueService {
       params,
       responseType: 'blob'
     });
+  }
+
+  /**
+   * Get recent transactions
+   */
+  getRecentTransactions(dateRange?: DateRange): Observable<RecentTransaction[]> {
+    let params = new HttpParams();
+    if (dateRange) {
+      params = params.set('start_date', dateRange.start_date);
+      params = params.set('end_date', dateRange.end_date);
+    }
+    return this.http.get<RecentTransaction[]>(`${this.apiUrl}/transactions`, { params });
   }
 
   /**

@@ -14,103 +14,6 @@ const ACTIVE_STATUSES = new Set([
 
 const RESOLVED_STATUSES = new Set(['closed', 'resolved']);
 
-const MOCK_CASES: AttorneyCase[] = [
-  // 3 pending (assigned_to_attorney)
-  {
-    id: 'mc-001', case_number: 'CDL-2026-401', status: 'assigned_to_attorney',
-    violation_type: 'Speeding', state: 'Texas', driver_name: 'Miguel Hernandez',
-    created_at: '2026-03-08T14:30:00Z', attorney_price: 450,
-  },
-  {
-    id: 'mc-002', case_number: 'CDL-2026-412', status: 'assigned_to_attorney',
-    violation_type: 'Overweight', state: 'California', driver_name: 'Sarah Johnson',
-    created_at: '2026-03-09T09:15:00Z', attorney_price: 850,
-  },
-  {
-    id: 'mc-003', case_number: 'CDL-2026-418', status: 'assigned_to_attorney',
-    violation_type: 'Logbook Violation', state: 'Ohio', driver_name: 'James Carter',
-    created_at: '2026-03-10T16:45:00Z', attorney_price: 600,
-  },
-  // 4 active
-  {
-    id: 'mc-004', case_number: 'CDL-2026-305', status: 'send_info_to_attorney',
-    violation_type: 'Speeding', state: 'Georgia', driver_name: 'Robert Williams',
-    created_at: '2026-03-01T08:00:00Z', attorney_price: 500,
-  },
-  {
-    id: 'mc-005', case_number: 'CDL-2026-310', status: 'waiting_for_driver',
-    violation_type: 'Lane Violation', state: 'Florida', driver_name: 'Lisa Chen',
-    created_at: '2026-02-28T11:20:00Z', attorney_price: 350,
-  },
-  {
-    id: 'mc-006', case_number: 'CDL-2026-322', status: 'call_court',
-    violation_type: 'Overweight', state: 'Illinois', driver_name: 'David Kowalski',
-    created_at: '2026-02-25T10:00:00Z', attorney_price: 1200,
-  },
-  {
-    id: 'mc-007', case_number: 'CDL-2026-335', status: 'check_with_manager',
-    violation_type: 'Equipment Violation', state: 'Pennsylvania', driver_name: 'Maria Gonzalez',
-    created_at: '2026-02-20T15:30:00Z', attorney_price: 750,
-  },
-  // 3 resolved
-  {
-    id: 'mc-008', case_number: 'CDL-2026-210', status: 'closed',
-    violation_type: 'Speeding', state: 'New York', driver_name: 'Thomas Anderson',
-    created_at: '2026-01-15T09:00:00Z', attorney_price: 400,
-  },
-  {
-    id: 'mc-009', case_number: 'CDL-2026-225', status: 'resolved',
-    violation_type: 'Logbook Violation', state: 'Tennessee', driver_name: 'Angela Brooks',
-    created_at: '2026-01-20T14:00:00Z', attorney_price: 550,
-  },
-  {
-    id: 'mc-010', case_number: 'CDL-2026-240', status: 'resolved',
-    violation_type: 'Overweight', state: 'Indiana', driver_name: 'Kevin Patel',
-    created_at: '2026-02-05T12:00:00Z', attorney_price: 1500,
-  },
-  // 2 more with various statuses
-  {
-    id: 'mc-011', case_number: 'CDL-2026-350', status: 'waiting_for_driver',
-    violation_type: 'Reckless Driving', state: 'Michigan', driver_name: 'Daniel Okafor',
-    created_at: '2026-03-04T07:45:00Z', attorney_price: 1350,
-  },
-  {
-    id: 'mc-012', case_number: 'CDL-2026-260', status: 'closed',
-    violation_type: 'Lane Violation', state: 'Arizona', driver_name: 'Jennifer Martinez',
-    created_at: '2026-02-10T16:00:00Z', attorney_price: 250,
-  },
-  {
-    id: 'mc-013', case_number: 'CDL-2026-430', status: 'assigned_to_attorney',
-    violation_type: 'DOT Inspection Failure', state: 'Nevada', driver_name: 'Omar Hassan',
-    created_at: '2026-03-11T08:20:00Z', attorney_price: 950,
-  },
-  {
-    id: 'mc-014', case_number: 'CDL-2026-360', status: 'call_court',
-    violation_type: 'Speeding', state: 'Colorado', driver_name: 'Brian Murphy',
-    created_at: '2026-03-03T13:10:00Z', attorney_price: 475,
-  },
-  {
-    id: 'mc-015', case_number: 'CDL-2026-275', status: 'resolved',
-    violation_type: 'Equipment Violation', state: 'Virginia', driver_name: 'Priya Sharma',
-    created_at: '2026-02-08T09:30:00Z', attorney_price: 680,
-  },
-  {
-    id: 'mc-016', case_number: 'CDL-2026-440', status: 'send_info_to_attorney',
-    violation_type: 'Reckless Driving', state: 'Washington', driver_name: 'Tyler Brooks',
-    created_at: '2026-03-10T14:55:00Z', attorney_price: 1100,
-  },
-  {
-    id: 'mc-017', case_number: 'CDL-2026-290', status: 'closed',
-    violation_type: 'Overweight', state: 'Minnesota', driver_name: 'Yuki Tanaka',
-    created_at: '2026-02-12T11:00:00Z', attorney_price: 900,
-  },
-  {
-    id: 'mc-018', case_number: 'CDL-2026-455', status: 'assigned_to_attorney',
-    violation_type: 'Failure to Signal', state: 'Oregon', driver_name: 'Alejandro Ruiz',
-    created_at: '2026-03-11T10:45:00Z', attorney_price: 520,
-  },
-];
-
 type StatusCategory = 'all' | 'pending' | 'active' | 'resolved';
 
 interface StatusBadgeInfo {
@@ -518,6 +421,7 @@ export class AttorneyCasesComponent implements OnInit {
   private router = inject(Router);
 
   cases = signal<AttorneyCase[]>([]);
+  loading = signal(false);
   searchQuery = signal('');
   statusFilter = signal<StatusCategory>('all');
   violationFilter = signal('all');
@@ -562,11 +466,12 @@ export class AttorneyCasesComponent implements OnInit {
   }
 
   loadCases(): void {
+    this.loading.set(true);
     this.attorneyService.getMyCases().pipe(
-      catchError(() => of({ cases: MOCK_CASES })),
+      catchError(() => of({ cases: [] as AttorneyCase[] })),
     ).subscribe(r => {
-      const cases = r.cases?.length ? r.cases : MOCK_CASES;
-      this.cases.set(cases);
+      this.cases.set(r.cases ?? []);
+      this.loading.set(false);
     });
   }
 

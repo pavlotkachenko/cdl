@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed, ChangeDetectionStrategy,
+  Component, OnInit, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -8,6 +8,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatBadgeModule } from '@angular/material/badge';
 import { TranslateModule } from '@ngx-translate/core';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+import { NotificationService } from '../../../core/services/notification.service';
 
 interface AttorneyNotification {
   id: string;
@@ -17,105 +21,6 @@ interface AttorneyNotification {
   read: boolean;
   created_at: string;
 }
-
-const MOCK_NOTIFICATIONS: AttorneyNotification[] = [
-  {
-    id: 'atn-001',
-    title: 'Case Assigned to You',
-    message: 'Case CDL-2026-112 has been assigned to you by the dispatcher',
-    type: 'info',
-    read: false,
-    created_at: '2026-03-11T09:45:00Z',
-  },
-  {
-    id: 'atn-002',
-    title: 'Client Uploaded Document',
-    message: 'Miguel Rivera uploaded a new document for case CDL-2026-098',
-    type: 'info',
-    read: false,
-    created_at: '2026-03-11T08:30:00Z',
-  },
-  {
-    id: 'atn-003',
-    title: 'Court Date Reminder',
-    message: 'Court hearing for case CDL-2026-078 is in 3 days — prepare filings',
-    type: 'warning',
-    read: false,
-    created_at: '2026-03-10T17:00:00Z',
-  },
-  {
-    id: 'atn-004',
-    title: 'Payment Received',
-    message: 'Payment of $850 received from client James Kowalski for case CDL-2026-065',
-    type: 'success',
-    read: false,
-    created_at: '2026-03-10T14:22:00Z',
-  },
-  {
-    id: 'atn-005',
-    title: 'Case Resolved — Won',
-    message: 'Case CDL-2026-045 has been resolved in your favor — ticket dismissed',
-    type: 'success',
-    read: true,
-    created_at: '2026-03-10T11:15:00Z',
-  },
-  {
-    id: 'atn-006',
-    title: 'Client Message Received',
-    message: 'New message from Lisa Chen regarding case CDL-2026-101',
-    type: 'info',
-    read: false,
-    created_at: '2026-03-10T09:48:00Z',
-  },
-  {
-    id: 'atn-007',
-    title: 'Filing Deadline Tomorrow',
-    message: 'Motion to dismiss for case CDL-2026-089 must be filed by end of day tomorrow',
-    type: 'warning',
-    read: false,
-    created_at: '2026-03-09T16:30:00Z',
-  },
-  {
-    id: 'atn-008',
-    title: 'New Client Referred to You',
-    message: 'A new client, David Park, has been referred to you for a speeding violation',
-    type: 'info',
-    read: true,
-    created_at: '2026-03-09T13:10:00Z',
-  },
-  {
-    id: 'atn-009',
-    title: 'Subscription Renewal Reminder',
-    message: 'Your CDL Ticket Management Pro subscription renews on March 20, 2026',
-    type: 'warning',
-    read: false,
-    created_at: '2026-03-09T10:00:00Z',
-  },
-  {
-    id: 'atn-010',
-    title: 'Case Status Changed',
-    message: 'Case CDL-2026-072 status changed from "Pending Court" to "In Progress"',
-    type: 'info',
-    read: true,
-    created_at: '2026-03-08T15:45:00Z',
-  },
-  {
-    id: 'atn-011',
-    title: 'Court Hearing Rescheduled',
-    message: 'Hearing for case CDL-2026-056 rescheduled from March 18 to March 25',
-    type: 'warning',
-    read: false,
-    created_at: '2026-03-08T11:20:00Z',
-  },
-  {
-    id: 'atn-012',
-    title: 'Monthly Report Ready',
-    message: 'Your February 2026 performance report is ready for review',
-    type: 'success',
-    read: true,
-    created_at: '2026-03-07T08:00:00Z',
-  },
-];
 
 @Component({
   selector: 'app-attorney-notifications',
@@ -218,27 +123,59 @@ const MOCK_NOTIFICATIONS: AttorneyNotification[] = [
   `],
 })
 export class AttorneyNotificationsComponent implements OnInit {
+  private readonly notificationService = inject(NotificationService);
+
   loading = signal(true);
   notifications = signal<AttorneyNotification[]>([]);
 
   unreadCount = computed(() => this.notifications().filter(n => !n.read).length);
 
   ngOnInit(): void {
-    // Simulate async load from mock data
-    setTimeout(() => {
-      this.notifications.set(MOCK_NOTIFICATIONS.map(n => ({ ...n })));
+    this.loadNotifications();
+  }
+
+  loadNotifications(): void {
+    this.loading.set(true);
+    this.notificationService.getNotifications({ limit: 50 }).pipe(
+      catchError(() => of({ notifications: [], total: 0 })),
+    ).subscribe(r => {
+      const mapped: AttorneyNotification[] = (r.notifications ?? []).map(n => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        type: this.mapNotificationType(n.type),
+        read: n.read,
+        created_at: n.createdAt ?? n.timestamp ?? '',
+      }));
+      this.notifications.set(mapped);
       this.loading.set(false);
-    }, 400);
+    });
   }
 
   markRead(n: AttorneyNotification): void {
     if (n.read) return;
-    this.notifications.update(list =>
-      list.map(item => item.id === n.id ? { ...item, read: true } : item)
-    );
+    this.notificationService.markAsRead(n.id).pipe(
+      catchError(() => of(null)),
+    ).subscribe(() => {
+      this.notifications.update(list =>
+        list.map(item => item.id === n.id ? { ...item, read: true } : item)
+      );
+    });
   }
 
   markAllRead(): void {
-    this.notifications.update(list => list.map(item => ({ ...item, read: true })));
+    this.notificationService.markAllAsRead().pipe(
+      catchError(() => of(null)),
+    ).subscribe(() => {
+      this.notifications.update(list => list.map(item => ({ ...item, read: true })));
+    });
+  }
+
+  private mapNotificationType(type: string): 'info' | 'warning' | 'success' | 'error' {
+    const warningTypes = new Set(['court', 'court_date']);
+    const successTypes = new Set(['payment']);
+    if (warningTypes.has(type)) return 'warning';
+    if (successTypes.has(type)) return 'success';
+    return 'info';
   }
 }

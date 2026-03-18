@@ -1008,3 +1008,365 @@ describe('getWorkloadDistribution', () => {
     expect(res.json.mock.calls[0][0].staff).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════
+// Sprint 056 — Mock Data Migration: Client & Staff Performance Endpoints
+// ═══════════════════════════════════════════════
+
+describe('getAllClients', () => {
+  function setupGetAllClients(drivers, { countResults = [], lastCaseRows = [] } = {}) {
+    let fromCallCount = 0;
+    supabase.from.mockImplementation(() => {
+      fromCallCount++;
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.single = jest.fn().mockResolvedValue({ data: null, error: null });
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+
+      if (fromCallCount === 1) {
+        // Users query (drivers)
+        c.then = (onFulfilled) => Promise.resolve({ data: drivers, error: null }).then(onFulfilled);
+      } else {
+        // Per-driver queries: totalCases count, activeCases count, lastCase query
+        // Pattern repeats per driver: count, count, data
+        const perDriverIdx = (fromCallCount - 2) % 3; // 0 = total, 1 = active, 2 = last case
+        const driverIdx = Math.floor((fromCallCount - 2) / 3);
+        if (perDriverIdx === 0) {
+          // Total cases count
+          const cnt = countResults[driverIdx]?.total ?? 5;
+          c.then = (onFulfilled) => Promise.resolve({ count: cnt, error: null }).then(onFulfilled);
+        } else if (perDriverIdx === 1) {
+          // Active cases count
+          const cnt = countResults[driverIdx]?.active ?? 2;
+          c.then = (onFulfilled) => Promise.resolve({ count: cnt, error: null }).then(onFulfilled);
+        } else {
+          // Last case query (returns data array)
+          const rows = lastCaseRows[driverIdx] ?? [{ updated_at: '2026-03-10' }];
+          c.then = (onFulfilled) => Promise.resolve({ data: rows, error: null }).then(onFulfilled);
+        }
+      }
+      return c;
+    });
+  }
+
+  test('returns client list with totalCases and activeCases counts', async () => {
+    const drivers = [
+      { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', cdl_number: 'CDL111', address: '123 Main St', city: 'Dallas', state: 'TX', zip_code: '75001', created_at: '2026-01-01' },
+      { id: 'u2', full_name: 'Sarah L.', email: 'sarah@test.com', phone: null, cdl_number: null, address: null, city: null, state: null, zip_code: null, created_at: '2026-02-01' },
+    ];
+    setupGetAllClients(drivers, {
+      countResults: [{ total: 10, active: 3 }, { total: 5, active: 0 }],
+      lastCaseRows: [[{ updated_at: '2026-03-05' }], []],
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getAllClients(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.clients).toHaveLength(2);
+    expect(body.clients[0]).toMatchObject({
+      id: 'u1', name: 'Miguel R.', email: 'miguel@test.com',
+      phone: '555-1234', cdlNumber: 'CDL111',
+      totalCases: 10, activeCases: 3,
+      lastContact: '2026-03-05',
+    });
+    expect(body.clients[1]).toMatchObject({
+      id: 'u2', name: 'Sarah L.', totalCases: 5, activeCases: 0,
+      phone: null, cdlNumber: null, lastContact: null,
+    });
+  });
+
+  test('filters by search term', async () => {
+    setupGetAllClients([]);
+
+    const req = makeReq({ query: { search: 'miguel' } });
+    const res = makeRes();
+    await adminController.getAllClients(req, res);
+
+    // The first from() call builds the users query; verify or() was called with search ilike
+    const firstChainCalls = supabase.from.mock.results[0].value;
+    expect(firstChainCalls.or).toHaveBeenCalledWith(
+      expect.stringContaining('full_name.ilike.%miguel%')
+    );
+    expect(res.json.mock.calls[0][0].clients).toEqual([]);
+  });
+
+  test('filters by status=active (only clients with active cases)', async () => {
+    const drivers = [
+      { id: 'u1', full_name: 'Miguel', email: 'miguel@test.com', phone: null, cdl_number: null, address: null, city: null, state: null, zip_code: null, created_at: '2026-01-01' },
+      { id: 'u2', full_name: 'Sarah', email: 'sarah@test.com', phone: null, cdl_number: null, address: null, city: null, state: null, zip_code: null, created_at: '2026-02-01' },
+    ];
+    setupGetAllClients(drivers, {
+      countResults: [{ total: 5, active: 2 }, { total: 3, active: 0 }],
+    });
+
+    const req = makeReq({ query: { status: 'active' } });
+    const res = makeRes();
+    await adminController.getAllClients(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    // Only Miguel has active cases
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].name).toBe('Miguel');
+  });
+
+  test('returns 500 on error', async () => {
+    supabase.from.mockImplementation(() => {
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.then = (onFulfilled) => Promise.resolve({ data: null, error: { message: 'db fail' } }).then(onFulfilled);
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+      return c;
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getAllClients(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_FAILED');
+  });
+});
+
+describe('getClient', () => {
+  function setupGetClient(user, { totalCases = 5, activeCases = 2, recentCases = [] } = {}) {
+    let fromCallCount = 0;
+    supabase.from.mockImplementation(() => {
+      fromCallCount++;
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+
+      if (fromCallCount === 1) {
+        // User fetch (single)
+        c.single = jest.fn().mockResolvedValue({ data: user, error: user ? null : { message: 'not found' } });
+      } else if (fromCallCount === 2) {
+        // Total cases count
+        c.then = (onFulfilled) => Promise.resolve({ count: totalCases, error: null }).then(onFulfilled);
+      } else if (fromCallCount === 3) {
+        // Active cases count
+        c.then = (onFulfilled) => Promise.resolve({ count: activeCases, error: null }).then(onFulfilled);
+      } else {
+        // Recent cases
+        c.then = (onFulfilled) => Promise.resolve({ data: recentCases, error: null }).then(onFulfilled);
+      }
+      return c;
+    });
+  }
+
+  test('returns client with recentCases array', async () => {
+    const user = { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', cdl_number: 'CDL111', address: '123 Main', city: 'Dallas', state: 'TX', zip_code: '75001', created_at: '2026-01-01' };
+    const cases = [
+      { id: 'c1', case_number: 'CDL-001', status: 'new', violation_type: 'Speeding', state: 'TX', court_date: '2026-04-01', created_at: '2026-03-01', updated_at: '2026-03-05' },
+    ];
+    setupGetClient(user, { totalCases: 10, activeCases: 3, recentCases: cases });
+
+    const req = makeReq({ params: { id: 'u1' } });
+    const res = makeRes();
+    await adminController.getClient(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.client).toMatchObject({
+      id: 'u1', name: 'Miguel R.', email: 'miguel@test.com',
+      phone: '555-1234', cdlNumber: 'CDL111',
+      totalCases: 10, activeCases: 3,
+      lastContact: '2026-03-05',
+    });
+    expect(body.recentCases).toHaveLength(1);
+    expect(body.recentCases[0]).toMatchObject({
+      id: 'c1', caseNumber: 'CDL-001', status: 'new',
+    });
+  });
+
+  test('returns 404 when not found', async () => {
+    setupGetClient(null);
+
+    const req = makeReq({ params: { id: 'ghost' } });
+    const res = makeRes();
+    await adminController.getClient(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json.mock.calls[0][0].error.code).toBe('NOT_FOUND');
+  });
+
+  test('returns 500 on error', async () => {
+    supabase.from.mockImplementation(() => {
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.single = jest.fn().mockRejectedValue(new Error('db crash'));
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+      return c;
+    });
+
+    const req = makeReq({ params: { id: 'u1' } });
+    const res = makeRes();
+    await adminController.getClient(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_FAILED');
+  });
+});
+
+describe('updateClient', () => {
+  function setupUpdateClient(existing, updatedData) {
+    let fromCallCount = 0;
+    supabase.from.mockImplementation(() => {
+      fromCallCount++;
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit', 'update'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+
+      if (fromCallCount === 1) {
+        // Check existence
+        c.single = jest.fn().mockResolvedValue({ data: existing, error: existing ? null : { message: 'not found' } });
+      } else {
+        // Update query
+        c.single = jest.fn().mockResolvedValue({ data: updatedData, error: null });
+      }
+      return c;
+    });
+  }
+
+  test('updates and returns client', async () => {
+    setupUpdateClient(
+      { id: 'u1' },
+      { id: 'u1', full_name: 'Miguel R.', email: 'new@test.com', phone: '555-9999', cdl_number: 'CDL111' }
+    );
+
+    const req = makeReq({ params: { id: 'u1' }, body: { phone: '555-9999', email: 'new@test.com' } });
+    const res = makeRes();
+    await adminController.updateClient(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.client).toMatchObject({
+      id: 'u1', name: 'Miguel R.', email: 'new@test.com', phone: '555-9999',
+    });
+  });
+
+  test('returns 400 when no valid fields', async () => {
+    buildChain();
+    const req = makeReq({ params: { id: 'u1' }, body: {} });
+    const res = makeRes();
+    await adminController.updateClient(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('returns 404 when client not found', async () => {
+    setupUpdateClient(null, null);
+
+    const req = makeReq({ params: { id: 'ghost' }, body: { phone: '555-0000' } });
+    const res = makeRes();
+    await adminController.updateClient(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json.mock.calls[0][0].error.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('getStaffPerformance', () => {
+  function setupStaffPerformance(staffUsers, { perStaffCounts = [], resolvedData = [] } = {}) {
+    let fromCallCount = 0;
+    supabase.from.mockImplementation(() => {
+      fromCallCount++;
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+
+      if (fromCallCount === 1) {
+        // Staff users query
+        c.then = (onFulfilled) => Promise.resolve({ data: staffUsers, error: null }).then(onFulfilled);
+      } else {
+        // Per-staff queries: total count, active count, resolved count, resolvedData
+        // Pattern per staff member: count, count, count, data
+        const perStaffIdx = (fromCallCount - 2) % 4;
+        const staffIdx = Math.floor((fromCallCount - 2) / 4);
+        const counts = perStaffCounts[staffIdx] || { total: 10, active: 3, resolved: 7 };
+        if (perStaffIdx === 0) {
+          // Total cases
+          c.then = (onFulfilled) => Promise.resolve({ count: counts.total, error: null }).then(onFulfilled);
+        } else if (perStaffIdx === 1) {
+          // Active cases
+          c.then = (onFulfilled) => Promise.resolve({ count: counts.active, error: null }).then(onFulfilled);
+        } else if (perStaffIdx === 2) {
+          // Resolved cases
+          c.then = (onFulfilled) => Promise.resolve({ count: counts.resolved, error: null }).then(onFulfilled);
+        } else {
+          // Resolved data (for avg resolution time)
+          const data = resolvedData[staffIdx] || [];
+          c.then = (onFulfilled) => Promise.resolve({ data, error: null }).then(onFulfilled);
+        }
+      }
+      return c;
+    });
+  }
+
+  test('returns metrics array with correct fields', async () => {
+    const staff = [
+      { id: 'op-1', full_name: 'Lisa M.', email: 'lisa@test.com', role: 'operator' },
+      { id: 'att-1', full_name: 'James H.', email: 'james@test.com', role: 'attorney' },
+    ];
+    const resolvedRows = [
+      { created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-11T00:00:00Z' }, // 10 days
+      { created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-21T00:00:00Z' }, // 20 days
+    ];
+    setupStaffPerformance(staff, {
+      perStaffCounts: [
+        { total: 20, active: 5, resolved: 15 },
+        { total: 10, active: 2, resolved: 8 },
+      ],
+      resolvedData: [resolvedRows, []],
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getStaffPerformance(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.metrics).toHaveLength(2);
+    expect(body.metrics[0]).toMatchObject({
+      id: 'op-1', name: 'Lisa M.', role: 'operator',
+      casesHandled: 20, activeCases: 5, resolvedCases: 15,
+      successRate: 75, // 15/20 * 100
+    });
+    expect(body.metrics[0].avgResolutionDays).toBeGreaterThan(0);
+    expect(body.metrics[1]).toMatchObject({
+      id: 'att-1', name: 'James H.', role: 'attorney',
+      casesHandled: 10, activeCases: 2, resolvedCases: 8,
+      successRate: 80, // 8/10 * 100
+    });
+  });
+
+  test('returns 500 on error', async () => {
+    supabase.from.mockImplementation(() => {
+      const c = {};
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+        c[m] = jest.fn().mockReturnValue(c);
+      });
+      c.head = jest.fn().mockReturnValue(c);
+      c.then = (onFulfilled) => Promise.resolve({ data: null, error: { message: 'db fail' } }).then(onFulfilled);
+      c.catch = jest.fn().mockReturnValue(Promise.resolve());
+      return c;
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getStaffPerformance(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_FAILED');
+  });
+});
