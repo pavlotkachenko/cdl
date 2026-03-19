@@ -11,7 +11,7 @@ import { environment } from '../../../environments/environment';
 
 export interface Notification {
   id: string;
-  type: 'case' | 'message' | 'court' | 'payment' | 'system' | 'case_update' | 'attorney_message' | 'comment' | 'document' | 'court_date';
+  type: 'case' | 'message' | 'court' | 'payment' | 'system' | 'case_update' | 'attorney_message' | 'comment' | 'document' | 'court_date' | 'court_reminder';
   title: string;
   message: string;
   read: boolean;

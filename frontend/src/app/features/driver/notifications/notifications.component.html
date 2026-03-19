@@ -1,171 +1,256 @@
-<!-- Notification Center Template - Full Page View -->
-<div class="notifications-container">
+<div class="notif-page">
 
   <!-- Page Header -->
   <div class="page-header">
-    <div class="header-content">
-      <button mat-icon-button routerLink="/driver/dashboard" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <div>
-        <h1>Notifications</h1>
-        <p>Stay updated on your cases and activities</p>
+    <div>
+      <div class="page-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Updates &amp; Alerts
       </div>
+      <div class="page-title-row">
+        <h1 class="page-title">Notifications</h1>
+        @if (unreadCount() > 0) {
+          <span class="unread-badge" aria-label="{{ unreadCount() }} unread notifications">{{ unreadCount() }} unread</span>
+        }
+      </div>
+      <p class="page-sub">Stay updated on your cases, attorney messages, and payments</p>
     </div>
     <div class="header-actions">
-      <button mat-stroked-button (click)="refresh()" [disabled]="loading">
-        <mat-icon>refresh</mat-icon>
-        Refresh
+      <button class="btn btn-secondary" (click)="goToSettings()" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Preferences
       </button>
-      <button mat-stroked-button (click)="goToSettings()">
-        <mat-icon>settings</mat-icon>
-        Settings
-      </button>
-      <button 
-        mat-raised-button 
-        color="primary" 
-        (click)="markAllAsRead()"
-        [disabled]="unreadCount === 0">
-        <mat-icon>done_all</mat-icon>
-        Mark All Read
-      </button>
+      @if (unreadCount() > 0) {
+        <button class="btn mark-all-btn" (click)="markAllAsRead()" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Mark All Read
+        </button>
+      }
     </div>
   </div>
 
-  <!-- Stats Bar -->
-  <div class="stats-bar">
-    <div class="stat-card" [class.active]="selectedFilter === 'all'" (click)="setFilter('all')">
-      <mat-icon>notifications</mat-icon>
-      <div>
-        <span class="stat-value">{{ allNotifications.length }}</span>
-        <span class="stat-label">Total</span>
-      </div>
+  <!-- Summary Cards -->
+  <div class="summary-row" role="group" aria-label="Notification summary">
+    @for (card of summaryCards; track card.key) {
+      <button class="sum-card"
+              [class.active-filter]="selectedFilter() === card.key"
+              (click)="setFilter(card.key)"
+              [attr.aria-pressed]="selectedFilter() === card.key"
+              type="button">
+        <div class="sum-icon" [style.background]="card.bgColor">
+          <span aria-hidden="true">{{ card.emoji }}</span>
+        </div>
+        <div>
+          <div class="sum-num" [style.color]="card.color">{{ getCardCount(card.key) }}</div>
+          <div class="sum-label">{{ card.label }}</div>
+        </div>
+      </button>
+    }
+  </div>
+
+  <!-- Toolbar -->
+  <div class="notif-toolbar">
+    <div class="tab-group" role="tablist" aria-label="Filter notifications">
+      <button class="tab" role="tab"
+              [class.active]="selectedFilter() === 'all'"
+              [attr.aria-selected]="selectedFilter() === 'all'"
+              (click)="setFilter('all')" type="button">
+        All
+        <span class="tab-count all">{{ totalCount() }}</span>
+      </button>
+      <button class="tab" role="tab"
+              [class.active]="selectedFilter() === 'unread'"
+              [attr.aria-selected]="selectedFilter() === 'unread'"
+              (click)="setFilter('unread')" type="button">
+        Unread
+        <span class="tab-count unread">{{ unreadCount() }}</span>
+      </button>
+      <button class="tab" role="tab"
+              [class.active]="selectedFilter() === 'read'"
+              [attr.aria-selected]="selectedFilter() === 'read'"
+              (click)="setFilter('read')" type="button">
+        Read
+        <span class="tab-count read">{{ readCount() }}</span>
+      </button>
     </div>
-    <div class="stat-card" [class.active]="selectedFilter === 'unread'" (click)="setFilter('unread')">
-      <mat-icon>mark_email_unread</mat-icon>
-      <div>
-        <span class="stat-value">{{ unreadCount }}</span>
-        <span class="stat-label">Unread</span>
-      </div>
-    </div>
-    <div class="stat-card" [class.active]="selectedFilter === 'read'" (click)="setFilter('read')">
-      <mat-icon>drafts</mat-icon>
-      <div>
-        <span class="stat-value">{{ allNotifications.length - unreadCount }}</span>
-        <span class="stat-label">Read</span>
-      </div>
+    <div class="toolbar-right">
+      <!-- Batch actions -->
+      @if (selectedItems().size > 0) {
+        <span class="batch-count">{{ selectedItems().size }} selected</span>
+        <button class="btn btn-batch-read" (click)="bulkMarkRead()" type="button">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Mark Read
+        </button>
+        <button class="btn btn-batch-delete" (click)="bulkDelete()" type="button">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete
+        </button>
+      } @else {
+        <button class="btn btn-ghost" (click)="clearAll()" type="button">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Clear All
+        </button>
+        <button class="icon-btn" (click)="goToSettings()" title="Notification settings" type="button" aria-label="Notification settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 1.41 13.4M4.93 4.93a10 10 0 0 0-1.41 13.4"/></svg>
+        </button>
+      }
     </div>
   </div>
 
-  <!-- Type Filters -->
-  <mat-card class="filters-card">
-    <mat-card-content>
-      <div class="type-filters">
-        <mat-chip-listbox>
-          <mat-chip-option 
-            *ngFor="let type of notificationTypes"
-            [selected]="selectedType === type.value"
-            (click)="setTypeFilter(type.value)">
-            <mat-icon>{{ type.icon }}</mat-icon>
-            {{ type.label }}
-          </mat-chip-option>
-        </mat-chip-listbox>
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <!-- Select All (when items selected) -->
+  @if (selectedItems().size > 0) {
+    <div class="select-all-bar">
+      <button class="select-all-toggle" (click)="toggleSelectAll()" type="button">
+        @if (selectedItems().size === filteredNotifications().length) {
+          Deselect All
+        } @else {
+          Select All ({{ filteredNotifications().length }})
+        }
+      </button>
+    </div>
+  }
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <mat-spinner diameter="60"></mat-spinner>
-    <p>Loading notifications...</p>
-  </div>
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading notifications...</p>
+    </div>
+  } @else if (filteredNotifications().length === 0) {
+    <!-- Empty State -->
+    <div class="notif-empty">
+      <div class="empty-icon"><span aria-hidden="true">🔔</span></div>
+      <h2 class="empty-title">{{ getEmptyTitle() }}</h2>
+      <p class="empty-sub">{{ getEmptySubtitle() }}</p>
+    </div>
+  } @else {
+    <!-- Notifications List -->
+    <div class="notif-list" role="list" aria-label="Notifications">
+      @for (group of groupedNotifications(); track group.label) {
+        <!-- Date Group Header -->
+        <div class="date-group-header">
+          <div class="date-group-line"></div>
+          <span class="date-group-label">{{ group.label }}@if (group.date) { · {{ group.date }}}</span>
+          <div class="date-group-line"></div>
+          <span class="date-group-count">{{ group.notifications.length }}</span>
+        </div>
 
-  <!-- Notifications List -->
-  <div *ngIf="!loading && filteredNotifications.length > 0" class="notifications-list">
-    <div *ngFor="let group of groupNotificationsByDate() | keyvalue: null" class="notification-group">
-      <div class="group-header">
-        <h3>{{ group.key }}</h3>
-      </div>
+        @for (n of group.notifications; track n.id) {
+          <div class="notif-item"
+               [class.unread]="!n.read"
+               [class.read]="n.read"
+               role="listitem"
+               (click)="onNotificationClick(n)">
 
-      <mat-card *ngFor="let notification of group.value" 
-                class="notification-card"
-                [class.unread]="!notification.read"
-                (click)="onNotificationClick(notification)">
-        <mat-card-content>
-          <div class="notification-main">
-            <div class="notification-icon" [style.background-color]="getColor(notification.type)">
-              <mat-icon>{{ getIcon(notification.type) }}</mat-icon>
+            <!-- Colored left bar -->
+            <div class="notif-unread-bar" [class]="'notif-unread-bar ' + getBarColor(n)"></div>
+
+            <!-- Batch checkbox -->
+            <div class="notif-checkbox"
+                 role="checkbox"
+                 [attr.aria-checked]="isSelected(n.id)"
+                 [attr.aria-label]="'Select notification: ' + n.title"
+                 tabindex="0"
+                 (click)="$event.stopPropagation(); toggleSelection(n.id)"
+                 (keydown)="onCheckboxKeydown($event, n.id)">
+              <div class="checkbox-inner" [class.checked]="isSelected(n.id)">
+                @if (isSelected(n.id)) {
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                }
+              </div>
             </div>
 
-            <div class="notification-content">
-              <div class="notification-title">
-                {{ notification.title }}
-                <mat-chip *ngIf="!notification.read" class="unread-chip">New</mat-chip>
+            <div class="notif-body">
+              <!-- Icon -->
+              <div class="notif-icon" [style.background]="getIconBg(n.type)">
+                <span aria-hidden="true">{{ getEmoji(n.type) }}</span>
+                <div class="icon-badge" [style.background]="getTypeChip(n.type).color">
+                  @switch (n.type) {
+                    @case ('case_update') {
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    }
+                    @case ('case') {
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    }
+                    @case ('payment') {
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    }
+                    @default {
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    }
+                  }
+                </div>
               </div>
-              <div class="notification-message">{{ notification.message }}</div>
-              <div class="notification-meta">
-                <mat-icon>schedule</mat-icon>
-                <span>{{ formatFullDate(notification.timestamp || notification.createdAt) }}</span>
-                <span class="time-ago">• {{ formatTime(notification.timestamp || notification.createdAt) }}</span>
+
+              <!-- Content -->
+              <div class="notif-content">
+                <div class="notif-title-row">
+                  <span class="notif-title">{{ n.title }}</span>
+                  @if (!n.read) {
+                    <span class="notif-new-pill">NEW</span>
+                  }
+                  <span class="notif-type-chip"
+                        [style.background]="getTypeChip(n.type).bg"
+                        [style.color]="getTypeChip(n.type).color"
+                        [style.border-color]="getTypeChip(n.type).border">
+                    {{ getTypeChip(n.type).label }}
+                  </span>
+                </div>
+                <p class="notif-text" [innerHTML]="n.message"></p>
+                <div class="notif-meta">
+                  <span class="notif-time">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {{ formatTime(n.createdAt) }}
+                  </span>
+                  @if (isGroupedNotification(n) && !isCaseGroupExpanded(n)) {
+                    <button class="case-group-badge" (click)="$event.stopPropagation(); toggleCaseGroup(n)" type="button">
+                      {{ getCaseGroupCount(n) }} updates
+                    </button>
+                  }
+                  <a class="notif-case-link" [attr.href]="n.actionUrl" (click)="$event.stopPropagation(); onNotificationClick(n)">
+                    {{ getCtaLabel(n.type) }}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  </a>
+                </div>
               </div>
             </div>
 
-            <div class="notification-actions">
-              <button 
-                mat-icon-button 
-                *ngIf="!notification.read"
-                (click)="markAsRead(notification, $event)"
-                matTooltip="Mark as read">
-                <mat-icon>done</mat-icon>
-              </button>
-              <button 
-                mat-icon-button 
-                [matMenuTriggerFor]="menu"
-                (click)="$event.stopPropagation()"
-                matTooltip="More options">
-                <mat-icon>more_vert</mat-icon>
-              </button>
-              <mat-menu #menu="matMenu">
-                <button mat-menu-item *ngIf="!notification.read" (click)="markAsRead(notification, $event)">
-                  <mat-icon>done</mat-icon>
-                  Mark as read
+            <!-- Hover actions -->
+            <div class="notif-actions">
+              @if (!n.read) {
+                <button class="notif-action-btn mark"
+                        title="Mark as read"
+                        aria-label="Mark as read"
+                        (click)="markAsRead(n, $event)"
+                        type="button">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 </button>
-                <button mat-menu-item (click)="deleteNotification(notification, $event)">
-                  <mat-icon>delete</mat-icon>
-                  Delete
-                </button>
-              </mat-menu>
+              }
+              <button class="notif-action-btn del"
+                      title="Delete"
+                      aria-label="Delete notification"
+                      (click)="deleteNotification(n, $event)"
+                      type="button">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
             </div>
           </div>
-
-          <div class="notification-priority" *ngIf="notification.metadata?.priority === 'high'">
-            <mat-icon>priority_high</mat-icon>
-            <span>High Priority</span>
-          </div>
-        </mat-card-content>
-      </mat-card>
+        }
+      }
     </div>
-  </div>
 
-  <!-- Empty State -->
-  <div *ngIf="!loading && filteredNotifications.length === 0" class="empty-state">
-    <mat-icon *ngIf="selectedFilter === 'all'">check_circle</mat-icon>
-    <mat-icon *ngIf="selectedFilter !== 'all'">notifications_none</mat-icon>
-    <h2 *ngIf="selectedFilter === 'all'">You're all caught up!</h2>
-    <h2 *ngIf="selectedFilter === 'unread'">No unread notifications</h2>
-    <h2 *ngIf="selectedFilter === 'read'">No read notifications</h2>
-    <p *ngIf="selectedFilter === 'all'">No new notifications right now</p>
-    <button mat-raised-button color="primary" (click)="setFilter('all')" *ngIf="selectedFilter !== 'all'">
-      View All Notifications
-    </button>
-  </div>
+    <!-- Footer -->
+    <div class="notif-footer">
+      Showing {{ filteredNotifications().length }} notification{{ filteredNotifications().length === 1 ? '' : 's' }} ·
+      <a class="prefs-link" (click)="goToSettings()">Manage notification preferences →</a>
+    </div>
+  }
 
-  <!-- Clear All Button -->
-  <div class="clear-all-section" *ngIf="!loading && allNotifications.length > 0">
-    <button mat-stroked-button color="warn" (click)="clearAll()">
-      <mat-icon>delete_sweep</mat-icon>
-      Clear All Notifications
-    </button>
-  </div>
-
+  <!-- Toast -->
+  @if (toastMessage()) {
+    <div class="toast" [class.toast-success]="toastType() === 'success'" [class.toast-error]="toastType() === 'error'" role="alert">
+      <span>{{ toastMessage() }}</span>
+      <button class="toast-close" (click)="dismissToast()" aria-label="Dismiss" type="button">&times;</button>
+    </div>
+  }
 </div>
