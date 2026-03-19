@@ -1,139 +1,298 @@
 import {
-  Component, OnInit, signal, inject, ChangeDetectionStrategy,
+  Component, OnInit, OnDestroy, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
-
+import { Router } from '@angular/router';
 import { UserPreferencesService } from '../../../../core/services/user-preferences.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
-const PUSH_DISMISSED_KEY = 'cdl_push_prompt_dismissed';
+// ── Toggle item definitions ──
+interface ToggleItem {
+  key: string;
+  label: string;
+  desc: string;
+  emoji: string;
+  iconBg: string;
+  badge?: string;
+  badgeClass?: string;
+}
+
+const EMAIL_ITEMS: ToggleItem[] = [
+  { key: 'case_status', label: 'Case Status Updates', desc: 'Receive an email whenever your case status changes — attorney assigned, hearing scheduled, charges dismissed.', emoji: '⚖️', iconBg: 'var(--blue-bg)', badge: 'Urgent', badgeClass: 'badge-urgent' },
+  { key: 'attorney_messages', label: 'Attorney Messages', desc: 'Get notified when your attorney sends a new message requiring your response.', emoji: '💬', iconBg: 'var(--teal-bg2)', badge: 'Recommended', badgeClass: 'badge-recommended' },
+  { key: 'payment', label: 'Payment Confirmations', desc: 'Receipts and confirmations for all payments and payment plan installments.', emoji: '💳', iconBg: 'var(--green-bg)' },
+  { key: 'court_dates', label: 'Court Date Reminders', desc: 'Reminders sent 7 days and 24 hours before each hearing date.', emoji: '📅', iconBg: 'var(--amber-bg)', badge: 'Urgent', badgeClass: 'badge-urgent' },
+  { key: 'documents', label: 'Document Requests', desc: 'Alerts when your attorney requests additional documents or evidence from you.', emoji: '📄', iconBg: 'var(--purple-bg)' },
+  { key: 'marketing', label: 'Marketing & News', desc: 'CDL law tips, platform updates, and relevant trucking industry news.', emoji: '📧', iconBg: 'var(--border-light)' },
+];
+
+const SMS_ITEMS: ToggleItem[] = [
+  { key: 'case_status', label: 'Case Status Updates via SMS', desc: 'Receive text messages when your case status changes. Ideal when away from email.', emoji: '⚖️', iconBg: 'var(--blue-bg)', badge: 'Urgent', badgeClass: 'badge-urgent' },
+  { key: 'court_dates', label: 'Court Date Reminders via SMS', desc: 'SMS reminders 24 hours before your hearing. Never miss an important date.', emoji: '📅', iconBg: 'var(--amber-bg)' },
+];
+
+const PUSH_ITEMS: ToggleItem[] = [
+  { key: 'case_updates', label: 'Case Updates', desc: 'Instant browser notifications when your case status changes.', emoji: '⚖️', iconBg: 'var(--blue-bg)', badge: 'Recommended', badgeClass: 'badge-recommended' },
+  { key: 'messages', label: 'New Messages', desc: 'Instant push alerts when your attorney sends a message.', emoji: '💬', iconBg: 'var(--teal-bg2)', badge: 'New', badgeClass: 'badge-new' },
+  { key: 'payment', label: 'Payment Alerts', desc: 'Confirmation when payments succeed or a plan installment is due.', emoji: '💳', iconBg: 'var(--green-bg)' },
+];
+
+const DEFAULT_EMAIL: Record<string, boolean> = {
+  case_status: true, attorney_messages: true, payment: true,
+  court_dates: true, documents: true, marketing: false,
+};
+
+const DEFAULT_SMS: Record<string, boolean> = {
+  case_status: false, court_dates: false,
+};
+
+const DEFAULT_PUSH: Record<string, boolean> = {
+  case_updates: true, messages: true, payment: false,
+};
+
+const ALL_DAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 @Component({
   selector: 'app-notification-preferences',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ReactiveFormsModule, MatCardModule, MatSlideToggleModule,
-    MatButtonModule, MatIconModule,
-  ],
-  template: `
-    <div class="prefs-page">
-      <h1>Notification Preferences</h1>
-
-      <form [formGroup]="form" (ngSubmit)="save()">
-        <mat-card class="prefs-card">
-          <mat-card-content>
-            <h2>SMS Notifications</h2>
-            <div class="toggle-row">
-              <div>
-                <p class="toggle-label">Case status updates via SMS</p>
-                <p class="toggle-hint">Receive text messages when your case status changes.</p>
-              </div>
-              <mat-slide-toggle formControlName="smsOptIn" aria-label="SMS notifications"></mat-slide-toggle>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="prefs-card">
-          <mat-card-content>
-            <h2>Push Notifications</h2>
-            <div class="toggle-row">
-              <div>
-                <p class="toggle-label">Browser push notifications</p>
-                <p class="toggle-hint">
-                  Status: <strong>{{ pushStatus() }}</strong>
-                </p>
-              </div>
-              @if (canRequestPush()) {
-                <button mat-stroked-button type="button" (click)="enablePush()"
-                        aria-label="Enable push notifications">
-                  <mat-icon aria-hidden="true">notifications</mat-icon> Enable
-                </button>
-              } @else if (pushStatus() === 'granted') {
-                <mat-icon class="granted-icon" aria-label="Push notifications enabled">check_circle</mat-icon>
-              }
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <div class="actions">
-          <button mat-raised-button color="primary" type="submit" [disabled]="saving()">
-            {{ saving() ? 'Saving…' : 'Save Preferences' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  `,
-  styles: [`
-    .prefs-page { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
-    h1 { margin: 0 0 20px; font-size: 1.4rem; }
-    h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 600; }
-    .prefs-card { margin-bottom: 16px; }
-    .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .toggle-label { margin: 0; font-weight: 500; font-size: 0.9rem; }
-    .toggle-hint { margin: 2px 0 0; font-size: 0.8rem; color: #666; }
-    .granted-icon { color: #388e3c; font-size: 28px; width: 28px; height: 28px; }
-    .actions { margin-top: 8px; }
-  `],
+  templateUrl: './notification-preferences.component.html',
+  styleUrl: './notification-preferences.component.scss',
 })
-export class NotificationPreferencesComponent implements OnInit {
+export class NotificationPreferencesComponent implements OnInit, OnDestroy {
   private preferencesService = inject(UserPreferencesService);
-  private snackBar = inject(MatSnackBar);
-  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private flashTimer: ReturnType<typeof setTimeout> | null = null;
 
-  form!: FormGroup;
+  // ── Item lists (exposed to template) ──
+  readonly emailItems = EMAIL_ITEMS;
+  readonly smsItems = SMS_ITEMS;
+  readonly pushItems = PUSH_ITEMS;
+  readonly allDays = ALL_DAYS;
+
+  // ── Toggle state signals ──
+  emailToggles = signal<Record<string, boolean>>({ ...DEFAULT_EMAIL });
+  smsToggles = signal<Record<string, boolean>>({ ...DEFAULT_SMS });
+  pushToggles = signal<Record<string, boolean>>({ ...DEFAULT_PUSH });
+
+  // ── Master toggles ──
+  emailMasterOn = signal(true);
+  smsMasterOn = signal(false);
+
+  // ── Quiet hours ──
+  quietHoursEnabled = signal(true);
+  quietFrom = signal('22:00');
+  quietUntil = signal('07:00');
+  quietDays = signal<Set<string>>(new Set(ALL_DAYS));
+
+  // ── Push permission ──
+  pushPermission = signal<string>('default');
+
+  // ── User info (loaded from auth) ──
+  userEmail = signal('');
+  userPhone = signal('');
+  phoneVerified = signal(false);
+
+  // ── UI state ──
   saving = signal(false);
+  saveFlash = signal(false);
+  saveError = signal(false);
 
-  pushStatus = signal<string>('not-supported');
-  canRequestPush = signal(false);
+  // ── Saved state for dirty tracking ──
+  private initialState = '';
+
+  // ── Computed counts for sidebar ──
+  emailEnabledCount = computed(() => {
+    if (!this.emailMasterOn()) return 0;
+    const toggles = this.emailToggles();
+    return Object.values(toggles).filter(Boolean).length;
+  });
+
+  smsEnabledCount = computed(() => {
+    if (!this.smsMasterOn()) return 0;
+    const toggles = this.smsToggles();
+    return Object.values(toggles).filter(Boolean).length;
+  });
+
+  pushEnabledCount = computed(() => {
+    const toggles = this.pushToggles();
+    return Object.values(toggles).filter(Boolean).length;
+  });
+
+  // ── Display helpers for quiet hours ──
+  quietFromDisplay = computed(() => this.formatTime(this.quietFrom()));
+  quietUntilDisplay = computed(() => this.formatTime(this.quietUntil()));
 
   ngOnInit(): void {
-    this.form = this.fb.group({ smsOptIn: [false] });
-    this.checkPushStatus();
+    this.checkPushPermission();
+    this.loadUserInfo();
+    this.initialState = this.serializeState();
   }
 
-  private checkPushStatus(): void {
+  ngOnDestroy(): void {
+    if (this.flashTimer) {
+      clearTimeout(this.flashTimer);
+      this.flashTimer = null;
+    }
+  }
+
+  private loadUserInfo(): void {
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.userEmail.set(user.email || '');
+      this.userPhone.set(user.phone || '');
+      this.phoneVerified.set(!!user.phone);
+    }
+  }
+
+  // ── Email toggles ──
+  getEmailToggle(key: string): boolean {
+    return this.emailToggles()[key] ?? false;
+  }
+
+  toggleEmail(key: string): void {
+    if (!this.emailMasterOn()) return;
+    const current = this.emailToggles();
+    this.emailToggles.set({ ...current, [key]: !current[key] });
+  }
+
+  toggleEmailMaster(): void {
+    const newVal = !this.emailMasterOn();
+    this.emailMasterOn.set(newVal);
+    if (!newVal) {
+      this.emailToggles.set(Object.fromEntries(
+        Object.keys(this.emailToggles()).map(k => [k, false])
+      ));
+    } else {
+      this.emailToggles.set({ ...DEFAULT_EMAIL });
+    }
+  }
+
+  // ── SMS toggles ──
+  getSmsToggle(key: string): boolean {
+    return this.smsToggles()[key] ?? false;
+  }
+
+  toggleSms(key: string): void {
+    if (!this.smsMasterOn()) return;
+    const current = this.smsToggles();
+    this.smsToggles.set({ ...current, [key]: !current[key] });
+  }
+
+  toggleSmsMaster(): void {
+    const newVal = !this.smsMasterOn();
+    this.smsMasterOn.set(newVal);
+    if (!newVal) {
+      this.smsToggles.set(Object.fromEntries(
+        Object.keys(this.smsToggles()).map(k => [k, false])
+      ));
+    } else {
+      this.smsToggles.set({ ...DEFAULT_SMS, case_status: true, court_dates: true });
+    }
+  }
+
+  // ── Push toggles ──
+  getPushToggle(key: string): boolean {
+    return this.pushToggles()[key] ?? false;
+  }
+
+  togglePush(key: string): void {
+    const current = this.pushToggles();
+    this.pushToggles.set({ ...current, [key]: !current[key] });
+  }
+
+  // ── Quiet hours ──
+  isDayActive(day: string): boolean {
+    return this.quietDays().has(day);
+  }
+
+  toggleDay(day: string): void {
+    if (!this.quietHoursEnabled()) return;
+    const current = this.quietDays();
+    const next = new Set(current);
+    if (next.has(day)) {
+      next.delete(day);
+    } else {
+      next.add(day);
+    }
+    this.quietDays.set(next);
+  }
+
+  // ── Push permission ──
+  checkPushPermission(): void {
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      this.pushStatus.set('not-supported');
+      this.pushPermission.set('not-supported');
       return;
     }
-    this.pushStatus.set(Notification.permission);
-    this.canRequestPush.set(Notification.permission !== 'granted');
+    this.pushPermission.set(Notification.permission);
   }
 
-  enablePush(): void {
-    if (!('Notification' in window)) return;
-    Notification.requestPermission().then(permission => {
-      this.pushStatus.set(permission);
-      this.canRequestPush.set(permission !== 'granted');
+  requestPushPermission(): Promise<void> {
+    if (!('Notification' in window)) return Promise.resolve();
+    return Notification.requestPermission().then(permission => {
+      this.pushPermission.set(permission);
       if (permission === 'granted') {
-        localStorage.setItem(PUSH_DISMISSED_KEY, '1');
         const token = `web_${Date.now()}`;
-        this.preferencesService.savePushToken(token).subscribe({
-          next: () => this.snackBar.open('Push notifications enabled!', 'Close', { duration: 3000 }),
-          error: () => this.snackBar.open('Failed to register device.', 'Close', { duration: 3000 }),
-        });
-      } else {
-        this.snackBar.open('Push notifications were not enabled.', 'Close', { duration: 3000 });
+        this.preferencesService.savePushToken(token).subscribe();
       }
+    }).catch(() => {
+      this.pushPermission.set('denied');
     });
   }
 
-  save(): void {
+  // ── Actions ──
+  verifyPhone(): void {
+    this.router.navigate(['/driver/profile']);
+  }
+
+  savePreferences(): void {
     this.saving.set(true);
-    const { smsOptIn } = this.form.value;
-    this.preferencesService.updateSmsOptIn(smsOptIn).subscribe({
+    this.saveError.set(false);
+    const smsValue = this.smsMasterOn() && (this.smsToggles()['case_status'] || this.smsToggles()['court_dates']);
+    this.preferencesService.updateSmsOptIn(smsValue).subscribe({
       next: () => {
         this.saving.set(false);
-        this.snackBar.open('Preferences saved!', 'Close', { duration: 3000 });
+        this.saveFlash.set(true);
+        this.initialState = this.serializeState();
+        this.flashTimer = setTimeout(() => this.saveFlash.set(false), 2200);
       },
       error: () => {
         this.saving.set(false);
-        this.snackBar.open('Failed to save preferences.', 'Close', { duration: 3000 });
+        this.saveError.set(true);
       },
+    });
+  }
+
+  resetToDefaults(): void {
+    this.emailMasterOn.set(true);
+    this.emailToggles.set({ ...DEFAULT_EMAIL });
+    this.smsMasterOn.set(false);
+    this.smsToggles.set({ ...DEFAULT_SMS });
+    this.pushToggles.set({ ...DEFAULT_PUSH });
+    this.quietHoursEnabled.set(true);
+    this.quietFrom.set('22:00');
+    this.quietUntil.set('07:00');
+    this.quietDays.set(new Set(ALL_DAYS));
+  }
+
+  // ── Helpers ──
+  private formatTime(time24: string): string {
+    const [h, m] = time24.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${h12}${m === 0 ? '' : ':' + String(m).padStart(2, '0')} ${ampm}`;
+  }
+
+  private serializeState(): string {
+    return JSON.stringify({
+      emailMaster: this.emailMasterOn(),
+      email: this.emailToggles(),
+      smsMaster: this.smsMasterOn(),
+      sms: this.smsToggles(),
+      push: this.pushToggles(),
+      quietEnabled: this.quietHoursEnabled(),
+      quietFrom: this.quietFrom(),
+      quietUntil: this.quietUntil(),
+      quietDays: [...this.quietDays()],
     });
   }
 }
