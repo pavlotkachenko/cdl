@@ -1,144 +1,209 @@
-<!-- Case Detail Template - Professional & Feature-Rich WITH PDF VIEWER & LIGHTBOX -->
+<!-- Case Detail Template — Sprint 065 CD-4/5/6/7 -->
+<!-- No mat-icon / no Material components — emoji + inline SVG only -->
 <div class="case-detail-container">
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <mat-spinner diameter="60"></mat-spinner>
-    <p>Loading case details...</p>
-  </div>
+  @if (loading()) {
+    <div class="loading-state" role="status" aria-label="Loading case details">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Loading case details...</p>
+    </div>
+  }
 
   <!-- Error State -->
-  <div *ngIf="error && !loading" class="error-state">
-    <mat-icon>error_outline</mat-icon>
-    <h2>{{ error }}</h2>
-    <button mat-raised-button color="primary" (click)="goBack()">
-      <mat-icon>arrow_back</mat-icon>
-      Back to Cases
-    </button>
-  </div>
+  @if (error() && !loading()) {
+    <div class="error-state">
+      <span class="error-icon" aria-hidden="true">&#9888;&#65039;</span>
+      <h2>{{ error() }}</h2>
+      <button class="btn-primary" (click)="goBack()">
+        <span aria-hidden="true">&#8592;</span> Back to Cases
+      </button>
+    </div>
+  }
 
   <!-- Main Content -->
-  <div *ngIf="case && !loading" class="case-content">
+  @if (caseData() && !loading()) {
+    <!-- ─── Case Hero Header ──────────────────────────────────── -->
+    <header class="case-hero">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/driver/dashboard">Home</a>
+        <span class="sep" aria-hidden="true">&#8250;</span>
+        <a routerLink="/driver/tickets">My Cases</a>
+        <span class="sep" aria-hidden="true">&#8250;</span>
+        <span aria-current="page">{{ caseNumber() }}</span>
+      </nav>
 
-    <!-- Header Section -->
-    <div class="case-header">
-      <button mat-icon-button (click)="goBack()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-
-      <div class="header-info">
-        <div class="title-section">
-          <h1>{{ case.ticketNumber || case.id }}</h1>
-          <mat-chip [ngClass]="getStatusClass(case.status)">
-            <mat-icon>{{ getStatusIcon(case.status) }}</mat-icon>
-            {{ getStatusLabel(case.status) }}
-          </mat-chip>
+      <div class="hero-main">
+        <div class="hero-info">
+          <h1>{{ caseNumber() }}</h1>
+          @if (violationType()) {
+            <span class="violation-label">{{ violationType() }}</span>
+          }
+          <span class="status-badge" [class]="statusInfo().cssClass">
+            <span aria-hidden="true">{{ statusInfo().emoji }}</span>
+            {{ statusInfo().label }}
+          </span>
         </div>
-        <p class="case-type">{{ case.type || case.violation_type || 'Traffic Violation' }}</p>
+        <div class="hero-actions">
+          <!-- CD-6: Edit button -->
+          @if (!isEditing()) {
+            <button class="btn-outline"
+                    (click)="toggleEdit()"
+                    aria-label="Edit case details">
+              <span aria-hidden="true">&#9999;&#65039;</span> Edit
+            </button>
+          } @else {
+            <button class="btn-primary btn-sm"
+                    (click)="saveEdit()"
+                    [disabled]="saving()"
+                    aria-label="Save changes">
+              @if (saving()) {
+                <span class="spinner-sm" aria-hidden="true"></span>
+              }
+              Save
+            </button>
+            <button class="btn-outline btn-sm"
+                    (click)="cancelEdit()"
+                    [disabled]="saving()"
+                    aria-label="Cancel editing">
+              Cancel
+            </button>
+          }
+          <button class="btn-outline"
+                  (click)="exportToPDF()"
+                  [disabled]="exportingPdf()"
+                  aria-label="Export case to PDF">
+            <span aria-hidden="true">&#128196;</span>
+            {{ exportingPdf() ? 'Generating...' : 'Export PDF' }}
+          </button>
+        </div>
       </div>
 
-      <div class="header-actions">
-        <button mat-stroked-button (click)="exportToPDF()" [disabled]="exportingPdf" matTooltip="Export to PDF">
-          <mat-icon>picture_as_pdf</mat-icon>
-          {{ exportingPdf ? 'Generating...' : 'Export PDF' }}
-        </button>
-        <button mat-raised-button color="primary" (click)="toggleEdit()" *ngIf="!isEditing">
-          <mat-icon>edit</mat-icon>
-          Edit Case
-        </button>
-        <button mat-raised-button color="warn" (click)="toggleEdit()" *ngIf="isEditing">
-          <mat-icon>close</mat-icon>
-          Cancel
-        </button>
-        <button mat-raised-button color="primary" (click)="saveChanges()" *ngIf="isEditing">
-          <mat-icon>save</mat-icon>
-          Save Changes
-        </button>
-      </div>
-    </div>
-
-    <!-- Court Date Alert -->
-    <mat-card class="alert-card" *ngIf="case.courtDate && getDaysUntilCourt() && getDaysUntilCourt()! > 0">
-      <mat-card-content>
-        <div class="alert-content">
-          <mat-icon class="alert-icon">event</mat-icon>
-          <div>
-            <strong>Court Date Approaching</strong>
-            <p>{{ getDaysUntilCourt() }} days until your court date on {{ formatDate(case.courtDate) }}</p>
+      <!-- Stat Strip -->
+      <div class="stat-strip">
+        <div class="stat-item">
+          <span class="stat-value">{{ daysOpen() }}</span>
+          <span class="stat-label">Days Open</span>
+        </div>
+        @if (daysUntilCourt() !== null) {
+          <div class="stat-item">
+            <span class="stat-value">{{ daysUntilCourt() }}</span>
+            <span class="stat-label">Days to Court</span>
           </div>
+        }
+        <div class="stat-item">
+          <span class="stat-value">{{ documentCount() }}</span>
+          <span class="stat-label">Documents</span>
         </div>
-      </mat-card-content>
-    </mat-card>
+      </div>
+    </header>
 
-    <!-- Main Grid Layout -->
+    <!-- ─── Court Date Alert ──────────────────────────────────── -->
+    @if (showCourtAlert()) {
+      <div class="alert-card alert-court" role="alert">
+        <span class="alert-icon" aria-hidden="true">&#128197;</span>
+        <div class="alert-body">
+          <strong>Court Date Approaching</strong>
+          <p>{{ daysUntilCourt() }} days until your court date on {{ formatDate(caseData()!.courtDate || caseData()!.court_date) }}</p>
+        </div>
+      </div>
+    }
+
+    <!-- ─── Pay Attorney Alert ────────────────────────────────── -->
+    @if (showPayAttorney()) {
+      <div class="alert-card alert-pay" role="alert">
+        <span class="alert-icon" aria-hidden="true">&#128179;</span>
+        <div class="alert-body">
+          <strong>Attorney Fee Due</strong>
+          @if (caseData()!.attorney_price) {
+            <p>Amount: ${{ caseData()!.attorney_price }}</p>
+          } @else {
+            <p>Payment required to proceed</p>
+          }
+        </div>
+        <button class="btn-primary btn-pay" (click)="payAttorneyFee()">Pay Now</button>
+      </div>
+    }
+
+    <!-- ─── Main Grid ─────────────────────────────────────────── -->
     <div class="main-grid">
 
-      <!-- Left Column - Case Details -->
+      <!-- Left Column -->
       <div class="left-column">
 
         <!-- Case Information Card -->
-        <mat-card class="info-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>info</mat-icon>
-              Case Information
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
+        <section class="card info-card" aria-labelledby="info-heading">
+          <div class="card-header">
+            <h2 id="info-heading"><span aria-hidden="true">&#8505;&#65039;</span> Case Information</h2>
+          </div>
+          <div class="card-body">
             <div class="info-grid">
               <div class="info-item">
                 <label>Citation Number</label>
-                <p>{{ case.citationNumber || 'N/A' }}</p>
+                <p>{{ caseData()!.citationNumber || caseData()!.citation_number || 'N/A' }}</p>
               </div>
               <div class="info-item">
                 <label>Violation Date</label>
-                <p>{{ formatDate(case.violationDate) }}</p>
+                <p>{{ formatDate(caseData()!.violationDate || caseData()!.violation_date) }}</p>
               </div>
-              <div class="info-item">
+              <div class="info-item" [class.edit-active]="isEditing()">
                 <label>Location</label>
-                <p>{{ case.location || 'N/A' }}</p>
+                @if (isEditing()) {
+                  <input type="text" class="edit-input" [formControl]="editForm.controls.location"
+                         placeholder="Enter location">
+                } @else {
+                  <p>{{ caseData()!.location || 'N/A' }}</p>
+                }
               </div>
               <div class="info-item">
                 <label>State</label>
-                <p>{{ case.state || 'N/A' }}</p>
+                <p>{{ caseData()!.state || 'N/A' }}</p>
               </div>
-              <div class="info-item" *ngIf="case.courtDate">
-                <label>Court Date</label>
-                <p>{{ formatDate(case.courtDate) }}</p>
-              </div>
+              @if (caseData()!.courtDate || caseData()!.court_date) {
+                <div class="info-item">
+                  <label>Court Date</label>
+                  <p>{{ formatDate(caseData()!.courtDate || caseData()!.court_date) }}</p>
+                </div>
+              }
               <div class="info-item">
                 <label>Submitted</label>
-                <p>{{ formatDate(case.createdAt || case.created_at) }}</p>
+                <p>{{ formatDate(caseData()!.createdAt || caseData()!.created_at) }}</p>
               </div>
             </div>
 
-            <mat-divider></mat-divider>
+            @if (caseData()!.description || isEditing()) {
+              <div class="description-section" [class.edit-active]="isEditing()">
+                <label>Description</label>
+                @if (isEditing()) {
+                  <textarea class="edit-textarea" [formControl]="editForm.controls.description"
+                            placeholder="Enter description" rows="3"></textarea>
+                } @else {
+                  <p>{{ caseData()!.description }}</p>
+                }
+              </div>
+            }
 
-            <div class="description-section">
-              <label>Description</label>
-              <p>{{ case.description || 'No description provided' }}</p>
-            </div>
-
-            <div class="resolution-section" *ngIf="case.resolution">
-              <label>Resolution</label>
-              <p class="resolution-text">{{ case.resolution }}</p>
-            </div>
-          </mat-card-content>
-        </mat-card>
+            @if (caseData()!.resolution) {
+              <div class="resolution-section">
+                <label>Resolution</label>
+                <p class="resolution-text">{{ caseData()!.resolution }}</p>
+              </div>
+            }
+          </div>
+        </section>
 
         <!-- Documents Card -->
-        <mat-card class="documents-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>attach_file</mat-icon>
-              Documents ({{ realDocuments.length }})
-            </mat-card-title>
-            <button mat-icon-button (click)="triggerFileInput()" matTooltip="Upload Document"
-                    [disabled]="uploadingDoc">
-              <mat-icon>add</mat-icon>
+        <section class="card documents-card" aria-labelledby="docs-heading">
+          <div class="card-header">
+            <h2 id="docs-heading"><span aria-hidden="true">&#128206;</span> Documents ({{ documentCount() }})</h2>
+            <button class="btn-icon"
+                    (click)="triggerFileInput()"
+                    [disabled]="uploadingDoc()"
+                    aria-label="Upload document">
+              <span aria-hidden="true">&#10133;</span>
             </button>
-          </mat-card-header>
-          <mat-card-content>
+          </div>
+          <div class="card-body">
 
             <!-- Hidden file input -->
             <input id="doc-file-input" type="file"
@@ -147,247 +212,351 @@
                    (change)="onFileSelected($event)">
 
             <!-- Upload progress -->
-            <div *ngIf="uploadingDoc" style="display:flex;align-items:center;gap:12px;padding:12px 0">
-              <mat-spinner diameter="24"></mat-spinner>
-              <span>Uploading...</span>
-            </div>
+            @if (uploadingDoc()) {
+              <div class="upload-progress">
+                <div class="spinner-sm" aria-hidden="true"></div>
+                <span>Uploading...</span>
+              </div>
+            }
 
             <!-- Empty state -->
-            <div *ngIf="!uploadingDoc && realDocuments.length === 0" class="no-documents">
-              <mat-icon>folder_open</mat-icon>
-              <p>No documents uploaded yet</p>
-              <button mat-raised-button color="primary" (click)="triggerFileInput()">
-                <mat-icon>cloud_upload</mat-icon>
-                Upload Document
-              </button>
-            </div>
+            @if (!uploadingDoc() && realDocuments().length === 0) {
+              <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true">&#128194;</span>
+                <p>No documents uploaded yet</p>
+                <button class="btn-primary" (click)="triggerFileInput()" aria-label="Upload your first document">
+                  <span aria-hidden="true">&#11014;&#65039;</span> Upload Document
+                </button>
+              </div>
+            }
 
             <!-- Document list -->
-            <div *ngIf="realDocuments.length > 0" class="documents-list">
-              <div *ngFor="let doc of realDocuments" class="document-item">
-                <mat-icon class="doc-icon">{{ getFileIcon(doc.fileName) }}</mat-icon>
-                <div class="doc-info">
-                  <p class="doc-name">{{ doc.fileName }}</p>
-                  <p class="doc-meta">{{ formatDate(doc.uploadedAt) }}</p>
-                </div>
-                <div class="doc-actions">
-                  <a *ngIf="doc.signedUrl"
-                     [href]="doc.signedUrl" target="_blank" rel="noopener noreferrer"
-                     mat-icon-button matTooltip="Download">
-                    <mat-icon>download</mat-icon>
-                  </a>
-                  <button mat-icon-button color="warn"
-                          matTooltip="Delete"
-                          [disabled]="deletingDocId === doc.id"
-                          (click)="deleteDoc(doc.id)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Comments Section -->
-        <mat-card class="comments-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>chat</mat-icon>
-              Comments & Notes ({{ comments.length }})
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            
-            <!-- Comment List -->
-            <div class="comments-list">
-              <div *ngFor="let comment of comments" class="comment-item" [ngClass]="{'staff-comment': comment.isStaff}">
-                <div class="comment-header">
-                  <div class="comment-author">
-                    <mat-icon *ngIf="comment.isStaff">support_agent</mat-icon>
-                    <mat-icon *ngIf="!comment.isStaff">person</mat-icon>
-                    <strong>{{ comment.author }}</strong>
+            @if (realDocuments().length > 0) {
+              <div class="documents-list">
+                @for (doc of realDocuments(); track doc.id) {
+                  <div class="document-item">
+                    <span class="doc-icon" aria-hidden="true">{{ getFileEmoji(doc.fileName) }}</span>
+                    <div class="doc-info">
+                      <p class="doc-name">{{ doc.fileName }}</p>
+                      <p class="doc-meta">{{ formatDate(doc.uploadedAt) }}</p>
+                    </div>
+                    <div class="doc-actions">
+                      @if (doc.signedUrl) {
+                        <a [href]="doc.signedUrl"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn-icon"
+                           aria-label="Download {{ doc.fileName }}">
+                          <span aria-hidden="true">&#11015;&#65039;</span>
+                        </a>
+                      }
+                      <button class="btn-icon btn-danger"
+                              [disabled]="deletingDocId() === doc.id"
+                              (click)="deleteDoc(doc.id)"
+                              aria-label="Delete {{ doc.fileName }}">
+                        <span aria-hidden="true">&#128465;&#65039;</span>
+                      </button>
+                    </div>
                   </div>
-                  <span class="comment-time">{{ formatDateTime(comment.timestamp) }}</span>
-                </div>
-                <p class="comment-text">{{ comment.text }}</p>
+                }
               </div>
+            }
 
-              <div *ngIf="comments.length === 0" class="no-comments">
-                <mat-icon>chat_bubble_outline</mat-icon>
-                <p>No comments yet. Start the conversation!</p>
+            <!-- Upload area hint -->
+            @if (realDocuments().length > 0) {
+              <div class="upload-hint">
+                <p>Accepted: JPG, PNG, PDF, HEIC &middot; Max 10 MB</p>
               </div>
+            }
+          </div>
+        </section>
+
+        <!-- ─── CD-5: Messaging Section ──────────────────────────── -->
+        <section class="card messaging-card" aria-labelledby="messaging-heading">
+          <div class="card-header">
+            <h2 id="messaging-heading"><span aria-hidden="true">&#128172;</span> Messages</h2>
+          </div>
+          <div class="card-body">
+            <!-- Privilege notice -->
+            <div class="privilege-notice">
+              <span aria-hidden="true">&#128274;</span>
+              Messages are protected by attorney-client privilege
             </div>
 
-            <mat-divider></mat-divider>
+            <!-- Message thread -->
+            @if (messages().length > 0) {
+              <div class="message-thread">
+                @for (msg of messages(); track msg.id || $index) {
+                  <div class="message-bubble" [class.message-driver]="msg.sender_role === 'driver'" [class.message-staff]="msg.sender_role !== 'driver'">
+                    <div class="message-header">
+                      <span class="message-avatar" aria-hidden="true">{{ getInitials(msg.sender_name || 'User') }}</span>
+                      <span class="message-sender">{{ msg.sender_name || 'User' }}</span>
+                      <span class="message-role-badge" [class.badge-attorney]="msg.sender_role === 'attorney'" [class.badge-driver]="msg.sender_role === 'driver'">{{ msg.sender_role === 'attorney' ? 'Attorney' : msg.sender_role === 'driver' ? 'Driver' : 'Staff' }}</span>
+                      <span class="message-time">{{ formatDateTime(msg.created_at || msg.timestamp) }}</span>
+                    </div>
+                    <div class="message-body">{{ msg.content }}</div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true">&#128172;</span>
+                <p>No messages yet. Start a conversation with your attorney.</p>
+              </div>
+            }
 
-            <!-- Add Comment Form -->
-            <form [formGroup]="commentForm" (ngSubmit)="addComment()" class="comment-form">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Add a comment or note</mat-label>
-                <textarea 
-                  matInput 
-                  formControlName="comment" 
-                  rows="3" 
-                  placeholder="Share updates, ask questions, or add notes..."></textarea>
-                <mat-hint>Minimum 10 characters</mat-hint>
-                <mat-error *ngIf="commentForm.get('comment')?.hasError('required')">
-                  Comment is required
-                </mat-error>
-                <mat-error *ngIf="commentForm.get('comment')?.hasError('minlength')">
-                  Comment must be at least 10 characters
-                </mat-error>
-              </mat-form-field>
-              <button 
-                mat-raised-button 
-                color="primary" 
-                type="submit" 
-                [disabled]="commentForm.invalid || addingComment">
-                <mat-icon>send</mat-icon>
-                {{ addingComment ? 'Posting...' : 'Post Comment' }}
-              </button>
+            <!-- Message form -->
+            <form class="message-form" [formGroup]="messageForm" (ngSubmit)="sendMessage()">
+              @if (messageError()) {
+                <p class="form-error">{{ messageError() }}</p>
+              }
+              <div class="message-input-row">
+                <textarea formControlName="content"
+                          placeholder="Type your message... (min 10 characters)"
+                          rows="2"
+                          class="message-textarea"
+                          aria-label="Message content"></textarea>
+                <button type="submit"
+                        class="btn-primary btn-send"
+                        [disabled]="messageForm.invalid || sendingMessage()"
+                        aria-label="Send message">
+                  @if (sendingMessage()) {
+                    <span class="spinner-sm" aria-hidden="true"></span>
+                  } @else {
+                    <span aria-hidden="true">&#9993;&#65039;</span>
+                  }
+                </button>
+              </div>
+              <span class="char-counter" [class.char-warning]="(messageForm.value.content?.length || 0) < 10">
+                {{ messageForm.value.content?.length || 0 }} characters
+              </span>
             </form>
-          </mat-card-content>
-        </mat-card>
+          </div>
+        </section>
+
+        <!-- ─── CD-5: Activity Log Section ───────────────────────── -->
+        <section class="card activity-card" aria-labelledby="activity-heading">
+          <div class="card-header">
+            <h2 id="activity-heading"><span aria-hidden="true">&#128203;</span> Activity Log</h2>
+            @if (activityLog().length > 5) {
+              <button class="btn-icon" (click)="toggleActivity()"
+                      [attr.aria-expanded]="activityExpanded()"
+                      aria-label="Toggle activity log">
+                <span aria-hidden="true">{{ activityExpanded() ? '&#9650;' : '&#9660;' }}</span>
+              </button>
+            }
+          </div>
+          <div class="card-body">
+            @if (activityLog().length > 0) {
+              <ul class="activity-list">
+                @for (entry of activityLog(); track entry.id || $index; let i = $index) {
+                  @if (i < 5 || activityExpanded()) {
+                    <li class="activity-entry">
+                      <span class="activity-time">{{ formatDateTime(entry.created_at || entry.timestamp) }}</span>
+                      <span class="activity-desc">{{ entry.action || entry.description }}</span>
+                      @if (entry.user_name) {
+                        <span class="activity-user">by {{ entry.user_name }}</span>
+                      }
+                    </li>
+                  }
+                }
+              </ul>
+              @if (activityLog().length > 5 && !activityExpanded()) {
+                <button class="btn-link" (click)="toggleActivity()">Show {{ activityLog().length - 5 }} more entries</button>
+              }
+            } @else {
+              <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true">&#128203;</span>
+                <p>No activity recorded yet</p>
+              </div>
+            }
+          </div>
+        </section>
 
       </div>
 
-      <!-- Right Column - Timeline & Attorney Info -->
+      <!-- Right Column -->
       <div class="right-column">
 
-        <!-- Pay Attorney Fee Alert -->
-        <mat-card class="pay-attorney-card" *ngIf="case.status === 'pay_attorney'">
-          <mat-card-content>
-            <div class="pay-alert">
-              <mat-icon class="pay-icon">payment</mat-icon>
-              <div class="pay-info">
-                <strong>Attorney Fee Due</strong>
-                <p *ngIf="case.attorney_price">Amount: ${{ case.attorney_price }}</p>
-                <p *ngIf="!case.attorney_price">Payment required to proceed</p>
-              </div>
-              <button mat-raised-button color="primary" (click)="payAttorneyFee()">
-                Pay Now
-              </button>
+        <!-- Attorney Card -->
+        @if (attorney() || caseData()!.assignedAttorney) {
+          <section class="card attorney-card" aria-labelledby="attorney-heading">
+            <div class="card-header">
+              <h2 id="attorney-heading"><span aria-hidden="true">&#9878;&#65039;</span> Your Attorney</h2>
             </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Attorney Info Card -->
-        <mat-card class="attorney-card" *ngIf="case.attorney || case.assignedAttorney">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>gavel</mat-icon>
-              Assigned Attorney
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="attorney-info">
-              <div class="attorney-avatar">
-                <mat-icon>account_circle</mat-icon>
+            <div class="card-body">
+              <div class="attorney-profile">
+                <div class="attorney-avatar" aria-hidden="true">
+                  {{ attorneyInitials() }}
+                </div>
+                <div class="attorney-details">
+                  <h3>{{ attorneyName() }}</h3>
+                  <span class="attorney-role">Defense Attorney</span>
+                </div>
               </div>
-              <div class="attorney-details">
-                <h3>{{ case.attorney?.full_name || case.assignedAttorney }}</h3>
-                <p>Licensed Attorney</p>
-                <div class="attorney-contact">
-                  <button mat-button color="primary">
-                    <mat-icon>email</mat-icon>
-                    Send Message
+
+              @if (attorney()?.win_rate !== undefined || attorney()?.years_experience !== undefined || attorney()?.cases_won !== undefined) {
+                <div class="attorney-stats">
+                  @if (attorney()!.win_rate !== undefined) {
+                    <div class="attorney-stat">
+                      <span class="stat-value">{{ attorney()!.win_rate }}%</span>
+                      <span class="stat-label">Win Rate</span>
+                    </div>
+                  }
+                  @if (attorney()!.years_experience !== undefined) {
+                    <div class="attorney-stat">
+                      <span class="stat-value">{{ attorney()!.years_experience }}</span>
+                      <span class="stat-label">Years Exp</span>
+                    </div>
+                  }
+                  @if (attorney()!.cases_won !== undefined) {
+                    <div class="attorney-stat">
+                      <span class="stat-value">{{ attorney()!.cases_won }}</span>
+                      <span class="stat-label">Cases Won</span>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="attorney-actions">
+                <button class="btn-outline btn-sm" aria-label="Send message to attorney">
+                  <span aria-hidden="true">&#9993;&#65039;</span> Message
+                </button>
+                @if (attorney()?.phone) {
+                  <button class="btn-outline btn-sm" aria-label="Call attorney">
+                    <span aria-hidden="true">&#128222;</span> Call
                   </button>
-                  <button mat-button *ngIf="case.attorney?.phone">
-                    <mat-icon>phone</mat-icon>
-                    Call
-                  </button>
-                </div>
+                }
               </div>
             </div>
-          </mat-card-content>
-        </mat-card>
+          </section>
+        }
 
-        <!-- Status Timeline Card -->
-        <mat-card class="timeline-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>timeline</mat-icon>
-              Status History
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="timeline" *ngIf="case.statusHistory && case.statusHistory.length > 0">
-              <div *ngFor="let history of case.statusHistory; let last = last" class="timeline-item">
-                <div class="timeline-marker" [ngClass]="getStatusClass(history.status)">
-                  <mat-icon>{{ getStatusIcon(history.status) }}</mat-icon>
-                </div>
-                <div class="timeline-content">
-                  <h4>{{ getStatusLabel(history.status) }}</h4>
-                  <p class="timeline-date">{{ formatDateTime(history.timestamp) }}</p>
-                  <p class="timeline-note" *ngIf="history.note">{{ history.note }}</p>
-                </div>
-                <div class="timeline-line" *ngIf="!last"></div>
+        <!-- Status Timeline -->
+        <section class="card timeline-card" aria-labelledby="timeline-heading">
+          <div class="card-header">
+            <h2 id="timeline-heading"><span aria-hidden="true">&#128203;</span> Status History</h2>
+          </div>
+          <div class="card-body">
+            @if (statusHistory().length > 0) {
+              <ol class="timeline" role="list">
+                @for (entry of statusHistory(); track $index; let last = $last; let i = $index) {
+                  <li class="timeline-item" [class.timeline-done]="i < statusHistory().length - 1"
+                      [class.timeline-current]="i === statusHistory().length - 1">
+                    <div class="timeline-marker" aria-hidden="true">
+                      @if (i < statusHistory().length - 1) {
+                        <span>&#9989;</span>
+                      } @else {
+                        <span class="current-dot"></span>
+                      }
+                    </div>
+                    <div class="timeline-content">
+                      <h4>{{ getStatusLabel(entry.status) }}</h4>
+                      @if (entry.changed_by) {
+                        <p class="timeline-by">by {{ entry.changed_by }}</p>
+                      }
+                      <p class="timeline-date">{{ formatDateTime(entry.changed_at || entry.timestamp) }}</p>
+                      @if (entry.notes || entry.note) {
+                        <p class="timeline-note">{{ entry.notes || entry.note }}</p>
+                      }
+                    </div>
+                    @if (!last) {
+                      <div class="timeline-line" aria-hidden="true"></div>
+                    }
+                  </li>
+                }
+              </ol>
+            } @else {
+              <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true">&#128203;</span>
+                <p>No status history available</p>
               </div>
-            </div>
+            }
+          </div>
+        </section>
 
-            <div *ngIf="!case.statusHistory || case.statusHistory.length === 0" class="no-timeline">
-              <mat-icon>history</mat-icon>
-              <p>No status history available</p>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Quick Actions Card -->
-        <mat-card class="actions-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>bolt</mat-icon>
-              Quick Actions
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
+        <!-- Quick Actions -->
+        <section class="card actions-card" aria-labelledby="actions-heading">
+          <div class="card-header">
+            <h2 id="actions-heading"><span aria-hidden="true">&#9889;</span> Quick Actions</h2>
+          </div>
+          <div class="card-body">
             <div class="quick-actions">
-              <button mat-stroked-button class="action-button" (click)="triggerFileInput()"
-                      [disabled]="uploadingDoc">
-                <mat-icon>file_upload</mat-icon>
-                Upload Document
+              <button class="action-btn" (click)="triggerFileInput()" [disabled]="uploadingDoc()">
+                <span class="action-icon" aria-hidden="true">&#128228;</span>
+                <span>Upload Doc</span>
               </button>
-              <button mat-stroked-button class="action-button" (click)="commentForm.get('comment')?.setValue('')">
-                <mat-icon>edit_note</mat-icon>
-                Add Note
+              <button class="action-btn" (click)="exportToPDF()" [disabled]="exportingPdf()">
+                <span class="action-icon" aria-hidden="true">&#128424;&#65039;</span>
+                <span>Print Case</span>
               </button>
-              <button mat-stroked-button class="action-button" (click)="exportToPDF()">
-                <mat-icon>print</mat-icon>
-                Print Case
+              <button class="action-btn" disabled>
+                <span class="action-icon" aria-hidden="true">&#128221;</span>
+                <span>Add Note</span>
               </button>
-              <button mat-stroked-button class="action-button">
-                <mat-icon>share</mat-icon>
-                Share Case
+              <button class="action-btn" (click)="shareCase()" aria-label="Share case details">
+                <span class="action-icon" aria-hidden="true">&#128279;</span>
+                <span>{{ shareCopyFeedback() ? 'Copied!' : 'Share Case' }}</span>
+              </button>
+              <button class="action-btn" disabled>
+                <span class="action-icon" aria-hidden="true">&#9993;&#65039;</span>
+                <span>Contact Attorney</span>
+              </button>
+              <button class="action-btn" routerLink="/driver/payments">
+                <span class="action-icon" aria-hidden="true">&#128176;</span>
+                <span>Payment History</span>
               </button>
             </div>
-          </mat-card-content>
-        </mat-card>
+            <!-- CD-7: Share copy feedback (aria-live region) -->
+            <div aria-live="polite" class="sr-only">
+              @if (shareCopyFeedback()) {
+                Case details copied to clipboard
+              }
+            </div>
+          </div>
+        </section>
 
       </div>
     </div>
 
-  </div>
+    <!-- ─── Secure Footer ─────────────────────────────────────── -->
+    <footer class="secure-footer" aria-label="Security information">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>Your data is protected with bank-level encryption &middot; AES-256 &middot; PCI DSS compliant</span>
+    </footer>
+  }
 
-  <!-- Document Viewer Modal -->
-  <div class="modal-overlay" *ngIf="isDocumentViewerOpen" (click)="closeDocumentViewer()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
-      <app-document-viewer
-        *ngIf="selectedDocument"
-        [document]="selectedDocument"
-        [showToolbar]="true"
-        (close)="closeDocumentViewer()"
-        (download)="downloadDocument($event)">
-      </app-document-viewer>
+  <!-- ─── Toast Notification ──────────────────────────────────── -->
+  @if (toastVisible()) {
+    <div class="toast" role="status" aria-live="polite">
+      {{ toastMessage() }}
     </div>
-  </div>
+  }
 
-  <!-- Image Lightbox -->
-  <app-image-lightbox
-    *ngIf="isLightboxOpen"
-    [images]="lightboxImages"
-    [currentIndex]="currentLightboxIndex"
-    (close)="closeLightbox()"
-    (download)="downloadLightboxImage($event)">
-  </app-image-lightbox>
+  <!-- ─── Document Viewer Modal ───────────────────────────────── -->
+  @if (isDocumentViewerOpen()) {
+    <div class="modal-overlay" (click)="closeDocumentViewer()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <app-document-viewer
+          [document]="selectedDocument()"
+          [showToolbar]="true"
+          (close)="closeDocumentViewer()"
+          (download)="downloadDocument($event)">
+        </app-document-viewer>
+      </div>
+    </div>
+  }
+
+  <!-- ─── Image Lightbox ──────────────────────────────────────── -->
+  @if (isLightboxOpen()) {
+    <app-image-lightbox
+      [images]="lightboxImages()"
+      [currentIndex]="currentLightboxIndex()"
+      (close)="closeLightbox()"
+      (download)="downloadLightboxImage($event)">
+    </app-image-lightbox>
+  }
 
 </div>

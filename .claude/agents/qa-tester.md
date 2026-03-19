@@ -198,6 +198,19 @@ For every bug in `docs/HARD_BUGS_REGISTRY.md`, write a test that proves the fix 
 - **BUG-004:** Test that all 5 roles can register without enum errors
 - **BUG-005:** Test that post-login navigation goes to correct route (no `/app/` prefix)
 
+## Verification Protocol (Mandatory)
+
+Before claiming test writing is complete, you MUST provide fresh evidence.
+
+1. **Run the full test suite and show the output.** Not just the new tests — the FULL suite.
+   - Backend: `cd backend && npm test --no-coverage`
+   - Frontend: `cd frontend && npx ng test --no-watch`
+2. **Never say "all tests pass" from memory.** Run the command NOW and show the output.
+3. **If any test fails** (even pre-existing ones), document it explicitly: which test, what error, whether it's pre-existing or a regression.
+4. **If you wrote a test that passes immediately without code changes,** question whether the test is actually testing anything. A test that can't fail is useless.
+
+---
+
 ## Rules
 
 - Every test file MUST have at least one positive and one negative test case
@@ -206,3 +219,25 @@ For every bug in `docs/HARD_BUGS_REGISTRY.md`, write a test that proves the fix 
 - E2E tests should use test fixtures, not production data
 - Test names should describe the expected behavior, not the implementation
 - Run the full test suite and ensure it passes before handing off to the Critic
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Flaky tests:** Which tests intermittently fail? Are they timing-dependent, order-dependent, or relying on external state?
+- **Missed edge cases:** Did bugs slip through to the Critic or production that a test should have caught? What category?
+- **Test framework issues:** Did `ng test` or `vitest` behave differently than expected? (e.g., signal inputs, DI issues, mock hoisting)
+- **Coverage gaps:** After the Critic review, were there untested code paths flagged?
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Add the new test pattern to the relevant "What to Test" section
+2. Update test templates if the existing templates don't handle a discovered pattern (e.g., signal required inputs, interceptor mocking)
+3. Add notes to the "Configuration" section for framework-specific gotchas
+4. Update "Rules" if a new testing convention is established
+
+### Improve
+- Track which types of bugs most frequently escape testing. Add those categories as mandatory test cases in the templates.
+- When Angular or Jest/Vitest updates change testing patterns, update the templates in this file.
+- If a test pattern is reused across >3 test files, extract it as a shared test utility and document it here.

@@ -4,14 +4,14 @@
   <div class="greeting-row">
     <div class="greeting-left">
       <div class="greeting-time">
-        <mat-icon>schedule</mat-icon>
+        <span class="greeting-emoji" aria-hidden="true">&#x1F44B;</span>
         {{ greetingText() }}
       </div>
       <div class="greeting-name">{{ currentUser()?.name || 'Driver' }}</div>
       <div class="greeting-sub">{{ 'DRIVER_DASHBOARD.OVERVIEW' | translate }}, {{ todayFormatted() }}</div>
     </div>
     <button class="btn btn-primary" (click)="submitNewCase()">
-      <mat-icon>add</mat-icon>
+      <span aria-hidden="true">&#x2795;</span>
       {{ 'DRIVER_DASHBOARD.SUBMIT_TICKET' | translate }}
     </button>
   </div>
@@ -30,9 +30,9 @@
       <!-- Total Cases -->
       <div class="stat-card total" (click)="viewAllCases()" role="button" tabindex="0" (keydown.enter)="viewAllCases()">
         <div class="stat-top">
-          <div class="stat-icon-wrap total"><mat-icon>folder_open</mat-icon></div>
+          <div class="stat-icon-wrap total"><span aria-hidden="true">&#x1F4CB;</span></div>
           <span class="stat-trend trend-up">
-            <mat-icon>trending_up</mat-icon>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             All time
           </span>
         </div>
@@ -46,9 +46,9 @@
       <!-- Active -->
       <div class="stat-card active" (click)="viewAllCases()" role="button" tabindex="0" (keydown.enter)="viewAllCases()">
         <div class="stat-top">
-          <div class="stat-icon-wrap active"><mat-icon>pending_actions</mat-icon></div>
+          <div class="stat-icon-wrap active"><span aria-hidden="true">&#x1F535;</span></div>
           <span class="stat-trend trend-up">
-            <mat-icon>trending_up</mat-icon>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             {{ stats().active }} active
           </span>
         </div>
@@ -62,10 +62,10 @@
       <!-- Pending -->
       <div class="stat-card pending" (click)="viewAllCases()" role="button" tabindex="0" (keydown.enter)="viewAllCases()">
         <div class="stat-top">
-          <div class="stat-icon-wrap pending"><mat-icon>hourglass_top</mat-icon></div>
+          <div class="stat-icon-wrap pending"><span aria-hidden="true">&#x23F3;</span></div>
           @if (stats().pending > 0) {
             <span class="stat-trend trend-up">
-              <mat-icon>trending_up</mat-icon>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
               {{ stats().pending }} waiting
             </span>
           } @else {
@@ -132,7 +132,7 @@
       <div class="card">
         <div class="card-header">
           <div class="card-header-icon">
-            <mat-icon>description</mat-icon>
+            <span aria-hidden="true">&#x1F4CB;</span>
           </div>
           <div>
             <div class="card-title">{{ 'DRIVER_DASHBOARD.RECENT_CASES' | translate }}</div>
@@ -140,17 +140,17 @@
           </div>
           <button class="card-action" (click)="viewAllCases()">
             {{ 'COMMON.VIEW_ALL' | translate }}
-            <mat-icon>chevron_right</mat-icon>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
 
         @if (recentCases().length === 0) {
           <div class="empty-state">
-            <mat-icon>inbox</mat-icon>
+            <span class="empty-emoji" aria-hidden="true">&#x1F4ED;</span>
             <h3>{{ 'DRIVER_DASHBOARD.NO_CASES' | translate }}</h3>
             <p>{{ 'DRIVER_DASHBOARD.NO_CASES_HINT' | translate }}</p>
             <button class="btn btn-primary" (click)="submitNewCase()">
-              <mat-icon>add</mat-icon> {{ 'DRIVER_DASHBOARD.SUBMIT_TICKET' | translate }}
+              <span aria-hidden="true">&#x2795;</span> {{ 'DRIVER_DASHBOARD.SUBMIT_TICKET' | translate }}
             </button>
           </div>
         } @else {
@@ -161,7 +161,7 @@
                  (keydown.enter)="viewCase(c)"
                  [attr.aria-label]="'View case ' + (c.case_number || c.id)">
               <div [class]="'case-icon ' + getViolationIconClass(c.violation_type || c.type)">
-                <mat-icon>{{ getViolationIcon(c.violation_type || c.type) }}</mat-icon>
+                <span aria-hidden="true">{{ getViolationEmoji(c.violation_type || c.type) }}</span>
               </div>
               <div class="case-main">
                 <div class="case-id">{{ c.case_number || c.ticketNumber || c.id }}</div>
@@ -182,7 +182,7 @@
                 <div class="case-date">{{ formatDate(c.created_at || c.createdAt) }} · {{ formatRelativeTime(c.created_at || c.createdAt) }}</div>
               </div>
               <div class="case-arrow">
-                <mat-icon>chevron_right</mat-icon>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
             </div>
           }
@@ -196,7 +196,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-header-icon quick-icon-bg">
-              <mat-icon>bolt</mat-icon>
+              <span aria-hidden="true">&#x26A1;</span>
             </div>
             <div>
               <div class="card-title">{{ 'DRIVER_DASHBOARD.QUICK_ACTIONS' | translate }}</div>
@@ -205,28 +205,28 @@
           </div>
           <div class="quick-grid">
             <div class="quick-btn q-new" role="button" tabindex="0" (click)="submitNewCase()" (keydown.enter)="submitNewCase()">
-              <div class="quick-icon"><mat-icon>add_circle</mat-icon></div>
+              <div class="quick-icon"><span aria-hidden="true">&#x2795;</span></div>
               <div>
                 <div class="quick-label">{{ 'DRIVER_DASHBOARD.NEW_CASE' | translate }}</div>
                 <div class="quick-sub">Submit ticket</div>
               </div>
             </div>
             <div class="quick-btn q-cases" role="button" tabindex="0" (click)="viewAllCases()" (keydown.enter)="viewAllCases()">
-              <div class="quick-icon"><mat-icon>list_alt</mat-icon></div>
+              <div class="quick-icon"><span aria-hidden="true">&#x1F4CB;</span></div>
               <div>
                 <div class="quick-label">{{ 'DRIVER_DASHBOARD.ALL_CASES' | translate }}</div>
                 <div class="quick-sub">View {{ stats().total }} tickets</div>
               </div>
             </div>
             <div class="quick-btn q-profile" role="button" tabindex="0" (click)="navigateToProfile()" (keydown.enter)="navigateToProfile()">
-              <div class="quick-icon"><mat-icon>person</mat-icon></div>
+              <div class="quick-icon"><span aria-hidden="true">&#x1F464;</span></div>
               <div>
                 <div class="quick-label">{{ 'NAV.PROFILE' | translate }}</div>
                 <div class="quick-sub">Edit info</div>
               </div>
             </div>
             <div class="quick-btn q-support" role="button" tabindex="0" (click)="navigateToHelp()" (keydown.enter)="navigateToHelp()">
-              <div class="quick-icon"><mat-icon>support_agent</mat-icon></div>
+              <div class="quick-icon"><span aria-hidden="true">&#x1F4AC;</span></div>
               <div>
                 <div class="quick-label">{{ 'DRIVER_DASHBOARD.SUPPORT' | translate }}</div>
                 <div class="quick-sub">Get help</div>
@@ -239,7 +239,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-header-icon activity-icon-bg">
-              <mat-icon>schedule</mat-icon>
+              <span aria-hidden="true">&#x1F550;</span>
             </div>
             <div>
               <div class="card-title">Recent Activity</div>

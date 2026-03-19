@@ -147,6 +147,96 @@ module.exports = router;
 - Backend services: `backend/src/services/<feature>.service.js`
 - Backend routes: `backend/src/routes/<feature>.routes.js`
 
+## Verification Protocol (Mandatory)
+
+Before claiming ANY task is complete, you MUST provide fresh evidence. No exceptions.
+
+### Rules
+1. **Run the relevant test command. Show the output.**
+   - Backend: `cd backend && npm test --no-coverage`
+   - Frontend: `cd frontend && npx ng test --no-watch`
+2. **Never verify from memory.** Never say "tests passed earlier." Run it NOW.
+3. **The actual command output must be visible in this conversation** for every "tests pass" claim.
+4. **If a test fails, the task is NOT complete.** Fix it or flag it as a blocker.
+5. **If you say "done" without fresh test output,** the task is reverted to IN PROGRESS.
+
+### What Counts as Evidence
+- Terminal output showing test results with pass/fail counts
+- Build output showing successful compilation
+- A command you ran in THIS session (not a previous one)
+
+### What Does NOT Count
+- "Tests should pass because I didn't change anything"
+- "The tests passed when I ran them earlier"
+- "Based on my analysis, this change is safe"
+- Paraphrasing results without showing actual output
+
+---
+
+## Debugging Protocol (When a test fails or bug is reported)
+
+Do NOT guess. Do NOT try random fixes. Follow this 4-phase process.
+
+### Phase 1: Investigate (DO NOT write code yet)
+1. Read the **full** error message and stack trace
+2. Identify the failing file, line number, and function
+3. Check `git diff` or `git blame` for recent changes to that area
+4. Read the relevant test to understand expected vs actual behavior
+
+### Phase 2: Pattern Analysis
+1. Is this the same error pattern as a known bug? Check `docs/HARD_BUGS_REGISTRY.md`
+2. Are there similar patterns elsewhere in the codebase that work? Compare them
+3. Is the issue in our code, a dependency, or test setup?
+4. Check if the failure is deterministic (run the test 2x)
+
+### Phase 3: Hypothesis Testing
+1. State your hypothesis explicitly: **"The bug is caused by X because Y"**
+2. Write or modify ONE test that would confirm or deny the hypothesis
+3. Run it. Does the result match your prediction?
+4. If yes → proceed to Phase 4. If no → back to Phase 2 with new data
+
+### Phase 4: Implementation
+1. Fix the **root cause**, not symptoms
+2. Run the FULL test suite, not just the failing test
+3. Verify no regressions were introduced
+
+### Circuit Breaker: 3 Strikes Rule
+If **3 attempted fixes fail in a row**:
+1. **STOP writing code**
+2. Re-read the original error message with fresh eyes
+3. List every assumption you've made — which one might be wrong?
+4. Consider: wrong file? wrong layer? wrong mental model of the data flow?
+5. If still stuck after reassessment, flag to the user with:
+   - What you've tried (with specifics)
+   - What you've ruled out
+   - Where you think the real issue is
+   - What information would help unblock you
+
+**Never attempt fix #4 without first questioning your assumptions from fixes 1-3.**
+
+---
+
 ## Handoff
 
 After implementation, the output is passed to the **QA Tester** agent for test creation. Ensure your code is clean, well-structured, and follows all conventions so tests can be written against clear interfaces.
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Test failures:** Did the QA Tester or test suite reveal bugs in the implementation? What category? (null handling, async race conditions, form validation edge cases)
+- **Critic feedback:** Did the Critic flag code quality, security, or performance issues? What patterns?
+- **Convention violations:** Did the code accidentally use old patterns (`*ngIf`, constructor injection, `@Input()`, `standalone: true`)?
+- **Build failures:** What TypeScript errors or Angular compilation issues occurred during implementation?
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Add the fix pattern to the relevant "Rules" section (Frontend or Backend)
+2. Update code templates if the existing templates led to incorrect patterns
+3. Add new entries to "Critical Backend Rules" or "Template Rules" for recurring mistakes
+
+### Improve
+- When a new Angular or Node.js pattern becomes standard in the codebase, update the templates in this file to reflect it.
+- If `HARD_BUGS_REGISTRY.md` gets a new entry related to implementation, add a corresponding rule here.
+- Track which shared components are most reused — add them to a "Preferred Components" quick-reference if they're used in >3 features.

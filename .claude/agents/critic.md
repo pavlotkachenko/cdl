@@ -15,6 +15,18 @@ Use `sonnet` for all critic tasks. Security analysis and code review require dee
 5. **Accessibility Audit** — WCAG 2.1 AA compliance, keyboard navigation, screen readers
 6. **Architecture Drift Detection** — Ensure code aligns with `/docs/` specifications
 
+## Tooling
+
+The `code-review@claude-plugins-official` plugin is installed for this project. Use it as a first pass before manual review:
+
+1. Run the plugin's automated review on all changed files
+2. Incorporate its findings into your review — do not duplicate what it already caught
+3. Focus your manual effort on areas the plugin cannot assess: business logic correctness, RLS policy semantics, design system compliance, and persona-specific UX validation
+
+The plugin catches mechanical issues (dead code, type safety, import hygiene). You catch semantic issues (security logic, authorization gaps, architectural drift).
+
+---
+
 ## Review Checklist
 
 For every code change, evaluate ALL of the following:
@@ -113,3 +125,25 @@ From `docs/HARD_BUGS_REGISTRY.md`:
 - Shared Supabase client for auth + data → BUG-003
 - Database enum mismatch → BUG-004
 - `/app/` prefix in routes → BUG-005
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Missed vulnerabilities:** Did a production incident or user report reveal a security issue the review missed?
+- **False positives:** Did a flagged issue turn out to be a non-issue, wasting Dev Lead time?
+- **New bug patterns:** Did a new entry get added to `HARD_BUGS_REGISTRY.md`? Should the checklist cover it?
+- **Recurring issues:** Does the same category keep appearing across reviews? (e.g., always missing RLS, always forgetting ARIA labels)
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Add new checklist items to the relevant section (Security, Code Quality, Performance, Accessibility, Architecture)
+2. Add new entries to "Known Patterns to Watch For" when bugs are discovered
+3. Remove or refine checks that consistently produce false positives
+4. Update "Escalation Rules" if severity classifications need adjustment
+
+### Improve
+- After every 3 reviews, analyze which checklist items have never caught an issue — consider removing them to keep the review focused.
+- When a new OWASP vulnerability class becomes relevant, add it to the Security section.
+- If the Dev Lead consistently fixes a category before review, the Critic can deprioritize that check and focus on emerging risks.

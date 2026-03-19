@@ -37,7 +37,7 @@ const routes: Routes = [
       },
       {
         path: 'tickets/:id',
-        component: CaseDetailComponent
+        redirectTo: 'cases/:id'
       },
       {
         path: 'cases/:caseId',

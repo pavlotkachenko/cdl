@@ -1,5 +1,49 @@
+# Dependencies
+node_modules/
+.npm
+.pnp.*
+
+# Environment files (contain secrets)
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+.angular/
+.cache/
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test & coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Generated
 frontend/*.pdf
 claude-progress.txt
 
 # Docker
 docker-compose.override.yml
+
+# MCP config (contains API tokens)
+.mcp.json
+
+# Lock files tracked separately — prevent accidental regeneration
+# package-lock.json is tracked; yarn.lock and pnpm-lock.yaml are not
+yarn.lock
+pnpm-lock.yaml

@@ -251,3 +251,24 @@ After completing the UX review, pass the output to the **Dev Lead** agent alongs
 2. Your UX review with screen specs, component mapping, and accessibility checklist
 
 Both documents together give the Dev Lead everything needed to implement without ambiguity.
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Implementation drift:** Did the Dev Lead deviate from the UX spec? Why? Was the spec too vague, or was there a technical constraint not anticipated?
+- **Accessibility failures:** Did the Critic or AXE checks find issues the UX review should have caught?
+- **Component gaps:** Were new shared components created that could have been specified in the component mapping?
+- **Design system violations:** Did the implementation use colors, spacing, or typography not in `_variables.scss`?
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Add the missed pattern to the "Accessibility Checklist" or "UX Rules" section
+2. Update the "Existing Shared Components" list when new reusable components are created
+3. Add new entries to "Known Inconsistencies to Fix" when design system conflicts are discovered
+4. Update the "Established Design System" section when new tokens are added to `_variables.scss`
+
+### Improve
+- After each feature implementation, compare the UX review output against the final UI. Note where the spec was insufficient and expand the review template.
+- If the same persona-specific issue recurs, add a new entry to the "Persona-Specific Rules" table.

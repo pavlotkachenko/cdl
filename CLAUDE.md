@@ -121,7 +121,14 @@ cdl-ticket-management/
 │   │   ├── security-audit.md    # Security review checklist
 │   │   ├── db-migration.md      # Database migration workflow
 │   │   ├── test-suite.md        # Test generation and execution
+│   │   ├── tdd-backend.md       # Opt-in TDD for backend services and bug fixes
 │   │   └── pr-workflow.md       # Branch, commit, PR creation
+│   ├── templates/               # Reusable file templates
+│   │   ├── sprint-story-template.md
+│   │   └── sprint-overview-template.md
+│   ├── scripts/                 # Automation scripts
+│   │   ├── pre-sprint-kickoff.sh  # Environment/story/test validation
+│   │   └── verify-story.sh       # Definition of Done checker
 │   └── settings.local.json
 ├── frontend/                    # Angular 21 application
 │   ├── src/app/
@@ -152,6 +159,7 @@ cdl-ticket-management/
 ├── supabase/                    # Supabase project configuration
 │   └── migrations/              # Supabase migration files
 ├── docs/                        # Canonical project documentation
+│   └── adr/                     # Architecture Decision Records
 └── supabase_schema.sql          # Database schema reference
 ```
 
@@ -161,34 +169,15 @@ cdl-ticket-management/
 
 ### Frontend (Angular 21)
 
-Refer to `frontend/.claude/CLAUDE.md` for detailed Angular conventions. Key rules:
+**Authoritative source:** `frontend/.claude/CLAUDE.md` — read it before writing any frontend code.
 
-- **Standalone components only** — no NgModules. Do NOT set `standalone: true` (default in Angular 21).
-- **Signals for state** — use `signal()`, `computed()`, `effect()`. Use `update()` or `set()`, never `mutate`.
-- **OnPush change detection** — always set `changeDetection: ChangeDetectionStrategy.OnPush`.
-- **Native control flow** — use `@if`, `@for`, `@switch` (not `*ngIf`, `*ngFor`).
-- **Reactive forms** — never template-driven forms.
-- **`input()` / `output()`** — not `@Input()` / `@Output()` decorators.
-- **`inject()`** — not constructor injection.
-- **`host` object** — not `@HostBinding` / `@HostListener`.
-- **Lazy loading** — all feature routes are lazy-loaded.
-- **WCAG 2.1 AA** — must pass all AXE checks. 44x44px touch targets. Keyboard navigable.
-- **Mobile-first** — design for 4-inch screens first. Primary actions in bottom thumb zone.
-- **NgOptimizedImage** — for all static images (not for inline base64).
+Key rules: standalone components only (no NgModules), signals for state, OnPush change detection, native control flow (`@if`/`@for`/`@switch`), `input()`/`output()` functions (not decorators), `inject()` (not constructor injection), reactive forms only, WCAG 2.1 AA, mobile-first.
 
 ### Backend (Node.js / Express 5)
 
-- **Controllers are thin** — extract business logic into service files.
-- **Consistent error responses:** `{ error: { code: 'ERROR_CODE', message: 'Human-readable message' } }`
-- **Never expose stack traces** in production responses.
-- **Validate at boundaries** — validate all request inputs in controllers/middleware.
-- **Supabase client usage:**
-  - `supabaseAdmin` (service role) for server-side operations
-  - `supabaseAnon` for auth operations (prevents BUG-003: auth state pollution)
-  - NEVER share a single client for both auth and data queries
-- **JWT tokens** — 7-day expiry, include `role` claim. Verify with middleware.
-- **Password hashing** — bcrypt with 10 salt rounds.
-- **Generic auth errors** — never reveal if email exists ("Invalid credentials").
+**Authoritative source:** `backend/CLAUDE.md` — read it before writing any backend code.
+
+Key rules: thin controllers (logic in services), consistent error format `{ error: { code, message } }`, `supabaseAnon` for auth / `supabaseAdmin` for data (BUG-003), JWT 7-day expiry with role claim, bcrypt 10 rounds, generic auth errors.
 
 ### Database (Supabase / PostgreSQL)
 
@@ -222,14 +211,21 @@ This project uses a **sequential pipeline with product management and critic rev
 
 **Pipeline for any feature:**
 ```
-0. Product Mgr → Decompose (trace to docs, break into stories, prioritize, get human sign-off)
-1. Architect   → Design (schema + API contract + component tree per story)
-2. UX Expert   → UX Review (interaction flows, mobile layout, accessibility, design tokens)
-3. Dev Lead    → Implement (backend services + frontend components)
-4. QA Tester   → Test (unit + integration + E2E tests)
-5. Critic      → Review (security + DRY + performance + accessibility)
-6. DevOps      → Ship (branch + commit + PR with human approval)
+0. Product Mgr  → Decompose (trace to docs, break into stories, prioritize, get human sign-off)
+1. Architect    → Design (schema + API contract + component tree per story)
+2. UX Expert    → UX Review (interaction flows, mobile layout, accessibility, design tokens)
+3. Dev Lead     → Implement (backend services + frontend components)
+4. QA Tester    → Test (unit + integration + E2E tests)
+5. Critic       → Review (security + DRY + performance + accessibility)
+6. Docs Writer  → Update docs (API spec, functional reqs, bug registry, glossary)
+7. DevOps       → Ship (branch + commit + PR with human approval)
 ```
+
+**Escalation loops** are defined in `implement-feature.md`:
+- UX rejection → Architect revises → UX re-reviews (max 2 iterations)
+- Critic flags → Dev Lead fixes → QA updates → Critic re-reviews (max 3 iterations)
+- Test failure → Dev Lead debugs (4-phase protocol) → re-run (max 3 iterations)
+- All loops escalate to user if max iterations exhausted.
 
 **Step 0 is mandatory.** No work begins until the Product Manager has decomposed the request into traceable, scoped user stories with acceptance criteria and the user has approved the breakdown.
 

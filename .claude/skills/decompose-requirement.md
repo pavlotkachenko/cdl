@@ -47,6 +47,40 @@ Before decomposing, scan the codebase:
 
 Don't write stories for things that are already built.
 
+### Step 3b: Hidden Requirements Analysis
+
+Before decomposing into stories, perform a **hidden requirements audit** on any provided design templates, mockups, or HTML prototypes:
+
+#### Data Layer Gaps
+- Compare every form field in the template against the DB schema (`supabase_schema.sql`)
+- Flag fields that exist in the UI but have **no corresponding DB column**
+- Flag fields that exist in the UI but are **not accepted by the backend API**
+- Check enum values in the template against DB enum definitions — flag mismatches
+- Identify **conditional fields** (fields shown/hidden based on other field values) and their backend implications
+
+#### API Contract Gaps
+- Compare the template's form submission to the backend `createX` / `updateX` endpoint
+- Flag payload fields the backend doesn't accept or validate
+- Identify **field name mismatches** (camelCase vs snake_case, `description` vs `violation_details`)
+- Check if the template implies new API capabilities not yet built
+
+#### Asset & Icon Inventory
+- Catalog every icon used in the template (SVG inline, emoji, icon font references)
+- Check which icons exist in `frontend/src/assets/icons/` — flag missing ones
+- For templates using inline SVGs, create a story to extract them into reusable Angular components or the project icon system
+- Flag any images, logos, or illustrations referenced but not in the codebase
+
+#### Integration Points
+- Does the template assume data from services not yet connected? (e.g., OCR results populating fields)
+- Does the template show real-time updates that require Socket.io integration?
+- Does the template reference third-party services (Stripe, maps, autocomplete)?
+
+#### Stale File Detection
+- Check if the component has both inline template (in `.ts`) and external template (`.html`) — flag the stale one
+- Check for `.backup`, `.bak`, or duplicate files in the same directory
+
+**Output:** A "Hidden Requirements" section in the Product Brief listing every gap found, with each gap assigned to a story.
+
 ### Step 4: Decompose into Stories
 
 Using the Product Manager agent's story template, break the feature into the smallest independently deliverable pieces. Each story should:

@@ -384,7 +384,7 @@ type FilterTab = 'all' | 'attorneys' | 'support' | 'unread';
             <div class="error-state" role="alert">{{ convError() }}</div>
           } @else {
             @if (activeCaseConvs().length > 0) {
-              <div class="conv-group-label" role="heading" aria-level="3">Active Cases</div>
+              <div class="conv-group-label" role="heading" aria-level="3">&#x2696;&#xFE0F; Active Cases</div>
               @for (conv of activeCaseConvs(); track conv.id) {
                 <div
                   class="conv-item"
@@ -425,7 +425,7 @@ type FilterTab = 'all' | 'attorneys' | 'support' | 'unread';
             }
 
             @if (supportConvs().length > 0) {
-              <div class="conv-group-label" role="heading" aria-level="3">Support & Operations</div>
+              <div class="conv-group-label" role="heading" aria-level="3">&#x1F3AF; Support & Operations</div>
               @for (conv of supportConvs(); track conv.id) {
                 <div
                   class="conv-item"
@@ -463,7 +463,7 @@ type FilterTab = 'all' | 'attorneys' | 'support' | 'unread';
             }
 
             @if (closedConvs().length > 0) {
-              <div class="conv-group-label" role="heading" aria-level="3">Closed Cases</div>
+              <div class="conv-group-label" role="heading" aria-level="3">&#x1F512; Closed Cases</div>
               @for (conv of closedConvs(); track conv.id) {
                 <div
                   class="conv-item closed"
@@ -513,9 +513,9 @@ type FilterTab = 'all' | 'attorneys' | 'support' | 'unread';
               <div class="chat-user-name">{{ msgSvc.getOtherPartyName(conv) }}</div>
               <div class="chat-user-role">
                 @switch (conv.conversation_type) {
-                  @case ('attorney_case') { Defense Attorney }
-                  @case ('operator') { Case Coordinator }
-                  @case ('support') { Support Agent }
+                  @case ('attorney_case') { &#x2696;&#xFE0F; Defense Attorney }
+                  @case ('operator') { &#x1F3AF; Case Coordinator }
+                  @case ('support') { &#x1F4AC; Support Agent }
                 }
                 @if (!conv.closed_at) {
                   &middot; <span style="color: #22c55e">Online</span>
@@ -620,9 +620,9 @@ type FilterTab = 'all' | 'attorneys' | 'support' | 'unread';
           @if (!conv.closed_at) {
             <div class="chat-input-area">
               <div class="input-toolbar">
-                <button class="toolbar-btn" aria-label="Attach file" type="button">&#128206;</button>
-                <button class="toolbar-btn" aria-label="Upload document" type="button">&#128196;</button>
-                <span class="encrypt-note">&#128274; End-to-end encrypted</span>
+                <button class="toolbar-btn" aria-label="Attach file" type="button">&#x1F4CE;</button>
+                <button class="toolbar-btn" aria-label="Upload document" type="button">&#x1F4C4;</button>
+                <span class="encrypt-note">&#x1F512; End-to-end encrypted</span>
               </div>
               <div class="input-row">
                 <textarea
@@ -728,10 +728,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   // Tab definitions
   filterTabs: { key: FilterTab; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'attorneys', label: 'Attorneys' },
-    { key: 'support', label: 'Support' },
-    { key: 'unread', label: 'Unread' },
+    { key: 'all', label: '\u{1F4AC} All' },
+    { key: 'attorneys', label: '\u{2696}\u{FE0F} Attorneys' },
+    { key: 'support', label: '\u{1F3AF} Support' },
+    { key: 'unread', label: '\u{1F514} Unread' },
   ];
 
   // Search debounce

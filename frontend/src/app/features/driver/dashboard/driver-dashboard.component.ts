@@ -2,11 +2,9 @@ import {
   Component, OnInit, OnDestroy, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatRippleModule } from '@angular/material/core';
@@ -66,8 +64,8 @@ interface ActivityItem {
   selector: 'app-driver-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatDividerModule, MatRippleModule, DatePipe,
+    MatCardModule, MatButtonModule, MatProgressSpinnerModule,
+    MatDividerModule, MatRippleModule,
     ErrorStateComponent, SkeletonLoaderComponent, TranslateModule,
   ],
   templateUrl: './driver-dashboard.component.html',
@@ -240,6 +238,19 @@ export class DriverDashboardComponent implements OnInit, OnDestroy {
     if (t.includes('park')) return 'local_parking';
     if (t.includes('traffic')) return 'traffic';
     return 'description';
+  }
+
+  getViolationEmoji(type?: string): string {
+    if (!type) return '\u{1F4CB}';
+    const t = type.toLowerCase();
+    if (t.includes('speed')) return '\u{1F697}';
+    if (t.includes('hos') || t.includes('log')) return '\u{1F4CB}';
+    if (t.includes('dot') || t.includes('inspect')) return '\u{1F50D}';
+    if (t.includes('cdl')) return '\u{2696}';
+    if (t.includes('weight')) return '\u{1F4CA}';
+    if (t.includes('park')) return '\u{1F17F}';
+    if (t.includes('traffic')) return '\u{1F6A6}';
+    return '\u{1F4CB}';
   }
 
   getViolationIconClass(type?: string): string {

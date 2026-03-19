@@ -1,230 +1,218 @@
-<!-- Documents List Template -->
-<div class="documents-container">
+<div class="list-container">
 
   <!-- Toolbar -->
-  <div class="documents-toolbar">
-    
-    <!-- Search -->
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-icon matPrefix>search</mat-icon>
-      <input 
-        matInput 
-        [(ngModel)]="searchTerm"
-        (input)="onSearchChange()"
-        placeholder="Search documents...">
-    </mat-form-field>
+  <div class="toolbar">
+    <div class="search-field">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        type="text"
+        placeholder="Search documents..."
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        aria-label="Search documents" />
+    </div>
 
-    <!-- Category Filter -->
-    <mat-form-field appearance="outline" class="category-filter">
-      <mat-label>Category</mat-label>
-      <mat-select 
-        [(ngModel)]="selectedCategory"
-        (selectionChange)="onCategoryChange()">
-        <mat-option *ngFor="let cat of categories" [value]="cat.value">
-          <mat-icon>{{ cat.icon }}</mat-icon>
-          {{ cat.label }}
-          <span class="count" *ngIf="getDocumentCount(cat.value) > 0">
-            ({{ getDocumentCount(cat.value) }})
+    <div class="select-wrap">
+      <select
+        class="filter-select"
+        [value]="selectedCategory()"
+        (change)="onCategoryChange($any($event.target).value)"
+        aria-label="Filter by category">
+        @for (cat of CATEGORIES; track cat.value) {
+          <option [value]="cat.value">{{ cat.label }}</option>
+        }
+      </select>
+      <span class="select-arr" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+    </div>
+
+    <div class="toolbar-right">
+      <div class="sort-wrap">
+        <span class="sort-label">Sort</span>
+        <div class="select-wrap">
+          <select
+            class="filter-select sort-select"
+            [value]="sortBy()"
+            (change)="onSortChange($any($event.target).value)"
+            aria-label="Sort by">
+            @for (opt of SORT_OPTIONS; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          <span class="select-arr" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
+        </div>
+      </div>
 
-    <span class="spacer"></span>
-
-    <!-- Sort -->
-    <mat-form-field appearance="outline" class="sort-field">
-      <mat-label>Sort by</mat-label>
-      <mat-select 
-        [(ngModel)]="sortBy"
-        (selectionChange)="onSortChange()">
-        <mat-option value="date">Date</mat-option>
-        <mat-option value="name">Name</mat-option>
-        <mat-option value="size">Size</mat-option>
-        <mat-option value="category">Category</mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <!-- Sort Direction -->
-    <button 
-      mat-icon-button 
-      (click)="toggleSortDirection()"
-      [matTooltip]="sortDirection === 'asc' ? 'Ascending' : 'Descending'">
-      <mat-icon>{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-    </button>
-
-    <!-- View Toggle -->
-    <mat-button-toggle-group [(ngModel)]="viewMode">
-      <mat-button-toggle value="grid">
-        <mat-icon>grid_view</mat-icon>
-      </mat-button-toggle>
-      <mat-button-toggle value="list">
-        <mat-icon>view_list</mat-icon>
-      </mat-button-toggle>
-    </mat-button-toggle-group>
-
+      <!-- View Toggle -->
+      <div class="view-toggle" role="radiogroup" aria-label="View mode">
+        <div class="view-btn" [class.active]="viewMode() === 'grid'"
+             role="radio" [attr.aria-checked]="viewMode() === 'grid'"
+             (click)="setViewMode('grid')" (keydown.enter)="setViewMode('grid')"
+             tabindex="0" title="Grid view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </div>
+        <div class="view-btn" [class.active]="viewMode() === 'list'"
+             role="radio" [attr.aria-checked]="viewMode() === 'list'"
+             (click)="setViewMode('list')" (keydown.enter)="setViewMode('list')"
+             tabindex="0" title="List view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <mat-spinner></mat-spinner>
-    <p>Loading documents...</p>
-  </div>
+  @if (loading()) {
+    <div class="state-empty" role="status" aria-live="polite">
+      <mat-spinner diameter="32"></mat-spinner>
+      <p>Loading documents...</p>
+    </div>
+  }
 
   <!-- Empty State -->
-  <div *ngIf="!loading && filteredDocuments.length === 0" class="empty-state">
-    <mat-icon>folder_open</mat-icon>
-    <h3>No documents found</h3>
-    <p *ngIf="searchTerm || selectedCategory !== 'all'">
-      Try adjusting your filters
-    </p>
-    <p *ngIf="!searchTerm && selectedCategory === 'all'">
-      Upload documents to get started
-    </p>
-  </div>
-
-  <!-- Grid View -->
-  <div *ngIf="!loading && viewMode === 'grid' && filteredDocuments.length > 0" class="documents-grid">
-    <mat-card 
-      *ngFor="let doc of filteredDocuments"
-      class="document-card"
-      (click)="viewDocument(doc)">
-      
-      <!-- Thumbnail -->
-      <div class="document-thumbnail">
-        <img 
-          *ngIf="isImage(doc) && doc.thumbnailUrl"
-          [src]="doc.thumbnailUrl"
-          [alt]="doc.fileName">
-        <mat-icon *ngIf="!isImage(doc) || !doc.thumbnailUrl" class="file-icon-large">
-          {{ getFileIcon(doc) }}
-        </mat-icon>
+  @if (!loading() && filteredDocuments().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-box">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+          <polyline points="13 2 13 9 20 9"/>
+        </svg>
       </div>
+      @if (searchTerm() || selectedCategory() !== 'all') {
+        <h3 class="empty-title">No documents match your filters</h3>
+        <p class="empty-sub">Try adjusting your search or category filter</p>
+      } @else {
+        <h3 class="empty-title">No documents yet</h3>
+        <p class="empty-sub">Upload documents to get started with your case</p>
+      }
+    </div>
+  }
 
-      <!-- Content -->
-      <mat-card-content>
-        <div class="document-title">{{ doc.fileName }}</div>
-        
-        <div class="document-meta">
-          <mat-chip class="category-chip">
-            <mat-icon>{{ getCategoryIcon(doc.category) }}</mat-icon>
-            {{ getCategoryLabel(doc.category) }}
-          </mat-chip>
-          <span class="file-size">{{ getFileSize(doc) }}</span>
-        </div>
+  <!-- Document Count Row -->
+  @if (!loading() && filteredDocuments().length > 0) {
+    <div class="doc-count-row">
+      <div class="doc-count-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+          <polyline points="13 2 13 9 20 9"/>
+        </svg>
+        {{ filteredDocuments().length }} document{{ filteredDocuments().length === 1 ? '' : 's' }}
+      </div>
+      <div class="doc-count-sep"></div>
+    </div>
+  }
 
-        <div class="document-date">
-          Uploaded {{ formatDate(doc.uploadedAt) }}
-        </div>
-      </mat-card-content>
-
-      <!-- Actions -->
-      <mat-card-actions>
-        <button 
-          mat-icon-button 
-          [matMenuTriggerFor]="menu"
-          (click)="$event.stopPropagation()">
-          <mat-icon>more_vert</mat-icon>
-        </button>
-
-        <mat-menu #menu="matMenu">
-          <button mat-menu-item (click)="viewDocument(doc)">
-            <mat-icon>visibility</mat-icon>
-            <span>View</span>
-          </button>
-          <button mat-menu-item (click)="downloadDocument(doc)">
-            <mat-icon>download</mat-icon>
-            <span>Download</span>
-          </button>
-          <button mat-menu-item (click)="extractText(doc)" *ngIf="isImage(doc) || isPDF(doc)">
-            <mat-icon>text_fields</mat-icon>
-            <span>Extract Text (OCR)</span>
-          </button>
-          <button mat-menu-item (click)="shareDocument(doc)">
-            <mat-icon>share</mat-icon>
-            <span>Share</span>
-          </button>
-          <mat-divider></mat-divider>
-          <button mat-menu-item (click)="deleteDocument(doc)" class="delete-action">
-            <mat-icon>delete</mat-icon>
-            <span>Delete</span>
-          </button>
-        </mat-menu>
-      </mat-card-actions>
-
-    </mat-card>
-  </div>
-
-  <!-- List View -->
-  <div *ngIf="!loading && viewMode === 'list' && filteredDocuments.length > 0" class="documents-list">
-    <mat-card 
-      *ngFor="let doc of filteredDocuments"
-      class="document-list-item"
-      (click)="viewDocument(doc)">
-      
-      <mat-card-content>
-        <mat-icon class="file-icon">{{ getFileIcon(doc) }}</mat-icon>
-        
-        <div class="document-info">
-          <div class="document-name">{{ doc.fileName }}</div>
-          <div class="document-details">
-            <mat-chip class="category-chip-small">
-              {{ getCategoryLabel(doc.category) }}
-            </mat-chip>
-            <span class="separator">•</span>
-            <span>{{ getFileSize(doc) }}</span>
-            <span class="separator">•</span>
-            <span>{{ formatDate(doc.uploadedAt) }}</span>
-            <span class="separator">•</span>
-            <span>{{ doc.uploadedBy }}</span>
+  <!-- GRID VIEW -->
+  @if (!loading() && viewMode() === 'grid' && filteredDocuments().length > 0) {
+    <div class="docs-grid">
+      @for (doc of filteredDocuments(); track doc.id) {
+        <div class="doc-card">
+          <div class="doc-type-stripe" [style.background]="getTypeStripeGradient(doc.category)"></div>
+          <div class="doc-thumb" [style.background]="getThumbBackground(doc.category)">
+            @if (isImage(doc) && doc.thumbnailUrl) {
+              <img [src]="doc.thumbnailUrl" [alt]="doc.fileName" />
+            } @else {
+              <span class="doc-thumb-icon">{{ getFileEmoji(doc) }}</span>
+            }
+            <div class="doc-overlay">
+              <button class="overlay-btn" (click)="downloadDocument(doc)" title="Preview" aria-label="Preview document">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+              <button class="overlay-btn" (click)="downloadDocument(doc)" title="Download" aria-label="Download document">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          <div class="document-description" *ngIf="doc.description">
-            {{ doc.description }}
+          <div class="doc-info">
+            <div class="doc-filename">{{ doc.fileName }}</div>
+            <div class="doc-meta">
+              <span class="doc-cat-badge" [class]="getCategoryBadgeClass(doc.category)">{{ getCategoryEmoji(doc.category) }} {{ getCategoryLabel(doc.category) }}</span>
+              <span class="doc-size">{{ getFileSize(doc.fileSize) }}</span>
+            </div>
+            <div class="doc-date">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Uploaded {{ formatDate(doc.uploadedAt) }}
+            </div>
+          </div>
+          <div class="doc-actions">
+            <button class="doc-menu-btn" (click)="$event.stopPropagation()" aria-label="More actions">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+              </svg>
+            </button>
           </div>
         </div>
+      }
+    </div>
+  }
 
-        <div class="document-actions">
-          <button 
-            mat-icon-button 
-            (click)="downloadDocument(doc); $event.stopPropagation()"
-            matTooltip="Download">
-            <mat-icon>download</mat-icon>
-          </button>
-          <button 
-            mat-icon-button 
-            [matMenuTriggerFor]="menu"
-            (click)="$event.stopPropagation()">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-
-          <mat-menu #menu="matMenu">
-            <button mat-menu-item (click)="viewDocument(doc)">
-              <mat-icon>visibility</mat-icon>
-              <span>View</span>
+  <!-- LIST VIEW -->
+  @if (!loading() && viewMode() === 'list' && filteredDocuments().length > 0) {
+    <div class="docs-list">
+      <div class="list-header">
+        <span>Name</span>
+        <span>Category</span>
+        <span>Size</span>
+        <span>Uploaded</span>
+        <span>Actions</span>
+      </div>
+      @for (doc of filteredDocuments(); track doc.id) {
+        <div class="list-row">
+          <div class="list-file">
+            <div class="list-file-icon" [style.background]="getFileIconBg(doc.category)">{{ getFileEmoji(doc) }}</div>
+            <div>
+              <div class="list-filename">{{ doc.fileName }}</div>
+              <div class="list-ext">{{ getFileExtLabel(doc) }}</div>
+            </div>
+          </div>
+          <span class="doc-cat-badge" [class]="getCategoryBadgeClass(doc.category)" style="width:fit-content">{{ getCategoryEmoji(doc.category) }} {{ getCategoryLabel(doc.category) }}</span>
+          <span class="list-size">{{ getFileSize(doc.fileSize) }}</span>
+          <div class="list-date-wrap">
+            <div class="list-date">{{ formatDate(doc.uploadedAt) }}</div>
+            <div class="list-date-rel">{{ getRelativeTime(doc.uploadedAt) }}</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" (click)="downloadDocument(doc)" aria-label="View document">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              View
             </button>
-            <button mat-menu-item (click)="extractText(doc)" *ngIf="isImage(doc) || isPDF(doc)">
-              <mat-icon>text_fields</mat-icon>
-              <span>Extract Text</span>
+            <button class="row-action-btn danger" (click)="deleteDocument(doc)" aria-label="Delete document">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
             </button>
-            <button mat-menu-item (click)="shareDocument(doc)">
-              <mat-icon>share</mat-icon>
-              <span>Share</span>
-            </button>
-            <mat-divider></mat-divider>
-            <button mat-menu-item (click)="deleteDocument(doc)" class="delete-action">
-              <mat-icon>delete</mat-icon>
-              <span>Delete</span>
-            </button>
-          </mat-menu>
+          </div>
         </div>
-      </mat-card-content>
+      }
+    </div>
+  }
 
-    </mat-card>
-  </div>
-
-  <!-- Results Count -->
-  <div *ngIf="!loading && filteredDocuments.length > 0" class="results-count">
-    Showing {{ filteredDocuments.length }} of {{ documents.length }} document(s)
-  </div>
-
+  <!-- Results Count Footer -->
+  @if (!loading() && filteredDocuments().length > 0) {
+    <p class="results-note">
+      Showing {{ filteredDocuments().length }} of {{ documentCount() }} document(s)
+    </p>
+  }
 </div>

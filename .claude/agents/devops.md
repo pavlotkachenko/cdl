@@ -139,3 +139,24 @@ sleep 3
 curl http://localhost:3000/health
 kill %1
 ```
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Build failures:** Did `ng build` or `npm test` fail during pre-PR verification? What was the root cause?
+- **PR issues:** Did the PR get rejected or require changes for non-code reasons? (bad description, wrong branch name, missing labels)
+- **Migration failures:** Did a database migration fail to apply cleanly?
+- **Baseline drift:** Have the expected test baselines changed? (new pre-existing failures, or old ones fixed)
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Update "Expected baselines" with current test pass/fail counts
+2. Add new entries to "Pre-PR Verification Checklist" if a check was missing
+3. Update "Migration Execution" if the process changed
+4. Refine PR template if reviewers consistently ask for additional information
+
+### Improve
+- Keep the "Expected baselines" section current — update it whenever sprint work changes the pass/fail counts.
+- If a new git workflow pattern is adopted (e.g., squash merging, release branches), update the "Git Workflow" section.

@@ -10,6 +10,17 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const Sentry = require('@sentry/node');
+
+// Initialize Sentry (no-op if DSN is not configured)
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+    sendDefaultPii: false,
+  });
+}
 
 // Import Socket.io setup
 const { initializeSocket } = require('./socket/socket');
@@ -104,8 +115,11 @@ const publicSubmitLimiter = rateLimit({
   message: { error: { code: 'RATE_LIMITED', message: 'Too many submissions, please try again later.' } },
 });
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
+// Body parsing — skip JSON for Stripe webhook (needs raw body for signature verification)
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/payments/webhook') return next();
+  express.json({ limit: '10mb' })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging
@@ -234,6 +248,11 @@ app.use((req, res) => {
   });
 });
 
+// Sentry error handler (must be before custom error handler)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
+
 // Global error handler
 app.use(errorHandler);
 
@@ -279,12 +298,15 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
-  
+
+  // Flush Sentry events before shutdown
+  await Sentry.close(2000).catch(() => {});
+
   server.close(() => {
     console.log('HTTP server closed');
-    
+
     // Close Socket.io connections
     io.close(() => {
       console.log('Socket.io server closed');
@@ -305,11 +327,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
+  Sentry.captureException(err);
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  Sentry.captureException(reason);
 });
 
 module.exports = { app, server, io };

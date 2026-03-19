@@ -77,3 +77,23 @@ HARD_BUGS_REGISTRY.md
 - Update the glossary when new domain terms are introduced
 - Every new API endpoint MUST be documented in `API_SPECIFICATION.md`
 - Every new bug fix MUST be logged in `HARD_BUGS_REGISTRY.md`
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Doc staleness:** Did a developer or user find outdated information in `/docs/`? Which doc and section?
+- **Missing docs:** Was a new feature shipped without corresponding documentation? Which type was missing? (API spec, bug registry entry, requirement update)
+- **Format inconsistencies:** Did a new doc entry not match the established templates?
+- **Glossary gaps:** Were domain terms used in code or conversations that aren't in `GLOSSARY.md`?
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Add the missed documentation type to the "Core Responsibilities" section
+2. Update templates in "Documentation Standards" if format requirements have evolved
+3. Add new rules to "Rules" section for recurring documentation gaps
+
+### Improve
+- After each sprint, verify every new/modified API endpoint has a corresponding entry in `API_SPECIFICATION.md`.
+- When new document types are introduced (e.g., sprint stories, UX specs), add their format to this agent's templates.

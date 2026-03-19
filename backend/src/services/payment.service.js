@@ -11,34 +11,34 @@ const { sendPaymentConfirmationEmail } = require('./email.service');
 
 class PaymentService {
   /**
-   * Create a payment intent for a ticket
+   * Create a payment intent for a case
    * @param {Object} params - Payment parameters
    * @returns {Object} Payment intent details
    */
-  async createPaymentIntent({ ticketId, userId, amount, currency = 'USD', metadata = {} }) {
+  async createPaymentIntent({ caseId, userId, amount, currency = 'USD', metadata = {} }) {
     try {
-      // Validate ticket exists and belongs to user
-      const { data: ticket, error: ticketError } = await supabase
-        .from('tickets')
+      // Validate case exists and belongs to user
+      const { data: caseData, error: caseError } = await supabase
+        .from('cases')
         .select('*')
-        .eq('id', ticketId)
-        .eq('user_id', userId)
+        .eq('id', caseId)
+        .eq('driver_id', userId)
         .single();
 
-      if (ticketError || !ticket) {
-        throw new Error('Ticket not found or access denied');
+      if (caseError || !caseData) {
+        throw new Error('Case not found or access denied');
       }
 
-      // Check if payment already exists for this ticket
+      // Check if payment already exists for this case
       const { data: existingPayment } = await supabase
         .from('payments')
         .select('*')
-        .eq('ticket_id', ticketId)
+        .eq('case_id', caseId)
         .eq('status', 'succeeded')
         .single();
 
       if (existingPayment) {
-        throw new Error('Payment already exists for this ticket');
+        throw new Error('Payment already exists for this case');
       }
 
       // Create Stripe payment intent
@@ -46,8 +46,9 @@ class PaymentService {
         amount: Math.round(amount * 100), // Convert to cents
         currency: currency.toLowerCase(),
         metadata: {
-          ticketId,
+          caseId,
           userId,
+          caseNumber: caseData.case_number || caseId,
           ...metadata
         },
         automatic_payment_methods: {
@@ -59,7 +60,7 @@ class PaymentService {
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
-          ticket_id: ticketId,
+          case_id: caseId,
           user_id: userId,
           stripe_payment_intent_id: paymentIntent.id,
           amount,
@@ -79,14 +80,14 @@ class PaymentService {
         throw paymentError;
       }
 
-      // Update ticket payment status
+      // Update case payment status
       await supabase
-        .from('tickets')
+        .from('cases')
         .update({
           payment_status: 'pending',
           payment_amount: amount
         })
-        .eq('id', ticketId);
+        .eq('id', caseId);
 
       return {
         payment,
@@ -106,40 +107,64 @@ class PaymentService {
    */
   async confirmPayment(paymentIntentId) {
     try {
-      // Retrieve payment intent from Stripe
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      // Retrieve payment intent from Stripe (expand latest_charge for card details)
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ['latest_charge'],
+      });
+
+      // Extract card details — latest_charge is the modern API (charges.data[] is deprecated)
+      const charge = typeof paymentIntent.latest_charge === 'object'
+        ? paymentIntent.latest_charge
+        : (paymentIntent.charges?.data?.[0] || null);
+      const cardDetails = charge?.payment_method_details?.card || {};
 
       // Update payment in database
-      const { data: payment, error: paymentError } = await supabase
+      const updateFields = {
+        status: 'succeeded',
+        stripe_charge_id: charge?.id || null,
+        payment_method: paymentIntent.payment_method_types?.[0] || 'card',
+        paid_at: new Date().toISOString(),
+        metadata: {
+          payment_intent_status: paymentIntent.status,
+        }
+      };
+
+      // Card detail columns are optional (migration 026)
+      let { data: payment, error: paymentError } = await supabase
         .from('payments')
         .update({
-          status: 'succeeded',
-          stripe_charge_id: paymentIntent.charges.data[0]?.id,
-          payment_method: paymentIntent.payment_method_types[0],
-          paid_at: new Date().toISOString(),
-          metadata: {
-            payment_intent_status: paymentIntent.status,
-            charges: paymentIntent.charges.data
-          }
+          ...updateFields,
+          card_brand: cardDetails.brand || null,
+          card_last4: cardDetails.last4 || null,
+          receipt_url: charge?.receipt_url || null,
         })
         .eq('stripe_payment_intent_id', paymentIntentId)
         .select()
         .single();
 
+      // Fallback: if card columns don't exist yet, update without them
+      if (paymentError && paymentError.code === 'PGRST204') {
+        ({ data: payment, error: paymentError } = await supabase
+          .from('payments')
+          .update(updateFields)
+          .eq('stripe_payment_intent_id', paymentIntentId)
+          .select()
+          .single());
+      }
+
       if (paymentError) {
         throw paymentError;
       }
 
-      // Update ticket payment status
-      await supabase
-        .from('tickets')
-        .update({
-          payment_status: 'paid'
-        })
-        .eq('id', payment.ticket_id);
+      // Update case payment status
+      if (payment.case_id) {
+        await supabase
+          .from('cases')
+          .update({ payment_status: 'paid' })
+          .eq('id', payment.case_id);
+      }
 
       // Send payment confirmation email (non-blocking)
-      const charge = paymentIntent.charges?.data?.[0];
       const { data: userProfile } = await supabase
         .from('users')
         .select('full_name, email')
@@ -151,8 +176,8 @@ class PaymentService {
           name: userProfile.full_name || userProfile.email,
           email: userProfile.email,
           amount: payment.amount * 100, // convert dollars → cents for formatter
-          caseId: payment.ticket_id,
-          last4: charge?.payment_method_details?.card?.last4,
+          caseId: payment.case_id,
+          last4: cardDetails.last4,
           transactionId: charge?.id,
         });
       }
@@ -187,13 +212,15 @@ class PaymentService {
 
       if (error) throw error;
 
-      // Update ticket payment status back to unpaid
-      await supabase
-        .from('tickets')
-        .update({
-          payment_status: 'unpaid'
-        })
-        .eq('id', payment.ticket_id);
+      // Update case payment status back to unpaid
+      if (payment.case_id) {
+        await supabase
+          .from('cases')
+          .update({
+            payment_status: 'unpaid'
+          })
+          .eq('id', payment.case_id);
+      }
 
       return payment;
     } catch (error) {
@@ -267,12 +294,14 @@ class PaymentService {
         .update({ status: newPaymentStatus })
         .eq('id', paymentId);
 
-      // Update ticket payment status
-      const ticketPaymentStatus = refundAmount === payment.amount ? 'refunded' : 'partial_refund';
-      await supabase
-        .from('tickets')
-        .update({ payment_status: ticketPaymentStatus })
-        .eq('id', payment.ticket_id);
+      // Update case payment status
+      if (payment.case_id) {
+        const casePaymentStatus = refundAmount === payment.amount ? 'refunded' : 'partial_refund';
+        await supabase
+          .from('cases')
+          .update({ payment_status: casePaymentStatus })
+          .eq('id', payment.case_id);
+      }
 
       return refundRecord;
     } catch (error) {
@@ -303,53 +332,132 @@ class PaymentService {
   }
 
   /**
-   * Get payments for a ticket
-   * @param {string} ticketId - Ticket ID
+   * Get payments for a case
+   * @param {string} caseId - Case ID
    * @returns {Array} List of payments
    */
-  async getTicketPayments(ticketId) {
+  async getCasePayments(caseId) {
     try {
       const { data: payments, error } = await supabase
         .from('payments')
         .select('*')
-        .eq('ticket_id', ticketId)
+        .eq('case_id', caseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return payments;
     } catch (error) {
-      console.error('Get ticket payments error:', error);
+      console.error('Get case payments error:', error);
       throw error;
     }
   }
 
   /**
-   * Get user payments
+   * Get user payments with filtering, pagination, and sorting
    * @param {string} userId - User ID
    * @param {Object} options - Query options
-   * @returns {Array} List of payments
+   * @returns {Object} { payments, pagination }
    */
   async getUserPayments(userId, options = {}) {
     try {
+      const {
+        status,
+        start_date,
+        end_date,
+        min_amount,
+        max_amount,
+        search,
+        sort_by = 'created_at',
+        sort_order = 'desc',
+        page = 1,
+        per_page = 10,
+      } = options;
+
+      // Build base query with joins
       let query = supabase
         .from('payments')
-        .select('*, tickets(ticket_number, violation_type)')
+        .select('*, cases(id, case_number, violation_type, assigned_attorney_id)', { count: 'exact' })
         .eq('user_id', userId);
 
-      if (options.status) {
-        query = query.eq('status', options.status);
+      // Apply filters
+      if (status) {
+        query = query.eq('status', status);
+      }
+      if (start_date) {
+        query = query.gte('created_at', start_date);
+      }
+      if (end_date) {
+        query = query.lte('created_at', end_date);
+      }
+      if (min_amount) {
+        query = query.gte('amount', parseFloat(min_amount));
+      }
+      if (max_amount) {
+        query = query.lte('amount', parseFloat(max_amount));
+      }
+      if (search) {
+        query = query.or(`description.ilike.%${search}%`);
       }
 
-      if (options.limit) {
-        query = query.limit(options.limit);
-      }
+      // Sorting
+      const ascending = sort_order === 'asc';
+      const sortColumn = ['created_at', 'amount'].includes(sort_by) ? sort_by : 'created_at';
+      query = query.order(sortColumn, { ascending });
 
-      query = query.order('created_at', { ascending: false });
+      // Pagination
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(per_page) || 10));
+      const offset = (pageNum - 1) * limit;
+      query = query.range(offset, offset + limit - 1);
 
-      const { data: payments, error } = await query;
+      const { data: payments, error, count } = await query;
 
       if (error) throw error;
-      return payments;
+
+      // Fetch attorney names for cases that have attorney_id
+      const attorneyIds = [...new Set(
+        (payments || [])
+          .map(p => p.cases?.assigned_attorney_id)
+          .filter(Boolean)
+      )];
+
+      let attorneyMap = {};
+      if (attorneyIds.length > 0) {
+        const { data: attorneys } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .in('id', attorneyIds);
+
+        if (attorneys) {
+          attorneyMap = Object.fromEntries(attorneys.map(a => [a.id, a.full_name]));
+        }
+      }
+
+      // Enrich payments with attorney name
+      const enriched = (payments || []).map(p => {
+        const caseData = p.cases || {};
+        const attorneyName = caseData.assigned_attorney_id ? attorneyMap[caseData.assigned_attorney_id] || null : null;
+        return {
+          ...p,
+          case: caseData.id ? {
+            id: caseData.id,
+            case_number: caseData.case_number,
+            violation_type: caseData.violation_type,
+          } : null,
+          attorney: attorneyName ? { name: attorneyName } : null,
+          cases: undefined, // Remove raw join data
+        };
+      });
+
+      return {
+        payments: enriched,
+        pagination: {
+          page: pageNum,
+          per_page: limit,
+          total: count || 0,
+          total_pages: Math.ceil((count || 0) / limit),
+        },
+      };
     } catch (error) {
       console.error('Get user payments error:', error);
       throw error;
@@ -399,6 +507,234 @@ class PaymentService {
       return { received: true, processed: true };
     } catch (error) {
       console.error('Webhook handling error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get per-user payment stats for KPI cards
+   * @param {string} userId - User ID
+   * @returns {Object} Payment statistics for the user
+   */
+  async getUserPaymentStats(userId) {
+    try {
+      const { data: payments, error } = await supabase
+        .from('payments')
+        .select('amount, status')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const rows = payments || [];
+      const byStatus = (s) => rows.filter(p => p.status === s);
+      const sumAmount = (arr) => arr.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+      return {
+        total_amount: sumAmount(rows),
+        paid_amount: sumAmount(byStatus('succeeded')),
+        pending_amount: sumAmount(byStatus('pending')),
+        failed_amount: sumAmount(byStatus('failed')),
+        refunded_amount: sumAmount(byStatus('refunded')),
+        transaction_count: rows.length,
+        paid_count: byStatus('succeeded').length,
+        pending_count: byStatus('pending').length,
+        failed_count: byStatus('failed').length,
+        refunded_count: byStatus('refunded').length,
+        currency: 'USD',
+      };
+    } catch (error) {
+      console.error('Get user payment stats error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retry a failed payment — creates a new PaymentIntent for the same case/amount
+   * @param {string} paymentId - Original failed payment ID
+   * @param {string} userId - Authenticated user ID
+   * @returns {Object} New payment record with client_secret
+   */
+  async retryPayment(paymentId, userId) {
+    try {
+      // Get the failed payment
+      const { data: original, error: fetchError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('id', paymentId)
+        .single();
+
+      if (fetchError || !original) {
+        throw new Error('Payment not found');
+      }
+
+      // Authorization: only the payment owner can retry
+      if (original.user_id !== userId) {
+        throw new Error('Unauthorized');
+      }
+
+      // Only failed payments can be retried
+      if (original.status !== 'failed') {
+        throw new Error('Only failed payments can be retried');
+      }
+
+      // Check for existing pending/succeeded payment for the same case
+      const caseId = original.case_id;
+      const { data: existing } = await supabase
+        .from('payments')
+        .select('id, status')
+        .eq('case_id', caseId)
+        .in('status', ['pending', 'succeeded'])
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        throw new Error('A pending or completed payment already exists for this case');
+      }
+
+      // Cooldown: check if a payment was created in the last 60 seconds
+      const { data: recent } = await supabase
+        .from('payments')
+        .select('created_at')
+        .eq('case_id', caseId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (recent && recent.length > 0) {
+        const lastCreated = new Date(recent[0].created_at).getTime();
+        if (Date.now() - lastCreated < 60000) {
+          throw new Error('Please wait before retrying. Try again in a minute.');
+        }
+      }
+
+      // Create new Stripe PaymentIntent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(original.amount * 100),
+        currency: (original.currency || 'USD').toLowerCase(),
+        metadata: {
+          caseId,
+          userId,
+          retryOf: paymentId,
+        },
+        automatic_payment_methods: { enabled: true },
+      });
+
+      // Save new payment record
+      const { data: newPayment, error: insertError } = await supabase
+        .from('payments')
+        .insert({
+          case_id: caseId,
+          user_id: userId,
+          stripe_payment_intent_id: paymentIntent.id,
+          amount: original.amount,
+          currency: original.currency || 'USD',
+          status: 'pending',
+          description: original.description,
+          metadata: { retry_of: paymentId },
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        await stripe.paymentIntents.cancel(paymentIntent.id);
+        throw insertError;
+      }
+
+      return {
+        payment: newPayment,
+        client_secret: paymentIntent.client_secret,
+      };
+    } catch (error) {
+      console.error('Retry payment error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get enriched payment confirmation data by Stripe payment intent ID
+   * @param {string} paymentIntentId - Stripe payment intent ID
+   * @param {string} userId - Authenticated user ID (for access control)
+   * @returns {Object} Enriched payment confirmation data
+   */
+  async getPaymentConfirmation(paymentIntentId, userId) {
+    try {
+      // 1. Query payment by stripe_payment_intent_id
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('stripe_payment_intent_id', paymentIntentId)
+        .single();
+
+      if (paymentError || !payment) {
+        throw new Error('Payment not found');
+      }
+
+      // 2. Verify ownership
+      if (payment.user_id !== userId) {
+        throw new Error('Access denied');
+      }
+
+      // 3. Get case data
+      let caseData = null;
+      if (payment.case_id) {
+        const { data: caseRow } = await supabase
+          .from('cases')
+          .select('id, case_number, violation_type, violation_location, assigned_attorney_id')
+          .eq('id', payment.case_id)
+          .single();
+        caseData = caseRow;
+      }
+
+      // 4. Get attorney name
+      let attorney = null;
+      if (caseData?.assigned_attorney_id) {
+        const { data: attorneyRow } = await supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', caseData.assigned_attorney_id)
+          .single();
+
+        if (attorneyRow?.full_name) {
+          const initials = attorneyRow.full_name
+            .split(/\s+/)
+            .map(w => w[0])
+            .join('')
+            .toUpperCase();
+          attorney = { name: attorneyRow.full_name, initials };
+        }
+      }
+
+      // 5. Get driver email
+      let driverEmail = null;
+      const { data: driverRow } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', payment.user_id)
+        .single();
+      if (driverRow) {
+        driverEmail = driverRow.email;
+      }
+
+      // 6. Shape response
+      return {
+        payment_id: payment.id,
+        amount: parseFloat(payment.amount),
+        currency: payment.currency || 'USD',
+        status: payment.status,
+        transaction_id: payment.stripe_charge_id || payment.stripe_payment_intent_id,
+        stripe_payment_intent_id: payment.stripe_payment_intent_id,
+        paid_at: payment.paid_at || null,
+        card_brand: payment.card_brand || null,
+        card_last4: payment.card_last4 || null,
+        case: caseData ? {
+          id: caseData.id,
+          case_number: caseData.case_number,
+          violation_type: caseData.violation_type,
+          violation_location: caseData.violation_location,
+        } : null,
+        attorney,
+        driver_email: driverEmail,
+      };
+    } catch (error) {
+      console.error('Get payment confirmation error:', error);
       throw error;
     }
   }

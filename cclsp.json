@@ -1,0 +1,14 @@
+{
+  "servers": [
+    {
+      "extensions": ["ts", "tsx", "js", "jsx"],
+      "command": ["npx", "--", "typescript-language-server", "--stdio"],
+      "rootDir": "./frontend"
+    },
+    {
+      "extensions": ["js"],
+      "command": ["npx", "--", "typescript-language-server", "--stdio"],
+      "rootDir": "./backend"
+    }
+  ]
+}

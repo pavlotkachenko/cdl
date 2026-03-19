@@ -1,137 +1,182 @@
-<!-- Document Upload Template -->
-<div class="upload-container">
-
-  <!-- Header -->
-  <div class="upload-header">
-    <h2>
-      <mat-icon>cloud_upload</mat-icon>
-      Upload Documents
-    </h2>
-    <p>Drag and drop files or click to browse</p>
+<!-- Panel Header -->
+<div class="upload-panel">
+  <div class="panel-header">
+    <div class="panel-icon-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+      </svg>
+    </div>
+    <div>
+      <div class="panel-title">Upload Documents</div>
+      <div class="panel-sub">Drag and drop files or click to browse</div>
+    </div>
+    <button class="panel-close" (click)="closePanel.emit()" aria-label="Close upload panel">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
   </div>
 
-  <!-- Drag and Drop Zone -->
-  <div 
-    class="drop-zone"
-    [class.dragging]="isDragging"
-    [class.has-files]="selectedFiles.length > 0"
-    (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)"
-    (drop)="onDrop($event)"
-    (click)="fileInput.click()">
-    
-    <div class="drop-zone-content">
-      <mat-icon class="upload-icon">cloud_upload</mat-icon>
-      <h3>Drag files here</h3>
-      <p>or click to browse</p>
-      <span class="file-info">Supports: Images, PDF, Word, Text (Max 10MB)</span>
+  <!-- Body: two columns -->
+  <div class="panel-body">
+    <!-- Left: Drop Zone + File Queue -->
+    <div class="panel-left">
+      <div
+        class="drop-zone"
+        [class.drag-over]="isDragging()"
+        role="button"
+        tabindex="0"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+        (click)="fileInput.click()"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="fileInput.click(); $event.preventDefault()">
+
+        <input #fileInput type="file" hidden multiple
+               accept="image/*,.pdf,.doc,.docx,.txt"
+               (change)="onFileSelect($event)" />
+
+        <div class="drop-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" aria-hidden="true">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+        </div>
+        <div class="drop-title">Drag files here</div>
+        <div class="drop-sub">or click the button below to browse</div>
+        <div class="drop-browse">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Browse Files
+        </div>
+        <div class="drop-formats">
+          <span class="format-tag">&#x1F4F7; Images</span>
+          <span class="format-tag">&#x1F4C4; PDF</span>
+          <span class="format-tag">&#x1F4DD; Word</span>
+          <span class="format-tag">&#x1F4CB; Text</span>
+          <span class="format-tag format-tag-max">Max 10 MB</span>
+        </div>
+      </div>
+
+      <!-- Queued files -->
+      @if (selectedFiles().length > 0) {
+        <div class="queue-section">
+          <div class="queue-label">Queued Files ({{ selectedFiles().length }})</div>
+          <div class="file-queue">
+            @for (file of selectedFiles(); track file.name; let i = $index) {
+              <div class="queue-item">
+                <div class="queue-icon">{{ getFileEmoji(file) }}</div>
+                <span class="queue-name">{{ file.name }}</span>
+                <span class="queue-size">{{ getFileSize(file.size) }}</span>
+                <button class="queue-remove" (click)="removeFile(i); $event.stopPropagation()"
+                        [disabled]="uploading()" [attr.aria-label]="'Remove ' + file.name">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
 
-    <!-- Hidden File Input -->
-    <input 
-      #fileInput
-      type="file"
-      multiple
-      accept="image/*,.pdf,.doc,.docx,.txt"
-      (change)="onFileSelect($event)"
-      style="display: none;">
-  </div>
-
-  <!-- Selected Files List -->
-  <div class="selected-files" *ngIf="selectedFiles.length > 0">
-    <div class="files-header">
-      <h3>Selected Files ({{ selectedFiles.length }})</h3>
-      <button mat-button (click)="clearAll()" [disabled]="uploading">
-        <mat-icon>clear_all</mat-icon>
-        Clear All
-      </button>
-    </div>
-
-    <div class="files-list">
-      <div *ngFor="let file of selectedFiles; let i = index" class="file-item">
-        <mat-icon class="file-icon">{{ getFileIcon(file) }}</mat-icon>
-        
-        <div class="file-details">
-          <div class="file-name">{{ file.name }}</div>
-          <div class="file-size">{{ getFileSize(file) }}</div>
-          
-          <!-- Upload Progress -->
-          <mat-progress-bar 
-            *ngIf="uploading && uploadProgress[file.name]"
-            mode="determinate"
-            [value]="uploadProgress[file.name]">
-          </mat-progress-bar>
+    <!-- Right: Category + Description + Tips -->
+    <div class="panel-right">
+      <form [formGroup]="uploadForm">
+        <div class="field-group">
+          <div class="field-label">
+            <span class="required-dot" aria-hidden="true"></span>
+            Document Category
+          </div>
+          <div class="select-wrap">
+            <select class="field-select2" id="doc-category" formControlName="category">
+              @for (cat of CATEGORIES; track cat.value) {
+                <option [value]="cat.value">{{ cat.label }}</option>
+              }
+            </select>
+            <span class="select-arr" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </div>
+          <span class="field-hint">Select the type of document you're uploading</span>
         </div>
 
-        <button 
-          mat-icon-button 
-          (click)="removeFile(i)"
-          [disabled]="uploading"
-          class="remove-button">
-          <mat-icon>close</mat-icon>
-        </button>
+        <div class="field-group">
+          <div class="field-label">
+            Description <span class="optional-tag">optional</span>
+          </div>
+          <textarea class="field-textarea" id="doc-description"
+                    formControlName="description"
+                    rows="3"
+                    placeholder="Add context or notes about these files — e.g. 'Photo taken at the scene, shows posted speed limit'..."></textarea>
+          <span class="field-hint">Helps your attorney understand the context</span>
+        </div>
+      </form>
+
+      <!-- Tips Card -->
+      <div class="tips-card">
+        <div class="tips-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <div class="tips-title">Tips for Better Results</div>
+        </div>
+        <div class="tip-row">
+          <div class="tip-check" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span>Clear, well-lit photos get significantly better OCR results</span>
+        </div>
+        <div class="tip-row">
+          <div class="tip-check" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span>PDFs preserve formatting and are easier to search</span>
+        </div>
+        <div class="tip-row">
+          <div class="tip-check" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span>Group related documents in a single upload</span>
+        </div>
+        <div class="tip-row">
+          <div class="tip-check" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span>Use descriptive filenames for easy searching later</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Upload Form -->
-  <form [formGroup]="uploadForm" (ngSubmit)="onUpload()" class="upload-form">
-    
-    <!-- Category Selection -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Document Category</mat-label>
-      <mat-select formControlName="category">
-        <mat-option *ngFor="let cat of categories" [value]="cat.value">
-          <mat-icon>{{ cat.icon }}</mat-icon>
-          {{ cat.label }}
-        </mat-option>
-      </mat-select>
-      <mat-hint>Select the type of document you're uploading</mat-hint>
-    </mat-form-field>
-
-    <!-- Description -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Description (Optional)</mat-label>
-      <textarea 
-        matInput 
-        formControlName="description"
-        rows="3"
-        placeholder="Add notes about these documents..."></textarea>
-      <mat-hint>Provide context or notes about the uploaded files</mat-hint>
-    </mat-form-field>
-
-    <!-- Action Buttons -->
-    <div class="form-actions">
-      <button 
-        mat-raised-button 
-        color="primary"
-        type="submit"
-        [disabled]="uploading || selectedFiles.length === 0 || uploadForm.invalid">
-        <mat-icon>cloud_upload</mat-icon>
-        <span *ngIf="!uploading">Upload {{ selectedFiles.length }} File(s)</span>
-        <span *ngIf="uploading">Uploading...</span>
-      </button>
-
-      <button 
-        mat-button 
-        type="button"
-        (click)="clearAll()"
-        [disabled]="uploading || selectedFiles.length === 0">
-        Cancel
+  <!-- Footer -->
+  <div class="panel-footer">
+    <div class="upload-note">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Files are encrypted and securely stored
+    </div>
+    <div class="footer-actions">
+      <button class="btn btn-ghost" type="button" (click)="closePanel.emit()">Cancel</button>
+      <button class="btn btn-primary" type="button"
+              [disabled]="uploading() || selectedFiles().length === 0 || uploadForm.invalid"
+              (click)="onUpload()">
+        @if (uploading()) {
+          <mat-spinner diameter="16"></mat-spinner>
+          Uploading&hellip;
+        } @else {
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+          Upload {{ selectedFiles().length }} File(s)
+        }
       </button>
     </div>
-
-  </form>
-
-  <!-- Upload Tips -->
-  <div class="upload-tips">
-    <h4><mat-icon>lightbulb</mat-icon> Tips for Better Results</h4>
-    <ul>
-      <li>Clear photos get better OCR results</li>
-      <li>PDFs preserve formatting and are easier to search</li>
-      <li>Group related documents in a single upload</li>
-      <li>Use descriptive names for your files</li>
-    </ul>
   </div>
-
 </div>

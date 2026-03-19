@@ -1,82 +1,39 @@
-// ============================================
-// Documents Page Component (Main)
-// Location: frontend/src/app/features/driver/documents/documents.component.ts
-// ============================================
-
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-// Angular Material
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-
-// Child Components
 import { DocumentUploadComponent } from './document-upload/document-upload.component';
 import { DocumentsListComponent } from './documents-list/documents-list.component';
-
-// Models
 import { Document } from '../../../core/services/document.service';
 
 @Component({
   selector: 'app-documents',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DocumentUploadComponent, DocumentsListComponent],
   templateUrl: './documents.component.html',
-  styleUrls: ['./documents.component.scss'],
-  imports: [
-    CommonModule,
-    MatTabsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatDialogModule,
-    DocumentUploadComponent,
-    DocumentsListComponent
-  ]
+  styleUrl: './documents.component.scss',
 })
-export class DocumentsComponent implements OnInit {
-  caseId: string = '';
-  selectedTabIndex = 0;
+export class DocumentsComponent {
+  private route = inject(ActivatedRoute);
+  private snackBar = inject(MatSnackBar);
 
-  constructor(
-    private route: ActivatedRoute,
-    private dialog: MatDialog
-  ) {}
+  readonly caseId = signal('current-case');
+  readonly showUploadPanel = signal(false);
+  readonly refreshTrigger = signal(0);
 
-  ngOnInit(): void {
-    // Get case ID from route params
+  constructor() {
     this.route.params.subscribe(params => {
-      this.caseId = params['id'] || 'current-case';
+      this.caseId.set(params['id'] || 'current-case');
     });
   }
 
-  onDocumentsUploaded(documents: Document[]): void {
-    console.log('Documents uploaded:', documents);
-    
-    // Switch to list view to see uploaded documents
-    this.selectedTabIndex = 1;
-
-    // Refresh the documents list
-    // The list component will automatically refresh through its lifecycle
+  toggleUploadPanel(): void {
+    this.showUploadPanel.update(v => !v);
   }
 
-  onDocumentSelected(document: Document): void {
-    console.log('Document selected:', document);
-    // Open document viewer/preview
-  }
-
-  openUploadDialog(): void {
-    const dialogRef = this.dialog.open(DocumentUploadComponent, {
-      width: '800px',
-      maxHeight: '90vh',
-      data: { caseId: this.caseId }
-    });
-
-    dialogRef.componentInstance.caseId = this.caseId;
-    dialogRef.componentInstance.uploaded.subscribe((docs: Document[]) => {
-      this.onDocumentsUploaded(docs);
-      dialogRef.close();
-    });
+  onDocumentsUploaded(docs: Document[]): void {
+    this.showUploadPanel.set(false);
+    this.refreshTrigger.update(v => v + 1);
+    this.snackBar.open(`${docs.length} document(s) uploaded successfully`, 'Close', { duration: 3000 });
   }
 }

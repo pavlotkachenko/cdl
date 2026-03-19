@@ -43,8 +43,16 @@ const createCaseValidation = [
     'traffic_signal',
     'reckless_driving',
     'dui',
+    'hos_logbook',
+    'dot_inspection',
+    'suspension',
+    'csa_score',
+    'dqf',
     'other'
-  ])
+  ]),
+  body('citation_number').optional().isString().isLength({ max: 50 }).withMessage('Citation number must be 50 characters or less'),
+  body('fine_amount').optional().isFloat({ min: 0 }).withMessage('Fine amount must be a non-negative number'),
+  body('alleged_speed').optional().isInt({ min: 1, max: 300 }).withMessage('Alleged speed must be between 1 and 300'),
 ];
 
 const publicSubmitValidation = [
@@ -67,6 +75,9 @@ const updateCaseValidation = [
   body('town').optional().isString().isLength({ max: 100 }),
   body('carrier').optional().isString().isLength({ max: 255 }),
   body('next_action_date').optional().isISO8601(),
+  body('citation_number').optional().isString().isLength({ max: 50 }),
+  body('fine_amount').optional().isFloat({ min: 0 }),
+  body('alleged_speed').optional().isInt({ min: 1, max: 300 }),
 ];
 
 // ============================================
@@ -159,13 +170,13 @@ router.get(
 /**
  * PATCH /api/cases/:id
  * Update case details
- * Access: Operators, Attorneys, Admins
+ * Access: Drivers (description + location only), Operators, Attorneys, Admins
  */
 router.patch(
   '/:id',
   authenticate,
   canAccessCase,
-  authorize(['operator', 'attorney', 'admin']),
+  authorize(['driver', 'operator', 'attorney', 'admin']),
   updateCaseValidation,
   caseController.updateCase
 );
@@ -309,7 +320,7 @@ router.post(
 router.post(
   '/:id/payments',
   authenticate,
-  authorize(['driver']),
+  authorize('driver'),
   caseController.createCasePayment
 );
 
@@ -336,6 +347,46 @@ router.post(
   authorize(['attorney']),
   body('reason').optional().isString(),
   caseController.declineCase
+);
+
+// ============================================
+// Case messaging (driver + attorney + operator)
+// ============================================
+
+/**
+ * GET /api/cases/:id/conversation
+ * Get or create conversation for a case
+ * Access: Anyone who can access the case
+ */
+router.get(
+  '/:id/conversation',
+  authenticate,
+  canAccessCase,
+  caseController.getCaseConversation
+);
+
+/**
+ * GET /api/cases/:id/messages
+ * Get messages for a case conversation
+ * Access: Anyone who can access the case
+ */
+router.get(
+  '/:id/messages',
+  authenticate,
+  canAccessCase,
+  caseController.getCaseMessages
+);
+
+/**
+ * POST /api/cases/:id/messages
+ * Send a message in a case conversation
+ * Access: Anyone who can access the case
+ */
+router.post(
+  '/:id/messages',
+  authenticate,
+  canAccessCase,
+  caseController.sendCaseMessage
 );
 
 /**

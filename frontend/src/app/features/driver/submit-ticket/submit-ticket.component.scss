@@ -1,335 +1,930 @@
-$teal: #1dad8c;
-$teal-mid: #17a07f;
-$teal-bg: #f0faf7;
-$teal-border: #c0e8dd;
-$success-color: #28a745;
-$error-color: #dc3545;
-$text-primary: #0f2137;
-$text-secondary: #8a94a6;
-$text-body: #5a6578;
-$bg: #f4f7f9;
-$border: #edf2f6;
-$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+@use '../../../../assets/styles/variables' as *;
 
-.submit-ticket-container {
-  min-height: calc(100vh - 64px);
-  background: $bg;
-  padding: 24px;
-  font-family: 'Mulish', sans-serif;
+// ============================================
+// Page Layout
+// ============================================
 
-  @media (max-width: 768px) {
-    padding: 16px;
+.wizard-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: $spacing-lg $container-padding-mobile;
+
+  @media (min-width: $breakpoint-mobile) {
+    padding: $spacing-2xl $spacing-xl;
   }
 }
 
-.page-header {
+.page-title {
+  font-family: $font-primary;
+  font-size: $h4-size-mobile;
+  font-weight: $font-bold;
+  color: $text-primary;
+  margin: 0 0 $spacing-xs;
+
+  @media (min-width: $breakpoint-mobile) {
+    font-size: $h4-size-desktop;
+  }
+}
+
+.page-subtitle {
+  font-family: $font-primary;
+  font-size: $small-size;
+  color: $text-secondary;
+  margin: 0 0 $spacing-lg;
+}
+
+// ============================================
+// Form Layout (two-column with sidebar)
+// ============================================
+
+.form-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-lg;
+
+  @media (min-width: $breakpoint-mobile) {
+    grid-template-columns: 1fr 300px;
+  }
+}
+
+.form-main {
+  min-width: 0;
+}
+
+// ============================================
+// Form Card
+// ============================================
+
+.form-card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.form-card-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
-  max-width: 900px;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+  border-bottom: 1px solid $border-light;
+}
+
+.header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &.scan-icon { background: $teal-bg; color: $teal; }
+  &.type-icon { background: #eff6ff; color: #3b82f6; }
+  &.details-icon { background: $teal-bg; color: $teal; }
+  &.review-icon { background: #ecfdf5; color: #10b981; }
+}
+
+.card-title {
+  font-family: $font-primary;
+  font-size: $body-size;
+  font-weight: $font-semibold;
+  color: $text-primary;
+  margin: 0;
+}
+
+.card-desc {
+  font-family: $font-primary;
+  font-size: $small-size;
+  color: $text-secondary;
+  margin: 2px 0 0;
+}
+
+.step-badge {
   margin-left: auto;
-  margin-right: auto;
-
-  .back-button {
-    color: $teal;
-  }
-
-  h1 {
-    font-size: 32px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 4px 0;
-
-    @media (max-width: 768px) {
-      font-size: 24px;
-    }
-  }
-
-  p {
-    color: $text-body;
-    margin: 0;
-    font-size: 16px;
-  }
+  font-size: $tiny-size;
+  color: $text-muted;
+  white-space: nowrap;
 }
 
-// Success State
-.success-container {
-  max-width: 600px;
-  margin: 60px auto;
+// ============================================
+// Step 0: Scan
+// ============================================
+
+.scan-body {
+  padding: $spacing-lg;
+}
+
+.upload-zone {
+  border: 2px dashed $border;
+  border-radius: $radius-md;
+  padding: $spacing-2xl $spacing-lg;
   text-align: center;
+  cursor: pointer;
+  transition: all $transition-base;
 
-  .success-card {
-    padding: 40px 24px;
-    border: 1.5px solid $border;
-    border-radius: 10px;
-    box-shadow: $shadow-sm;
+  &:hover, &:focus-visible {
+    border-color: $teal;
+    background: $teal-bg;
   }
 
-  .success-icon {
-    mat-icon {
-      font-size: 80px;
-      width: 80px;
-      height: 80px;
-      color: $teal;
-    }
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
   }
+}
 
-  h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 16px 0 8px 0;
-  }
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto $spacing-sm;
+}
 
-  .ticket-number {
-    font-size: 20px;
-    font-weight: 600;
+.upload-text {
+  font-family: $font-primary;
+  font-size: $small-size;
+  color: $text-primary;
+  margin: 0 0 4px;
+}
+
+.upload-hint {
+  font-family: $font-primary;
+  font-size: $tiny-size;
+  color: $text-muted;
+  margin: 0;
+}
+
+.scanning-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  color: $teal;
+  font-size: $small-size;
+}
+
+.ocr-banner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $teal-bg;
+  border: 1px solid $teal-border;
+  border-radius: $radius-sm;
+  margin-top: $spacing-md;
+  font-size: $small-size;
+  color: $text-primary;
+}
+
+.ocr-check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+// ============================================
+// Step 1: Violation Chips
+// ============================================
+
+.chips-body {
+  padding: $spacing-lg;
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.violation-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1.5px solid $border;
+  border-radius: 8px;
+  background: $surface;
+  cursor: pointer;
+  transition: all $transition-base;
+  font-family: $font-primary;
+  font-size: $small-size;
+  color: $text-secondary;
+
+  &:hover {
+    border-color: $teal;
+    background: $teal-bg;
     color: $teal;
-    margin: 0 0 16px 0;
   }
 
-  .success-message {
-    color: $text-body;
-    font-size: 16px;
-    line-height: 1.6;
-    margin: 0 0 32px 0;
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
   }
 
-  .success-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: center;
-
-    button {
-      min-width: 200px;
-
-      mat-icon {
-        margin-right: 8px;
-      }
-    }
+  &.selected {
+    border-color: $teal;
+    background: $teal-bg2;
+    color: $teal;
+    box-shadow: 0 0 0 3px rgba($teal, 0.15);
   }
 }
 
-// Form Container
-.form-container {
-  max-width: 900px;
-  margin: 0 auto;
-
-  mat-stepper {
-    background: transparent;
-  }
-
-  mat-card {
-    margin-top: 24px;
-    border: 1.5px solid $border;
-    border-radius: 10px;
-    box-shadow: $shadow-sm;
-  }
-
-  mat-card-content {
-    padding: 32px;
-
-    @media (max-width: 768px) {
-      padding: 24px 16px;
-    }
-  }
-
-  h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 24px 0;
-  }
+.chip-icon {
+  font-size: 18px;
+  line-height: 1;
 }
 
-// Form Fields
-.full-width {
-  width: 100%;
-  margin-bottom: 16px;
+.chip-label {
+  font-weight: $font-medium;
 }
 
-.form-grid {
+// ============================================
+// Step 2: Details Form
+// ============================================
+
+.details-body {
+  padding: $spacing-lg;
+}
+
+.required-legend {
+  font-size: $tiny-size;
+  color: $text-muted;
+  margin: 0 0 $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.req-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $error;
+  flex-shrink: 0;
+}
+
+.optional-tag {
+  font-size: $tiny-size;
+  color: $text-muted;
+  font-weight: $font-regular;
+  margin-left: 4px;
+}
+
+.form-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
 
-  @media (max-width: 768px) {
+  @media (max-width: #{$breakpoint-mobile - 1}) {
     grid-template-columns: 1fr;
   }
 }
 
-// Upload Zone
-.upload-info {
-  color: $text-body;
-  margin-bottom: 24px;
-}
+.field-group {
+  margin-bottom: $spacing-md;
 
-.upload-zone {
-  margin-bottom: 24px;
-
-  .upload-area {
-    border: 2px dashed $teal-border;
-    border-radius: 10px;
-    padding: 48px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      border-color: $teal;
-      background: $teal-bg;
-    }
-
-    mat-icon {
-      font-size: 60px;
-      width: 60px;
-      height: 60px;
-      color: $teal;
-      margin-bottom: 16px;
-    }
-
-    h3 {
-      font-size: 18px;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0 0 8px 0;
-    }
-
-    p {
-      color: $text-secondary;
-      margin: 0;
-      font-size: 14px;
-    }
+  &.full-width {
+    grid-column: 1 / -1;
   }
 }
 
-.uploaded-files {
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: $font-primary;
+  font-size: $small-size;
+  font-weight: $font-medium;
+  color: $text-primary;
+  margin-bottom: 6px;
+}
+
+.field-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon-left {
+  position: absolute;
+  left: 12px;
+  width: 18px;
+  height: 18px;
+  color: $text-muted;
+  pointer-events: none;
+
+  &.field-text-icon {
+    width: auto;
+    height: auto;
+    font-size: $body-size;
+    font-weight: $font-semibold;
+    color: $text-muted;
+  }
+}
+
+.field-suffix {
+  position: absolute;
+  right: 12px;
+  font-size: $small-size;
+  font-weight: $font-medium;
+  color: $text-muted;
+  pointer-events: none;
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+  width: 100%;
+  height: $input-height;
+  padding: 0 12px 0 38px;
+  border: 1.5px solid $border;
+  border-radius: $radius-sm;
+  font-family: $font-primary;
+  font-size: $body-size;
+  color: $text-primary;
+  background: $surface;
+  transition: all $transition-base;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $teal;
+    box-shadow: 0 0 0 3px rgba($teal, 0.15);
+  }
+
+  &.ng-touched.ng-invalid {
+    border-color: $error;
+  }
+}
+
+.field-input.has-text-icon {
+  padding-left: 28px;
+}
+
+.field-input.has-suffix {
+  padding-right: 44px;
+}
+
+.field-select {
+  appearance: none;
+  padding-left: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2398a8b4' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.field-textarea {
+  height: auto;
+  min-height: 110px;
+  padding: 12px;
+  padding-left: 12px;
+  resize: vertical;
+}
+
+.field-error {
+  font-size: $tiny-size;
+  color: $error;
+  margin: 4px 0 0;
+}
+
+.char-counter {
+  font-size: $tiny-size;
+  color: $text-muted;
+  text-align: right;
+  margin-top: 4px;
+
+  &.near-limit {
+    color: $warning;
+  }
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin: $spacing-lg 0 $spacing-md;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: $border-light;
+  }
+}
+
+.divider-label {
+  font-family: $font-primary;
+  font-size: $tiny-size;
+  font-weight: $font-semibold;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+// ============================================
+// Form Footer
+// ============================================
+
+.form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid $border-light;
+  gap: $spacing-sm;
+}
+
+.footer-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $tiny-size;
+  color: $text-muted;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.footer-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+// ============================================
+// Buttons
+// ============================================
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: $font-primary;
+  font-size: $small-size;
+  font-weight: $font-semibold;
+  border: none;
+  border-radius: $border-radius-full;
+  cursor: pointer;
+  transition: all $transition-base;
+  padding: 10px 20px;
+  min-height: 40px;
+  min-width: 44px;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background: $teal;
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: $teal-mid;
+    box-shadow: $shadow-teal;
+  }
+}
+
+.btn-secondary {
+  background: $light-grey;
+  color: $text-primary;
+
+  &:hover:not(:disabled) {
+    background: $grey;
+  }
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid $border;
+  color: $text-secondary;
+
+  &:hover:not(:disabled) {
+    border-color: $teal;
+    color: $teal;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.btn-text {
+  background: transparent;
+  color: $text-secondary;
+  padding: 10px 12px;
+
+  &:hover:not(:disabled) {
     color: $text-primary;
-    margin: 0 0 12px 0;
-  }
-
-  .file-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: $bg;
-    border: 1.5px solid $border;
-    border-radius: 10px;
-    margin-bottom: 8px;
-
-    mat-icon {
-      color: $teal;
-    }
-
-    .file-info {
-      flex: 1;
-
-      .file-name {
-        font-size: 14px;
-        font-weight: 500;
-        color: $text-primary;
-        margin: 0 0 4px 0;
-      }
-
-      .file-size {
-        font-size: 12px;
-        color: $text-secondary;
-        margin: 0;
-      }
-    }
   }
 }
 
-// Review Section
+.btn-sm {
+  padding: 6px 14px;
+  font-size: $tiny-size;
+  min-height: 32px;
+}
+
+.btn-lg {
+  padding: 12px 28px;
+  font-size: $body-size;
+  min-height: 48px;
+}
+
+.btn-edit {
+  background: none;
+  border: none;
+  color: $teal;
+  font-family: $font-primary;
+  font-size: $small-size;
+  font-weight: $font-medium;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: $teal-bg;
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+  }
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: $text-muted;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background: rgba($error, 0.1);
+    color: $error;
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba($error, 0.3);
+  }
+}
+
+// ============================================
+// Step 3: Review
+// ============================================
+
+.review-body {
+  padding: $spacing-lg;
+}
+
 .review-section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1.5px solid $border;
+  margin-bottom: $spacing-lg;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.review-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+
+  h3 {
+    font-family: $font-primary;
+    font-size: $small-size;
+    font-weight: $font-semibold;
+    color: $text-primary;
+    margin: 0;
+  }
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm $spacing-md;
+
+  @media (max-width: #{$breakpoint-mobile - 1}) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.review-item {
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+.review-label {
+  display: block;
+  font-size: $tiny-size;
+  color: $text-muted;
+  margin-bottom: 2px;
+}
+
+.review-value {
+  display: block;
+  font-size: $small-size;
+  color: $text-primary;
+  font-weight: $font-medium;
+}
+
+.review-desc {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+// Documents
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 8px 0;
+  border-bottom: 1px solid $border-light;
 
   &:last-of-type {
     border-bottom: none;
   }
-
-  h3 {
-    font-size: 16px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 12px 0;
-  }
-
-  p {
-    margin: 8px 0;
-    color: $text-body;
-    font-size: 14px;
-
-    strong {
-      color: $text-primary;
-      margin-right: 8px;
-    }
-  }
 }
 
-// Step Actions
-.step-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1.5px solid $border;
-
-  button {
-    mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    flex-direction: column-reverse;
-
-    button {
-      width: 100%;
-    }
-  }
+.file-icon {
+  width: 18px;
+  height: 18px;
+  color: $text-muted;
+  flex-shrink: 0;
 }
 
-// Error Message
-.error-message {
+.file-name {
+  flex: 1;
+  font-size: $small-size;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: $tiny-size;
+  color: $text-muted;
+  white-space: nowrap;
+}
+
+.attach-row {
+  margin-top: $spacing-sm;
+}
+
+.error-banner {
+  background: rgba($error, 0.08);
+  border: 1px solid rgba($error, 0.2);
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #ffebee;
-  border-radius: 10px;
-  color: $error-color;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  margin-top: $spacing-md;
 
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+  p {
+    margin: 0;
+    font-size: $small-size;
+    color: $error;
   }
 }
 
-// Spinning Icon
-.spinning {
-  animation: spin 1s linear infinite;
+// ============================================
+// Info Sidebar
+// ============================================
+
+.info-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  @media (max-width: #{$breakpoint-mobile - 1}) {
+    order: 1;
+  }
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
+.info-card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  padding: $spacing-md;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+
+  h3 {
+    font-family: $font-primary;
+    font-size: $small-size;
+    font-weight: $font-semibold;
+    color: $text-primary;
+    margin: 0;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+.info-card-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+// Progress bar
+.progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: $border-light;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: $spacing-md;
+}
+
+.progress-bar {
+  height: 100%;
+  background: $teal;
+  border-radius: 3px;
+  transition: width $transition-slow;
+}
+
+// Progress checklist
+.progress-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 6px 0;
+    font-family: $font-primary;
+    font-size: $small-size;
+
+    &.done .progress-label { color: $teal; }
+    &.current .progress-label { color: $text-primary; font-weight: $font-semibold; }
+    &.todo .progress-label { color: $text-muted; }
   }
+}
+
+.progress-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.progress-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: $font-semibold;
+  flex-shrink: 0;
+
+  &.current {
+    background: $navy;
+    color: #ffffff;
+  }
+
+  &.todo {
+    background: $border-light;
+    color: $text-muted;
+  }
+}
+
+.progress-label {
+  line-height: 1;
+}
+
+// Tips list
+.tips-list,
+.next-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: 5px 0;
+    font-family: $font-primary;
+    font-size: $small-size;
+    color: $text-secondary;
+    line-height: $line-height-normal;
+  }
+}
+
+.tip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $teal;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.next-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+
+  &.blue { background: #3b82f6; }
+  &.amber { background: #f59e0b; }
+  &.teal { background: $teal; }
+}
+
+// ============================================
+// Success Page
+// ============================================
+
+.success-page {
+  display: flex;
+  justify-content: center;
+  padding: $spacing-3xl $spacing-lg;
+}
+
+.success-card {
+  max-width: 480px;
+  text-align: center;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card-md;
+  padding: $spacing-2xl;
+}
+
+.success-icon-wrap {
+  margin-bottom: $spacing-lg;
+}
+
+.success-check {
+  width: 64px;
+  height: 64px;
+}
+
+.success-title {
+  font-family: $font-primary;
+  font-size: $h4-size-mobile;
+  font-weight: $font-bold;
+  color: $text-primary;
+  margin: 0 0 $spacing-sm;
+}
+
+.success-text {
+  font-family: $font-primary;
+  font-size: $small-size;
+  color: $text-secondary;
+  margin: 0 0 $spacing-lg;
+  line-height: $line-height-relaxed;
+}
+
+.success-actions {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: center;
+  flex-wrap: wrap;
 }

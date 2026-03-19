@@ -21,13 +21,19 @@ router.use(authenticate);
 router.post('/create-intent', paymentController.createPaymentIntent);
 router.post('/confirm', paymentController.confirmPayment);
 
+// Payment confirmation & receipt routes (before /:id to avoid param conflict)
+router.get('/confirmation/:paymentIntentId', paymentController.getPaymentConfirmation);
+router.get('/:id/receipt', paymentController.downloadReceipt);
+
 // Payment retrieval routes
+router.get('/user/me/stats', paymentController.getUserPaymentStats);
 router.get('/user/me', paymentController.getUserPayments);
-router.get('/ticket/:ticketId', paymentController.getTicketPayments);
+router.get('/case/:caseId', paymentController.getCasePayments);
 router.get('/stats', paymentController.getPaymentStats);
 router.get('/:id', paymentController.getPayment);
 
-// Refund routes
+// Refund & retry routes
+router.post('/:id/retry', paymentController.retryPayment);
 router.post('/:id/refund', paymentController.processRefund);
 
 // Installment payment plan routes

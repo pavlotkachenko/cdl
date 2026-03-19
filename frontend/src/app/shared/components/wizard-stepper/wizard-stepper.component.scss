@@ -1,0 +1,115 @@
+@use '../../../../assets/styles/variables' as *;
+
+.wizard-stepper {
+  width: 100%;
+  padding: $spacing-lg 0;
+}
+
+.stepper-list {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stepper-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+
+.step-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: $font-primary;
+  font-weight: $font-semibold;
+  font-size: $small-size;
+  transition: all $transition-base;
+  position: relative;
+  z-index: 1;
+}
+
+.stepper-item.done .step-circle {
+  background-color: $teal;
+  color: #ffffff;
+}
+
+.stepper-item.current .step-circle {
+  background-color: $navy;
+  color: #ffffff;
+}
+
+.stepper-item.todo .step-circle {
+  background-color: $light-grey;
+  color: $text-muted;
+}
+
+.check-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.step-number {
+  line-height: 1;
+}
+
+.step-connector {
+  position: absolute;
+  top: 19px;
+  left: calc(50% + 22px);
+  width: calc(100% - 44px);
+  height: 2px;
+  background-color: $border;
+  transition: background-color $transition-base;
+}
+
+.step-connector.done {
+  background-color: $teal;
+}
+
+.step-label {
+  margin-top: $spacing-xs;
+  font-family: $font-primary;
+  font-size: $tiny-size;
+  font-weight: $font-medium;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stepper-item.done .step-label {
+  color: $teal;
+}
+
+.stepper-item.current .step-label {
+  color: $text-primary;
+  font-weight: $font-semibold;
+}
+
+.stepper-item.todo .step-label {
+  color: $text-muted;
+}
+
+@media (max-width: #{$breakpoint-mobile - 1}) {
+  .step-label {
+    display: none;
+  }
+
+  .step-circle {
+    width: 32px;
+    height: 32px;
+    font-size: $tiny-size;
+  }
+
+  .step-connector {
+    top: 16px;
+    left: calc(50% + 19px);
+    width: calc(100% - 38px);
+  }
+}

@@ -68,7 +68,7 @@ export class NotificationBellComponent implements OnInit {
       case 'case':
       case 'case_update':
         if (notification.data?.caseId) {
-          this.router.navigate(['/driver/tickets', notification.data.caseId]);
+          this.router.navigate(['/driver/cases', notification.data.caseId]);
         } else {
           this.router.navigate(['/driver/notifications']);
         }
