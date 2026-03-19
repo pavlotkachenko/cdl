@@ -1,51 +1,96 @@
 // ============================================
-// Help & Support Styles
+// Help Center Styles — Sprint 067 Redesign
+// Teal design system, no Angular Material
 // ============================================
 
-$primary-color: #1dad8c;
+// ── Variables ────────────────────────────────
+
+$teal: #1dad8c;
+$teal-dark: #17a07f;
+$teal-light: #f0faf7;
+$teal-ring: rgba(29, 173, 140, 0.2);
+
+$bg-page: #f4f7f9;
+$bg-white: #ffffff;
+
 $text-dark: #1f2937;
 $text-medium: #6b7280;
 $text-light: #9ca3af;
-$background: #f9fafb;
-$border-color: #e5e7eb;
 
-.help-container {
-  min-height: calc(100vh - 64px);
-  background: $background;
+$border-color: #e5e7eb;
+$border-radius: 16px;
+$border-radius-sm: 8px;
+
+$font: 'Mulish', sans-serif;
+
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 8px 24px rgba(29, 173, 140, 0.2);
+
+// ── Animations ───────────────────────────────
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-// Hero Section
+// ── Base ─────────────────────────────────────
+
+.help-container {
+  font-family: $font;
+  background: $bg-page;
+  min-height: calc(100vh - 64px);
+}
+
+// ── Hero Section ─────────────────────────────
+
 .help-hero {
-  background: linear-gradient(135deg, $primary-color 0%, #159a7a 100%);
+  background: linear-gradient(135deg, $teal 0%, $teal-dark 100%);
   color: white;
   padding: 80px 32px;
   text-align: center;
+  animation: fadeIn 0.4s ease;
 
   @media (max-width: 768px) {
-    padding: 60px 20px;
+    padding: 48px 20px;
   }
 
   .hero-content {
     max-width: 800px;
     margin: 0 auto;
 
+    .hero-emoji {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 16px;
+    }
+
     h1 {
       font-size: 48px;
       font-weight: 700;
-      margin: 0 0 16px 0;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
 
       @media (max-width: 768px) {
-        font-size: 32px;
+        font-size: 28px;
       }
     }
 
     p {
       font-size: 20px;
       opacity: 0.95;
-      margin: 0 0 40px 0;
+      margin: 0 0 36px 0;
+      line-height: 1.5;
 
       @media (max-width: 768px) {
-        font-size: 16px;
+        font-size: 15px;
+        margin-bottom: 28px;
       }
     }
   }
@@ -54,42 +99,50 @@ $border-color: #e5e7eb;
     max-width: 600px;
     margin: 0 auto;
 
-    .search-field {
-      width: 100%;
-      
-      ::ng-deep {
-        .mat-mdc-form-field {
-          background: white;
-          border-radius: 50px;
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .search-icon {
+        position: absolute;
+        left: 20px;
+        color: $teal;
+        pointer-events: none;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 16px 20px 16px 52px;
+        font-size: 16px;
+        font-family: $font;
+        border: none;
+        border-radius: 50px;
+        background: $bg-white;
+        color: $text-dark;
+        box-shadow: $shadow-md;
+        outline: none;
+        transition: box-shadow 0.2s ease;
+
+        &::placeholder {
+          color: $text-light;
         }
 
-        .mat-mdc-text-field-wrapper {
-          background: white !important;
-          border-radius: 50px;
-        }
-
-        .mat-mdc-form-field-infix {
-          padding: 16px 20px !important;
-        }
-
-        input {
-          font-size: 16px;
-        }
-
-        .mat-icon {
-          color: $primary-color;
-          margin-right: 12px;
+        &:focus {
+          box-shadow: 0 0 0 3px $teal-ring, $shadow-md;
         }
       }
     }
   }
 }
 
-// Support Categories
+// ── Support Categories ───────────────────────
+
 .support-categories {
   padding: 60px 32px;
   max-width: 1200px;
   margin: 0 auto;
+  animation: fadeIn 0.4s ease 0.1s both;
 
   @media (max-width: 768px) {
     padding: 40px 20px;
@@ -101,6 +154,11 @@ $border-color: #e5e7eb;
     font-weight: 700;
     color: $text-dark;
     margin: 0 0 40px 0;
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+      margin-bottom: 28px;
+    }
   }
 
   .categories-grid {
@@ -118,27 +176,29 @@ $border-color: #e5e7eb;
   }
 
   .category-card {
+    background: $bg-white;
+    border: 2px solid transparent;
+    border-radius: $border-radius;
+    padding: 32px 24px;
+    text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    border: 2px solid transparent;
-    border-radius: 12px;
+    box-shadow: $shadow-sm;
 
     &:hover {
       transform: translateY(-4px);
-      border-color: $primary-color;
-      box-shadow: 0 8px 24px rgba(29, 173, 140, 0.2);
+      border-color: $teal;
+      box-shadow: $shadow-lg;
     }
 
-    mat-card-content {
-      text-align: center;
-      padding: 32px 24px !important;
+    &:focus-visible {
+      outline: 2px solid $teal;
+      outline-offset: 2px;
     }
 
-    .category-icon {
+    .category-emoji {
       font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: $primary-color;
+      display: block;
       margin-bottom: 16px;
     }
 
@@ -152,16 +212,24 @@ $border-color: #e5e7eb;
     p {
       font-size: 14px;
       color: $text-medium;
-      margin: 0;
+      margin: 0 0 12px 0;
       line-height: 1.5;
+    }
+
+    .article-count {
+      font-size: 13px;
+      font-weight: 600;
+      color: $teal;
     }
   }
 }
 
-// FAQ Section
+// ── FAQ Section ──────────────────────────────
+
 .faq-section {
   padding: 60px 32px;
-  background: white;
+  background: $bg-white;
+  animation: fadeIn 0.4s ease 0.2s both;
 
   @media (max-width: 768px) {
     padding: 40px 20px;
@@ -169,7 +237,7 @@ $border-color: #e5e7eb;
 
   .faq-header {
     max-width: 800px;
-    margin: 0 auto 40px;
+    margin: 0 auto 32px;
     text-align: center;
 
     h2 {
@@ -177,6 +245,10 @@ $border-color: #e5e7eb;
       font-weight: 700;
       color: $text-dark;
       margin: 0 0 12px 0;
+
+      @media (max-width: 768px) {
+        font-size: 24px;
+      }
     }
 
     p {
@@ -186,33 +258,42 @@ $border-color: #e5e7eb;
     }
   }
 
-  .category-filters {
-    max-width: 1000px;
+  .category-tabs {
+    max-width: 900px;
     margin: 0 auto 32px;
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
 
-    mat-chip-listbox {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    mat-chip-option {
-      font-weight: 500;
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: $font;
       border: 2px solid $border-color;
-      background: white;
-      transition: all 0.3s ease;
+      border-radius: 50px;
+      background: $bg-white;
+      color: $text-medium;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 44px;
 
       &:hover {
-        border-color: $primary-color;
-        background: #f0fdfa;
+        border-color: $teal;
+        color: $teal;
+        background: $teal-light;
       }
 
-      &.mat-mdc-chip-selected {
-        background: $primary-color !important;
-        color: white !important;
-        border-color: $primary-color;
+      &:focus-visible {
+        outline: 2px solid $teal;
+        outline-offset: 2px;
+      }
+
+      &.active {
+        background: $teal;
+        color: white;
+        border-color: $teal;
       }
     }
   }
@@ -220,56 +301,90 @@ $border-color: #e5e7eb;
   .faq-accordion {
     max-width: 900px;
     margin: 0 auto;
+  }
 
-    mat-expansion-panel {
-      margin-bottom: 16px;
-      border-radius: 8px;
-      border: 1px solid $border-color;
-      box-shadow: none;
+  .faq-item {
+    margin-bottom: 12px;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-sm;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
 
-      &:hover {
-        border-color: $primary-color;
+    &:hover {
+      border-color: $teal;
+    }
+  }
+
+  .faq-header-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    background: $bg-white;
+    transition: background 0.2s ease;
+    min-height: 44px;
+
+    &:hover {
+      background: $teal-light;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $teal;
+      outline-offset: -2px;
+    }
+
+    .faq-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .faq-question {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-dark;
+      line-height: 1.4;
+    }
+
+    .faq-chevron {
+      flex-shrink: 0;
+      color: $text-light;
+      transition: transform 0.3s ease;
+
+      &.expanded {
+        transform: rotate(180deg);
       }
+    }
+  }
 
-      mat-expansion-panel-header {
-        padding: 20px 24px;
+  .faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
 
-        mat-panel-title {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 16px;
-          font-weight: 600;
-          color: $text-dark;
+    &.expanded {
+      max-height: 500px;
+    }
 
-          .faq-icon {
-            color: $primary-color;
-            font-size: 20px;
-            width: 20px;
-            height: 20px;
-          }
-        }
-      }
-
-      .faq-answer {
-        padding: 0 24px 24px 60px;
-        font-size: 15px;
-        line-height: 1.7;
-        color: $text-medium;
-        margin: 0;
-      }
+    p {
+      padding: 0 20px 20px 52px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: $text-medium;
+      margin: 0;
     }
   }
 
   .no-results {
     text-align: center;
     padding: 60px 20px;
+    max-width: 900px;
+    margin: 0 auto;
 
-    mat-icon {
-      font-size: 80px;
-      width: 80px;
-      height: 80px;
-      color: $text-light;
+    .no-results-emoji {
+      font-size: 64px;
+      display: block;
       opacity: 0.5;
       margin-bottom: 16px;
     }
@@ -286,28 +401,58 @@ $border-color: #e5e7eb;
       color: $text-medium;
       margin: 0 0 24px 0;
     }
+
+    .btn-clear {
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: $font;
+      background: $teal;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+      min-height: 44px;
+
+      &:hover {
+        background: $teal-dark;
+        box-shadow: $shadow-lg;
+      }
+
+      &:focus-visible {
+        outline: 2px solid $teal;
+        outline-offset: 2px;
+      }
+    }
   }
 }
 
-// Contact Support Section
+// ── Contact Support ──────────────────────────
+
 .contact-support-section {
   padding: 60px 32px;
   max-width: 1200px;
   margin: 0 auto;
+  animation: fadeIn 0.4s ease 0.3s both;
 
   @media (max-width: 768px) {
     padding: 40px 20px;
   }
 
-  h2 {
+  > h2 {
     text-align: center;
     font-size: 32px;
     font-weight: 700;
     color: $text-dark;
     margin: 0 0 12px 0;
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+    }
   }
 
-  p {
+  > p {
     text-align: center;
     font-size: 16px;
     color: $text-medium;
@@ -328,27 +473,30 @@ $border-color: #e5e7eb;
     }
   }
 
-  .contact-method-card {
+  .contact-card {
+    background: $bg-white;
+    border: 2px solid transparent;
+    border-radius: $border-radius;
+    padding: 32px 24px;
+    text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    border: 2px solid transparent;
-    text-align: center;
+    box-shadow: $shadow-sm;
 
     &:hover {
       transform: translateY(-4px);
-      border-color: $primary-color;
-      box-shadow: 0 8px 24px rgba(29, 173, 140, 0.2);
+      border-color: $teal;
+      box-shadow: $shadow-lg;
     }
 
-    mat-card-content {
-      padding: 32px 24px !important;
+    &:focus-visible {
+      outline: 2px solid $teal;
+      outline-offset: 2px;
     }
 
-    .contact-icon {
+    .contact-emoji {
       font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: $primary-color;
+      display: block;
       margin-bottom: 16px;
     }
 
@@ -362,31 +510,47 @@ $border-color: #e5e7eb;
     .contact-value {
       font-size: 15px;
       font-weight: 600;
-      color: $primary-color;
+      color: $teal;
       margin-bottom: 8px;
     }
 
     .contact-description {
       font-size: 13px;
       color: $text-medium;
-      margin: 0;
+      margin: 0 0 12px 0;
+      line-height: 1.5;
+    }
+
+    .contact-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .contact-availability,
+      .contact-response {
+        font-size: 12px;
+        color: $text-light;
+      }
     }
   }
 }
 
-// Quick Links Section
-.quick-links-section {
+// ── Helpful Resources ────────────────────────
+
+.resources-section {
   padding: 0 32px 60px;
   max-width: 1000px;
   margin: 0 auto;
+  animation: fadeIn 0.4s ease 0.35s both;
 
   @media (max-width: 768px) {
     padding: 0 20px 40px;
   }
 
-  .quick-links-card {
+  .resources-card {
     background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    border-radius: 12px;
+    border-radius: $border-radius;
+    padding: 32px;
 
     h3 {
       font-size: 20px;
@@ -396,7 +560,7 @@ $border-color: #e5e7eb;
       text-align: center;
     }
 
-    .links-grid {
+    .resources-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
@@ -408,36 +572,131 @@ $border-color: #e5e7eb;
       @media (max-width: 480px) {
         grid-template-columns: 1fr;
       }
+    }
 
-      a {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 16px;
-        border: 2px solid $border-color;
-        border-radius: 8px;
-        background: white;
-        transition: all 0.3s ease;
-        font-weight: 500;
-        color: $text-dark;
+    .resource-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px;
+      border: 2px solid $border-color;
+      border-radius: $border-radius-sm;
+      background: $bg-white;
+      font-size: 14px;
+      font-weight: 500;
+      color: $text-dark;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      min-height: 44px;
 
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-        }
+      .resource-emoji {
+        font-size: 18px;
+      }
 
-        &:hover {
-          border-color: $primary-color;
-          background: #f0fdfa;
-          color: $primary-color;
+      &:hover {
+        border-color: $teal;
+        background: $teal-light;
+        color: $teal;
+      }
 
-          mat-icon {
-            color: $primary-color;
-          }
-        }
+      &:focus-visible {
+        outline: 2px solid $teal;
+        outline-offset: 2px;
       }
     }
+  }
+}
+
+// ── Footer CTA ───────────────────────────────
+
+.footer-cta {
+  background: linear-gradient(135deg, $teal 0%, $teal-dark 100%);
+  padding: 60px 32px;
+  text-align: center;
+  animation: fadeIn 0.4s ease 0.4s both;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+  }
+
+  .cta-content {
+    max-width: 600px;
+    margin: 0 auto;
+
+    h2 {
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      margin: 0 0 12px 0;
+
+      @media (max-width: 768px) {
+        font-size: 24px;
+      }
+    }
+
+    p {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.9);
+      margin: 0 0 28px 0;
+      line-height: 1.5;
+    }
+
+    .cta-button {
+      display: inline-block;
+      padding: 14px 36px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: $font;
+      background: $bg-white;
+      color: $teal;
+      border: none;
+      border-radius: 50px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 44px;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      &:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
+      }
+    }
+  }
+}
+
+// ── Reduced Motion ───────────────────────────
+
+@media (prefers-reduced-motion: reduce) {
+  .help-hero,
+  .support-categories,
+  .faq-section,
+  .contact-support-section,
+  .resources-section,
+  .footer-cta {
+    animation: none;
+  }
+
+  .category-card,
+  .contact-card,
+  .cta-button {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+
+  .faq-chevron {
+    transition: none;
+  }
+
+  .faq-answer {
+    transition: none;
   }
 }
