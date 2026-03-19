@@ -1,69 +1,154 @@
-// ─── Page Shell ──────────────────────────────────────────────────────
+// ─── Variables ────────────────────────────────────────────────────────
+$teal:        #1dad8c;
+$teal-dark:   #17a07f;
+$teal-light:  #f0faf7;
+$teal-border: #c0e8dd;
+$teal-badge:  #e4f5f1;
+$teal-ring:   rgba(29, 173, 140, 0.1);
+$text-dark:   #0f2137;
+$text-body:   #475569;
+$text-muted:  #64748b;
+$text-faint:  #94a3b8;
+$bg-page:     #f4f7f9;
+$bg-card:     #fff;
+$bg-field:    #f4f7f9;
+$border:      #e2e8ee;
+$border-light:#f1f5f9;
+$error:       #ef4444;
+$font:        'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+// ─── Animations ───────────────────────────────────────────────────────
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.spin { animation: spin 0.8s linear infinite; }
+
+// ─── Page Shell ───────────────────────────────────────────────────────
 .pay-page {
-  min-height: 100vh;
-  background: #f8fafc;
+  font-family: $font;
+  color: $text-dark;
+  min-height: 100%;
+  background: $bg-page;
   padding-bottom: 40px;
 }
 
-.pay-header {
+// ─── Page Header ──────────────────────────────────────────────────────
+.page-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 24px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 24px 18px;
+  animation: fadeIn 0.3s ease both;
 }
 
 .back-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid $border;
+  background: $bg-card;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 18px;
-  color: #475569;
-  transition: background 0.15s;
+  color: $text-body;
   flex-shrink: 0;
+  margin-top: 2px;
+  transition: border-color 0.15s, color 0.15s;
 
-  &:hover { background: #e2e8f0; }
-  &:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+  &:hover  { border-color: $teal; color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
 }
 
-.pay-title {
-  font-size: 1.375rem;
+.header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #0f172a;
-  margin: 0;
+  color: $teal;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  svg { color: $teal; }
 }
 
+.label-line {
+  width: 20px;
+  height: 2px;
+  background: $teal;
+  border-radius: 1px;
+}
+
+.page-title {
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: $text-dark;
+  margin: 4px 0 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 0.8125rem;
+  color: $text-muted;
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+
+// ─── Loading ──────────────────────────────────────────────────────────
 .loading-center {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 300px;
+  color: $teal;
+}
+
+// ─── Inline Error ─────────────────────────────────────────────────────
+.inline-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 0 24px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: $error;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  svg { flex-shrink: 0; }
 }
 
 // ─── 2-Column Layout ─────────────────────────────────────────────────
-.pay-layout {
+.payment-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 360px;
   gap: 24px;
-  max-width: 1040px;
-  margin: 24px auto 0;
+  max-width: 960px;
+  margin: 0 auto;
   padding: 0 24px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    padding: 0 16px;
-    margin-top: 16px;
-  }
+  animation: fadeIn 0.3s 0.06s ease both;
 }
 
 .pay-left,
@@ -73,183 +158,898 @@
   gap: 16px;
 }
 
-// ─── Card Base ───────────────────────────────────────────────────────
-.card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  border: 1px solid #e2e8f0;
+.pay-right {
+  position: sticky;
+  top: 16px;
+  align-self: start;
 }
 
-.card-title {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: #64748b;
-  margin: 0 0 16px;
+// ─── Card Base ────────────────────────────────────────────────────────
+.pay-card {
+  background: $bg-card;
+  border-radius: 14px;
+  border: 1px solid $border;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.pay-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid $border-light;
+}
+
+.pay-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: $teal-light;
   display: flex;
   align-items: center;
-  gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  justify-content: center;
+  flex-shrink: 0;
+  color: $teal;
 }
 
-// ─── Case Summary ────────────────────────────────────────────────────
-.info-grid {
+.pay-card-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: $text-dark;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.pay-card-subtitle {
+  font-size: 0.75rem;
+  color: $text-muted;
+  margin: 1px 0 0;
+  font-weight: 500;
+}
+
+// ─── Case Info Grid ───────────────────────────────────────────────────
+.case-info-grid {
+  padding: 14px 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
 }
 
-.info-row {
+.case-info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.875rem;
+  padding: 11px 0;
+  border-bottom: 1px solid $border-light;
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+}
+
+.case-info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text-muted;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  svg { color: $text-faint; }
+}
+
+// ─── Case ID Link ─────────────────────────────────────────────────────
+.case-id-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: $teal;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 0.8; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; border-radius: 3px; }
+
+  svg { color: $teal; }
+}
+
+// ─── Violation ────────────────────────────────────────────────────────
+.violation-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.violation-badge {
+  background: #fff5f5;
+  color: #c53030;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #fed7d7;
+}
+
+.violation-location {
+  font-size: 0.6875rem;
+  color: $text-faint;
+  font-weight: 500;
+}
+
+// ─── Attorney Inline ──────────────────────────────────────────────────
+.attorney-inline {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.info-label {
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.info-value {
-  color: #1e293b;
-  font-weight: 600;
-  text-align: right;
-}
-
-.case-number {
-  color: #3b82f6;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.8125rem;
-}
-
-// ─── Attorney Card ───────────────────────────────────────────────────
-.attorney-badge {
-  margin-bottom: 12px;
-}
-
-.badge-recommended {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #fff;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 3px 10px;
-  border-radius: 20px;
-}
-
-.attorney-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.attorney-avatar {
-  width: 48px;
-  height: 48px;
+.mini-avatar {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 1.25rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.attorney-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.attorney-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.attorney-title {
-  font-size: 0.8125rem;
-  color: #64748b;
-}
-
-.attorney-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 12px;
-  gap: 8px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.stat-label {
   font-size: 0.6875rem;
-  color: #94a3b8;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 36px;
-  background: #e2e8f0;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
-// ─── Payment Plan Selector ───────────────────────────────────────────
+.attorney-inline-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.attorney-inline-meta {
+  font-size: 0.6875rem;
+  color: $text-faint;
+  font-weight: 500;
+}
+
+// ─── Status ───────────────────────────────────────────────────────────
+.status-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff8ed;
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #fed7aa;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.court-date-text {
+  font-size: 0.6875rem;
+  color: $text-faint;
+  font-weight: 500;
+}
+
+// ─── Plan Loading ─────────────────────────────────────────────────────
 .plan-loading {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #64748b;
+  color: $teal;
   font-size: 0.875rem;
-  padding: 8px 0;
+  padding: 16px 20px;
 }
 
-.plan-options {
+// ─── Payment Option Cards ─────────────────────────────────────────────
+.payment-options {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+
+.option-card {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1.5px solid $border;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  min-height: 44px;
+
+  &:hover {
+    border-color: $teal-border;
+    background: $teal-light;
+  }
+
+  &.selected {
+    border-color: $teal;
+    background: $teal-light;
+    box-shadow: 0 0 0 3px $teal-ring;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: 2px;
+  }
+}
+
+.option-radio {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.option-radio-inner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  position: relative;
+  transition: border-color 0.15s;
+
+  &.active {
+    border-color: $teal;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 8px;
+      height: 8px;
+      background: $teal;
+      border-radius: 50%;
+    }
+  }
+}
+
+.option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.option-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.option-desc {
+  font-size: 0.8125rem;
+  color: $text-muted;
+  line-height: 1.4;
+}
+
+.option-badge {
+  background: $teal-badge;
+  color: $teal;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+// ─── Plan Schedule Preview ────────────────────────────────────────────
+.plan-schedule {
+  padding: 0 20px 18px;
+}
+
+.schedule-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: $text-faint;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 12px;
+}
+
+.schedule-rows {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.plan-option {
+.schedule-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px;
-  border-radius: 10px;
-  border: 2px solid #e2e8f0;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-
-  &:hover { border-color: #93c5fd; background: #eff6ff; }
-  &.selected { border-color: #3b82f6; background: #eff6ff; }
-  &:focus-within { outline: 2px solid #3b82f6; outline-offset: 1px; }
 }
 
+.schedule-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid $teal-border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: $teal;
+  flex-shrink: 0;
+
+  &.first {
+    background: linear-gradient(135deg, $teal, $teal-dark);
+    border-color: $teal;
+    color: #fff;
+  }
+}
+
+.schedule-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.schedule-date {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text-dark;
+}
+
+.due-now-badge {
+  background: $teal-badge;
+  color: $teal;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schedule-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+// ─── Card Form ────────────────────────────────────────────────────────
+.card-form {
+  padding: 18px 20px 20px;
+  border-top: 1px solid $border-light;
+}
+
+.card-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-form-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: $text-dark;
+  margin: 0;
+}
+
+.card-brands {
+  display: flex;
+  gap: 4px;
+}
+
+.card-brand {
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid $border;
+  color: $text-faint;
+  background: $bg-card;
+}
+
+// ─── Form Fields ──────────────────────────────────────────────────────
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text-body;
+
+  svg { color: $text-faint; }
+}
+
+.text-input {
+  font-family: $font;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $text-dark;
+  background: $bg-field;
+  border: 1.5px solid $border;
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-height: 44px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &::placeholder { color: $text-faint; font-weight: 500; }
+  &:focus { border-color: $teal; box-shadow: 0 0 0 3px $teal-ring; background: $bg-card; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.stripe-field-wrapper {
+  position: relative;
+}
+
+.stripe-input {
+  background: $bg-field;
+  border: 1.5px solid $border;
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-height: 44px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus-within {
+    border-color: $teal;
+    box-shadow: 0 0 0 3px $teal-ring;
+    background: $bg-card;
+  }
+}
+
+.field-lock-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: $text-faint;
+  pointer-events: none;
+}
+
+.f-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field-error {
+  font-size: 0.8125rem;
+  color: $error;
+  margin: 0;
+  font-weight: 500;
+}
+
+.cvv-info {
+  color: $text-faint;
+  cursor: help;
+  margin-left: 2px;
+}
+
+// ─── Stripe Badge ─────────────────────────────────────────────────────
+.stripe-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0;
+  margin-bottom: 12px;
+  font-size: 0.6875rem;
+  color: $text-faint;
+  font-weight: 500;
+
+  svg { color: $teal; }
+}
+
+// ─── Pay Button ───────────────────────────────────────────────────────
+.pay-btn {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, $teal, $teal-dark);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: $font;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 4px 16px rgba(29, 173, 140, 0.25);
+
+  &:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(29, 173, 140, 0.3);
+  }
+
+  &:active:not(:disabled) { transform: translateY(0); }
+
+  &:disabled {
+    background: $text-faint;
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.7;
+    box-shadow: none;
+  }
+
+  &:focus-visible { outline: 2px solid $teal-dark; outline-offset: 2px; }
+}
+
+.pay-btn-amount {
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.btn-spinner {
+  color: #fff;
+}
+
+// ─── Order Summary (Sidebar) ─────────────────────────────────────────
+.order-summary {
+  background: $bg-card;
+  border-radius: 14px;
+  border: 1px solid $border;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+}
+
+.order-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 14px;
+}
+
+.order-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: $text-body;
+}
+
+.order-row-value {
+  font-weight: 600;
+  color: $text-dark;
+}
+
+.order-row-free {
+  font-weight: 600;
+  color: #10b981;
+}
+
+.order-divider {
+  height: 1px;
+  background: $border;
+  margin: 14px 0;
+}
+
+.order-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: $teal-light;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.order-total-amount {
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: $teal;
+}
+
+.order-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.6875rem;
+  color: $text-faint;
+  font-weight: 500;
+
+  svg { color: $teal; }
+}
+
+// ─── Attorney Card (Sidebar) ─────────────────────────────────────────
+.atty-card {
+  background: $bg-card;
+  border-radius: 14px;
+  border: 1px solid $border;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+}
+
+.atty-card-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: $text-faint;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+}
+
+.atty-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.atty-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.atty-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.atty-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.atty-role {
+  font-size: 0.75rem;
+  color: $text-muted;
+  font-weight: 500;
+}
+
+.atty-stats {
+  display: flex;
+  gap: 4px;
+}
+
+.atty-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: $bg-page;
+  border-radius: 8px;
+  padding: 10px 4px;
+}
+
+.atty-stat-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: $teal;
+}
+
+.atty-stat-label {
+  font-size: 0.625rem;
+  color: $text-faint;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+// ─── Trust Card (Sidebar) ────────────────────────────────────────────
+.trust-card {
+  background: $bg-card;
+  border-radius: 14px;
+  border: 1px solid $border;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+}
+
+.trust-card-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: $text-dark;
+  margin: 0 0 14px;
+}
+
+.trust-items {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trust-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.trust-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.trust-icon-ssl    { background: #e0f2fe; color: #0284c7; }
+  &.trust-icon-stripe { background: #ede9fe; color: #7c3aed; }
+  &.trust-icon-pci    { background: #d1fae5; color: #059669; }
+  &.trust-icon-cancel { background: #fef3c7; color: #d97706; }
+}
+
+.trust-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trust-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.trust-desc {
+  font-size: 0.6875rem;
+  color: $text-muted;
+  line-height: 1.4;
+}
+
+// ─── Created Payment Schedule ─────────────────────────────────────────
+.created-schedule {
+  padding: 0 20px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.created-schedule-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid $border-light;
+  font-size: 0.875rem;
+  color: $text-body;
+
+  &:last-child { border-bottom: none; }
+  &.paid { color: #10b981; }
+}
+
+.sched-num {
+  font-weight: 700;
+  color: $text-faint;
+  font-size: 0.8125rem;
+}
+
+.sched-amount { font-weight: 700; }
+
+.sched-status {
+  display: flex;
+  align-items: center;
+}
+
+// ─── Responsive ───────────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 900px) {
+  .payment-layout {
+    grid-template-columns: 1fr 320px;
+    gap: 18px;
+  }
+}
+
+// Mobile
+@media (max-width: 768px) {
+  .payment-layout {
+    grid-template-columns: 1fr;
+    padding: 0 16px;
+  }
+
+  .pay-right {
+    position: static;
+  }
+
+  .payment-options {
+    flex-direction: column;
+  }
+
+  .f-row {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    padding: 16px;
+  }
+}
+
+// Small mobile
+@media (max-width: 480px) {
+  .page-header {
+    padding: 14px 16px;
+  }
+
+  .pay-card-header {
+    padding: 14px 16px;
+  }
+
+  .case-info-grid {
+    padding: 12px 16px 14px;
+  }
+
+  .payment-options {
+    padding: 0 16px 14px;
+  }
+
+  .card-form {
+    padding: 14px 16px 16px;
+  }
+
+  .plan-schedule {
+    padding: 0 16px 14px;
+  }
+
+  .attorney-inline {
+    flex-wrap: wrap;
+  }
+
+  .attorney-inline-meta {
+    width: 100%;
+  }
+}
+
+// ─── Utility ──────────────────────────────────────────────────────────
 .sr-only {
   position: absolute;
   width: 1px;
@@ -261,245 +1061,3 @@
   white-space: nowrap;
   border: 0;
 }
-
-.plan-radio { flex-shrink: 0; }
-
-.radio-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid #cbd5e1;
-  position: relative;
-  transition: border-color 0.15s;
-
-  &.active {
-    border-color: #3b82f6;
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 8px;
-      height: 8px;
-      background: #3b82f6;
-      border-radius: 50%;
-    }
-  }
-}
-
-.plan-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-}
-
-.plan-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.plan-name {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.plan-savings {
-  font-size: 0.75rem;
-  color: #10b981;
-  font-weight: 500;
-}
-
-.plan-badge {
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-}
-
-.plan-price {
-  font-size: 0.8125rem;
-  color: #64748b;
-}
-
-// ─── Stripe Card Form ────────────────────────────────────────────────
-.stripe-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.field-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #374151;
-  letter-spacing: 0.01em;
-}
-
-.stripe-input {
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 12px 14px;
-  min-height: 44px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-
-  &:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-    background: #fff;
-  }
-}
-
-.field-error {
-  font-size: 0.8125rem;
-  color: #ef4444;
-  margin: 2px 0 0;
-}
-
-// ─── Order Summary ───────────────────────────────────────────────────
-.order-summary {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
-}
-
-.summary-title {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 12px;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-  color: #475569;
-  padding: 4px 0;
-}
-
-.fee-note {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.summary-divider {
-  height: 1px;
-  background: #e2e8f0;
-  margin: 10px 0;
-}
-
-.total-row {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 1rem;
-}
-
-.total-amount {
-  color: #3b82f6;
-  font-size: 1.125rem;
-}
-
-.installment-note {
-  font-size: 0.8125rem;
-  color: #64748b;
-  margin: 10px 0 0;
-  text-align: center;
-}
-
-// ─── Pay Button ──────────────────────────────────────────────────────
-.pay-btn {
-  width: 100%;
-  height: 52px;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: opacity 0.15s, transform 0.1s;
-  margin-bottom: 12px;
-
-  &:hover:not(:disabled) {
-    opacity: 0.92;
-    transform: translateY(-1px);
-  }
-
-  &:active:not(:disabled) { transform: translateY(0); }
-
-  &:disabled {
-    background: #94a3b8;
-    cursor: not-allowed;
-    transform: none;
-    opacity: 0.7;
-  }
-
-  &:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
-}
-
-.secure-note {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin: 0;
-}
-
-// ─── Payment Schedule ────────────────────────────────────────────────
-.schedule-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.schedule-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.875rem;
-  color: #475569;
-
-  &:last-child { border-bottom: none; }
-  &.paid { color: #10b981; }
-}
-
-.sched-num { font-weight: 700; color: #94a3b8; }
-.sched-date { flex: 1; }
-.sched-amount { font-weight: 700; }
