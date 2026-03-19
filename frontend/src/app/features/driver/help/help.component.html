@@ -1,164 +1,168 @@
-<!-- Help & Support Page Template -->
+<!-- Help & Support Page — Sprint 067 Redesign -->
 <div class="help-container">
 
-  <!-- Hero Section -->
-  <div class="help-hero">
+  <!-- ═══════════════ Hero Section ═══════════════ -->
+  <section class="help-hero">
     <div class="hero-content">
-      <h1>{{ 'HELP.HERO_TITLE' | translate }}</h1>
-      <p>{{ 'HELP.HERO_SUBTITLE' | translate }}</p>
+      <span class="hero-emoji" aria-hidden="true">🎧</span>
+      <h1>Help Center</h1>
+      <p>Find answers to common questions, browse support topics, or contact our team directly.</p>
 
       <!-- Search Bar -->
       <div class="search-bar">
-        <mat-form-field appearance="outline" class="search-field">
-          <mat-icon matPrefix>search</mat-icon>
+        <div class="search-wrapper">
+          <svg class="search-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
           <input
-            matInput
-            [(ngModel)]="searchQuery"
-            [placeholder]="'HELP.SEARCH_PLACEHOLDER' | translate"
-            (input)="selectCategory('all')">
-        </mat-form-field>
+            type="text"
+            class="search-input"
+            placeholder="Search for help topics..."
+            aria-label="Search help topics"
+            [value]="searchQuery()"
+            (input)="onSearch($event)">
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Support Categories -->
-  <div class="support-categories">
-    <h2>{{ 'HELP.BROWSE_CATEGORY' | translate }}</h2>
+  <!-- ═══════════════ Support Categories ═══════════════ -->
+  <section class="support-categories">
+    <h2>Browse by Category</h2>
     <div class="categories-grid">
-      <mat-card
-        *ngFor="let category of supportCategories"
-        class="category-card"
-        [routerLink]="category.link"
-        style="cursor: pointer">
-        <mat-card-content>
-          <mat-icon class="category-icon">{{ category.icon }}</mat-icon>
-          <h3>{{ category.titleKey | translate }}</h3>
-          <p>{{ category.descKey | translate }}</p>
-        </mat-card-content>
-      </mat-card>
+      @for (cat of categories; track cat.id) {
+        <div
+          class="category-card"
+          role="button"
+          tabindex="0"
+          (click)="selectCategoryAndScroll(cat.id)"
+          (keydown)="onCategoryCardKeydown($event, cat.id)">
+          <span class="category-emoji" aria-hidden="true">{{ cat.emoji }}</span>
+          <h3>{{ cat.title }}</h3>
+          <p>{{ cat.description }}</p>
+          <span class="article-count">{{ articleCounts()[cat.id] }} articles</span>
+        </div>
+      }
     </div>
-  </div>
+  </section>
 
-  <!-- FAQ Section -->
-  <div class="faq-section" id="faq">
+  <!-- ═══════════════ FAQ Section ═══════════════ -->
+  <section class="faq-section" id="faq">
     <div class="faq-header">
-      <h2>{{ 'HELP.FAQ_TITLE' | translate }}</h2>
-      <p>{{ 'HELP.FAQ_SUBTITLE' | translate }}</p>
+      <h2>Frequently Asked Questions</h2>
+      <p>Quick answers to help you get the most out of our platform.</p>
     </div>
 
-    <!-- Category Filters -->
-    <div class="category-filters">
-      <mat-chip-listbox>
-        <mat-chip-option
-          [selected]="selectedCategory === 'all'"
-          (click)="selectCategory('all')">
-          {{ 'HELP.FILTER_ALL' | translate }}
-        </mat-chip-option>
-        <mat-chip-option
-          [selected]="selectedCategory === 'getting-started'"
-          (click)="selectCategory('getting-started')">
-          {{ 'HELP.FILTER_GETTING_STARTED' | translate }}
-        </mat-chip-option>
-        <mat-chip-option
-          [selected]="selectedCategory === 'submit-ticket'"
-          (click)="selectCategory('submit-ticket')">
-          {{ 'HELP.FILTER_SUBMIT_TICKET' | translate }}
-        </mat-chip-option>
-        <mat-chip-option
-          [selected]="selectedCategory === 'track-cases'"
-          (click)="selectCategory('track-cases')">
-          {{ 'HELP.FILTER_TRACK_CASES' | translate }}
-        </mat-chip-option>
-        <mat-chip-option
-          [selected]="selectedCategory === 'documents'"
-          (click)="selectCategory('documents')">
-          {{ 'HELP.FILTER_DOCUMENTS' | translate }}
-        </mat-chip-option>
-        <mat-chip-option
-          [selected]="selectedCategory === 'billing'"
-          (click)="selectCategory('billing')">
-          {{ 'HELP.FILTER_BILLING' | translate }}
-        </mat-chip-option>
-      </mat-chip-listbox>
+    <!-- Category Tabs -->
+    <div class="category-tabs" role="tablist" aria-label="FAQ category filter">
+      @for (tab of categoryTabs; track tab.id) {
+        <button
+          class="tab-btn"
+          role="tab"
+          [class.active]="selectedCategory() === tab.id"
+          [attr.aria-selected]="selectedCategory() === tab.id"
+          (click)="selectCategory(tab.id)">
+          {{ tab.label }}
+        </button>
+      }
     </div>
 
     <!-- FAQ Accordion -->
-    <mat-accordion class="faq-accordion">
-      <mat-expansion-panel *ngFor="let faq of filteredFAQs">
-        <mat-expansion-panel-header>
-          <mat-panel-title>
-            <mat-icon class="faq-icon">help_outline</mat-icon>
-            {{ faq.question }}
-          </mat-panel-title>
-        </mat-expansion-panel-header>
-        <p class="faq-answer">{{ faq.answer }}</p>
-      </mat-expansion-panel>
-    </mat-accordion>
+    @if (hasResults()) {
+      <div class="faq-accordion">
+        @for (faq of filteredFAQs(); track faq.question; let i = $index) {
+          <div class="faq-item">
+            <div
+              class="faq-header-row"
+              role="button"
+              tabindex="0"
+              [attr.aria-expanded]="expandedFaqIndex() === i"
+              [attr.aria-controls]="'faq-answer-' + i"
+              [attr.id]="'faq-header-' + i"
+              (click)="toggleFaq(i)"
+              (keydown)="onFaqKeydown($event, i)">
+              <span class="faq-icon" aria-hidden="true">{{ faq.icon }}</span>
+              <span class="faq-question">{{ faq.question }}</span>
+              <svg
+                class="faq-chevron"
+                [class.expanded]="expandedFaqIndex() === i"
+                aria-hidden="true"
+                width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <div
+              class="faq-answer"
+              [class.expanded]="expandedFaqIndex() === i"
+              role="region"
+              [attr.id]="'faq-answer-' + i"
+              [attr.aria-labelledby]="'faq-header-' + i">
+              <p>{{ faq.answer }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <!-- No Results -->
+      <div class="no-results">
+        <span class="no-results-emoji" aria-hidden="true">🔍</span>
+        <h3>No results found</h3>
+        <p>Try adjusting your search terms or browse by category.</p>
+        <button class="btn-clear" (click)="clearSearch()">Clear Search</button>
+      </div>
+    }
+  </section>
 
-    <!-- No Results -->
-    <div *ngIf="filteredFAQs.length === 0" class="no-results">
-      <mat-icon>search_off</mat-icon>
-      <h3>{{ 'HELP.NO_RESULTS' | translate }}</h3>
-      <p>{{ 'HELP.NO_RESULTS_HINT' | translate }}</p>
-      <button mat-raised-button color="primary" (click)="searchQuery = ''; selectCategory('all')">
-        {{ 'HELP.CLEAR_SEARCH' | translate }}
-      </button>
-    </div>
-  </div>
-
-  <!-- Contact Support Section -->
-  <div class="contact-support-section">
-    <h2>{{ 'HELP.STILL_NEED_HELP' | translate }}</h2>
-    <p>{{ 'HELP.SUPPORT_TEAM_DESC' | translate }}</p>
+  <!-- ═══════════════ Contact Support ═══════════════ -->
+  <section class="contact-support-section">
+    <h2>Still Need Help?</h2>
+    <p>Our support team is here to assist you through multiple channels.</p>
 
     <div class="contact-methods-grid">
-      <mat-card
-        *ngFor="let method of contactMethods"
-        class="contact-method-card"
-        (click)="openContactMethod(method.action)">
-        <mat-card-content>
-          <mat-icon class="contact-icon">{{ method.icon }}</mat-icon>
-          <h3>{{ method.titleKey | translate }}</h3>
-          <div class="contact-value">{{ method.valueKey | translate }}</div>
-          <p class="contact-description">{{ method.descKey | translate }}</p>
-        </mat-card-content>
-      </mat-card>
-    </div>
-  </div>
-
-  <!-- Quick Links -->
-  <div class="quick-links-section">
-    <mat-card class="quick-links-card">
-      <mat-card-content>
-        <h3>{{ 'HELP.HELPFUL_RESOURCES' | translate }}</h3>
-        <div class="links-grid">
-          <a routerLink="/driver/submit-ticket" mat-button>
-            <mat-icon>add_circle</mat-icon>
-            {{ 'HELP.LINK_SUBMIT' | translate }}
-          </a>
-          <a routerLink="/driver/tickets" mat-button>
-            <mat-icon>gavel</mat-icon>
-            {{ 'HELP.LINK_CASES' | translate }}
-          </a>
-          <a routerLink="/driver/analytics" mat-button>
-            <mat-icon>analytics</mat-icon>
-            {{ 'HELP.LINK_ANALYTICS' | translate }}
-          </a>
-          <a routerLink="/driver/profile" mat-button>
-            <mat-icon>person</mat-icon>
-            {{ 'HELP.LINK_PROFILE' | translate }}
-          </a>
-          <a routerLink="/privacy" mat-button>
-            <mat-icon>privacy_tip</mat-icon>
-            {{ 'HELP.LINK_PRIVACY' | translate }}
-          </a>
-          <a routerLink="/terms" mat-button>
-            <mat-icon>description</mat-icon>
-            {{ 'HELP.LINK_TERMS' | translate }}
-          </a>
+      @for (method of contactMethods; track method.title) {
+        <div
+          class="contact-card"
+          role="button"
+          tabindex="0"
+          (click)="openContactMethod(method)"
+          (keydown)="onContactKeydown($event, method)">
+          <span class="contact-emoji" aria-hidden="true">{{ method.emoji }}</span>
+          <h3>{{ method.title }}</h3>
+          <div class="contact-value">{{ method.value }}</div>
+          <p class="contact-description">{{ method.description }}</p>
+          <div class="contact-meta">
+            <span class="contact-availability">{{ method.availability }}</span>
+            <span class="contact-response">{{ method.responseTime }}</span>
+          </div>
         </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
+      }
+    </div>
+  </section>
+
+  <!-- ═══════════════ Helpful Resources ═══════════════ -->
+  <section class="resources-section">
+    <div class="resources-card">
+      <h3>Helpful Resources</h3>
+      <div class="resources-grid">
+        @for (res of resources; track res.route) {
+          <a class="resource-link" [routerLink]="res.route">
+            <span class="resource-emoji" aria-hidden="true">{{ res.emoji }}</span>
+            {{ res.label }}
+          </a>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ Footer CTA ═══════════════ -->
+  <section class="footer-cta">
+    <div class="cta-content">
+      <h2>Ready to Get Started?</h2>
+      <p>Submit your traffic ticket and let our expert attorneys handle the rest.</p>
+      <a class="cta-button" routerLink="/driver/submit-ticket">Submit a Ticket</a>
+    </div>
+  </section>
 
 </div>
