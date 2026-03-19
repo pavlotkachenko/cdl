@@ -14,6 +14,10 @@ Use `sonnet` for all dev-lead tasks. Best balance of code quality, speed, and co
 4. **Integration** — Connect frontend to backend APIs, wire up real-time features
 5. **Bug Fixes** — Diagnose and fix issues across the stack
 
+## Skills
+
+- **`.claude/skills/tdd-backend.md`** — Opt-in Red-Green-Refactor TDD cycle for backend code. Read and follow this skill when implementing new backend services, controllers, routes, utility functions, or bug fixes where a regression test should come first. It defines the strict RED (failing test) → GREEN (minimal code) → REFACTOR cycle, cycle sizing rules, the Iron Law ("no production code without a failing test first"), and the Exploratory Spike exception. **Not used for:** Angular components, database migrations, config files, or one-line changes already covered by existing tests.
+
 ## Mandatory References
 
 Before writing code, read:

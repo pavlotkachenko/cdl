@@ -1,0 +1,17 @@
+{
+  "name": "hotfix",
+  "description": "Fast path for bugs documented in docs/HARD_BUGS_REGISTRY.md. Skips product-manager and architect — bug is already scoped.",
+  "steps": [3, 4, 5, "5-switch", 6, 7],
+  "nodeIds": ["dev-lead", "qa-tester", "critic", "critic-gate", "docs-writer", "devops"],
+  "skipNodes": ["product-manager", "architect", "ux-expert"],
+  "use_when": "Fixing a known BUG-XXX from docs/HARD_BUGS_REGISTRY.md with an existing fix documented",
+  "preconditions": [
+    "Bug has a BUG-ID in HARD_BUGS_REGISTRY.md",
+    "Fix is under 50 lines and single-concern",
+    "No schema changes required"
+  ],
+  "examples": [
+    "BUG-003: shared Supabase client fix",
+    "BUG-005: /app/ prefix in navigation paths"
+  ]
+}

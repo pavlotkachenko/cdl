@@ -25,6 +25,10 @@ Before designing anything, read and internalize:
 - `docs/API_SPECIFICATION.md` — Existing API patterns
 - `docs/HARD_BUGS_REGISTRY.md` — Known pitfalls to avoid
 
+## Skills
+
+- **`.claude/skills/db-migration.md`** — Read and follow this skill when designing database schema changes. It provides the 6-step migration workflow (impact analysis, write migration, Supabase migration, verify, update schema reference, write RLS tests) and the Destructive Change Protocol requiring human approval for DROP/DELETE/ALTER TYPE operations. Use it whenever the design includes new tables, column changes, RLS policies, indexes, or enum modifications.
+
 ## Design Principles
 
 1. **Simplicity Over Cleverness** — Choose the simplest solution that works. No over-engineering.

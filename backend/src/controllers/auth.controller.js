@@ -6,16 +6,14 @@ const { sendRegistrationEmail } = require('../services/email.service');
 // client's auth state (which would cause RLS to kick in on subsequent DB queries).
 const authClient = supabaseAnon;
 
-// Valid DB enum values for user_role (carrier is NOT in the DB enum)
-const VALID_DB_ROLES = ['driver', 'attorney', 'admin', 'operator'];
+// Valid DB enum values for user_role
+const VALID_DB_ROLES = ['driver', 'carrier', 'attorney', 'admin', 'operator'];
 
 // Map a requested role to a valid DB role; keep the original in user_metadata
 function dbRole(role) {
   if (VALID_DB_ROLES.includes(role)) return role;
   // paralegal → operator in the DB
   if (role === 'paralegal') return 'operator';
-  // carrier → driver in the DB (real role is stored in user_metadata)
-  if (role === 'carrier') return 'driver';
   return 'driver';
 }
 

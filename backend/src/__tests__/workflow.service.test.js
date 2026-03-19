@@ -144,8 +144,7 @@ describe('updateCaseStatus', () => {
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: null, error: null });
     chain.maybeSingle
-      .mockResolvedValueOnce({ data: null, error: null })  // upsert sla
-      .mockResolvedValueOnce({ data: driver, error: null }); // driver lookup
+      .mockResolvedValueOnce({ data: driver, error: null }); // driver lookup (only maybeSingle call)
 
     await updateCaseStatus(caseId, 'assigned');
 

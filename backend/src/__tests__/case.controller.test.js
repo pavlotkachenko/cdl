@@ -17,6 +17,7 @@ jest.mock('../services/storage.service', () => ({
 
 jest.mock('../services/assignment.service', () => ({
   rankAttorneys: jest.fn(),
+  autoAssign: jest.fn().mockResolvedValue(null),
 }));
 
 jest.mock('../services/payment.service', () => ({
@@ -388,6 +389,7 @@ describe('declineCase', () => {
   };
 
   test('resets status to new and clears assigned_attorney_id', async () => {
+    assignmentService.autoAssign.mockResolvedValue(null);
     const req = makeReq({ user: { id: 'atty-1', role: 'attorney' }, body: { reason: 'conflict' } });
     const res = makeRes();
 
