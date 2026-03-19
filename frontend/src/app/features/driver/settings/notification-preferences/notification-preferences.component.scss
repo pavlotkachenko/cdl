@@ -176,6 +176,8 @@
 }
 
 // ── TOGGLE SWITCH ──
+// The toggle track is 44x24px visually.
+// A transparent ::before pseudo-element extends the tap area to 44px tall.
 .toggle {
   width: 44px;
   height: 24px;
@@ -185,9 +187,18 @@
   transition: background 0.2s;
   flex-shrink: 0;
   border: none;
-  padding: 10px 0;
-  min-height: 44px;
-  box-sizing: content-box;
+  padding: 0;
+  background: transparent;
+
+  // Invisible hit-area expander for 44px touch target
+  &::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    left: -4px;
+    right: -4px;
+  }
 
   &.on {
     background: var(--teal);
