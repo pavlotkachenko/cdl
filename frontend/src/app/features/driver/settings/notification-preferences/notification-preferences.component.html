@@ -1,0 +1,416 @@
+<div class="prefs-page">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="page-label">
+      <span class="label-bar" aria-hidden="true"></span>
+      <span aria-hidden="true">🔔</span> Alerts &amp; Updates
+    </div>
+    <h1 class="page-title">Notification Preferences</h1>
+    <p class="page-sub">Control how and when CDL Advisor contacts you about your cases</p>
+  </header>
+
+  <!-- Layout -->
+  <div class="prefs-layout">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- EMAIL NOTIFICATIONS -->
+      <section class="pref-card" aria-labelledby="email-heading">
+        <div class="pref-card-header">
+          <div class="pref-card-icon email-icon"><span aria-hidden="true">✉️</span></div>
+          <div>
+            <h2 id="email-heading" class="pref-card-title">Email Notifications</h2>
+            <p class="pref-card-sub">Sent to {{ userEmail() }}</p>
+          </div>
+          <div class="pref-header-right">
+            <div class="master-toggle-wrap">
+              <span class="toggle-label" [class.on]="emailMasterOn()" [class.off]="!emailMasterOn()">
+                {{ emailMasterOn() ? 'On' : 'Off' }}
+              </span>
+              <button class="toggle" role="switch"
+                      [class.on]="emailMasterOn()" [class.off]="!emailMasterOn()"
+                      [attr.aria-checked]="emailMasterOn()"
+                      aria-label="Email notifications master toggle"
+                      (click)="toggleEmailMaster()"
+                      (keydown.enter)="toggleEmailMaster()"
+                      (keydown.space)="$event.preventDefault(); toggleEmailMaster()">
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        @for (item of emailItems; track item.key) {
+          <div class="pref-row" [class.disabled]="!emailMasterOn()">
+            <div class="pref-row-icon" [style.background]="item.iconBg">
+              <span aria-hidden="true">{{ item.emoji }}</span>
+            </div>
+            <div class="pref-row-info">
+              <div class="pref-row-title">
+                {{ item.label }}
+                @if (item.badge) {
+                  <span class="pref-badge" [class]="item.badgeClass">{{ item.badge }}</span>
+                }
+              </div>
+              <div class="pref-row-desc">{{ item.desc }}</div>
+            </div>
+            <div class="toggle-wrap">
+              <button class="toggle" role="switch"
+                      [class.on]="getEmailToggle(item.key)" [class.off]="!getEmailToggle(item.key)"
+                      [attr.aria-checked]="getEmailToggle(item.key)"
+                      [attr.aria-label]="item.label + ' email toggle'"
+                      [attr.tabindex]="emailMasterOn() ? 0 : -1"
+                      (click)="toggleEmail(item.key)"
+                      (keydown.enter)="toggleEmail(item.key)"
+                      (keydown.space)="$event.preventDefault(); toggleEmail(item.key)">
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- SMS NOTIFICATIONS -->
+      <section class="pref-card" aria-labelledby="sms-heading">
+        <div class="pref-card-header">
+          <div class="pref-card-icon sms-icon"><span aria-hidden="true">📱</span></div>
+          <div>
+            <h2 id="sms-heading" class="pref-card-title">SMS Notifications</h2>
+            <p class="pref-card-sub">
+              Text messages to {{ userPhone() }}
+              @if (!phoneVerified()) {
+                <span class="not-verified"> · Not verified</span>
+              }
+            </p>
+          </div>
+          <div class="pref-header-right">
+            <div class="master-toggle-wrap">
+              <span class="toggle-label" [class.on]="smsMasterOn()" [class.off]="!smsMasterOn()">
+                {{ smsMasterOn() ? 'On' : 'Off' }}
+              </span>
+              <button class="toggle" role="switch"
+                      [class.on]="smsMasterOn()" [class.off]="!smsMasterOn()"
+                      [attr.aria-checked]="smsMasterOn()"
+                      aria-label="SMS notifications master toggle"
+                      (click)="toggleSmsMaster()"
+                      (keydown.enter)="toggleSmsMaster()"
+                      (keydown.space)="$event.preventDefault(); toggleSmsMaster()">
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        @for (item of smsItems; track item.key) {
+          <div class="pref-row" [class.disabled]="!smsMasterOn()">
+            <div class="pref-row-icon" [style.background]="item.iconBg">
+              <span aria-hidden="true">{{ item.emoji }}</span>
+            </div>
+            <div class="pref-row-info">
+              <div class="pref-row-title">
+                {{ item.label }}
+                @if (item.badge) {
+                  <span class="pref-badge" [class]="item.badgeClass">{{ item.badge }}</span>
+                }
+              </div>
+              <div class="pref-row-desc">{{ item.desc }}</div>
+            </div>
+            <div class="toggle-wrap">
+              <button class="toggle" role="switch"
+                      [class.on]="getSmsToggle(item.key)" [class.off]="!getSmsToggle(item.key)"
+                      [attr.aria-checked]="getSmsToggle(item.key)"
+                      [attr.aria-label]="item.label + ' SMS toggle'"
+                      [attr.tabindex]="smsMasterOn() ? 0 : -1"
+                      (click)="toggleSms(item.key)"
+                      (keydown.enter)="toggleSms(item.key)"
+                      (keydown.space)="$event.preventDefault(); toggleSms(item.key)">
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (!phoneVerified()) {
+          <div class="verify-banner" role="alert">
+            <span class="verify-icon" aria-hidden="true">⚠️</span>
+            <div class="verify-text">
+              <strong>Phone number not verified</strong>
+              <span>Verify your number to enable SMS notifications.</span>
+            </div>
+            <button class="verify-btn" (click)="verifyPhone()">Verify Now</button>
+          </div>
+        }
+      </section>
+
+      <!-- PUSH NOTIFICATIONS -->
+      <section class="pref-card" aria-labelledby="push-heading">
+        <div class="pref-card-header">
+          <div class="pref-card-icon push-icon"><span aria-hidden="true">🔔</span></div>
+          <div>
+            <h2 id="push-heading" class="pref-card-title">Push Notifications</h2>
+            <p class="pref-card-sub">Browser and device push alerts</p>
+          </div>
+          <div class="pref-header-right">
+            @if (pushPermission() === 'granted') {
+              <span class="push-status granted" aria-label="Push permission granted">
+                <span class="push-dot" aria-hidden="true"></span>
+                <span aria-hidden="true">✓</span> Permission Granted
+              </span>
+            } @else if (pushPermission() === 'denied') {
+              <span class="push-status denied" aria-label="Push permission denied">Permission Denied</span>
+            } @else {
+              <button class="push-status pending" (click)="requestPushPermission()" aria-label="Request push notification permission">
+                Enable Push
+              </button>
+            }
+          </div>
+        </div>
+
+        @for (item of pushItems; track item.key) {
+          <div class="pref-row">
+            <div class="pref-row-icon" [style.background]="item.iconBg">
+              <span aria-hidden="true">{{ item.emoji }}</span>
+            </div>
+            <div class="pref-row-info">
+              <div class="pref-row-title">
+                {{ item.label }}
+                @if (item.badge) {
+                  <span class="pref-badge" [class]="item.badgeClass">{{ item.badge }}</span>
+                }
+              </div>
+              <div class="pref-row-desc">{{ item.desc }}</div>
+            </div>
+            <div class="toggle-wrap">
+              <button class="toggle" role="switch"
+                      [class.on]="getPushToggle(item.key)" [class.off]="!getPushToggle(item.key)"
+                      [attr.aria-checked]="getPushToggle(item.key)"
+                      [attr.aria-label]="item.label + ' push toggle'"
+                      (click)="togglePush(item.key)"
+                      (keydown.enter)="togglePush(item.key)"
+                      (keydown.space)="$event.preventDefault(); togglePush(item.key)">
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- QUIET HOURS -->
+      <section class="pref-card" aria-labelledby="quiet-heading">
+        <div class="pref-card-header">
+          <div class="pref-card-icon quiet-icon"><span aria-hidden="true">🌙</span></div>
+          <div>
+            <h2 id="quiet-heading" class="pref-card-title">Quiet Hours</h2>
+            <p class="pref-card-sub">Pause non-urgent notifications during set hours</p>
+          </div>
+          <div class="pref-header-right">
+            <div class="master-toggle-wrap">
+              <span class="toggle-label" [class.on]="quietHoursEnabled()" [class.off]="!quietHoursEnabled()">
+                {{ quietHoursEnabled() ? 'On' : 'Off' }}
+              </span>
+              <button class="toggle" role="switch"
+                      [class.on]="quietHoursEnabled()" [class.off]="!quietHoursEnabled()"
+                      [attr.aria-checked]="quietHoursEnabled()"
+                      aria-label="Quiet hours master toggle"
+                      (click)="quietHoursEnabled.set(!quietHoursEnabled())"
+                      (keydown.enter)="quietHoursEnabled.set(!quietHoursEnabled())"
+                      (keydown.space)="$event.preventDefault(); quietHoursEnabled.set(!quietHoursEnabled())">
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quiet-row" [class.disabled]="!quietHoursEnabled()">
+          <div class="quiet-header">
+            <span class="quiet-title">
+              <span aria-hidden="true">🕐</span> Do not disturb between
+            </span>
+          </div>
+          <div class="time-row">
+            <div class="time-input-wrap">
+              <label class="time-input-label" for="quiet-from">From</label>
+              <input type="time" id="quiet-from" class="time-input"
+                     [value]="quietFrom()"
+                     [attr.tabindex]="quietHoursEnabled() ? 0 : -1"
+                     (change)="quietFrom.set($any($event.target).value)">
+            </div>
+            <span class="time-sep" aria-hidden="true">→</span>
+            <div class="time-input-wrap">
+              <label class="time-input-label" for="quiet-until">Until</label>
+              <input type="time" id="quiet-until" class="time-input"
+                     [value]="quietUntil()"
+                     [attr.tabindex]="quietHoursEnabled() ? 0 : -1"
+                     (change)="quietUntil.set($any($event.target).value)">
+            </div>
+          </div>
+
+          <div class="days-section">
+            <div class="days-label">Active on days</div>
+            <div class="days-row" role="group" aria-label="Active days for quiet hours">
+              @for (day of allDays; track day) {
+                <button class="day-chip" [class.active]="isDayActive(day)"
+                        [attr.aria-pressed]="isDayActive(day)"
+                        [attr.aria-label]="day"
+                        [attr.tabindex]="quietHoursEnabled() ? 0 : -1"
+                        (click)="toggleDay(day)"
+                        (keydown.enter)="toggleDay(day)"
+                        (keydown.space)="$event.preventDefault(); toggleDay(day)">
+                  {{ day }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="quiet-info" role="note">
+            <span aria-hidden="true">ℹ️</span>
+            <span><strong>Urgent alerts</strong> — court reminders and case dismissals — are always delivered regardless of quiet hours.</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <aside class="right-col" aria-label="Notification summary">
+
+      <!-- Channel Status -->
+      <div class="sidebar-card" aria-labelledby="cs-heading">
+        <div class="cs-header">
+          <div class="cs-header-icon" aria-hidden="true">📊</div>
+          <h3 id="cs-heading" class="cs-title">Channel Status</h3>
+        </div>
+        <div class="cs-row">
+          <div class="cs-channel-icon email-icon"><span aria-hidden="true">✉️</span></div>
+          <span class="cs-channel-name">Email</span>
+          @if (emailMasterOn()) {
+            <span class="cs-status cs-active">✓ Active</span>
+          } @else {
+            <span class="cs-status cs-inactive">Disabled</span>
+          }
+        </div>
+        <div class="cs-row">
+          <div class="cs-channel-icon sms-icon"><span aria-hidden="true">📱</span></div>
+          <span class="cs-channel-name">SMS</span>
+          @if (!phoneVerified()) {
+            <span class="cs-status cs-setup">⚠️ Setup needed</span>
+          } @else if (smsMasterOn()) {
+            <span class="cs-status cs-active">✓ Active</span>
+          } @else {
+            <span class="cs-status cs-inactive">Disabled</span>
+          }
+        </div>
+        <div class="cs-row">
+          <div class="cs-channel-icon push-icon"><span aria-hidden="true">🔔</span></div>
+          <span class="cs-channel-name">Push</span>
+          @if (pushPermission() === 'granted') {
+            <span class="cs-status cs-active">✓ Active</span>
+          } @else {
+            <span class="cs-status cs-setup">⚠️ Setup needed</span>
+          }
+        </div>
+        <div class="cs-row">
+          <div class="cs-channel-icon quiet-icon"><span aria-hidden="true">🌙</span></div>
+          <span class="cs-channel-name">Quiet Hours</span>
+          @if (quietHoursEnabled()) {
+            <span class="cs-status cs-active">✓ Enabled</span>
+          } @else {
+            <span class="cs-status cs-inactive">Disabled</span>
+          }
+        </div>
+      </div>
+
+      <!-- Active Notifications Summary -->
+      <div class="sidebar-card summary-card" aria-labelledby="summary-heading">
+        <h3 id="summary-heading" class="summary-title">Active Notifications</h3>
+        <div class="summary-stat">
+          <span class="sum-dot email-dot" aria-hidden="true"></span>
+          <span class="sum-label">Email alerts</span>
+          <span class="sum-count">{{ emailEnabledCount() }} of {{ emailItems.length }}</span>
+        </div>
+        <div class="summary-stat">
+          <span class="sum-dot sms-dot" aria-hidden="true"></span>
+          <span class="sum-label">SMS alerts</span>
+          @if (smsMasterOn()) {
+            <span class="sum-count">{{ smsEnabledCount() }} of {{ smsItems.length }}</span>
+          } @else {
+            <span class="sum-count muted">Disabled</span>
+          }
+        </div>
+        <div class="summary-stat">
+          <span class="sum-dot push-dot" aria-hidden="true"></span>
+          <span class="sum-label">Push alerts</span>
+          <span class="sum-count">{{ pushEnabledCount() }} of {{ pushItems.length }}</span>
+        </div>
+        <div class="summary-stat">
+          <span class="sum-dot quiet-dot" aria-hidden="true"></span>
+          <span class="sum-label">Quiet hours</span>
+          @if (quietHoursEnabled()) {
+            <span class="sum-count quiet-time">{{ quietFromDisplay() }} – {{ quietUntilDisplay() }}</span>
+          } @else {
+            <span class="sum-count muted">Disabled</span>
+          }
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="tips-card" aria-labelledby="tips-heading">
+        <h3 id="tips-heading" class="tips-title">
+          <span aria-hidden="true">💡</span> Recommendations
+        </h3>
+        <div class="tip-item">
+          <span class="tip-dot" aria-hidden="true"></span>
+          <span>Keep <strong>Case Status</strong> and <strong>Court Date</strong> alerts on at all times — they are time-sensitive.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-dot" aria-hidden="true"></span>
+          <span>Add your phone number and verify it to enable SMS — critical when you're away from your desktop.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-dot" aria-hidden="true"></span>
+          <span>Quiet Hours protect your rest while still delivering urgent court-date alerts when needed.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-dot" aria-hidden="true"></span>
+          @if (pushPermission() === 'granted') {
+            <span>Push notifications require browser permission. You've already granted it — great!</span>
+          } @else {
+            <span>Enable push notifications to receive instant browser alerts about your cases.</span>
+          }
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Save Bar -->
+  <div class="save-bar" role="status">
+    @if (saveError()) {
+      <div class="save-error" role="alert">
+        <span aria-hidden="true">⚠️</span>
+        Failed to save preferences. Please try again.
+      </div>
+    } @else {
+      <div class="save-note">
+        <span aria-hidden="true">ℹ️</span>
+        Changes are not saved until you click Save Preferences
+      </div>
+    }
+    <div class="save-actions">
+      <button class="btn btn-secondary" (click)="resetToDefaults()" aria-label="Reset to default preferences">
+        Reset to Defaults
+      </button>
+      <button class="btn btn-primary" [class.saved]="saveFlash()"
+              (click)="savePreferences()" [attr.aria-busy]="saving()">
+        @if (saveFlash()) {
+          <span aria-hidden="true">✓</span> Saved!
+        } @else if (saving()) {
+          Saving…
+        } @else {
+          <span aria-hidden="true">✓</span> Save Preferences
+        }
+      </button>
+    </div>
+  </div>
+</div>
