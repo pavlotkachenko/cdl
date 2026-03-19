@@ -1,244 +1,498 @@
 <div class="pay-page">
-  <!-- Header -->
-  <header class="pay-header">
-    <button class="back-btn" (click)="goBack()" aria-label="Go back">
-      <span aria-hidden="true">←</span>
+  <!-- Page Header -->
+  <header class="page-header">
+    <button class="back-btn" (click)="goBack()" aria-label="Go back to case details">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </button>
-    <h1 class="pay-title">Pay Attorney Fee</h1>
+    <div class="header-text">
+      <div class="section-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+          <path d="M1 10h22" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span class="label-line" aria-hidden="true"></span>
+        Secure Checkout
+      </div>
+      <h1 class="page-title">Pay Attorney Fee</h1>
+      <p class="page-subtitle">Review your case details and complete payment securely via Stripe</p>
+    </div>
   </header>
 
   @if (loadingCase()) {
     <div class="loading-center" aria-label="Loading case details">
-      <mat-spinner diameter="48"></mat-spinner>
+      <svg class="spin" width="32" height="32" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31 31" stroke-linecap="round"/>
+      </svg>
     </div>
   } @else {
-    <div class="pay-layout">
+    @if (loadError()) {
+      <div class="inline-error" role="alert" aria-live="assertive">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        {{ loadError() }}
+      </div>
+    }
 
-      <!-- ───────────────── LEFT COLUMN ───────────────── -->
+    <div class="payment-layout">
+      <!-- ─── LEFT COLUMN ─── -->
       <div class="pay-left">
 
-        <!-- Case Summary -->
-        <section class="card case-card" aria-label="Case summary">
-          <h2 class="card-title">Case Summary</h2>
-          <div class="info-grid">
-            <div class="info-row">
-              <span class="info-label">Case Number</span>
-              <span class="info-value case-number">{{ caseNumber() }}</span>
+        <!-- Case Summary Card -->
+        <section class="pay-card" aria-label="Case summary">
+          <div class="pay-card-header">
+            <div class="pay-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
+            <div>
+              <h2 class="pay-card-title">Case Summary</h2>
+              <p class="pay-card-subtitle">Review the details of your traffic case</p>
+            </div>
+          </div>
+
+          <div class="case-info-grid">
+            <!-- Case Number -->
+            <div class="case-info-row">
+              <div class="case-info-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Case
+              </div>
+              <a class="case-id-link" (click)="navigateToCase()" (keydown.enter)="navigateToCase()" tabindex="0">
+                {{ caseNumber() }}
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            </div>
+
+            <!-- Violation -->
             @if (violationType()) {
-              <div class="info-row">
-                <span class="info-label">Violation</span>
-                <span class="info-value">{{ violationType() }}</span>
+              <div class="case-info-row">
+                <div class="case-info-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Violation
+                </div>
+                <div class="violation-value">
+                  <span class="violation-badge">🚗 {{ getViolationLabel(violationType()) }}</span>
+                  @if (courtLocation()) {
+                    <span class="violation-location">{{ courtLocation() }}</span>
+                  }
+                </div>
               </div>
             }
-            @if (courtDate()) {
-              <div class="info-row">
-                <span class="info-label">Court Date</span>
-                <span class="info-value">{{ courtDate() }}</span>
+
+            <!-- Attorney -->
+            @if (attorney()) {
+              <div class="case-info-row">
+                <div class="case-info-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  Attorney
+                </div>
+                <div class="attorney-inline">
+                  <span class="mini-avatar" aria-hidden="true">{{ attorneyInitials() }}</span>
+                  <span class="attorney-inline-name">{{ attorney()!.name }}</span>
+                  <span class="attorney-inline-meta">CDL Defense · {{ attorney()!.years_experience }} yrs</span>
+                </div>
               </div>
             }
-            @if (courtLocation()) {
-              <div class="info-row">
-                <span class="info-label">Location</span>
-                <span class="info-value">{{ courtLocation() }}</span>
+
+            <!-- Status -->
+            @if (caseStatus()) {
+              <div class="case-info-row">
+                <div class="case-info-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Status
+                </div>
+                <div class="status-value">
+                  <span class="status-badge">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    {{ getStatusLabel(caseStatus()) }}
+                  </span>
+                  @if (courtDate()) {
+                    <span class="court-date-text">Court: {{ courtDate() }}</span>
+                  }
+                </div>
               </div>
             }
           </div>
         </section>
 
-        <!-- Attorney Card -->
-        @if (attorney()) {
-          <section class="card attorney-card" aria-label="Assigned attorney">
-            <div class="attorney-badge">
-              <span class="badge-recommended">✓ RECOMMENDED</span>
+        <!-- Payment Options + Card Form -->
+        <section class="pay-card" aria-label="Payment options">
+          <div class="pay-card-header">
+            <div class="pay-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M1 10h22" stroke="currentColor" stroke-width="2"/>
+              </svg>
             </div>
-            <div class="attorney-header">
-              <div class="attorney-avatar" aria-hidden="true">
-                {{ attorney()!.name.charAt(0).toUpperCase() }}
-              </div>
-              <div class="attorney-meta">
-                <span class="attorney-name">{{ attorney()!.name }}</span>
-                <span class="attorney-title">CDL Defense Attorney</span>
-              </div>
+            <div>
+              <h2 class="pay-card-title">Payment Option</h2>
+              <p class="pay-card-subtitle">Choose how you'd like to pay</p>
             </div>
-            <div class="attorney-stats" role="list">
-              <div class="stat-item" role="listitem">
-                <span class="stat-value">{{ attorney()!.win_rate }}%</span>
-                <span class="stat-label">Win Rate</span>
-              </div>
-              <div class="stat-divider" aria-hidden="true"></div>
-              <div class="stat-item" role="listitem">
-                <span class="stat-value">{{ attorney()!.years_experience }}+</span>
-                <span class="stat-label">Years Exp.</span>
-              </div>
-              <div class="stat-divider" aria-hidden="true"></div>
-              <div class="stat-item" role="listitem">
-                <span class="stat-value">{{ attorney()!.cases_won }}</span>
-                <span class="stat-label">Cases Won</span>
-              </div>
-            </div>
-          </section>
-        }
+          </div>
 
-        <!-- Payment Plan Selector -->
-        <section class="card plan-card" aria-label="Payment options">
-          <h2 class="card-title">Payment Option</h2>
           @if (loadingPlans()) {
-            <div class="plan-loading">
-              <mat-spinner diameter="24"></mat-spinner>
+            <div class="plan-loading" aria-label="Loading payment options">
+              <svg class="spin" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31 31" stroke-linecap="round"/>
+              </svg>
               <span>Loading options…</span>
             </div>
           } @else {
-            <div class="plan-options" role="radiogroup" aria-label="Choose payment plan">
-
+            <div class="payment-options" role="radiogroup" aria-label="Choose payment option" (keydown)="onPlanKeydown($event)">
               <!-- Pay in Full -->
-              <label class="plan-option" [class.selected]="selectedPlan() === 'full'">
-                <input type="radio" name="plan" value="full"
-                  [checked]="selectedPlan() === 'full'"
-                  (change)="selectPlan('full')"
-                  class="sr-only" />
-                <div class="plan-radio" aria-hidden="true">
-                  <div class="radio-dot" [class.active]="selectedPlan() === 'full'"></div>
+              <div class="option-card" [class.selected]="selectedPlan() === 'full'"
+                   role="radio" [attr.aria-checked]="selectedPlan() === 'full'"
+                   tabindex="0" (click)="selectPlan('full')"
+                   (keydown.enter)="selectPlan('full')"
+                   (keydown.space)="selectPlan('full'); $event.preventDefault()">
+                <div class="option-radio" aria-hidden="true">
+                  <div class="option-radio-inner" [class.active]="selectedPlan() === 'full'"></div>
                 </div>
-                <div class="plan-info">
-                  <div class="plan-name-row">
-                    <span class="plan-name">Pay in Full</span>
-                    <span class="plan-savings">Best value</span>
-                  </div>
-                  <span class="plan-price">{{ amount() | currency }} today</span>
+                <div class="option-content">
+                  <span class="option-title">Pay in Full</span>
+                  <span class="option-desc">Single payment of {{ amount() | currency }} today. No installment fees.</span>
                 </div>
-              </label>
+              </div>
 
-              <!-- Installment plans -->
-              @for (opt of planOptions(); track opt.key) {
-                @if (opt.key !== 'full') {
-                  <label class="plan-option" [class.selected]="selectedPlan() === opt.key">
-                    <input type="radio" name="plan" [value]="opt.key"
-                      [checked]="selectedPlan() === opt.key"
-                      (change)="selectPlan(opt.key)"
-                      class="sr-only" />
-                    <div class="plan-radio" aria-hidden="true">
-                      <div class="radio-dot" [class.active]="selectedPlan() === opt.key"></div>
-                    </div>
-                    <div class="plan-info">
-                      <div class="plan-name-row">
-                        <span class="plan-name">{{ opt.label }}</span>
-                        @if (opt.popular) {
-                          <span class="plan-badge">Most Popular</span>
+              <!-- Payment Plan -->
+              <div class="option-card" [class.selected]="selectedPlan() === 'plan'"
+                   role="radio" [attr.aria-checked]="selectedPlan() === 'plan'"
+                   tabindex="0" (click)="selectPlan('plan')"
+                   (keydown.enter)="selectPlan('plan')"
+                   (keydown.space)="selectPlan('plan'); $event.preventDefault()">
+                <div class="option-radio" aria-hidden="true">
+                  <div class="option-radio-inner" [class.active]="selectedPlan() === 'plan'"></div>
+                </div>
+                <div class="option-content">
+                  <div class="option-title-row">
+                    <span class="option-title">Payment Plan</span>
+                    <span class="option-badge">⭐ Most Popular</span>
+                  </div>
+                  <span class="option-desc">{{ planDescription() }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Schedule Preview -->
+            @if (selectedPlan() === 'plan' && planSchedulePreview().length > 0) {
+              <div class="plan-schedule">
+                <h3 class="schedule-title">Payment Schedule</h3>
+                <div class="schedule-rows">
+                  @for (item of planSchedulePreview(); track item.num) {
+                    <div class="schedule-row">
+                      <div class="schedule-num" [class.first]="item.isFirst">
+                        {{ item.num }}
+                      </div>
+                      <div class="schedule-info">
+                        <span class="schedule-date">{{ item.date }}</span>
+                        @if (item.isFirst) {
+                          <span class="due-now-badge">Due now</span>
                         }
                       </div>
-                      <span class="plan-price">{{ opt.weeklyAmount | currency }}/week × {{ opt.installments }} payments</span>
+                      <span class="schedule-amount">{{ item.amount | currency }}</span>
                     </div>
-                  </label>
-                }
-              }
-            </div>
+                  }
+                </div>
+              </div>
+            }
           }
-        </section>
 
-      </div>
+          <!-- Card Form -->
+          <div class="card-form">
+            <div class="card-form-header">
+              <h3 class="card-form-title">Card Details</h3>
+              <div class="card-brands" aria-label="Accepted cards: Visa, Mastercard, Amex">
+                <span class="card-brand visa">VISA</span>
+                <span class="card-brand mc">MC</span>
+                <span class="card-brand amex">AMEX</span>
+              </div>
+            </div>
 
-      <!-- ───────────────── RIGHT COLUMN ───────────────── -->
-      <div class="pay-right">
-
-        <section class="card payment-form-card" aria-label="Payment details">
-          <h2 class="card-title">
-            <span aria-hidden="true">🔒</span> Card Details
-          </h2>
-
-          <!-- Split Stripe Elements -->
-          <div class="stripe-fields">
+            <!-- Cardholder Name -->
             <div class="field-group">
-              <label class="field-label" for="card-number">Card Number</label>
-              <div #cardNumber id="card-number" class="stripe-input" aria-label="Card number input"></div>
+              <label class="field-label" for="cardholder-name">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Cardholder Name
+              </label>
+              <input
+                type="text"
+                id="cardholder-name"
+                class="text-input"
+                placeholder="Full name on card"
+                [value]="cardholderName()"
+                (input)="onCardholderInput($event)"
+                [disabled]="paying()"
+                autocomplete="cc-name" />
+            </div>
+
+            <!-- Card Number -->
+            <div class="field-group">
+              <label class="field-label" for="card-number">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M1 10h22" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Card Number
+              </label>
+              <div class="stripe-field-wrapper">
+                <div #cardNumber id="card-number" class="stripe-input" aria-label="Card number"></div>
+                <svg class="field-lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
               @if (cardNumberError()) {
-                <p class="field-error" role="alert">{{ cardNumberError() }}</p>
+                <p class="field-error" role="alert" aria-live="assertive">{{ cardNumberError() }}</p>
               }
             </div>
 
-            <div class="field-row">
+            <!-- Expiry + CVV Row -->
+            <div class="f-row">
               <div class="field-group">
                 <label class="field-label" for="card-expiry">Expiry Date</label>
-                <div #cardExpiry id="card-expiry" class="stripe-input" aria-label="Card expiry date input"></div>
+                <div #cardExpiry id="card-expiry" class="stripe-input" aria-label="Card expiry date"></div>
                 @if (cardExpiryError()) {
-                  <p class="field-error" role="alert">{{ cardExpiryError() }}</p>
+                  <p class="field-error" role="alert" aria-live="assertive">{{ cardExpiryError() }}</p>
                 }
               </div>
               <div class="field-group">
-                <label class="field-label" for="card-cvc">CVC</label>
-                <div #cardCvc id="card-cvc" class="stripe-input" aria-label="Card security code input"></div>
+                <label class="field-label" for="card-cvc">
+                  CVV
+                  <svg class="cvv-info" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <title>3-digit security code on the back of your card</title>
+                  </svg>
+                </label>
+                <div #cardCvc id="card-cvc" class="stripe-input" aria-label="Card security code"></div>
                 @if (cardCvcError()) {
-                  <p class="field-error" role="alert">{{ cardCvcError() }}</p>
+                  <p class="field-error" role="alert" aria-live="assertive">{{ cardCvcError() }}</p>
                 }
               </div>
             </div>
-          </div>
 
-          <!-- Order Summary -->
-          <div class="order-summary" aria-label="Order summary">
-            <h3 class="summary-title">Order Summary</h3>
-            <div class="summary-row">
-              <span>Attorney Fee</span>
-              <span>{{ amount() | currency }}</span>
+            <!-- Stripe Badge -->
+            <div class="stripe-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Secured by Stripe · AES-256 encryption · PCI DSS compliant</span>
             </div>
-            <div class="summary-row">
-              <span>Processing Fee <span class="fee-note">(2.9% + $0.30)</span></span>
-              <span>{{ processingFee() | currency }}</span>
-            </div>
-            <div class="summary-divider" role="separator"></div>
-            <div class="summary-row total-row">
-              <span>Total Due Today</span>
-              <span class="total-amount">{{ totalAmount() | currency }}</span>
-            </div>
-            @if (selectedPlan() !== 'full') {
-              <p class="installment-note">
-                First installment: <strong>{{ firstInstallment() | currency }}</strong> — remaining paid weekly
-              </p>
+
+            <!-- Payment Error -->
+            @if (paymentError()) {
+              <div class="inline-error" role="alert" aria-live="assertive">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                {{ paymentError() }}
+              </div>
             }
+
+            <!-- Pay Button -->
+            <button
+              class="pay-btn"
+              [disabled]="paying() || !stripeReady() || loadingCase()"
+              (click)="pay()"
+              [attr.aria-label]="'Pay ' + payButtonAmount()"
+              [attr.aria-busy]="paying()">
+              @if (paying()) {
+                <svg class="spin btn-spinner" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31 31" stroke-linecap="round"/>
+                </svg>
+                <span>Processing…</span>
+              } @else if (!stripeReady()) {
+                <span>Loading payment form…</span>
+              } @else {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Pay</span>
+                <span class="pay-btn-amount">{{ payButtonAmount() }}</span>
+              }
+            </button>
           </div>
-
-          <!-- Pay Button -->
-          <button
-            class="pay-btn"
-            [disabled]="paying() || !stripeReady() || loadingCase()"
-            (click)="pay()"
-            [attr.aria-label]="payButtonLabel()"
-            [attr.aria-busy]="paying()">
-            @if (paying()) {
-              <mat-spinner diameter="20"></mat-spinner>
-              <span>Processing…</span>
-            } @else if (!stripeReady()) {
-              <span>Loading payment form…</span>
-            } @else {
-              <span aria-hidden="true">🔒</span>
-              <span>{{ payButtonLabel() }}</span>
-            }
-          </button>
-
-          <p class="secure-note">
-            <span aria-hidden="true">🔒</span>
-            Payments secured by Stripe. Your card is never stored on our servers.
-          </p>
         </section>
 
-        <!-- Payment Schedule (shown after installment plan created) -->
+        <!-- Created Payment Schedule (after plan is actually created via API) -->
         @if (planSchedule().length > 0) {
-          <section class="card schedule-card" aria-label="Payment schedule">
-            <h2 class="card-title">Payment Schedule</h2>
-            <div class="schedule-list">
+          <section class="pay-card" aria-label="Payment schedule">
+            <div class="pay-card-header">
+              <div class="pay-card-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="pay-card-title">Payment Schedule</h2>
+                <p class="pay-card-subtitle">Your upcoming payments</p>
+              </div>
+            </div>
+            <div class="created-schedule">
               @for (item of planSchedule(); track item.installment_num) {
-                <div class="schedule-item" [class.paid]="item.status === 'paid'">
+                <div class="created-schedule-row" [class.paid]="item.status === 'paid'">
                   <span class="sched-num">#{{ item.installment_num }}</span>
                   <span class="sched-date">{{ item.due_date }}</span>
                   <span class="sched-amount">{{ item.amount | currency }}</span>
                   <span class="sched-status" [attr.aria-label]="item.status === 'paid' ? 'Paid' : 'Pending'">
-                    {{ item.status === 'paid' ? '✅' : '⏳' }}
+                    @if (item.status === 'paid') {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    } @else {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" stroke="#94a3b8" stroke-width="2"/>
+                        <path d="M12 6v6l4 2" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    }
                   </span>
                 </div>
               }
             </div>
           </section>
         }
+
+      </div>
+
+      <!-- ─── RIGHT COLUMN (Sidebar) ─── -->
+      <div class="pay-right">
+
+        <!-- Order Summary -->
+        <section class="order-summary" aria-label="Order summary">
+          <h2 class="order-title">Order Summary</h2>
+          <div class="order-rows">
+            <div class="order-row">
+              <span>Attorney fee</span>
+              <span class="order-row-value">{{ amount() | currency }}</span>
+            </div>
+            <div class="order-row">
+              <span>Processing fee</span>
+              <span class="order-row-free">Free</span>
+            </div>
+            <div class="order-row">
+              <span>Platform fee</span>
+              <span class="order-row-free">Included</span>
+            </div>
+          </div>
+          <div class="order-divider" role="separator"></div>
+          <div class="order-total-row">
+            <span>Total due today</span>
+            <span class="order-total-amount">{{ orderTotal() | currency }}</span>
+          </div>
+          <div class="order-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>No hidden fees. Secure payment via Stripe.</span>
+          </div>
+        </section>
+
+        <!-- Attorney Card -->
+        @if (attorney()) {
+          <section class="atty-card" aria-label="Your attorney">
+            <h2 class="atty-card-title">Your Attorney</h2>
+            <div class="atty-row">
+              <div class="atty-avatar" aria-hidden="true">{{ attorneyInitials() }}</div>
+              <div class="atty-info">
+                <span class="atty-name">{{ attorney()!.name }}</span>
+                <span class="atty-role">CDL Defense Attorney · Licensed</span>
+              </div>
+            </div>
+            <div class="atty-stats" role="list">
+              <div class="atty-stat" role="listitem">
+                <span class="atty-stat-value">{{ attorney()!.win_rate }}%</span>
+                <span class="atty-stat-label">Win Rate</span>
+              </div>
+              <div class="atty-stat" role="listitem">
+                <span class="atty-stat-value">{{ attorney()!.years_experience }}+</span>
+                <span class="atty-stat-label">Yrs Exp</span>
+              </div>
+              <div class="atty-stat" role="listitem">
+                <span class="atty-stat-value">{{ attorney()!.cases_won }}</span>
+                <span class="atty-stat-label">Cases Won</span>
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- Trust Badges -->
+        <section class="trust-card" aria-label="Security information">
+          <h2 class="trust-card-title">Why it's safe to pay</h2>
+          <div class="trust-items">
+            <div class="trust-item">
+              <span class="trust-icon trust-icon-ssl" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <div class="trust-text">
+                <span class="trust-title">SSL Encrypted</span>
+                <span class="trust-desc">All data is transmitted securely over HTTPS.</span>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon trust-icon-stripe" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M1 10h22" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </span>
+              <div class="trust-text">
+                <span class="trust-title">Stripe Secured</span>
+                <span class="trust-desc">Your card data never touches our servers.</span>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon trust-icon-pci" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <div class="trust-text">
+                <span class="trust-title">PCI Compliant</span>
+                <span class="trust-desc">Fully certified payment processing.</span>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon trust-icon-cancel" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <polyline points="1,4 1,10 7,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3.51 15a9 9 0 102.13-9.36L1 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <div class="trust-text">
+                <span class="trust-title">Cancel Anytime</span>
+                <span class="trust-desc">Payment plans can be paused if needed.</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
       </div>
     </div>

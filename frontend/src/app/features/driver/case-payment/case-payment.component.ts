@@ -8,8 +8,6 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { CurrencyPipe } from '@angular/common';
 import { environment } from '../../../../environments/environment';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   loadStripe,
   Stripe,
@@ -20,7 +18,7 @@ import {
 } from '@stripe/stripe-js';
 
 interface PlanOption {
-  key: 'full' | '2' | '4' | '8';
+  key: string;
   label: string;
   weeks: number;
   installments: number;
@@ -39,7 +37,7 @@ interface AttorneyStats {
 @Component({
   selector: 'app-case-payment',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyPipe, MatProgressSpinnerModule],
+  imports: [CurrencyPipe],
   templateUrl: './case-payment.component.html',
   styleUrl: './case-payment.component.scss'
 })
@@ -48,10 +46,9 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('cardExpiry') cardExpiryRef!: ElementRef;
   @ViewChild('cardCvc')    cardCvcRef!: ElementRef;
 
-  private route    = inject(ActivatedRoute);
-  private router   = inject(Router);
-  private http     = inject(HttpClient);
-  private snackBar = inject(MatSnackBar);
+  private route  = inject(ActivatedRoute);
+  private router = inject(Router);
+  private http   = inject(HttpClient);
 
   private readonly apiUrl = environment.apiUrl;
 
@@ -61,10 +58,17 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
   violationType = signal('');
   courtDate     = signal('');
   courtLocation = signal('');
+  caseStatus    = signal('');
   amount        = signal(0);
 
   // ─── Attorney stats ───────────────────────────────────────────────
   attorney = signal<AttorneyStats | null>(null);
+
+  attorneyInitials = computed(() => {
+    const name = this.attorney()?.name;
+    if (!name) return '';
+    return name.split(' ').map(w => w.charAt(0).toUpperCase()).join('');
+  });
 
   // ─── UI state ─────────────────────────────────────────────────────
   loadingCase  = signal(true);
@@ -72,29 +76,57 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
   paying       = signal(false);
   stripeReady  = signal(false);
 
+  // ─── Feedback (replaces MatSnackBar) ──────────────────────────────
+  paymentError   = signal('');
+  loadError      = signal('');
+
   // ─── Stripe field errors ──────────────────────────────────────────
   cardNumberError = signal('');
   cardExpiryError = signal('');
   cardCvcError    = signal('');
 
+  // ─── Cardholder name (non-sensitive, regular input) ───────────────
+  cardholderName = signal('');
+
   // ─── Plan selection ───────────────────────────────────────────────
-  selectedPlan = signal<'full' | '2' | '4' | '8'>('4');
+  selectedPlan = signal<'full' | 'plan'>('full');
   planOptions  = signal<PlanOption[]>([]);
   planSchedule = signal<{ installment_num: number; due_date: string; amount: number; status: string }[]>([]);
 
   // ─── Computed ─────────────────────────────────────────────────────
-  processingFee = computed(() =>
-    Math.round((this.amount() * 0.029 + 0.30) * 100) / 100
-  );
-
-  totalAmount = computed(() => this.amount() + this.processingFee());
-
-  firstInstallment = computed(() => {
-    const key = this.selectedPlan();
-    if (key === 'full') return 0;
-    const opt = this.planOptions().find(p => p.key === key);
-    return opt?.weeklyAmount ?? 0;
+  defaultPlanOption = computed(() => {
+    return this.planOptions().find(p => p.popular) ?? this.planOptions().find(p => p.key !== 'full');
   });
+
+  planDescription = computed(() => {
+    const opt = this.defaultPlanOption();
+    if (!opt) return '';
+    return `Split into ${opt.installments} weekly payments of ${this.formatCurrency(opt.weeklyAmount ?? 0)}.`;
+  });
+
+  planSchedulePreview = computed(() => {
+    const opt = this.defaultPlanOption();
+    if (!opt || !opt.weeklyAmount) return [];
+    const today = new Date();
+    return Array.from({ length: opt.installments }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i * 7);
+      return {
+        num: i + 1,
+        date: i === 0 ? `Today — ${this.formatDate(date)}` : this.formatDate(date),
+        amount: opt.weeklyAmount!,
+        isFirst: i === 0,
+      };
+    });
+  });
+
+  orderTotal = computed(() => {
+    if (this.selectedPlan() === 'full') return this.amount();
+    const opt = this.defaultPlanOption();
+    return opt?.weeklyAmount ?? this.amount();
+  });
+
+  payButtonAmount = computed(() => this.formatCurrency(this.orderTotal()));
 
   // ─── Stripe private state ─────────────────────────────────────────
   private stripe: Stripe | null = null;
@@ -105,17 +137,36 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
   private clientSecret = '';
   private paymentIntentId = '';
 
+  // ─── Helpers ──────────────────────────────────────────────────────
+  private formatCurrency(n: number): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+  }
+
+  private formatDate(d: Date): string {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  getStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      new: 'Submitted', reviewed: 'Under Review', in_progress: 'In Progress',
+      assigned_to_attorney: 'Attorney Assigned', pay_attorney: 'Payment Required',
+      closed: 'Case Closed', resolved: 'Resolved',
+    };
+    return map[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  getViolationLabel(type: string): string {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   payButtonLabel(): string {
-    const fmt = (n: number) =>
-      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-    if (this.selectedPlan() === 'full') return `Pay ${fmt(this.totalAmount())}`;
-    return `Pay ${fmt(this.firstInstallment())} now`;
+    if (this.selectedPlan() === 'full') return `Pay ${this.payButtonAmount()}`;
+    return `Pay ${this.payButtonAmount()} today`;
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────
   ngOnInit(): void {
     this.caseId.set(this.route.snapshot.params['caseId']);
-    // Load Stripe SDK early (parallel with case data), but don't mount yet
     this.loadStripeSDK();
     this.loadCaseData();
   }
@@ -139,6 +190,7 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.violationType.set((c['violation_type'] as string) || '');
         this.courtDate.set((c['court_date'] as string) || '');
         this.courtLocation.set(((c['court_location'] as string) || (c['court_name'] as string)) || '');
+        this.caseStatus.set((c['status'] as string) || '');
         this.amount.set((c['attorney_price'] as number) || 0);
 
         const att = c['attorney'] as Record<string, unknown> | null | undefined;
@@ -154,12 +206,11 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.loadingCase.set(false);
         this.loadPlanOptions();
         this.createPaymentIntent();
-        // Defer Stripe element mounting until after Angular re-renders the @else block
         setTimeout(() => this.mountStripeElements(), 0);
       },
       error: () => {
         this.loadingCase.set(false);
-        this.snackBar.open('Failed to load case details.', 'Close', { duration: 3000 });
+        this.loadError.set('Failed to load case details. Please go back and try again.');
       }
     });
   }
@@ -190,13 +241,12 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.paymentIntentId = response.paymentIntentId;
       },
       error: () => {
-        this.snackBar.open('Failed to initialize payment. Please try again.', 'Close', { duration: 5000 });
+        this.paymentError.set('Failed to initialize payment. Please try again.');
       }
     });
   }
 
   // ─── Stripe init ──────────────────────────────────────────────────
-  // Phase 1: load SDK (runs early, parallel with case data fetch)
   private async loadStripeSDK(): Promise<void> {
     try {
       const config = await firstValueFrom(
@@ -214,9 +264,7 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // Phase 2: mount elements into DOM (runs after loadingCase → false so refs exist)
   private mountStripeElements(): void {
-    // If SDK hasn't finished loading yet, retry until it's ready
     if (!this.stripe || !this.stripeElements) {
       setTimeout(() => this.mountStripeElements(), 200);
       return;
@@ -225,15 +273,15 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const elementStyle = {
       base: {
-        fontSize: '16px',
-        color: '#1a1a2e',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        '::placeholder': { color: '#9ca3af' },
+        fontSize: '14px',
+        fontWeight: '600',
+        color: '#0f2137',
+        fontFamily: "'Mulish', -apple-system, sans-serif",
+        '::placeholder': { color: '#98a8b4' },
       },
       invalid: { color: '#ef4444' },
     };
 
-    // All three elements must be from the same stripeElements instance
     this.cardNumberElement = this.stripeElements.create('cardNumber', { style: elementStyle });
     this.cardNumberElement.mount(this.cardNumberRef.nativeElement);
     this.cardNumberElement.on('change', (e) => this.cardNumberError.set(e.error?.message ?? ''));
@@ -250,27 +298,42 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ─── Actions ──────────────────────────────────────────────────────
-  selectPlan(plan: 'full' | '2' | '4' | '8'): void {
+  selectPlan(plan: 'full' | 'plan'): void {
     this.selectedPlan.set(plan);
+  }
+
+  onCardholderInput(event: Event): void {
+    this.cardholderName.set((event.target as HTMLInputElement).value);
+  }
+
+  onPlanKeydown(event: KeyboardEvent): void {
+    if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      this.selectPlan(this.selectedPlan() === 'full' ? 'plan' : 'full');
+      const active = (event.currentTarget as HTMLElement)
+        .querySelector<HTMLElement>('[aria-checked="true"]');
+      active?.focus();
+    }
   }
 
   async pay(): Promise<void> {
     if (!this.stripe || !this.cardNumberElement) return;
 
     this.paying.set(true);
+    this.paymentError.set('');
     this.cardNumberError.set('');
 
-    const plan = this.selectedPlan();
+    const billingDetails = { name: this.cardholderName() || undefined };
 
-    if (plan === 'full') {
+    if (this.selectedPlan() === 'full') {
       if (!this.clientSecret) { this.paying.set(false); return; }
 
       const { error, paymentIntent } = await this.stripe.confirmCardPayment(this.clientSecret, {
-        payment_method: { card: this.cardNumberElement }
+        payment_method: { card: this.cardNumberElement, billing_details: billingDetails }
       });
 
       if (error) {
-        this.cardNumberError.set(error.message ?? 'Payment failed. Please try again.');
+        this.paymentError.set(error.message ?? 'Payment failed. Please try again.');
         this.paying.set(false);
         return;
       }
@@ -287,23 +350,22 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         error: () => {
           this.paying.set(false);
-          this.snackBar.open(
-            'Payment processed but confirmation failed. Please contact support.',
-            'Close',
-            { duration: 7000 }
-          );
+          this.paymentError.set('Payment processed but confirmation failed. Please contact support.');
         }
       });
 
     } else {
-      // Installment plan — create a PaymentMethod and pass to backend
+      const planOpt = this.defaultPlanOption();
+      const weeks = planOpt?.weeks ?? 4;
+
       const { error: pmError, paymentMethod } = await this.stripe.createPaymentMethod({
         type: 'card',
         card: this.cardNumberElement,
+        billing_details: billingDetails,
       });
 
       if (pmError) {
-        this.cardNumberError.set(pmError.message ?? 'Card error. Please try again.');
+        this.paymentError.set(pmError.message ?? 'Card error. Please try again.');
         this.paying.set(false);
         return;
       }
@@ -312,22 +374,25 @@ export class CasePaymentComponent implements OnInit, AfterViewInit, OnDestroy {
         data: { schedule: { installment_num: number; due_date: string; amount: number; status: string }[] }
       }>(
         `${this.apiUrl}/payments/create-plan`,
-        { caseId: this.caseId(), weeks: Number(plan), paymentMethodId: paymentMethod?.id }
+        { caseId: this.caseId(), weeks, paymentMethodId: paymentMethod?.id }
       ).subscribe({
         next: (res) => {
           this.paying.set(false);
           this.planSchedule.set(res.data?.schedule ?? []);
-          this.snackBar.open('Payment plan created! First payment processed.', 'Close', { duration: 4000 });
         },
         error: (err) => {
           this.paying.set(false);
-          this.cardNumberError.set((err?.error?.message as string) ?? 'Failed to create payment plan.');
+          this.paymentError.set((err?.error?.message as string) ?? 'Failed to create payment plan.');
         }
       });
     }
   }
 
   goBack(): void {
+    this.router.navigate(['/driver/cases', this.caseId()]);
+  }
+
+  navigateToCase(): void {
     this.router.navigate(['/driver/cases', this.caseId()]);
   }
 }
