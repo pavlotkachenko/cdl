@@ -120,17 +120,50 @@ router.patch('/me/push-token',
 
 /**
  * PUT /api/users/profile
- * Update current user profile (name, phone)
+ * Update current user profile (name, phone, bio, cdl_number, cdl_state)
  */
 router.put('/profile',
   authenticate,
   async (req, res) => {
     try {
-      const { name, phone } = req.body;
+      const { name, phone, bio, cdl_number, cdl_state } = req.body;
       const updates = {};
 
-      if (name !== undefined) updates.full_name = name;
-      if (phone !== undefined) updates.phone = phone;
+      if (name !== undefined) updates.full_name = String(name).replace(/<[^>]*>/g, '').trim();
+      if (phone !== undefined) updates.phone = String(phone).replace(/<[^>]*>/g, '').trim();
+
+      // Bio: sanitize HTML, max 500 chars
+      if (bio !== undefined) {
+        const sanitized = String(bio).replace(/<[^>]*>/g, '').trim();
+        if (sanitized.length > 500) {
+          return res.status(400).json({
+            error: { code: 'VALIDATION_ERROR', message: 'Bio must be 500 characters or fewer' },
+          });
+        }
+        updates.bio = sanitized;
+      }
+
+      // CDL number: alphanumeric, max 50 chars
+      if (cdl_number !== undefined) {
+        const cleaned = String(cdl_number).trim();
+        if (cleaned.length > 50) {
+          return res.status(400).json({
+            error: { code: 'VALIDATION_ERROR', message: 'CDL number must be 50 characters or fewer' },
+          });
+        }
+        updates.cdl_number = cleaned || null;
+      }
+
+      // CDL state: 2-letter US state code
+      if (cdl_state !== undefined) {
+        const cleaned = String(cdl_state).trim().toUpperCase();
+        if (cleaned && !/^[A-Z]{2}$/.test(cleaned)) {
+          return res.status(400).json({
+            error: { code: 'VALIDATION_ERROR', message: 'CDL state must be a 2-letter US state code' },
+          });
+        }
+        updates.cdl_state = cleaned || null;
+      }
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({
@@ -142,7 +175,7 @@ router.put('/profile',
         .from('users')
         .update(updates)
         .eq('id', req.user.id)
-        .select('id, full_name, email, phone, avatar_url, role')
+        .select('id, full_name, email, phone, avatar_url, role, bio, cdl_number, cdl_state')
         .single();
 
       if (error) {
@@ -160,6 +193,9 @@ router.put('/profile',
           phone: data.phone,
           avatar_url: data.avatar_url,
           role: data.role,
+          bio: data.bio,
+          cdl_number: data.cdl_number,
+          cdl_state: data.cdl_state,
         },
       });
     } catch (err) {

@@ -1,0 +1,199 @@
+{
+  "name": "cdl-ticket-management-workflow",
+  "version": "3.0.0",
+  "description": "MASFactory directed graph formalising the 8-step pipeline from CLAUDE.md Section 6. Node IDs match .claude/agents/ filenames exactly. Escalation loops defined in .claude/skills/implement-feature.md.",
+  "pipeline_reference": "CLAUDE.md Section 6 — Agent Orchestration Model (steps 0-7)",
+  "escalation_reference": ".claude/skills/implement-feature.md",
+
+  "nodes": [
+    {
+      "id": "product-manager",
+      "step": 0,
+      "type": "Interaction",
+      "subagent": ".claude/agents/product-manager.md",
+      "model": "claude-sonnet-4-6",
+      "mandatory": true,
+      "human_gate": true,
+      "description": "MANDATORY Step 0. Decomposes request into traceable user stories with acceptance criteria. Traces to docs/. Human sign-off required before any work begins.",
+      "skills": [".claude/skills/decompose-requirement.md"]
+    },
+    {
+      "id": "architect",
+      "step": 1,
+      "type": "Agent",
+      "subagent": ".claude/agents/architect.md",
+      "model": "claude-opus-4-6",
+      "description": "Step 1. System design: DB schema, API contract, component tree per story. Checks supabase_schema.sql conventions and docs/API_SPECIFICATION.md.",
+      "skills": [".claude/skills/db-migration.md"]
+    },
+    {
+      "id": "ux-expert",
+      "step": 2,
+      "type": "Agent",
+      "subagent": ".claude/agents/ux-expert.md",
+      "model": "claude-sonnet-4-6",
+      "mandatory_for_ui": true,
+      "description": "Step 2. MANDATORY for UI changes. Screen specs, interaction flows, accessibility checklists, design tokens. Skip for backend-only changes.",
+      "skip_condition": "no_ui_changes"
+    },
+    {
+      "id": "dev-lead",
+      "step": 3,
+      "type": "Agent",
+      "subagent": ".claude/agents/dev-lead.md",
+      "model": "claude-sonnet-4-6",
+      "description": "Step 3. Implements backend services (Node.js/Express 5) and frontend components (Angular 21 signals, OnPush, standalone). Checks HARD_BUGS_REGISTRY.md before writing code.",
+      "skills": [".claude/skills/implement-feature.md", ".claude/skills/tdd-backend.md"]
+    },
+    {
+      "id": "qa-tester",
+      "step": 4,
+      "type": "Agent",
+      "subagent": ".claude/agents/qa-tester.md",
+      "model": "claude-haiku-4-5",
+      "description": "Step 4. Writes Jest tests (backend/__tests__/), Angular .spec.ts co-located tests, and Cypress E2E. Enforces Sprint Testing Mandate: every modified file gets a test.",
+      "skills": [".claude/skills/test-suite.md"],
+      "test_commands": {
+        "backend": "cd backend && npm test",
+        "frontend_unit": "cd frontend && npx ng test --no-watch",
+        "e2e": "cd frontend && npm run cy:run"
+      }
+    },
+    {
+      "id": "critic",
+      "step": 5,
+      "type": "Agent",
+      "subagent": ".claude/agents/critic.md",
+      "model": "claude-sonnet-4-6",
+      "description": "Step 5. Security audit (OWASP Top 10, RLS multi-tenancy, Stripe webhook validation), DRY enforcement, performance (N+1, indexes, <200ms p95), WCAG 2.1 AA.",
+      "skills": [".claude/skills/security-audit.md"],
+      "output_format": "Verdict: APPROVED | CHANGES REQUIRED | BLOCKED\nChecklist Summary: Security PASS/FAIL, Code Quality PASS/FAIL, Performance PASS/FAIL, Accessibility PASS/FAIL, Architecture PASS/FAIL"
+    },
+    {
+      "id": "critic-gate",
+      "step": "5-switch",
+      "type": "Switch",
+      "condition": "critic_verdict",
+      "condition_rule": "Parse 'Verdict:' line from critic output. APPROVED = pass. CHANGES REQUIRED or BLOCKED = fail.",
+      "max_iterations": 3,
+      "description": "Routes back to dev-lead (fail) or forward to docs-writer (pass). Max 3 critic iterations before escalating to user."
+    },
+    {
+      "id": "docs-writer",
+      "step": 6,
+      "type": "Agent",
+      "subagent": ".claude/agents/docs-writer.md",
+      "model": "claude-haiku-4-5",
+      "description": "Step 6. Updates docs/API_SPECIFICATION.md, docs/04_FUNCTIONAL_REQUIREMENTS.md, HARD_BUGS_REGISTRY.md, sprint story files. Keeps project documentation in sync with implementation."
+    },
+    {
+      "id": "devops",
+      "step": 7,
+      "type": "Interaction",
+      "subagent": ".claude/agents/devops.md",
+      "model": "claude-haiku-4-5",
+      "human_gate": true,
+      "description": "Step 7. Creates branch (feat/<name>), commits with conventional commit format, opens PR. Requires human approval before any push to main.",
+      "skills": [".claude/skills/pr-workflow.md"]
+    }
+  ],
+
+  "edges": [
+    {
+      "from": "product-manager",
+      "to": "architect",
+      "type": "instruction",
+      "payload": "Scoped user stories with acceptance criteria, traced to docs/ references"
+    },
+    {
+      "from": "architect",
+      "to": "ux-expert",
+      "type": "instruction",
+      "condition": "has_ui_changes",
+      "payload": "Schema + API contract + component tree. UX Expert produces screen specs."
+    },
+    {
+      "from": "architect",
+      "to": "dev-lead",
+      "type": "instruction",
+      "condition": "no_ui_changes",
+      "payload": "Direct path for backend-only: schema, API contract, implementation spec"
+    },
+    {
+      "from": "ux-expert",
+      "to": "dev-lead",
+      "type": "instruction",
+      "payload": "Screen specs, component mappings, accessibility checklist, design tokens"
+    },
+    {
+      "from": "dev-lead",
+      "to": "qa-tester",
+      "type": "result",
+      "payload": "List of all created/modified files. Sprint Testing Mandate: every file needs a test."
+    },
+    {
+      "from": "qa-tester",
+      "to": "critic",
+      "type": "result",
+      "payload": "Test files created, test commands run, coverage summary"
+    },
+    {
+      "from": "critic",
+      "to": "critic-gate",
+      "type": "feedback",
+      "payload": "Verdict: APPROVED | CHANGES REQUIRED | BLOCKED. Checklist summary with PASS/FAIL per category."
+    },
+    {
+      "from": "critic-gate",
+      "to": "dev-lead",
+      "type": "feedback",
+      "branch": "fail",
+      "payload": "Critical issues and warnings from critic. Dev Lead fixes → qa-tester retests → critic re-reviews. Max 3 iterations."
+    },
+    {
+      "from": "critic-gate",
+      "to": "docs-writer",
+      "type": "instruction",
+      "branch": "pass",
+      "payload": "Feature summary for docs update: which API endpoints changed, which requirements fulfilled"
+    },
+    {
+      "from": "docs-writer",
+      "to": "devops",
+      "type": "instruction",
+      "payload": "Docs updated. Ready for branch + commit + PR creation. Human approval required."
+    }
+  ],
+
+  "escalationLoops": {
+    "ux_rejection": {
+      "path": "ux-expert → architect → ux-expert",
+      "max_iterations": 2,
+      "on_exhaustion": "escalate_to_user"
+    },
+    "critic_fail": {
+      "path": "critic-gate → dev-lead → qa-tester → critic → critic-gate",
+      "max_iterations": 3,
+      "on_exhaustion": "escalate_to_user"
+    },
+    "test_failure": {
+      "path": "qa-tester → dev-lead → qa-tester",
+      "max_iterations": 3,
+      "on_exhaustion": "escalate_to_user"
+    }
+  },
+
+  "composedGraphs": {
+    "full-feature":       ".claude/graphs/full-feature.json",
+    "backend-only":       ".claude/graphs/backend-only.json",
+    "hotfix":             ".claude/graphs/hotfix.json",
+    "stripe-integration": ".claude/graphs/stripe-integration.json"
+  },
+
+  "qualityGates": {
+    "gate1": { "name": "Architecture Alignment", "owner": "architect", "ref": "CLAUDE.md Section 2 Gate 1" },
+    "gate2": { "name": "Sprint Testing Mandate", "owner": "qa-tester", "ref": "CLAUDE.md Section 2 Gate 2" },
+    "gate3": { "name": "Critic Review (Verdict: APPROVED)", "owner": "critic + critic-gate", "ref": "CLAUDE.md Section 2 Gate 3" },
+    "gate4": { "name": "Human-in-the-Loop", "owner": "product-manager + devops", "ref": "CLAUDE.md Section 2 Gate 4" }
+  }
+}

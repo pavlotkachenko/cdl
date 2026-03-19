@@ -155,11 +155,11 @@ describe('rankAttorneys', () => {
     setupChain();
     chain.single.mockResolvedValueOnce({ data: mockCase, error: null });
     // The attorneys query: from().select().eq('role').eq('is_active') → resolves
-    // We capture the last eq call to resolve the attorneys
+    // eq calls: 1=case_id (case query), 2=role (attorneys), 3=is_active (attorneys, resolves)
     let callCount = 0;
     chain.eq.mockImplementation(() => {
       callCount++;
-      if (callCount === 2) {
+      if (callCount === 3) {
         return Promise.resolve({ data: attorneys, error: null });
       }
       return chain;
@@ -180,7 +180,7 @@ describe('rankAttorneys', () => {
 
 // ── autoAssign (DB mocked) ────────────────────────────────────────────────────
 describe('autoAssign', () => {
-  it('throws if no available attorneys exist', async () => {
+  it('returns null when all attorneys are unavailable', async () => {
     const mockCase = { case_id: 'c1', violation_type: 'speeding', violation_state: 'CA' };
     chain.single.mockResolvedValueOnce({ data: mockCase, error: null });
     // attorneys all unavailable
@@ -191,13 +191,15 @@ describe('autoAssign', () => {
         availability_status: 'unavailable', current_cases_count: 50,
       },
     ];
+    // eq calls: 1=case_id (case query), 2=role (attorneys), 3=is_active (attorneys, resolves)
     let callCount = 0;
     chain.eq.mockImplementation(() => {
       callCount++;
-      if (callCount === 2) return Promise.resolve({ data: unavailableAttorneys, error: null });
+      if (callCount === 3) return Promise.resolve({ data: unavailableAttorneys, error: null });
       return chain;
     });
 
-    await expect(autoAssign('c1')).rejects.toThrow('No available attorneys');
+    const result = await autoAssign('c1');
+    expect(result).toBeNull();
   });
 });

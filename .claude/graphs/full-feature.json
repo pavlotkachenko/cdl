@@ -1,0 +1,12 @@
+{
+  "name": "full-feature",
+  "description": "Complete 8-step pipeline for features touching both Angular frontend and Node.js/Supabase backend.",
+  "steps": [0, 1, 2, 3, 4, 5, "5-switch", 6, 7],
+  "nodeIds": ["product-manager", "architect", "ux-expert", "dev-lead", "qa-tester", "critic", "critic-gate", "docs-writer", "devops"],
+  "use_when": "Feature touches Angular UI AND Node.js/Supabase backend",
+  "examples": [
+    "New ticket submission form with payment",
+    "Attorney case dashboard with real-time updates",
+    "Carrier fleet management with bulk upload"
+  ]
+}

@@ -71,7 +71,7 @@ const calculateScore = (attorney, caseData) => {
       'busy': 30,
       'unavailable': 0
     };
-    breakdown.availability = availabilityScores[availabilityStatus] || 50;
+    breakdown.availability = availabilityScores[availabilityStatus] ?? 50;
 
     // Calculate weighted total score
     const totalScore = 

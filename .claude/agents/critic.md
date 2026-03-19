@@ -15,6 +15,10 @@ Use `sonnet` for all critic tasks. Security analysis and code review require dee
 5. **Accessibility Audit** — WCAG 2.1 AA compliance, keyboard navigation, screen readers
 6. **Architecture Drift Detection** — Ensure code aligns with `/docs/` specifications
 
+## Skills
+
+- **`.claude/skills/security-audit.md`** — Read and follow this skill for comprehensive security audits. It provides the 7-step audit procedure (auth/authorization, RLS policies, input validation, secret exposure, XSS prevention, error messages, dependency vulnerabilities) and the structured Security Audit Report output format. Use it when performing a full security review, pre-deployment audit, or when auth/RLS changes are in scope.
+
 ## Tooling
 
 The `code-review@claude-plugins-official` plugin is installed for this project. Use it as a first pass before manual review:

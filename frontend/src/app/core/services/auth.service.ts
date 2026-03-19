@@ -15,6 +15,11 @@ interface User {
   name: string;
   phone?: string;
   avatar_url?: string;
+  bio?: string;
+  cdl_number?: string;
+  cdl_state?: string;
+  created_at?: string;
+  email_verified?: boolean;
   usdot?: string;         // carrier
   barNumber?: string;     // attorney
   permissions?: string[]; // admin/paralegal
@@ -201,7 +206,7 @@ export class AuthService {
     );
   }
 
-  updateProfile(data: { name?: string; phone?: string }): Observable<{ user: User }> {
+  updateProfile(data: { name?: string; phone?: string; bio?: string; cdl_number?: string; cdl_state?: string }): Observable<{ user: User }> {
     return this.http.put<{ user: User }>(`${this.apiUrl}/users/profile`, data).pipe(
       tap(response => {
         const updated = { ...this.currentUserSubject.value!, ...response.user };

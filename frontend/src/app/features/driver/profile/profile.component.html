@@ -1,206 +1,413 @@
-<!-- Profile Component Template -->
-<div class="profile-container">
-  
-  <!-- Page Header -->
-  <div class="page-header">
-    <button mat-icon-button routerLink="/driver/dashboard" class="back-button">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
-    <div>
-      <h1>My Profile</h1>
-      <p>Manage your account information and settings</p>
-    </div>
-  </div>
+<div class="profile-page">
 
-  <div class="profile-content">
-    
-    <!-- Profile Summary Card -->
-    <mat-card class="summary-card">
-      <mat-card-content>
-        <div class="profile-avatar">
-          <mat-icon>account_circle</mat-icon>
-        </div>
-        <h2>{{ fullName }}</h2>
-        <p class="email">{{ currentUser?.email }}</p>
-        <p class="member-since">Member since {{ memberSince }}</p>
-      </mat-card-content>
-    </mat-card>
+  <!-- 2-Column Layout -->
+  <div class="profile-layout">
 
-    <!-- Profile Information Card -->
-    <mat-card class="info-card">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>person</mat-icon>
-          Personal Information
-        </mat-card-title>
-        <button mat-icon-button (click)="toggleEditProfile()" *ngIf="!editingProfile">
-          <mat-icon>edit</mat-icon>
-        </button>
-      </mat-card-header>
+    <!-- LEFT: Hero Card (sticky) -->
+    <aside class="hero-card" aria-label="Profile summary">
+      <div class="hero-banner"></div>
 
-      <mat-divider></mat-divider>
-
-      <mat-card-content>
-        <!-- View Mode -->
-        <div *ngIf="!editingProfile" class="info-grid">
-          <div class="info-item">
-            <label>First Name</label>
-            <p>{{ profileForm.value.firstName || 'N/A' }}</p>
-          </div>
-          <div class="info-item">
-            <label>Last Name</label>
-            <p>{{ profileForm.value.lastName || 'N/A' }}</p>
-          </div>
-          <div class="info-item">
-            <label>Email</label>
-            <p>{{ profileForm.value.email || 'N/A' }}</p>
-          </div>
-          <div class="info-item">
-            <label>Phone</label>
-            <p>{{ profileForm.value.phone || 'N/A' }}</p>
-          </div>
-          <div class="info-item">
-            <label>CDL Number</label>
-            <p>{{ profileForm.value.cdlNumber || 'N/A' }}</p>
-          </div>
-          <div class="info-item">
-            <label>CDL State</label>
-            <p>{{ profileForm.value.cdlState || 'N/A' }}</p>
-          </div>
+      <div class="hero-content">
+        <!-- Avatar -->
+        <div class="avatar-wrapper">
+          <button
+            class="avatar-button"
+            type="button"
+            (click)="avatarInput.click()"
+            [disabled]="uploadingAvatar()"
+            aria-label="Change profile photo">
+            @if (uploadingAvatar()) {
+              <div class="spinner" aria-label="Uploading"></div>
+            } @else if (avatarUrl()) {
+              <img [src]="avatarUrl()" alt="Profile photo" class="avatar-img" />
+            } @else {
+              <span class="avatar-initials">{{ initials() }}</span>
+            }
+            <div class="avatar-overlay">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+          </button>
+          <input
+            #avatarInput
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            class="avatar-file-input"
+            (change)="onAvatarSelected($event)"
+            aria-hidden="true" />
         </div>
 
-        <!-- Edit Mode -->
-        <form *ngIf="editingProfile" [formGroup]="profileForm" class="edit-form">
-          <div class="form-grid">
-            <mat-form-field appearance="outline">
-              <mat-label>First Name</mat-label>
-              <input matInput formControlName="firstName" autocomplete="given-name" required>
-              <mat-error *ngIf="profileForm.get('firstName')?.hasError('required')">
-                First name is required
-              </mat-error>
-            </mat-form-field>
+        <!-- Name & email -->
+        <h1 class="hero-name">{{ fullName() }}</h1>
+        <div class="hero-email">
+          <span>{{ currentUser()?.email }}</span>
+          @if (emailVerified()) {
+            <span class="verified-badge" title="Email verified">
+              <span aria-hidden="true">&#x2705;</span> Verified
+            </span>
+          } @else {
+            <span class="unverified-badge" title="Email not verified">
+              <span aria-hidden="true">&#x26A0;&#xFE0F;</span> Unverified
+            </span>
+          }
+        </div>
+        <div class="hero-member-chip">
+          <span aria-hidden="true">&#x1F5D3;&#xFE0F;</span> {{ memberSince() }}
+        </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Last Name</mat-label>
-              <input matInput formControlName="lastName" autocomplete="family-name" required>
-              <mat-error *ngIf="profileForm.get('lastName')?.hasError('required')">
-                Last name is required
-              </mat-error>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" inputmode="email" autocomplete="email" required>
-              <mat-error *ngIf="profileForm.get('email')?.hasError('required')">
-                Email is required
-              </mat-error>
-              <mat-error *ngIf="profileForm.get('email')?.hasError('email')">
-                Please enter a valid email
-              </mat-error>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Phone</mat-label>
-              <input matInput formControlName="phone" type="tel" inputmode="tel" autocomplete="tel" required>
-              <mat-error *ngIf="profileForm.get('phone')?.hasError('required')">
-                Phone is required
-              </mat-error>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>CDL Number</mat-label>
-              <input matInput formControlName="cdlNumber" inputmode="numeric" autocomplete="off">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>CDL State</mat-label>
-              <input matInput formControlName="cdlState">
-            </mat-form-field>
+        <!-- Stats strip -->
+        <div class="stats-strip" aria-label="Driver statistics">
+          <div class="stat-item">
+            <span class="stat-value">{{ driverStats().totalCases }}</span>
+            <span class="stat-label"><span aria-hidden="true">&#x1F4CB;</span> Cases</span>
           </div>
-
-          <div class="form-actions">
-            <button mat-button (click)="toggleEditProfile()" [disabled]="savingProfile">
-              Cancel
-            </button>
-            <button mat-raised-button color="primary" (click)="saveProfile()" 
-                    [disabled]="profileForm.invalid || savingProfile">
-              <mat-icon *ngIf="!savingProfile">save</mat-icon>
-              <mat-icon *ngIf="savingProfile" class="spinning">sync</mat-icon>
-              {{ savingProfile ? 'Saving...' : 'Save Changes' }}
-            </button>
+          <div class="stat-item">
+            <span class="stat-value">{{ driverStats().successRate }}%</span>
+            <span class="stat-label"><span aria-hidden="true">&#x1F3C6;</span> Win Rate</span>
           </div>
-        </form>
-      </mat-card-content>
-    </mat-card>
+          <div class="stat-item">
+            <span class="stat-value">{{ driverStats().avgDays ?? '—' }}</span>
+            <span class="stat-label"><span aria-hidden="true">&#x23F1;&#xFE0F;</span> Avg Days</span>
+          </div>
+        </div>
 
-    <!-- Change Password Card -->
-    <mat-card class="info-card">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>lock</mat-icon>
-          Change Password
-        </mat-card-title>
-        <button mat-icon-button (click)="toggleEditPassword()" *ngIf="!editingPassword">
-          <mat-icon>edit</mat-icon>
-        </button>
-      </mat-card-header>
+        <!-- Section navigation -->
+        <nav class="section-nav" aria-label="Profile sections">
+          @for (link of sectionLinks; track link.id) {
+            <button
+              class="nav-link"
+              [class.active]="activeSection() === link.id"
+              (click)="scrollToSection(link.id)"
+              type="button">
+              <span aria-hidden="true">{{ link.emoji }}</span>
+              {{ link.label }}
+            </button>
+          }
+        </nav>
+      </div>
+    </aside>
 
-      <mat-divider></mat-divider>
+    <!-- RIGHT: Content Cards -->
+    <main class="content-column">
 
-      <mat-card-content>
-        <div *ngIf="!editingPassword" class="password-placeholder">
-          <p>••••••••</p>
-          <button mat-stroked-button (click)="toggleEditPassword()">
-            Change Password
+      <!-- Card 1: Profile Information -->
+      <section class="card card-fade" id="profile-information" style="animation-delay: 0.04s" aria-labelledby="profile-info-heading">
+        <div class="card-header">
+          <h2 id="profile-info-heading" class="card-title">
+            <span aria-hidden="true">&#x1F464;</span> Profile Information
+          </h2>
+          <button class="btn-teal-outline btn-pill" (click)="toggleEditProfile()" type="button">
+            {{ editingProfile() ? 'Cancel' : 'Edit' }}
           </button>
         </div>
 
-        <form *ngIf="editingPassword" [formGroup]="passwordForm" class="edit-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Current Password</mat-label>
-            <input matInput formControlName="currentPassword" type="password" autocomplete="current-password" required>
-            <mat-error *ngIf="passwordForm.get('currentPassword')?.hasError('required')">
-              Current password is required
-            </mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>New Password</mat-label>
-            <input matInput formControlName="newPassword" type="password" autocomplete="new-password" required>
-            <mat-hint>At least 8 characters</mat-hint>
-            <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('required')">
-              New password is required
-            </mat-error>
-            <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('minlength')">
-              Password must be at least 8 characters
-            </mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Confirm New Password</mat-label>
-            <input matInput formControlName="confirmPassword" type="password" autocomplete="new-password" required>
-            <mat-error *ngIf="passwordForm.get('confirmPassword')?.hasError('required')">
-              Please confirm your password
-            </mat-error>
-            <mat-error *ngIf="passwordForm.hasError('passwordMismatch')">
-              Passwords do not match
-            </mat-error>
-          </mat-form-field>
-
-          <div class="form-actions">
-            <button mat-button (click)="toggleEditPassword()" [disabled]="savingPassword">
-              Cancel
-            </button>
-            <button mat-raised-button color="primary" (click)="savePassword()" 
-                    [disabled]="passwordForm.invalid || savingPassword">
-              <mat-icon *ngIf="!savingPassword">save</mat-icon>
-              <mat-icon *ngIf="savingPassword" class="spinning">sync</mat-icon>
-              {{ savingPassword ? 'Saving...' : 'Update Password' }}
-            </button>
+        @if (editingProfile()) {
+          <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="edit-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="firstName">First Name *</label>
+                <input id="firstName" formControlName="firstName" type="text" autocomplete="given-name" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label for="lastName">Last Name *</label>
+                <input id="lastName" formControlName="lastName" type="text" autocomplete="family-name" class="form-input" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input id="email" formControlName="email" type="email" autocomplete="email" class="form-input disabled" />
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="phone">Phone</label>
+                <input id="phone" formControlName="phone" type="tel" inputmode="tel" autocomplete="tel" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label for="state">State / Region</label>
+                <input id="state" formControlName="state" type="text" maxlength="2" class="form-input" placeholder="e.g. TX" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="cdlNumber">CDL License #</label>
+              <input id="cdlNumber" formControlName="cdlNumber" type="text" maxlength="50" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label for="bio">Bio</label>
+              <textarea id="bio" formControlName="bio" maxlength="500" rows="3" class="form-input form-textarea" placeholder="Tell us about yourself..."></textarea>
+              <span class="char-counter">{{ bioCharCount() }}/500</span>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-teal btn-pill" [disabled]="savingProfile()">
+                @if (savingProfile()) {
+                  <span class="spinner-sm" aria-hidden="true"></span> Saving...
+                } @else {
+                  Save Changes
+                }
+              </button>
+              <button type="button" class="btn-grey btn-pill" (click)="toggleEditProfile()">Cancel</button>
+            </div>
+          </form>
+        } @else {
+          <div class="info-grid">
+            <div class="info-field">
+              <span class="field-label">Full Name</span>
+              <span class="field-value">{{ fullName() }}</span>
+            </div>
+            <div class="info-field">
+              <span class="field-label">Email</span>
+              <span class="field-value">
+                {{ currentUser()?.email }}
+                @if (emailVerified()) {
+                  <span class="verified-inline"><span aria-hidden="true">&#x2705;</span> Verified</span>
+                }
+              </span>
+            </div>
+            @if (currentUser()?.phone) {
+              <div class="info-field">
+                <span class="field-label"><span aria-hidden="true">&#x1F4F1;</span> Phone</span>
+                <span class="field-value">{{ currentUser()?.phone }}</span>
+              </div>
+            }
+            @if (currentUser()?.cdl_state) {
+              <div class="info-field">
+                <span class="field-label">State / Region</span>
+                <span class="field-value">{{ currentUser()?.cdl_state }}</span>
+              </div>
+            }
+            @if (currentUser()?.cdl_number) {
+              <div class="info-field">
+                <span class="field-label">CDL License #</span>
+                <span class="field-value">{{ currentUser()?.cdl_number }}</span>
+              </div>
+            }
+            <div class="info-field">
+              <span class="field-label">Member Since</span>
+              <span class="field-value">{{ memberSince() }}</span>
+            </div>
+            <div class="info-field full-width">
+              <span class="field-label">Bio</span>
+              <span class="field-value" [class.empty-bio]="!currentUser()?.bio">
+                {{ currentUser()?.bio || 'No bio added yet' }}
+              </span>
+            </div>
           </div>
-        </form>
-      </mat-card-content>
-    </mat-card>
+        }
+      </section>
 
+      <!-- Card 2: Password & Security -->
+      <section class="card card-fade" id="password-security" style="animation-delay: 0.08s" aria-labelledby="password-heading">
+        <div class="card-header">
+          <h2 id="password-heading" class="card-title">
+            <span aria-hidden="true">&#x1F512;</span> Password & Security
+          </h2>
+        </div>
+
+        <div class="password-row">
+          <div>
+            <span class="field-label">Password</span>
+            <span class="password-dots">&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;</span>
+          </div>
+          <button class="btn-teal-outline btn-pill" (click)="togglePasswordForm()" type="button">
+            {{ showPasswordForm() ? 'Cancel' : 'Change Password' }}
+          </button>
+        </div>
+
+        @if (showPasswordForm()) {
+          <form [formGroup]="passwordForm" (ngSubmit)="savePassword()" class="edit-form password-form">
+            <div class="form-group">
+              <label for="currentPassword">Current Password</label>
+              <div class="password-input-wrapper">
+                <input id="currentPassword" formControlName="currentPassword"
+                  [type]="passwordVisibility()['currentPassword'] ? 'text' : 'password'"
+                  autocomplete="current-password" class="form-input" />
+                <button type="button" class="password-toggle" (click)="togglePasswordVisibility('currentPassword')"
+                  aria-label="Toggle current password visibility">
+                  {{ passwordVisibility()['currentPassword'] ? '&#x1F648;' : '&#x1F441;&#xFE0F;' }}
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="newPassword">New Password</label>
+              <div class="password-input-wrapper">
+                <input id="newPassword" formControlName="newPassword"
+                  [type]="passwordVisibility()['newPassword'] ? 'text' : 'password'"
+                  autocomplete="new-password" class="form-input" />
+                <button type="button" class="password-toggle" (click)="togglePasswordVisibility('newPassword')"
+                  aria-label="Toggle new password visibility">
+                  {{ passwordVisibility()['newPassword'] ? '&#x1F648;' : '&#x1F441;&#xFE0F;' }}
+                </button>
+              </div>
+              <span class="hint">At least 8 characters</span>
+            </div>
+            <div class="form-group">
+              <label for="confirmPassword">Confirm New Password</label>
+              <div class="password-input-wrapper">
+                <input id="confirmPassword" formControlName="confirmPassword"
+                  [type]="passwordVisibility()['confirmPassword'] ? 'text' : 'password'"
+                  autocomplete="new-password" class="form-input" />
+                <button type="button" class="password-toggle" (click)="togglePasswordVisibility('confirmPassword')"
+                  aria-label="Toggle confirm password visibility">
+                  {{ passwordVisibility()['confirmPassword'] ? '&#x1F648;' : '&#x1F441;&#xFE0F;' }}
+                </button>
+              </div>
+              @if (passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched) {
+                <span class="field-error">Passwords do not match</span>
+              }
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-teal btn-pill" [disabled]="savingPassword()">
+                @if (savingPassword()) {
+                  <span class="spinner-sm" aria-hidden="true"></span> Updating...
+                } @else {
+                  Update Password
+                }
+              </button>
+              <button type="button" class="btn-grey btn-pill" (click)="togglePasswordForm()">Cancel</button>
+            </div>
+          </form>
+        }
+
+        <!-- 2FA Status -->
+        <div class="twofa-section">
+          <div class="twofa-warning">
+            <span aria-hidden="true">&#x26A0;&#xFE0F;</span>
+            <div>
+              <strong>Two-factor authentication is not enabled.</strong>
+              <p>We recommend enabling biometric authentication for added security.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 3: Notification Preferences -->
+      <section class="card card-fade" id="notifications" style="animation-delay: 0.12s" aria-labelledby="notif-heading">
+        <div class="card-header">
+          <h2 id="notif-heading" class="card-title">
+            <span aria-hidden="true">&#x1F514;</span> Notification Preferences
+          </h2>
+        </div>
+        <p class="card-subtitle">Choose how you want to be notified</p>
+
+        @if (loadingPrefs()) {
+          @for (i of [0, 1, 2, 3, 4]; track i) {
+            <div class="toggle-row skeleton-row">
+              <div class="skeleton-text"></div>
+              <div class="skeleton-toggle"></div>
+            </div>
+          }
+        } @else {
+          @for (toggle of notificationToggles(); track toggle.key; let i = $index) {
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <span aria-hidden="true" class="toggle-emoji">{{ toggle.emoji }}</span>
+                <div>
+                  <span class="toggle-title">{{ toggle.title }}</span>
+                  <span class="toggle-desc">{{ toggle.description }}</span>
+                </div>
+              </div>
+              <button
+                class="toggle-switch"
+                [class.active]="toggle.enabled"
+                role="switch"
+                [attr.aria-checked]="toggle.enabled"
+                tabindex="0"
+                (click)="toggleNotification(i)"
+                (keydown)="onToggleKeydown($event, i)"
+                [attr.aria-label]="toggle.title + ' notifications'">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+          }
+        }
+      </section>
+
+      <!-- Card 4: Linked Accounts -->
+      <section class="card card-fade" id="linked-accounts" style="animation-delay: 0.16s" aria-labelledby="linked-heading">
+        <div class="card-header">
+          <h2 id="linked-heading" class="card-title">
+            <span aria-hidden="true">&#x1F517;</span> Linked Accounts
+          </h2>
+        </div>
+
+        <div class="linked-row">
+          <div class="linked-info">
+            <span aria-hidden="true" class="provider-icon">&#x1F34E;</span>
+            <span class="provider-name">Apple</span>
+          </div>
+          <span class="coming-soon-badge">Coming Soon</span>
+        </div>
+
+        <div class="linked-row">
+          <div class="linked-info">
+            <span class="provider-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            </span>
+            <span class="provider-name">Google</span>
+          </div>
+          <button class="btn-teal-outline btn-pill btn-sm" (click)="connectGoogle()" type="button">Connect</button>
+        </div>
+
+        <div class="linked-row">
+          <div class="linked-info">
+            <span class="provider-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/></svg>
+            </span>
+            <span class="provider-name">Facebook</span>
+          </div>
+          <button class="btn-teal-outline btn-pill btn-sm" (click)="connectFacebook()" type="button">Connect</button>
+        </div>
+      </section>
+
+      <!-- Card 5: Danger Zone -->
+      <section class="card card-danger card-fade" id="danger-zone" style="animation-delay: 0.2s" aria-labelledby="danger-heading">
+        <div class="card-header">
+          <h2 id="danger-heading" class="card-title danger-title">
+            <span aria-hidden="true">&#x26A0;&#xFE0F;</span> Danger Zone
+          </h2>
+        </div>
+        <p class="danger-description">Once you delete your account, there is no going back. Please be certain.</p>
+        <button class="btn-danger btn-pill" (click)="openDeleteModal()" type="button">Delete Account</button>
+      </section>
+
+    </main>
   </div>
+
+  <!-- Delete Confirmation Modal -->
+  @if (showDeleteModal()) {
+    <div class="modal-backdrop" (click)="closeDeleteModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="delete-modal-title" aria-modal="true">
+        <h3 id="delete-modal-title">Are you sure you want to delete your account?</h3>
+        <p>This action cannot be undone. All your data including cases, documents, and payment history will be permanently deleted.</p>
+        <div class="form-group">
+          <label for="deleteConfirm">Type <strong>DELETE</strong> to confirm</label>
+          <input
+            id="deleteConfirm"
+            type="text"
+            class="form-input"
+            aria-label="Type DELETE to confirm"
+            [value]="deleteConfirmText()"
+            (input)="onDeleteInput($event)" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn-grey btn-pill" (click)="closeDeleteModal()" type="button">Cancel</button>
+          <button
+            class="btn-danger btn-pill"
+            [disabled]="deleteConfirmText() !== 'DELETE'"
+            (click)="confirmDelete()"
+            type="button">
+            Confirm Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Toast -->
+  @if (toastMessage()) {
+    <div class="toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'" role="alert">
+      <span>{{ toastMessage() }}</span>
+      <button class="toast-close" (click)="dismissToast()" aria-label="Close notification" type="button">&times;</button>
+    </div>
+  }
 </div>

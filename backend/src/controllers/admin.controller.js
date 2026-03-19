@@ -17,10 +17,12 @@ exports.getUsers = async (req, res) => {
 
     let query = supabase
       .from('users')
-      .select('id, full_name, email, role, created_at')
+      .select('id, full_name, email, role, is_active, created_at')
       .order('created_at', { ascending: false });
 
     if (role) query = query.eq('role', role);
+    if (status === 'active') query = query.eq('is_active', true);
+    else if (status === 'suspended') query = query.eq('is_active', false);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -30,7 +32,7 @@ exports.getUsers = async (req, res) => {
       name: u.full_name,
       email: u.email,
       role: u.role,
-      status: 'active',
+      status: u.is_active === false ? 'suspended' : u.is_active ? 'active' : 'pending',
       createdAt: u.created_at,
       lastLogin: null,
     }));
@@ -636,7 +638,7 @@ exports.getAllCases = async (req, res) => {
       .from('cases')
       .select(`
         id, case_number, status, state, violation_type, violation_date,
-        customer_name, driver_phone, customer_type,
+        customer_name, customer_email, driver_phone, customer_type,
         court_date, next_action_date,
         assigned_operator_id, assigned_attorney_id,
         attorney_price, price_cdl, subscriber_paid, court_fee, court_fee_paid_by,
@@ -698,6 +700,7 @@ exports.getAllCases = async (req, res) => {
       violation_type: c.violation_type,
       violation_date: c.violation_date,
       customer_name: c.customer_name,
+      customer_email: c.customer_email || null,
       driver_phone: c.driver_phone || null,
       customer_type: c.customer_type || null,
       court_date: c.court_date || null,

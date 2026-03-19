@@ -1,0 +1,13 @@
+{
+  "name": "backend-only",
+  "description": "Pipeline for Node.js/Supabase-only changes. Skips UX Expert (Step 2) — no UI involved.",
+  "steps": [0, 1, 3, 4, 5, "5-switch", 6, 7],
+  "nodeIds": ["product-manager", "architect", "dev-lead", "qa-tester", "critic", "critic-gate", "docs-writer", "devops"],
+  "skipNodes": ["ux-expert"],
+  "use_when": "API routes, Supabase migrations, RLS policies, Socket.io handlers, business logic only",
+  "examples": [
+    "Add /tickets/bulk-assign endpoint",
+    "New RLS policy for paralegal role",
+    "Supabase migration for case_status enum update"
+  ]
+}

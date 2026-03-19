@@ -336,3 +336,106 @@ When the conversation approaches context limits and compaction occurs, update `c
 ```
 
 This file is gitignored (session-local state only). Each new session reads it for orientation, then overwrites it with current state at session end.
+
+---
+
+## 11. MASFactory Graph Protocol
+
+> Inspired by MASFactory graph-centric multi-agent orchestration patterns.
+> This section EXTENDS Section 6. The 8-step pipeline in Section 6 remains canonical and is unchanged.
+> Added: Mar 19 2026
+
+### What This Adds
+
+The Section 6 pipeline is now formalised as a **directed computation graph** in `workflow.json`. This gives you:
+
+- **`/vibe-graph [task]`** — describe a task in plain English → see the proposed node sequence → approve → execute automatically
+- **`/run-pipeline [template] [task]`** — skip the proposal and run a known template directly
+- **ComposedGraph templates** — named sub-workflow patterns in `.claude/graphs/` for common task types
+- **Typed edge messages** — every inter-agent handoff has an explicit type (instruction / result / feedback / branch_signal)
+- **critic-gate Switch node** — automatic pass/fail routing based on critic Verdict, with 3-iteration escalation
+- **Execution tracing** — ▶/✓/⚠/⟶ log format so you can see every node transition
+
+### Starting Any Task (Vibe Graphing)
+
+```bash
+# In Claude Code terminal — describe what you want to build:
+/vibe-graph Add attorney availability calendar view — Angular component, Supabase backend, RLS for attorney role
+
+# Claude will:
+# 1. Read workflow.json + CLAUDE.md + claude-progress.txt + current sprint
+# 2. Propose the full node sequence with edge messages
+# 3. Wait for your approval
+# 4. Execute step-by-step with ▶/✓/⚠ tracing
+# 5. Enforce all 4 Quality Gates and human gates at Steps 0 and 7
+```
+
+### ComposedGraph Templates (pick by task type)
+
+| Template | Skips | Use When |
+|---|---|---|
+| `full-feature` | nothing | Angular UI + Node.js/Supabase backend |
+| `backend-only` | ux-expert | API/DB/RLS only, no UI changes |
+| `hotfix` | product-manager, architect, ux-expert | Known BUG-ID from HARD_BUGS_REGISTRY.md |
+| `stripe-integration` | ux-expert | Stripe payments, webhooks, PCI-sensitive work |
+
+### Direct Single-Agent Invocation (no graph needed)
+
+For small tasks not worth running through the full pipeline:
+
+```
+Use the critic agent to review backend/src/controllers/paymentController.js
+Use the qa-tester agent to write tests for the attorney assignment service
+Use the docs-writer agent to update docs/API_SPECIFICATION.md with the new /tickets/bulk endpoint
+Use the architect agent to design the schema for the hearing_schedule table
+```
+
+### Critic-Gate Routing
+
+The critic-gate Switch node parses the critic agent's `### Verdict:` line:
+- **`Verdict: APPROVED`** → proceed to docs-writer (Step 6)
+- **`Verdict: CHANGES REQUIRED`** → route back to dev-lead with blocking issues (max 3 iterations)
+- **`Verdict: BLOCKED`** → route back to dev-lead with critical issues (max 3 iterations)
+- **3 consecutive failures** → escalate to user
+
+This matches the critic agent's actual output format defined in `.claude/agents/critic.md`.
+
+### Execution Trace Format
+
+Every pipeline run logs:
+```
+▶  Step N · [node-id]  starting...
+✓  Step N · [node-id]  done → [one-line summary]
+⚠  HUMAN GATE · [node-id] — awaiting your approval
+   ⟶  PASS (Verdict: APPROVED) → docs-writer
+   ⟶  FAIL (Verdict: CHANGES REQUIRED, iteration: 1/3) → dev-lead
+```
+
+### workflow.json Reference
+
+`workflow.json` in the project root is the source of truth for:
+- Node definitions (id, type, model, subagent path, description)
+- Edge definitions (from, to, type, condition, branch, payload description)
+- Escalation loop specs (max iterations, on_exhaustion)
+- ComposedGraph template references
+
+The graph mirrors Section 6 exactly:
+```
+product-manager (Step 0, Interaction + Human Gate)
+    ↓ instruction
+architect (Step 1)
+    ↓ instruction  [conditional: has_ui_changes]
+ux-expert (Step 2)  ────── skipped if no_ui_changes
+    ↓ instruction
+dev-lead (Step 3)
+    ↓ result
+qa-tester (Step 4)
+    ↓ result
+critic (Step 5)
+    ↓ feedback
+critic-gate (Switch — Verdict: APPROVED = pass, max 3 iterations)
+    ├─ fail → dev-lead (feedback loop per implement-feature.md)
+    └─ pass → docs-writer (Step 6)
+                  ↓ instruction
+              devops (Step 7, Interaction + Human Gate)
+```

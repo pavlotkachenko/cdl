@@ -1,0 +1,22 @@
+{
+  "name": "stripe-integration",
+  "description": "Specialised pipeline for Stripe/payment work. Critic focuses on PCI DSS compliance and webhook security. Gate 4 human approval is mandatory for all financial logic changes.",
+  "steps": [0, 1, 3, 4, 5, "5-switch", 6, 7],
+  "nodeIds": ["product-manager", "architect", "dev-lead", "qa-tester", "critic", "critic-gate", "docs-writer", "devops"],
+  "skipNodes": ["ux-expert"],
+  "use_when": "Stripe payment intents, webhook handlers, subscriptions, refunds, Stripe Elements UI",
+  "criticFocusOverride": [
+    "stripe-signature MUST be validated via stripe.webhooks.constructEvent() before ANY processing",
+    "No raw card data touches the server — Stripe tokenization only (PCI DSS Level 1)",
+    "Payment intents MUST use idempotency keys",
+    "Webhook handler MUST be idempotent — duplicate events must be safe to replay",
+    "All financial logic changes require Gate 4 human approval (CLAUDE.md Section 2 Gate 4)",
+    "Test with: stripe trigger payment_intent.succeeded && stripe trigger payment_intent.payment_failed"
+  ],
+  "examples": [
+    "Add ticket submission payment intent flow",
+    "Handle payment_intent.succeeded webhook → update ticket status",
+    "Implement attorney subscription billing",
+    "Add refund flow for dismissed cases"
+  ]
+}
