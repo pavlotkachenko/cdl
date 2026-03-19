@@ -1,34 +1,39 @@
 // ============================================
-// Case Detail Styles - WITH DOCUMENT VIEWER & LIGHTBOX
+// Case Detail Styles — Sprint 065 CD-4 Redesign
+// Mulish font, no Material, emoji + inline SVG
 // ============================================
 
-$primary-color: #1dad8c;
-$success-color: #28a745;
-$warning-color: #f59e0b;
-$error-color: #ef4444;
-$info-color: #3b82f6;
+$primary: #1dad8c;
+$primary-dark: #178f74;
+$success: #28a745;
+$warning: #f59e0b;
+$error: #ef4444;
+$info: #3b82f6;
+
 $text-dark: #1f2937;
 $text-medium: #6b7280;
 $text-light: #9ca3af;
-$background: #f9fafb;
-$card-bg: #ffffff;
-$border-color: #e5e7eb;
+$bg: #f9fafb;
+$card-bg: #fff;
+$border: #e5e7eb;
 
-// Professional font stack
-$font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-$font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+$font: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$radius: 12px;
+$radius-sm: 8px;
 
+// ── Container ────────────────────────────────────────────────
 .case-detail-container {
   min-height: calc(100vh - 64px);
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  padding: 32px;
+  background: linear-gradient(135deg, $bg 0%, #f3f4f6 100%);
+  padding: 24px 32px;
+  font-family: $font;
 
   @media (max-width: 768px) {
     padding: 16px;
   }
 }
 
-// Loading & Error States
+// ── Loading / Error ──────────────────────────────────────────
 .loading-state,
 .error-state {
   display: flex;
@@ -38,226 +43,314 @@ $font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   min-height: 500px;
   text-align: center;
 
-  mat-icon {
-    font-size: 80px;
-    width: 80px;
-    height: 80px;
-    color: $text-light;
-    margin-bottom: 24px;
-  }
-
-  p, h2 {
-    color: $text-medium;
-    margin: 16px 0;
-  }
+  p, h2 { color: $text-medium; margin: 16px 0; }
 }
 
-// Header Section
-.case-header {
+.error-icon { font-size: 64px; display: block; margin-bottom: 8px; }
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid $border;
+  border-top-color: $primary;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-sm {
+  width: 20px;
+  height: 20px;
+  border: 3px solid $border;
+  border-top-color: $primary;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Buttons ──────────────────────────────────────────────────
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  min-height: 48px;
+  background: linear-gradient(135deg, $primary, $primary-dark);
+  color: #fff;
+  border: none;
+  border-radius: $radius-sm;
+  font-family: $font;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover:not(:disabled) { opacity: 0.9; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  min-height: 48px;
+  background: $card-bg;
+  color: $text-dark;
+  border: 2px solid $border;
+  border-radius: $radius-sm;
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover:not(:disabled) { border-color: $primary; background: #f0fdfa; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-sm { padding: 8px 16px; min-height: 40px; font-size: 13px; }
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid $border;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover:not(:disabled) { background: #f3f4f6; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.btn-danger:hover:not(:disabled) { background: #fee2e2; }
+
+.btn-pay {
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+// ── Case Hero ────────────────────────────────────────────────
+.case-hero {
+  background: $card-bg;
+  padding: 24px 32px;
+  border-radius: $radius;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+
+  @media (max-width: 768px) { padding: 16px; }
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: $text-light;
+  margin-bottom: 16px;
+
+  a {
+    color: $primary;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+
+  .sep { color: $text-light; }
+}
+
+.hero-main {
   display: flex;
   align-items: flex-start;
-  gap: 24px;
-  margin-bottom: 32px;
-  background: white;
-  padding: 32px;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 
-  @media (max-width: 968px) {
-    flex-direction: column;
-  }
+  @media (max-width: 768px) { flex-direction: column; }
+}
 
-  .back-button {
-    margin-top: 4px;
-  }
+.hero-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 
-  .header-info {
-    flex: 1;
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: $text-dark;
+    margin: 0;
+    letter-spacing: -0.02em;
 
-    .title-section {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 8px;
-
-      h1 {
-        font-family: $font-display;
-        font-size: 32px;
-        font-weight: 700;
-        color: $text-dark;
-        margin: 0;
-        letter-spacing: -0.02em;
-
-        @media (max-width: 768px) {
-          font-size: 24px;
-        }
-      }
-
-      mat-chip {
-        font-weight: 600;
-        font-size: 13px;
-        padding: 8px 16px;
-        border-radius: 20px;
-
-        mat-icon {
-          margin-right: 4px;
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-        }
-      }
-    }
-
-    .case-type {
-      font-size: 16px;
-      color: $text-medium;
-      margin: 0;
-      font-weight: 500;
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-
-    @media (max-width: 768px) {
-      width: 100%;
-      
-      button {
-        flex: 1;
-        min-width: 120px;
-      }
-    }
-
-    button {
-      mat-icon {
-        margin-right: 8px;
-      }
-    }
+    @media (max-width: 768px) { font-size: 22px; }
   }
 }
 
-// Alert Card
-.alert-card {
-  margin-bottom: 24px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border: 2px solid #f59e0b;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+.violation-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #f3f4f6;
+  color: $text-medium;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
 
-  .alert-content {
-    display: flex;
-    align-items: center;
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-new       { background: #dbeafe; color: #1e40af; }
+.status-progress  { background: #d1fae5; color: #065f46; }
+.status-warning   { background: #fef3c7; color: #92400e; }
+.status-success   { background: #d1fae5; color: #065f46; }
+.status-default   { background: #f3f4f6; color: $text-medium; }
+
+.stat-strip {
+  display: flex;
+  gap: 32px;
+
+  @media (max-width: 480px) {
     gap: 16px;
-
-    .alert-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: #f59e0b;
-    }
-
-    strong {
-      font-size: 18px;
-      color: #92400e;
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    p {
-      color: #78350f;
-      margin: 0;
-      font-size: 15px;
-    }
+    flex-wrap: wrap;
   }
 }
 
-// Main Grid
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: $text-dark;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: $text-light;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+// ── Alert Cards ──────────────────────────────────────────────
+.alert-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-radius: $radius;
+  margin-bottom: 24px;
+
+  .alert-icon { font-size: 32px; flex-shrink: 0; }
+
+  .alert-body {
+    flex: 1;
+    strong { display: block; font-size: 16px; margin-bottom: 2px; }
+    p { margin: 0; font-size: 14px; }
+  }
+
+  @media (max-width: 768px) { flex-wrap: wrap; }
+}
+
+.alert-court {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 2px solid $warning;
+  strong { color: #92400e; }
+  p { color: #78350f; }
+}
+
+.alert-pay {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  border: 2px solid #8b5cf6;
+  strong { color: #5b21b6; }
+  p { color: #6d28d9; }
+}
+
+// ── Main Grid ────────────────────────────────────────────────
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 24px;
 
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr;
-  }
+  @media (max-width: 1200px) { grid-template-columns: 1fr; }
 }
 
-// Cards
-.info-card,
-.documents-card,
-.comments-card,
-.attorney-card,
-.timeline-card,
-.actions-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
+// ── Generic Card ─────────────────────────────────────────────
+.card {
+  background: $card-bg;
+  border-radius: $radius;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  margin-bottom: 24px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
 
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
+  &:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+}
 
-  mat-card-header {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    padding: 20px 24px;
-    border-radius: 12px 12px 0 0;
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border-bottom: 1px solid $border;
 
-    mat-card-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-family: $font-display;
-      font-size: 18px;
-      font-weight: 700;
-      color: $text-dark;
-      letter-spacing: -0.01em;
-
-      mat-icon {
-        color: $primary-color;
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
-    }
-
-    button {
-      margin-left: auto;
-    }
-  }
-
-  mat-card-content {
-    padding: 24px;
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0;
   }
 }
 
-// Info Card
+.card-body { padding: 24px; }
+
+// ── Info Grid ────────────────────────────────────────────────
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
 
   .info-item {
+    padding: 16px;
+    border: 1px solid $border;
+    margin: -1px 0 0 -1px;
+
     label {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: $text-light;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     p {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 500;
       color: $text-dark;
       margin: 0;
@@ -267,12 +360,14 @@ $font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 
 .description-section,
 .resolution-section {
-  margin-top: 24px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid $border;
 
   label {
     display: block;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: $text-light;
@@ -289,413 +384,338 @@ $font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 
 .resolution-text {
   background: #ecfdf5;
-  border-left: 4px solid $success-color;
-  padding: 16px;
-  border-radius: 8px;
+  border-left: 4px solid $success;
+  padding: 12px 16px;
+  border-radius: $radius-sm;
+  color: #065f46 !important;
   font-weight: 500;
-  color: #065f46;
 }
 
-// Documents
-.no-documents {
+// ── Documents ────────────────────────────────────────────────
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  color: $text-medium;
+}
+
+.empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 40px 20px;
 
-  mat-icon {
-    font-size: 80px;
-    width: 80px;
-    height: 80px;
-    color: $text-light;
-    opacity: 0.5;
-    margin-bottom: 16px;
-  }
-
-  p {
-    color: $text-medium;
-    margin-bottom: 24px;
-  }
+  .empty-icon { font-size: 48px; display: block; margin-bottom: 12px; opacity: 0.6; }
+  p { color: $text-medium; margin-bottom: 16px; }
 }
 
 .documents-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  transition: border-color 0.2s, background 0.2s;
 
-  .document-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    border: 2px solid $border-color;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  &:hover { border-color: $primary; background: #f0fdfa; }
 
-    &:hover {
-      border-color: $primary-color;
-      background: #f0fdfa;
-      transform: translateX(4px);
-    }
+  .doc-icon { font-size: 24px; flex-shrink: 0; }
 
-    .doc-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      color: $primary-color;
-    }
-
-    .doc-info {
-      flex: 1;
-
-      .doc-name {
-        font-weight: 600;
-        color: $text-dark;
-        margin: 0 0 4px 0;
-        font-size: 15px;
-      }
-
-      .doc-meta {
-        font-size: 13px;
-        color: $text-light;
-        margin: 0;
-      }
-    }
-
-    .doc-actions {
-      display: flex;
-      gap: 4px;
-    }
-  }
-}
-
-// Comments
-.comments-list {
-  max-height: 500px;
-  overflow-y: auto;
-  margin-bottom: 24px;
-
-  .comment-item {
-    padding: 20px;
-    border-left: 4px solid $border-color;
-    margin-bottom: 16px;
-    background: #f9fafb;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-
-    &.staff-comment {
-      border-left-color: $primary-color;
-      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-    }
-
-    &:hover {
-      transform: translateX(4px);
-    }
-
-    .comment-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-
-      .comment-author {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 600;
-        color: $text-dark;
-
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-          color: $primary-color;
-        }
-      }
-
-      .comment-time {
-        font-size: 13px;
-        color: $text-light;
-      }
-    }
-
-    .comment-text {
-      font-size: 15px;
-      line-height: 1.6;
-      color: $text-medium;
-      margin: 0;
-    }
-  }
-}
-
-.no-comments {
-  text-align: center;
-  padding: 40px 20px;
-
-  mat-icon {
-    font-size: 60px;
-    width: 60px;
-    height: 60px;
-    color: $text-light;
-    opacity: 0.5;
-    margin-bottom: 12px;
-  }
-
-  p {
-    color: $text-medium;
-    margin: 0;
-  }
-}
-
-.comment-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
-
-  .full-width {
-    width: 100%;
-  }
-
-  button {
-    align-self: flex-end;
-
-    mat-icon {
-      margin-right: 8px;
-    }
-  }
-}
-
-// Attorney Card
-.attorney-info {
-  display: flex;
-  gap: 20px;
-
-  .attorney-avatar {
-    mat-icon {
-      font-size: 80px;
-      width: 80px;
-      height: 80px;
-      color: $primary-color;
-    }
-  }
-
-  .attorney-details {
+  .doc-info {
     flex: 1;
+    min-width: 0;
 
-    h3 {
-      font-size: 20px;
-      font-weight: 700;
+    .doc-name {
+      font-size: 14px;
+      font-weight: 600;
       color: $text-dark;
-      margin: 0 0 4px 0;
+      margin: 0 0 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    p {
-      color: $text-medium;
-      margin: 0 0 16px 0;
-    }
-
-    .attorney-contact {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .doc-meta { font-size: 12px; color: $text-light; margin: 0; }
   }
+
+  .doc-actions { display: flex; gap: 4px; flex-shrink: 0; }
 }
 
-// Timeline
-.timeline {
-  position: relative;
-
-  .timeline-item {
-    position: relative;
-    padding-left: 60px;
-    padding-bottom: 32px;
-
-    .timeline-marker {
-      position: absolute;
-      left: 0;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: white;
-      border: 3px solid $border-color;
-      z-index: 2;
-
-      mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-        color: $text-medium;
-      }
-
-      &.status-progress {
-        border-color: $warning-color;
-        background: #fef3c7;
-        
-        mat-icon {
-          color: #f59e0b;
-        }
-      }
-
-      &.status-success {
-        border-color: $success-color;
-        background: #ecfdf5;
-        
-        mat-icon {
-          color: $success-color;
-        }
-      }
-
-      &.status-error {
-        border-color: $error-color;
-        background: #fee2e2;
-        
-        mat-icon {
-          color: $error-color;
-        }
-      }
-
-      &.status-new,
-      &.status-submitted {
-        border-color: $info-color;
-        background: #dbeafe;
-        
-        mat-icon {
-          color: $info-color;
-        }
-      }
-    }
-
-    .timeline-line {
-      position: absolute;
-      left: 23px;
-      top: 48px;
-      width: 3px;
-      height: calc(100% - 48px);
-      background: linear-gradient(180deg, $border-color 0%, transparent 100%);
-      z-index: 1;
-    }
-
-    .timeline-content {
-      h4 {
-        font-size: 16px;
-        font-weight: 700;
-        color: $text-dark;
-        margin: 0 0 4px 0;
-      }
-
-      .timeline-date {
-        font-size: 13px;
-        color: $text-light;
-        margin: 0 0 8px 0;
-      }
-
-      .timeline-note {
-        font-size: 14px;
-        color: $text-medium;
-        margin: 0;
-        background: #f9fafb;
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 3px solid $primary-color;
-      }
-    }
-  }
-}
-
-.no-timeline {
+.upload-hint {
+  margin-top: 12px;
   text-align: center;
-  padding: 40px 20px;
 
-  mat-icon {
-    font-size: 60px;
-    width: 60px;
-    height: 60px;
-    color: $text-light;
-    opacity: 0.5;
-    margin-bottom: 12px;
+  p { font-size: 12px; color: $text-light; margin: 0; }
+}
+
+// ── Attorney Card ────────────────────────────────────────────
+.attorney-profile {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.attorney-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $primary, #0d9488);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.attorney-details {
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 2px;
   }
 
-  p {
+  .attorney-role {
+    font-size: 13px;
     color: $text-medium;
-    margin: 0;
   }
 }
 
-// Quick Actions
+.attorney-stats {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  .attorney-stat {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+
+    &:not(:last-child) { border-right: 1px solid $border; }
+
+    .stat-value {
+      display: block;
+      font-size: 20px;
+      font-weight: 800;
+      color: $primary;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: $text-light;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+  }
+}
+
+.attorney-actions {
+  display: flex;
+  gap: 8px;
+}
+
+// ── Status Timeline ──────────────────────────────────────────
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 48px;
+  padding-bottom: 24px;
+
+  &:last-child { padding-bottom: 0; }
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $card-bg;
+  border: 2px solid $border;
+  font-size: 14px;
+  z-index: 2;
+}
+
+.timeline-done .timeline-marker {
+  background: #ecfdf5;
+  border-color: $success;
+}
+
+.timeline-current .timeline-marker {
+  background: #dbeafe;
+  border-color: $info;
+}
+
+.current-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: $info;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+.timeline-line {
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  width: 2px;
+  height: calc(100% - 32px);
+  background: $border;
+  z-index: 1;
+}
+
+.timeline-done .timeline-line { background: $success; }
+
+.timeline-content {
+  h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 2px;
+  }
+
+  .timeline-by {
+    font-size: 12px;
+    color: $text-medium;
+    margin: 0 0 2px;
+  }
+
+  .timeline-date {
+    font-size: 12px;
+    color: $text-light;
+    margin: 0 0 6px;
+  }
+
+  .timeline-note {
+    font-size: 13px;
+    color: $text-medium;
+    background: #f9fafb;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid $primary;
+    margin: 4px 0 0;
+  }
+}
+
+// ── Quick Actions ────────────────────────────────────────────
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 8px;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-
-  .action-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 16px;
-    font-weight: 500;
-
-    mat-icon {
-      margin: 0 !important;
-    }
-  }
+  @media (max-width: 768px) { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 480px) { grid-template-columns: repeat(2, 1fr); }
 }
 
-// ============================================
-// NEW: Modal Overlay Styles for Document Viewer & Lightbox
-// ============================================
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 8px;
+  min-height: 48px;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  font-family: $font;
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-dark;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-decoration: none;
 
+  .action-icon { font-size: 20px; }
+
+  &:hover:not(:disabled) { border-color: $primary; background: #f0fdfa; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+// ── Secure Footer ────────────────────────────────────────────
+.secure-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  margin-top: 32px;
+  color: $text-light;
+  font-size: 12px;
+
+  svg { flex-shrink: 0; }
+}
+
+// ── Toast ────────────────────────────────────────────────────
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: $text-dark;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: $radius-sm;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+// ── Modal Overlay ────────────────────────────────────────────
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.85);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.3s ease;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
 }
 
 .modal-container {
   width: 90%;
   height: 90%;
   max-width: 1200px;
-  background: white;
-  border-radius: 12px;
+  background: $card-bg;
+  border-radius: $radius;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  animation: slideUp 0.3s ease;
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(30px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
 
   @media (max-width: 768px) {
     width: 100%;
@@ -705,25 +725,247 @@ $font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
 }
 
-// Status Chips
-.status-new,
-.status-submitted {
-  background: #dbeafe !important;
-  color: #1e40af !important;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.status-progress,
-.status-warning {
-  background: #fef3c7 !important;
-  color: #92400e !important;
+// ── CD-6: Edit mode ────────────────────────────────────────────
+.edit-active {
+  border-color: $info !important;
+  background: #f0f9ff;
 }
 
-.status-success {
-  background: #d1fae5 !important;
-  color: #065f46 !important;
+.edit-input,
+.edit-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid $info;
+  border-radius: $radius-sm;
+  font-family: $font;
+  font-size: 14px;
+  color: $text-dark;
+  background: #fff;
+  resize: vertical;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.1);
+  }
 }
 
-.status-error {
-  background: #fee2e2 !important;
-  color: #991b1b !important;
+.edit-textarea { min-height: 80px; }
+
+// ── CD-5: Messaging ───────────────────────────────────────────
+.privilege-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: $radius-sm;
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 16px;
+}
+
+.message-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: $radius-sm;
+}
+
+.message-staff {
+  background: #f0fdfa;
+  border-left: 3px solid $primary;
+}
+
+.message-driver {
+  background: #f3f4f6;
+  margin-left: 40px;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.message-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: $primary;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.message-sender {
+  font-size: 13px;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.message-role-badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #e5e7eb;
+  color: $text-medium;
+}
+
+.badge-attorney { background: #d1fae5; color: #065f46; }
+.badge-driver { background: #dbeafe; color: #1e40af; }
+
+.message-time {
+  font-size: 11px;
+  color: $text-light;
+  margin-left: auto;
+}
+
+.message-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: $text-dark;
+  white-space: pre-wrap;
+}
+
+.message-form {
+  border-top: 1px solid $border;
+  padding-top: 16px;
+}
+
+.form-error {
+  color: $error;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.message-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.message-textarea {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid $border;
+  border-radius: $radius-sm;
+  font-family: $font;
+  font-size: 14px;
+  color: $text-dark;
+  resize: vertical;
+  min-height: 48px;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.1);
+  }
+}
+
+.btn-send {
+  padding: 10px 16px;
+  min-height: 48px;
+  flex-shrink: 0;
+}
+
+.char-counter {
+  display: block;
+  font-size: 11px;
+  color: $text-light;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.char-warning { color: $warning; }
+
+// ── CD-5: Activity Log ────────────────────────────────────────
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid $border;
+  font-size: 13px;
+
+  &:last-child { border-bottom: none; }
+}
+
+.activity-time {
+  flex-shrink: 0;
+  color: $text-light;
+  font-size: 12px;
+  min-width: 130px;
+}
+
+.activity-desc {
+  flex: 1;
+  color: $text-dark;
+  font-weight: 500;
+}
+
+.activity-user {
+  color: $text-medium;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.btn-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  color: $primary;
+  font-family: $font;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0 0;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ── Screen reader only ────────────────────────────────────────
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

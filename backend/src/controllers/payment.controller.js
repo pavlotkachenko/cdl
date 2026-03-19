@@ -15,14 +15,14 @@ const webhookService = require('../services/webhook.service');
  */
 const createPaymentIntent = async (req, res) => {
   try {
-    const { ticketId, amount, currency, metadata } = req.body;
+    const { caseId, amount, currency, metadata } = req.body;
     const userId = req.user.id;
 
     // Validate required fields
-    if (!ticketId || !amount) {
+    if (!caseId || !amount) {
       return res.status(400).json({
         success: false,
-        message: 'Ticket ID and amount are required'
+        message: 'Case ID and amount are required'
       });
     }
 
@@ -34,7 +34,7 @@ const createPaymentIntent = async (req, res) => {
     }
 
     const result = await paymentService.createPaymentIntent({
-      ticketId,
+      caseId,
       userId,
       amount,
       currency: currency || 'USD',
@@ -72,22 +72,22 @@ const confirmPayment = async (req, res) => {
     const payment = await paymentService.confirmPayment(paymentIntentId);
 
     // Non-blocking invoice email to driver after payment confirmation
-    if (payment?.ticketId && payment?.userId) {
+    if (payment?.case_id && payment?.user_id) {
       supabase
         .from('cases').select('case_number, customer_name, attorney_price, driver_id')
-        .eq('id', payment.ticketId).single()
+        .eq('id', payment.case_id).single()
         .then(({ data: caseRow }) => {
           if (!caseRow) return;
           return supabase.from('users').select('email, full_name').eq('id', caseRow.driver_id).single()
             .then(({ data: driver }) => {
               if (!driver) return;
-              const invoiceNumber = `INV-${(caseRow.case_number || payment.ticketId).toString().slice(0, 8).toUpperCase()}`;
+              const invoiceNumber = `INV-${(caseRow.case_number || payment.case_id).toString().slice(0, 8).toUpperCase()}`;
               emailService.sendInvoiceEmail({
                 name: driver.full_name || caseRow.customer_name,
                 email: driver.email,
                 invoiceNumber,
                 amount: parseFloat(caseRow.attorney_price || 0),
-                caseId: payment.ticketId,
+                caseId: payment.case_id,
               }).catch(err => console.error('[confirmPayment] Invoice email failed:', err));
             });
         })
@@ -137,50 +137,117 @@ const getPayment = async (req, res) => {
 };
 
 /**
- * Get payments for a ticket
- * GET /api/payments/ticket/:ticketId
+ * Get payments for a case
+ * GET /api/payments/case/:caseId
  */
-const getTicketPayments = async (req, res) => {
+const getCasePayments = async (req, res) => {
   try {
-    const { ticketId } = req.params;
-    const payments = await paymentService.getTicketPayments(ticketId);
+    const { caseId } = req.params;
+    const payments = await paymentService.getCasePayments(caseId);
 
     res.json({
       success: true,
       data: payments
     });
   } catch (error) {
-    console.error('Get ticket payments error:', error);
+    console.error('Get case payments error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to retrieve ticket payments'
+      message: error.message || 'Failed to retrieve case payments'
     });
   }
 };
 
 /**
- * Get user payments
+ * Get user payments (enhanced with filtering, sorting, pagination)
  * GET /api/payments/user/me
  */
 const getUserPayments = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { status, limit } = req.query;
+    const {
+      status, date_from, date_to, amount_min, amount_max, search,
+      sort_by, sort_dir, page, per_page
+    } = req.query;
 
-    const payments = await paymentService.getUserPayments(userId, {
+    const result = await paymentService.getUserPayments(userId, {
       status,
-      limit: limit ? parseInt(limit) : undefined
+      date_from,
+      date_to,
+      amount_min: amount_min ? parseFloat(amount_min) : undefined,
+      amount_max: amount_max ? parseFloat(amount_max) : undefined,
+      search,
+      sort_by: sort_by || 'created_at',
+      sort_dir: sort_dir || 'desc',
+      page: page ? parseInt(page) : 1,
+      per_page: per_page ? parseInt(per_page) : 10,
     });
 
     res.json({
       success: true,
-      data: payments
+      data: result.payments,
+      pagination: result.pagination
     });
   } catch (error) {
     console.error('Get user payments error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to retrieve user payments'
+    });
+  }
+};
+
+/**
+ * Get user payment stats (KPI cards)
+ * GET /api/payments/user/me/stats
+ */
+const getUserPaymentStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stats = await paymentService.getUserPaymentStats(userId);
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Get user payment stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to retrieve payment statistics'
+    });
+  }
+};
+
+/**
+ * Retry a failed payment
+ * POST /api/payments/:id/retry
+ */
+const retryPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const result = await paymentService.retryPayment(id, userId);
+
+    res.status(201).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Retry payment error:', error);
+
+    const statusMap = {
+      'Payment not found or access denied': 403,
+      'Only failed payments can be retried': 400,
+      'A pending or succeeded payment already exists for this case': 409,
+      'Please wait at least 60 seconds between retry attempts': 429,
+    };
+    const status = statusMap[error.message] || 500;
+
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Failed to retry payment'
     });
   }
 };
@@ -411,7 +478,127 @@ const createPaymentPlan = async (req, res) => {
     res.status(201).json({ success: true, data: { planId: plan.id, weeks, weeklyAmount: weekly, schedule: scheduleRows } });
   } catch (err) {
     console.error('createPaymentPlan error:', err);
-    res.status(500).json({ success: false, message: err.message || 'Failed to create payment plan' });
+    const isTableMissing = err?.code === '42P01' || (err?.message || '').includes('schema cache');
+    const message = isTableMissing
+      ? 'Installment plans are not yet available. Please use Pay in Full.'
+      : 'Failed to create payment plan. Please try again.';
+    res.status(500).json({ success: false, message });
+  }
+};
+
+/**
+ * Get enriched payment confirmation data
+ * GET /api/payments/confirmation/:paymentIntentId
+ */
+const getPaymentConfirmation = async (req, res) => {
+  try {
+    const { paymentIntentId } = req.params;
+    const userId = req.user.id;
+
+    const data = await paymentService.getPaymentConfirmation(paymentIntentId, userId);
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Get payment confirmation error:', error);
+    const statusMap = {
+      'Payment not found': 404,
+      'Access denied': 403,
+    };
+    const status = statusMap[error.message] || 500;
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Failed to retrieve payment confirmation',
+    });
+  }
+};
+
+/**
+ * Download payment receipt (redirect to Stripe or generate PDF)
+ * GET /api/payments/:id/receipt
+ */
+const downloadReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const payment = await paymentService.getPayment(id);
+
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    if (payment.user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // If Stripe receipt URL exists, redirect
+    if (payment.receipt_url) {
+      return res.redirect(302, payment.receipt_url);
+    }
+
+    // Generate PDF with pdfkit
+    const { data: caseData } = await supabase
+      .from('cases')
+      .select('case_number')
+      .eq('id', payment.case_id)
+      .maybeSingle();
+
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="receipt-${id}.pdf"`);
+    doc.pipe(res);
+
+    doc.fontSize(20).font('Helvetica-Bold').text('CDL Advisor', { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text('Payment Receipt', { align: 'center' });
+    doc.moveDown(2);
+
+    doc.fontSize(11).font('Helvetica-Bold').text('Amount Paid:');
+    doc.font('Helvetica').text(`$${parseFloat(payment.amount).toFixed(2)} ${payment.currency || 'USD'}`);
+    doc.moveDown(0.5);
+
+    doc.font('Helvetica-Bold').text('Transaction ID:');
+    doc.font('Helvetica').text(payment.stripe_charge_id || payment.stripe_payment_intent_id || 'N/A');
+    doc.moveDown(0.5);
+
+    doc.font('Helvetica-Bold').text('Date:');
+    doc.font('Helvetica').text(
+      payment.paid_at
+        ? new Date(payment.paid_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
+        : 'N/A'
+    );
+    doc.moveDown(0.5);
+
+    if (payment.card_brand || payment.card_last4) {
+      doc.font('Helvetica-Bold').text('Payment Method:');
+      doc.font('Helvetica').text(
+        `${(payment.card_brand || 'Card').toUpperCase()} ending in ${payment.card_last4 || '****'}`
+      );
+      doc.moveDown(0.5);
+    }
+
+    if (caseData?.case_number) {
+      doc.font('Helvetica-Bold').text('Case Number:');
+      doc.font('Helvetica').text(caseData.case_number);
+      doc.moveDown(0.5);
+    }
+
+    doc.font('Helvetica-Bold').text('Status:');
+    doc.font('Helvetica').text(payment.status === 'succeeded' ? 'Confirmed' : payment.status);
+    doc.moveDown(2);
+
+    doc.fontSize(9).fillColor('#666').text(
+      'Secured by Stripe \u00B7 AES-256 encrypted \u00B7 PCI DSS compliant',
+      { align: 'center' }
+    );
+
+    doc.end();
+  } catch (error) {
+    console.error('Download receipt error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to generate receipt' });
+    }
   }
 };
 
@@ -419,12 +606,16 @@ module.exports = {
   createPaymentIntent,
   confirmPayment,
   getPayment,
-  getTicketPayments,
+  getCasePayments,
   getUserPayments,
+  getUserPaymentStats,
+  retryPayment,
   processRefund,
   handleWebhook,
   getPaymentStats,
   getStripeConfig,
   getPaymentPlanOptions,
   createPaymentPlan,
+  getPaymentConfirmation,
+  downloadReceipt,
 };

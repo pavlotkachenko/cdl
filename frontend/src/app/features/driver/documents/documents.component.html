@@ -1,54 +1,39 @@
-<!-- Documents Page Template -->
 <div class="documents-page">
-
   <!-- Page Header -->
   <div class="page-header">
-    <div class="header-content">
-      <div class="header-title">
-        <mat-icon>folder</mat-icon>
-        <h1>Documents</h1>
+    <div>
+      <div class="page-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        Case Files
       </div>
-      <p>Upload and manage case documents, evidence, and correspondence</p>
+      <h1 class="page-title">Documents</h1>
+      <p class="page-sub">Upload and manage case documents, evidence, and correspondence</p>
     </div>
-    <button mat-raised-button color="primary" (click)="openUploadDialog()">
-      <mat-icon>cloud_upload</mat-icon>
-      Upload Documents
+    <button class="btn btn-primary" (click)="toggleUploadPanel()" [attr.aria-expanded]="showUploadPanel()">
+      @if (showUploadPanel()) {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Close
+      } @else {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+        Upload Documents
+      }
     </button>
   </div>
 
-  <!-- Tabs -->
-  <mat-tab-group [(selectedIndex)]="selectedTabIndex">
-    
-    <!-- Upload Tab -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon>cloud_upload</mat-icon>
-        Upload
-      </ng-template>
-      
-      <div class="tab-content">
-        <app-document-upload
-          [caseId]="caseId"
-          (uploaded)="onDocumentsUploaded($event)">
-        </app-document-upload>
-      </div>
-    </mat-tab>
+  <!-- Upload Panel (toggleable) -->
+  @if (showUploadPanel()) {
+    <div class="upload-panel-wrap">
+      <app-document-upload
+        [caseId]="caseId()"
+        (uploaded)="onDocumentsUploaded($event)"
+        (closePanel)="toggleUploadPanel()" />
+    </div>
+  }
 
-    <!-- Documents List Tab -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon>folder_open</mat-icon>
-        All Documents
-      </ng-template>
-      
-      <div class="tab-content">
-        <app-documents-list
-          [caseId]="caseId"
-          (documentSelected)="onDocumentSelected($event)">
-        </app-documents-list>
-      </div>
-    </mat-tab>
-
-  </mat-tab-group>
-
+  <!-- Documents List -->
+  <div class="documents-content">
+    <app-documents-list
+      [caseId]="caseId()"
+      [refreshTrigger]="refreshTrigger()" />
+  </div>
 </div>

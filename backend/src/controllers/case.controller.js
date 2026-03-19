@@ -12,6 +12,7 @@ const oneSignalService = require('../services/onesignal.service');
 const assignmentService = require('../services/assignment.service');
 const webhookService = require('../services/webhook.service');
 const statusWorkflow = require('../services/status-workflow.service');
+const workflowService = require('../services/workflow.service');
 
 /**
  * PUBLIC SUBMIT
@@ -84,30 +85,44 @@ exports.createCase = async (req, res) => {
       violation_date,
       violation_type,
       violation_details,
-      carrier
+      carrier,
+      citation_number,
+      fine_amount,
+      alleged_speed
     } = req.body;
-    
+
     const driver_id = req.user.id;
     const who_sent = req.user.role === 'driver' ? 'driver' : 'carrier';
-    
+
+    // Build insert payload
+    const insertPayload = {
+      driver_id,
+      customer_name,
+      driver_phone,
+      customer_type,
+      state,
+      town,
+      county,
+      violation_date,
+      violation_type,
+      violation_details,
+      carrier,
+      who_sent,
+      status: 'new'
+    };
+
+    // Add new optional fields
+    if (citation_number) insertPayload.citation_number = citation_number;
+    if (fine_amount !== undefined && fine_amount !== null) insertPayload.fine_amount = fine_amount;
+    // alleged_speed only applies to speeding violations
+    if (violation_type === 'speeding' && alleged_speed !== undefined && alleged_speed !== null) {
+      insertPayload.alleged_speed = alleged_speed;
+    }
+
     // Create the case
     const { data: newCase, error } = await supabase
       .from('cases')
-      .insert([{
-        driver_id,
-        customer_name,
-        driver_phone,
-        customer_type,
-        state,
-        town,
-        county,
-        violation_date,
-        violation_type,
-        violation_details,
-        carrier,
-        who_sent,
-        status: 'new'
-      }])
+      .insert([insertPayload])
       .select()
       .single();
     
@@ -326,13 +341,13 @@ exports.getCaseById = async (req, res) => {
         operator:assigned_operator_id(id, full_name, email),
         attorney:assigned_attorney_id(id, full_name, email, phone),
         files:case_files(id, file_name, file_url, file_type, uploaded_at),
-        subscription:driver_id(subscriptions(*))
+        subscription:driver_id(subscriptions!subscriptions_user_id_fkey(*))
       `)
       .eq('id', id)
       .single();
-    
+
     if (error) throw error;
-    
+
     if (!data) {
       return res.status(404).json({ error: 'Case not found' });
     }
@@ -340,6 +355,41 @@ exports.getCaseById = async (req, res) => {
     // Mask driver phone for attorneys (last 4 digits only)
     if (req.user.role === 'attorney' && data.driver?.phone) {
       data.driver = { ...data.driver, phone: '***-***-' + String(data.driver.phone).slice(-4) };
+    }
+
+    // Enrich attorney with derived stats — separate query so a missing column never breaks case fetch
+    if (data.attorney?.id) {
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('success_rate, current_cases_count, created_at')
+          .eq('id', data.attorney.id)
+          .maybeSingle();
+
+        if (profile) {
+          const joinedYear = profile.created_at
+            ? new Date(profile.created_at).getFullYear()
+            : new Date().getFullYear();
+          data.attorney = {
+            ...data.attorney,
+            win_rate: profile.success_rate != null ? Math.round(parseFloat(profile.success_rate) * 100) : 0,
+            years_experience: Math.max(1, new Date().getFullYear() - joinedYear),
+            cases_won: profile.current_cases_count || 0,
+          };
+        } else {
+          data.attorney = { ...data.attorney, win_rate: 0, years_experience: 1, cases_won: 0 };
+        }
+      } catch {
+        // Stats are optional — never let this break the case response
+        data.attorney = { ...data.attorney, win_rate: 0, years_experience: 1, cases_won: 0 };
+      }
+    }
+
+    // Enrich with status history — graceful fallback to empty array on failure
+    try {
+      data.statusHistory = await workflowService.getCaseStatusHistory(id);
+    } catch {
+      data.statusHistory = [];
     }
 
     res.json({ case: data });
@@ -367,7 +417,18 @@ exports.updateCase = async (req, res) => {
     delete updates.assigned_operator_id;
     delete updates.assigned_attorney_id;
     delete updates.updated_at;
-    
+
+    // CD-6: Drivers can only edit description and location
+    if (req.user.role === 'driver') {
+      const DRIVER_EDITABLE = ['description', 'location'];
+      const disallowed = Object.keys(updates).filter(k => !DRIVER_EDITABLE.includes(k));
+      if (disallowed.length > 0) {
+        return res.status(403).json({
+          error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description and location' }
+        });
+      }
+    }
+
     const { data, error } = await supabase
       .from('cases')
       .update(updates)
@@ -1178,10 +1239,9 @@ exports.createCasePayment = async (req, res) => {
     if (!caseData.attorney_price || caseData.attorney_price <= 0) {
       return res.status(400).json({ error: 'Attorney fee has not been set for this case yet' });
     }
-
     const paymentService = require('../services/payment.service');
     const result = await paymentService.createPaymentIntent({
-      ticketId: id,
+      caseId: id,
       userId: req.user.id,
       amount: caseData.attorney_price,
       currency: 'USD',
@@ -1359,5 +1419,197 @@ async function createNotification(userId, caseId, title, message, type) {
     console.error('Create notification error:', error);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────
+// CD-2: Driver-accessible case messaging endpoints
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/cases/:id/conversation
+ * Get (or create) the conversation for a case.
+ * Access: anyone who can access the case (driver, operator, attorney, admin)
+ */
+exports.getCaseConversation = async (req, res) => {
+  try {
+    const { id: caseId } = req.params;
+    const userId = req.user.id;
+
+    // Verify case exists
+    const { data: caseData, error: caseErr } = await supabase
+      .from('cases')
+      .select('id, case_number, driver_id, assigned_operator_id')
+      .eq('id', caseId)
+      .single();
+
+    if (caseErr || !caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    // Look for an existing conversation for this case
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return res.json({ success: true, data: existing[0] });
+    }
+
+    // No conversation yet — create one
+    const driverId = caseData.driver_id;
+    if (!driverId) {
+      return res.status(400).json({ error: { code: 'NO_DRIVER', message: 'Case has no linked driver' } });
+    }
+
+    const { data: created, error: createErr } = await supabase
+      .from('conversations')
+      .insert([{
+        case_id: caseId,
+        driver_id: driverId,
+        attorney_id: userId,
+        accessed_by: [userId],
+      }])
+      .select('*')
+      .single();
+
+    if (createErr) {
+      return res.status(500).json({ error: { code: 'CREATE_FAILED', message: createErr.message } });
+    }
+
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    console.error('getCaseConversation error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to get conversation' } });
+  }
+};
+
+/**
+ * GET /api/cases/:id/messages
+ * Get messages for the case conversation.
+ * Access: anyone who can access the case
+ */
+exports.getCaseMessages = async (req, res) => {
+  try {
+    const { id: caseId } = req.params;
+
+    // Find conversation
+    const { data: convos } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!convos || convos.length === 0) {
+      return res.json({ success: true, data: { messages: [], total: 0 } });
+    }
+
+    const conversationId = convos[0].id;
+
+    // Fetch messages
+    const { data: messages, error: msgErr, count } = await supabase
+      .from('messages')
+      .select('*, sender:users!sender_id(user_id, full_name, role)', { count: 'exact' })
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (msgErr) {
+      return res.status(500).json({ error: { code: 'QUERY_FAILED', message: msgErr.message } });
+    }
+
+    res.json({ success: true, data: { messages: messages || [], total: count || 0, conversationId } });
+  } catch (error) {
+    console.error('getCaseMessages error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to get messages' } });
+  }
+};
+
+/**
+ * POST /api/cases/:id/messages
+ * Send a message in the case conversation. Creates conversation if needed.
+ * Access: anyone who can access the case
+ */
+exports.sendCaseMessage = async (req, res) => {
+  try {
+    const { id: caseId } = req.params;
+    const { content } = req.body;
+    const userId = req.user.id;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Message content is required' } });
+    }
+
+    // Fetch case to get driver_id
+    const { data: caseData, error: caseErr } = await supabase
+      .from('cases')
+      .select('id, driver_id')
+      .eq('id', caseId)
+      .single();
+
+    if (caseErr || !caseData) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    // Find or create conversation
+    let conversationId;
+    const { data: convos } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (convos && convos.length > 0) {
+      conversationId = convos[0].id;
+    } else {
+      const { data: created, error: createErr } = await supabase
+        .from('conversations')
+        .insert([{
+          case_id: caseId,
+          driver_id: caseData.driver_id,
+          attorney_id: userId,
+          accessed_by: [userId],
+        }])
+        .select('id')
+        .single();
+      if (createErr) {
+        return res.status(500).json({ error: { code: 'CREATE_FAILED', message: createErr.message } });
+      }
+      conversationId = created.id;
+    }
+
+    // Insert message
+    const { data: message, error: msgErr } = await supabase
+      .from('messages')
+      .insert([{
+        conversation_id: conversationId,
+        sender_id: userId,
+        recipient_id: caseData.driver_id,
+        content: content.trim(),
+        message_type: 'text',
+        priority: 'normal',
+      }])
+      .select('*')
+      .single();
+
+    if (msgErr) {
+      return res.status(500).json({ error: { code: 'SEND_FAILED', message: msgErr.message } });
+    }
+
+    // Update conversation last_message_at
+    await supabase
+      .from('conversations')
+      .update({ last_message_at: new Date().toISOString() })
+      .eq('id', conversationId)
+      .catch(() => {});
+
+    res.status(201).json({ success: true, data: message });
+  } catch (error) {
+    console.error('sendCaseMessage error:', error);
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to send message' } });
+  }
+};
 
 module.exports = exports;

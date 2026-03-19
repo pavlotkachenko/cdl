@@ -1,276 +1,485 @@
-<!-- Submit Ticket Component Template -->
-<div class="submit-ticket-container">
-  
+@if (submitted()) {
   <!-- Success State -->
-  <div *ngIf="submitted" class="success-container">
-    <mat-card class="success-card">
-      <mat-card-content>
-        <div class="success-icon">
-          <mat-icon>check_circle</mat-icon>
-        </div>
-        <h1>Ticket Submitted Successfully!</h1>
-        <p class="ticket-number">Ticket #{{ ticketId }}</p>
-        <p class="success-message">
-          Your ticket has been submitted and our team will review it within 1 hour.
-          You'll receive an SMS notification once we start working on your case.
-        </p>
-        
-        <div class="success-actions">
-          <button mat-raised-button color="primary" (click)="viewTicket()">
-            <mat-icon>visibility</mat-icon>
-            View Ticket
-          </button>
-          <button mat-stroked-button (click)="submitAnother()">
-            <mat-icon>add</mat-icon>
-            Submit Another
-          </button>
-          <button mat-button (click)="goToDashboard()">
-            Go to Dashboard
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Submission Form -->
-  <div *ngIf="!submitted" class="form-container">
-    <div class="page-header">
-      <button mat-icon-button routerLink="/driver/dashboard" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <div>
-        <h1>Submit New Ticket</h1>
-        <p>Get help with your citation or violation</p>
+  <div class="success-page">
+    <div class="success-card">
+      <div class="success-icon-wrap">
+        <svg class="success-check" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <circle cx="24" cy="24" r="24" fill="#1dad8c" opacity="0.12"/>
+          <circle cx="24" cy="24" r="18" fill="#1dad8c"/>
+          <path d="M16 24L22 30L32 18" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 class="success-title">Ticket Submitted!</h2>
+      <p class="success-text">
+        Case <strong>{{ ticketId() }}</strong> has been created.<br>
+        An attorney will review it shortly.
+      </p>
+      <div class="success-actions">
+        <button class="btn btn-primary" (click)="viewTicket()">View Case</button>
+        <button class="btn btn-secondary" (click)="submitAnother()">Submit Another</button>
       </div>
     </div>
+  </div>
+} @else {
+  <!-- Wizard -->
+  <div class="wizard-page">
+    <h1 class="page-title">Submit a Ticket</h1>
+    <p class="page-subtitle">Upload your ticket or enter details manually</p>
 
-    <mat-stepper [linear]="true" #stepper>
-      
-      <!-- Step 1: Ticket Type -->
-      <mat-step [stepControl]="ticketTypeForm">
-        <form [formGroup]="ticketTypeForm">
-          <ng-template matStepLabel>Select Ticket Type</ng-template>
-          
-          <mat-card>
-            <mat-card-content>
-              <h2>What type of ticket do you need help with?</h2>
-              
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Ticket Type</mat-label>
-                <mat-select formControlName="type" required>
-                  <mat-option *ngFor="let type of ticketTypes" [value]="type.value">
-                    {{ type.label }}
-                  </mat-option>
-                </mat-select>
-                <mat-error *ngIf="ticketTypeForm.get('type')?.hasError('required')">
-                  Please select a ticket type
-                </mat-error>
-              </mat-form-field>
+    <app-wizard-stepper [steps]="STEPS" [currentStep]="currentStep()" />
 
-              <div class="step-actions">
-                <button mat-raised-button color="primary" matStepperNext 
-                        [disabled]="ticketTypeForm.invalid">
-                  Next Step
-                  <mat-icon>arrow_forward</mat-icon>
-                </button>
+    <div class="form-layout">
+      <!-- Main Form Area -->
+      <div class="form-main">
+
+        <!-- Step 0: Scan -->
+        @if (currentStep() === 0) {
+          <div class="form-card">
+            <div class="form-card-header">
+              <div class="header-icon scan-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M3 9V5a2 2 0 012-2h4M15 3h4a2 2 0 012 2v4M21 15v4a2 2 0 01-2 2h-4M9 21H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </div>
-            </mat-card-content>
-          </mat-card>
-        </form>
-      </mat-step>
+              <div>
+                <h2 class="card-title">Scan Your Ticket</h2>
+                <p class="card-desc">Upload a photo of your ticket to auto-fill the form</p>
+              </div>
+            </div>
 
-      <!-- Step 2: Ticket Details -->
-      <mat-step [stepControl]="ticketDetailsForm">
-        <form [formGroup]="ticketDetailsForm">
-          <ng-template matStepLabel>Ticket Details</ng-template>
-          
-          <mat-card>
-            <mat-card-content>
-              <h2>Tell us about the violation</h2>
-              
-              <div class="form-grid">
-                <mat-form-field appearance="outline">
-                  <mat-label>Citation Number (Optional)</mat-label>
-                  <input matInput formControlName="citationNumber" placeholder="e.g., CA-SPD-123456">
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Violation Date</mat-label>
-                  <input matInput [matDatepicker]="picker" formControlName="violationDate" required>
-                  <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-                  <mat-datepicker #picker></mat-datepicker>
-                  <mat-error *ngIf="ticketDetailsForm.get('violationDate')?.hasError('required')">
-                    Violation date is required
-                  </mat-error>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>State</mat-label>
-                  <mat-select formControlName="state" required>
-                    <mat-option *ngFor="let state of states" [value]="state">
-                      {{ state }}
-                    </mat-option>
-                  </mat-select>
-                  <mat-error *ngIf="ticketDetailsForm.get('state')?.hasError('required')">
-                    State is required
-                  </mat-error>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Location/City</mat-label>
-                  <input matInput formControlName="location" placeholder="e.g., Los Angeles" required>
-                  <mat-error *ngIf="ticketDetailsForm.get('location')?.hasError('required')">
-                    Location is required
-                  </mat-error>
-                </mat-form-field>
+            <div class="scan-body">
+              <div class="upload-zone" role="button" tabindex="0"
+                   (click)="scanInputEl.click()"
+                   (keydown.enter)="scanInputEl.click()"
+                   (keydown.space)="scanInputEl.click(); $event.preventDefault()">
+                <input #scanInputEl type="file" hidden
+                       accept=".pdf,.jpg,.jpeg,.png,.heic"
+                       (change)="onScanFileSelected($event)" />
+                <svg class="upload-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                  <rect width="48" height="48" rx="12" fill="#f0faf7"/>
+                  <path d="M24 16v16M16 24h16" stroke="#1dad8c" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <p class="upload-text">
+                  @if (ticketFile()) {
+                    {{ ticketFile()!.name }}
+                  } @else {
+                    Click to upload or drag and drop
+                  }
+                </p>
+                <p class="upload-hint">PDF, JPG, PNG, HEIC up to 10MB</p>
               </div>
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Description</mat-label>
-                <textarea matInput formControlName="description" rows="5" 
-                          placeholder="Describe what happened in detail..." required></textarea>
-                <mat-hint>Minimum 10 characters</mat-hint>
-                <mat-error *ngIf="ticketDetailsForm.get('description')?.hasError('required')">
-                  Description is required
-                </mat-error>
-                <mat-error *ngIf="ticketDetailsForm.get('description')?.hasError('minlength')">
-                  Please provide more details (at least 10 characters)
-                </mat-error>
-              </mat-form-field>
+              @if (scanning()) {
+                <div class="scanning-row" role="status" aria-live="polite">
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Scanning ticket&hellip;</span>
+                </div>
+              }
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Court Date (if applicable)</mat-label>
-                <input matInput [matDatepicker]="courtPicker" formControlName="courtDate">
-                <mat-datepicker-toggle matIconSuffix [for]="courtPicker"></mat-datepicker-toggle>
-                <mat-datepicker #courtPicker></mat-datepicker>
-              </mat-form-field>
+              @if (ocrResult()) {
+                <div class="ocr-banner" role="status" aria-live="polite">
+                  <svg class="ocr-check" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <circle cx="10" cy="10" r="10" fill="#1dad8c"/>
+                    <path d="M6 10l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Auto-filled {{ ocrFieldCount() }} field(s) — review in next steps</span>
+                </div>
+              }
+            </div>
 
-              <div class="step-actions">
-                <button mat-button matStepperPrevious>
-                  <mat-icon>arrow_back</mat-icon>
-                  Back
-                </button>
-                <button mat-raised-button color="primary" matStepperNext
-                        [disabled]="ticketDetailsForm.invalid">
-                  Next Step
-                  <mat-icon>arrow_forward</mat-icon>
+            <div class="form-footer">
+              <div></div>
+              <div class="footer-actions">
+                <button class="btn btn-primary" (click)="nextStep()">
+                  {{ ocrResult() ? 'Next' : 'Skip — Enter Manually' }}
                 </button>
               </div>
-            </mat-card-content>
-          </mat-card>
-        </form>
-      </mat-step>
+            </div>
+          </div>
+        }
 
-      <!-- Step 3: Upload Documents -->
-      <mat-step [stepControl]="documentsForm">
-        <form [formGroup]="documentsForm">
-          <ng-template matStepLabel>Upload Documents</ng-template>
-          
-          <mat-card>
-            <mat-card-content>
-              <h2>Upload supporting documents (optional)</h2>
-              <p class="upload-info">
-                Upload your citation copy and any supporting documents that might help your case.
-              </p>
+        <!-- Step 1: Violation Type Chips -->
+        @if (currentStep() === 1) {
+          <div class="form-card">
+            <div class="form-card-header">
+              <div class="header-icon type-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div>
+                <h2 class="card-title">Violation Type</h2>
+                <p class="card-desc">Select the type of violation on your ticket</p>
+              </div>
+              <span class="step-badge">Step 2 of 4</span>
+            </div>
 
-              <div class="upload-zone">
-                 <input type="file" (change)="onFileSelected($event)" multiple>
-                       accept=".pdf,.jpg,.jpeg,.png"
-                       hidden>
-                
-                <div class="upload-area" (click)="fileInput.nativeElement.click()">
-                  <mat-icon>cloud_upload</mat-icon>
-                  <h3>Click to upload or drag and drop</h3>
-                  <p>PDF, JPG, PNG up to 10MB each</p>
+            <div class="chips-body" [formGroup]="ticketTypeForm">
+              <div class="chip-grid" role="radiogroup" aria-label="Violation type selection">
+                @for (chip of VIOLATION_CHIPS; track chip.value) {
+                  <button type="button"
+                          class="violation-chip"
+                          [class.selected]="ticketTypeForm.value.type === chip.value"
+                          role="radio"
+                          [attr.aria-checked]="ticketTypeForm.value.type === chip.value"
+                          tabindex="0"
+                          (click)="selectViolationType(chip.value)"
+                          (keydown)="onChipKeydown($event, chip.value)">
+                    <span class="chip-icon" aria-hidden="true">{{ chip.icon }}</span>
+                    <span class="chip-label">{{ chip.label }}</span>
+                  </button>
+                }
+              </div>
+              @if (ticketTypeForm.touched && ticketTypeForm.invalid) {
+                <p class="field-error" role="alert">Please select a violation type</p>
+              }
+            </div>
+
+            <div class="form-footer">
+              <button class="btn btn-text" (click)="prevStep()">Back</button>
+              <button class="btn btn-primary" (click)="nextStep()" [disabled]="ticketTypeForm.invalid">
+                Continue to Details
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Step 2: Details Form -->
+        @if (currentStep() === 2) {
+          <div class="form-card">
+            <div class="form-card-header">
+              <div class="header-icon details-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div>
+                <h2 class="card-title">Ticket Details</h2>
+                <p class="card-desc">Enter the information from your citation</p>
+              </div>
+              <span class="step-badge">Step 3 of 4</span>
+            </div>
+
+            <form class="details-body" [formGroup]="ticketDetailsForm">
+              <p class="required-legend"><span class="req-dot" aria-hidden="true"></span> Required fields</p>
+
+              <div class="form-row">
+                <div class="field-group">
+                  <label class="field-label" for="citationNumber">
+                    Citation Number <span class="optional-tag">optional</span>
+                  </label>
+                  <div class="field-input-wrap">
+                    <svg class="field-icon-left" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M9 2H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-5-5z" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <input id="citationNumber" type="text" class="field-input"
+                           formControlName="citationNumber"
+                           placeholder="e.g. TK-2024-001234" autocomplete="off" />
+                  </div>
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="violationDate">
+                    Violation Date <span class="req-dot" aria-hidden="true"></span>
+                  </label>
+                  <div class="field-input-wrap">
+                    <svg class="field-icon-left" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2" y="4" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <input id="violationDate" type="date" class="field-input"
+                           formControlName="violationDate" />
+                  </div>
+                  @if (ticketDetailsForm.get('violationDate')?.touched && ticketDetailsForm.get('violationDate')?.invalid) {
+                    <p class="field-error" role="alert">Violation date is required</p>
+                  }
                 </div>
               </div>
 
-              <div *ngIf="uploadedFiles.length > 0" class="uploaded-files">
-                <h3>Uploaded Files ({{ uploadedFiles.length }})</h3>
-                <div *ngFor="let file of uploadedFiles; let i = index" class="file-item">
-                  <mat-icon>description</mat-icon>
-                  <div class="file-info">
-                    <p class="file-name">{{ file.name }}</p>
-                    <p class="file-size">{{ getFileSize(file.size) }}</p>
+              <div class="form-row">
+                <div class="field-group">
+                  <label class="field-label" for="state">
+                    State <span class="req-dot" aria-hidden="true"></span>
+                  </label>
+                  <div class="field-input-wrap">
+                    <select id="state" class="field-select" formControlName="state">
+                      <option value="" disabled>Select state</option>
+                      @for (s of STATES; track s.code) {
+                        <option [value]="s.code">{{ s.name }}</option>
+                      }
+                    </select>
                   </div>
-                  <button mat-icon-button (click)="removeFile(i)" color="warn">
-                    <mat-icon>delete</mat-icon>
+                  @if (ticketDetailsForm.get('state')?.touched && ticketDetailsForm.get('state')?.invalid) {
+                    <p class="field-error" role="alert">State is required</p>
+                  }
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="courtDate">
+                    Court Date <span class="optional-tag">if known</span>
+                  </label>
+                  <div class="field-input-wrap">
+                    <svg class="field-icon-left" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2" y="4" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <input id="courtDate" type="date" class="field-input"
+                           formControlName="courtDate" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-divider">
+                <span class="divider-label">Location &amp; Details</span>
+              </div>
+
+              <div class="field-group full-width">
+                <label class="field-label" for="location">
+                  Incident Location <span class="req-dot" aria-hidden="true"></span>
+                </label>
+                <div class="field-input-wrap">
+                  <svg class="field-icon-left" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 18s-6-5.69-6-10a6 6 0 1112 0c0 4.31-6 10-6 10z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                  <input id="location" type="text" class="field-input"
+                         formControlName="location"
+                         placeholder="City, highway, or intersection" />
+                </div>
+                @if (ticketDetailsForm.get('location')?.touched && ticketDetailsForm.get('location')?.invalid) {
+                  <p class="field-error" role="alert">Location is required</p>
+                }
+              </div>
+
+              <div class="form-row">
+                <div class="field-group">
+                  <label class="field-label" for="fineAmount">
+                    Fine Amount <span class="optional-tag">optional</span>
+                  </label>
+                  <div class="field-input-wrap">
+                    <span class="field-icon-left field-text-icon" aria-hidden="true">$</span>
+                    <input id="fineAmount" type="number" class="field-input has-text-icon"
+                           formControlName="fineAmount"
+                           placeholder="0.00" min="0" step="0.01" />
+                  </div>
+                </div>
+
+                @if (isSpeedingType()) {
+                  <div class="field-group">
+                    <label class="field-label" for="allegedSpeed">
+                      Alleged Speed <span class="optional-tag">optional</span>
+                    </label>
+                    <div class="field-input-wrap">
+                      <input id="allegedSpeed" type="number" class="field-input has-suffix"
+                             formControlName="allegedSpeed"
+                             placeholder="0" min="1" max="300" />
+                      <span class="field-suffix" aria-hidden="true">mph</span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="field-group full-width">
+                <label class="field-label" for="description">
+                  Description <span class="req-dot" aria-hidden="true"></span>
+                </label>
+                <textarea id="description" class="field-textarea"
+                          formControlName="description"
+                          rows="4"
+                          placeholder="Describe what happened in detail..."
+                          maxlength="500"></textarea>
+                <div class="char-counter" [class.near-limit]="descriptionLength() > 450">
+                  {{ descriptionLength() }}/500
+                </div>
+                @if (ticketDetailsForm.get('description')?.touched && ticketDetailsForm.get('description')?.hasError('required')) {
+                  <p class="field-error" role="alert">Description is required</p>
+                }
+                @if (ticketDetailsForm.get('description')?.hasError('minlength')) {
+                  <p class="field-error" role="alert">Minimum 10 characters</p>
+                }
+              </div>
+            </form>
+
+            <div class="form-footer">
+              <div class="footer-note">
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1 1 0 110 2 1 1 0 010-2zm1 8H7V7h2v5z" fill="#98a8b4"/></svg>
+                <span>Your data is encrypted and secure</span>
+              </div>
+              <div class="footer-actions">
+                <button class="btn btn-text" (click)="prevStep()">Back</button>
+                <button class="btn btn-primary" (click)="nextStep()" [disabled]="ticketDetailsForm.invalid">
+                  Continue to Review
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Step 3: Review & Submit -->
+        @if (currentStep() === 3) {
+          <div class="form-card">
+            <div class="form-card-header">
+              <div class="header-icon review-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div>
+                <h2 class="card-title">Review &amp; Submit</h2>
+                <p class="card-desc">Verify your information before submitting</p>
+              </div>
+              <span class="step-badge">Step 4 of 4</span>
+            </div>
+
+            <div class="review-body">
+              <div class="review-section">
+                <div class="review-section-header">
+                  <h3>Violation Information</h3>
+                  <button class="btn-edit" (click)="goToStep(1)">Edit</button>
+                </div>
+                <div class="review-grid">
+                  <div class="review-item">
+                    <span class="review-label">Violation Type</span>
+                    <span class="review-value">{{ selectedTypeName() }}</span>
+                  </div>
+                  @if (ticketDetailsForm.value.citationNumber) {
+                    <div class="review-item">
+                      <span class="review-label">Citation Number</span>
+                      <span class="review-value">{{ ticketDetailsForm.value.citationNumber }}</span>
+                    </div>
+                  }
+                  <div class="review-item">
+                    <span class="review-label">Violation Date</span>
+                    <span class="review-value">{{ ticketDetailsForm.value.violationDate }}</span>
+                  </div>
+                  <div class="review-item">
+                    <span class="review-label">State</span>
+                    <span class="review-value">{{ selectedStateName() }}</span>
+                  </div>
+                  @if (ticketDetailsForm.value.courtDate) {
+                    <div class="review-item">
+                      <span class="review-label">Court Date</span>
+                      <span class="review-value">{{ ticketDetailsForm.value.courtDate }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="review-section">
+                <div class="review-section-header">
+                  <h3>Location &amp; Details</h3>
+                  <button class="btn-edit" (click)="goToStep(2)">Edit</button>
+                </div>
+                <div class="review-grid">
+                  <div class="review-item full-width">
+                    <span class="review-label">Location</span>
+                    <span class="review-value">{{ ticketDetailsForm.value.location }}</span>
+                  </div>
+                  @if (ticketDetailsForm.value.fineAmount != null) {
+                    <div class="review-item">
+                      <span class="review-label">Fine Amount</span>
+                      <span class="review-value">${{ ticketDetailsForm.value.fineAmount }}</span>
+                    </div>
+                  }
+                  @if (isSpeedingType() && ticketDetailsForm.value.allegedSpeed != null) {
+                    <div class="review-item">
+                      <span class="review-label">Alleged Speed</span>
+                      <span class="review-value">{{ ticketDetailsForm.value.allegedSpeed }} mph</span>
+                    </div>
+                  }
+                  <div class="review-item full-width">
+                    <span class="review-label">Description</span>
+                    <span class="review-value review-desc">{{ ticketDetailsForm.value.description }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Documents -->
+              <div class="review-section">
+                <div class="review-section-header">
+                  <h3>Supporting Documents</h3>
+                </div>
+                @for (file of uploadedFiles(); track file.name; let i = $index) {
+                  <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M9 2H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-5-5z" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <span class="file-name">{{ file.name }}</span>
+                    <span class="file-size">{{ getFileSize(file.size) }}</span>
+                    <button class="btn-remove" (click)="removeFile(i)" [attr.aria-label]="'Remove ' + file.name">
+                      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                  </div>
+                }
+                <div class="attach-row">
+                  <input #docInput type="file" hidden multiple
+                         accept=".pdf,.jpg,.jpeg,.png,.heic"
+                         (change)="onFileSelected($event)" />
+                  <button class="btn btn-outline btn-sm" (click)="docInput.click()">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Add Documents
                   </button>
                 </div>
               </div>
 
-              <div class="step-actions">
-                <button mat-button matStepperPrevious>
-                  <mat-icon>arrow_back</mat-icon>
-                  Back
-                </button>
-                <button mat-raised-button color="primary" matStepperNext>
-                  Review & Submit
-                  <mat-icon>arrow_forward</mat-icon>
-                </button>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        </form>
-      </mat-step>
-
-      <!-- Step 4: Review & Submit -->
-      <mat-step>
-        <ng-template matStepLabel>Review & Submit</ng-template>
-        
-        <mat-card>
-          <mat-card-content>
-            <h2>Review your ticket submission</h2>
-
-            <div class="review-section">
-              <h3>Ticket Type</h3>
-              <p>{{ ticketTypeForm.value.type | titlecase }}</p>
+              @if (error()) {
+                <div class="error-banner" role="alert">
+                  <p>{{ error() }}</p>
+                  <button class="btn btn-text btn-sm" (click)="submitTicket()">Retry</button>
+                </div>
+              }
             </div>
 
-            <div class="review-section">
-              <h3>Details</h3>
-              <p><strong>Citation Number:</strong> {{ ticketDetailsForm.value.citationNumber || 'N/A' }}</p>
-              <p><strong>Violation Date:</strong> {{ ticketDetailsForm.value.violationDate | date:'MM/dd/yyyy' }}</p>
-              <p><strong>Location:</strong> {{ ticketDetailsForm.value.location }}, {{ ticketDetailsForm.value.state }}</p>
-              <p><strong>Description:</strong> {{ ticketDetailsForm.value.description }}</p>
-              <p *ngIf="ticketDetailsForm.value.courtDate">
-                <strong>Court Date:</strong> {{ ticketDetailsForm.value.courtDate | date:'MM/dd/yyyy' }}
-              </p>
-            </div>
-
-            <div class="review-section" *ngIf="uploadedFiles.length > 0">
-              <h3>Documents</h3>
-              <p>{{ uploadedFiles.length }} file(s) attached</p>
-            </div>
-
-            <div *ngIf="error" class="error-message">
-              <mat-icon>error</mat-icon>
-              {{ error }}
-            </div>
-
-            <mat-progress-bar
-              *ngIf="submitting"
-              mode="indeterminate"
-              class="submit-progress">
-            </mat-progress-bar>
-            <p *ngIf="submitting" class="submit-status">Submitting your ticket...</p>
-
-            <div class="step-actions">
-              <button mat-button matStepperPrevious [disabled]="submitting">
-                <mat-icon>arrow_back</mat-icon>
-                Back
-              </button>
-              <button mat-raised-button color="primary"
-                      (click)="submitTicket()"
-                      [disabled]="submitting">
-                <mat-icon *ngIf="!submitting">send</mat-icon>
-                <mat-icon *ngIf="submitting" class="spinning">sync</mat-icon>
-                {{ submitting ? 'Submitting...' : 'Submit Ticket' }}
+            <div class="form-footer">
+              <button class="btn btn-text" (click)="prevStep()">Back</button>
+              <button class="btn btn-primary btn-lg" (click)="submitTicket()" [disabled]="submitting()">
+                @if (submitting()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                  Submitting&hellip;
+                } @else {
+                  Submit Ticket
+                }
               </button>
             </div>
-          </mat-card-content>
-        </mat-card>
-      </mat-step>
-    </mat-stepper>
+          </div>
+        }
+      </div>
+
+      <!-- Info Sidebar (Desktop) -->
+      <aside class="info-sidebar">
+        <!-- Progress Card -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <svg class="info-card-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="#1dad8c" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="#1dad8c" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <h3>Submission Progress</h3>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" [style.width.%]="progressPercent()"></div>
+          </div>
+          <ul class="progress-checklist">
+            @for (step of STEPS; track $index) {
+              <li [class.done]="$index < currentStep()"
+                  [class.current]="$index === currentStep()"
+                  [class.todo]="$index > currentStep()">
+                @if ($index < currentStep()) {
+                  <svg class="progress-icon done" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#1dad8c"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                } @else if ($index === currentStep()) {
+                  <span class="progress-dot current" aria-hidden="true">{{ $index + 1 }}</span>
+                } @else {
+                  <span class="progress-dot todo" aria-hidden="true">{{ $index + 1 }}</span>
+                }
+                <span class="progress-label">{{ step.label }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <!-- Tips Card -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <svg class="info-card-icon warning" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2L1 18h18L10 2z" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v4M10 14h.01" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <h3>Tips for Accuracy</h3>
+          </div>
+          <ul class="tips-list">
+            <li><span class="tip-dot" aria-hidden="true"></span>Use the exact date from your citation</li>
+            <li><span class="tip-dot" aria-hidden="true"></span>Include highway number and mile marker</li>
+            <li><span class="tip-dot" aria-hidden="true"></span>Court date is critical if hearing within 30 days</li>
+            <li><span class="tip-dot" aria-hidden="true"></span>Describe the incident honestly and in detail</li>
+          </ul>
+        </div>
+
+        <!-- What Happens Next Card -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <svg class="info-card-icon success" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 10l5 5 5-5M10 5v10" stroke="#1dad8c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h3>What Happens Next</h3>
+          </div>
+          <ul class="next-list">
+            <li><span class="next-dot blue" aria-hidden="true"></span>Attorney reviews your case within hours</li>
+            <li><span class="next-dot amber" aria-hidden="true"></span>Case strategy discussion scheduled</li>
+            <li><span class="next-dot teal" aria-hidden="true"></span>No payment required until case resolved</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
   </div>
-</div>
+}

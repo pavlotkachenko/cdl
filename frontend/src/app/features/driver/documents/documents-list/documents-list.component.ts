@@ -1,309 +1,297 @@
-// ============================================
-// Documents List Component
-// Location: frontend/src/app/features/driver/documents/documents-list/documents-list.component.ts
-// ============================================
-
-import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component, signal, computed, inject, effect,
+  ChangeDetectionStrategy, input,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-// Angular Material
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDividerModule } from '@angular/material/divider';
 
-// Services & Models
-import { DocumentService, Document, DocumentCategory } from '../../../../core/services/document.service';
+import {
+  DocumentService, Document, DocumentCategory,
+} from '../../../../core/services/document.service';
+
+type SortField = 'date' | 'name' | 'size' | 'category';
+type ViewMode = 'grid' | 'list';
+
+interface CategoryFilter {
+  value: DocumentCategory | 'all';
+  label: string;
+}
 
 @Component({
   selector: 'app-documents-list',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FormsModule, MatProgressSpinnerModule],
   templateUrl: './documents-list.component.html',
-  styleUrls: ['./documents-list.component.scss'],
-  imports: [
-    CommonModule,
-    FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatMenuModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatDialogModule,
-    MatSnackBarModule,
-    MatButtonToggleModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    MatDividerModule
-  ]
+  styleUrl: './documents-list.component.scss',
 })
-export class DocumentsListComponent implements OnInit {
-  @Input() caseId!: string;
-  @Output() documentSelected = new EventEmitter<Document>();
+export class DocumentsListComponent {
+  private documentService = inject(DocumentService);
+  private snackBar = inject(MatSnackBar);
 
-  documents: Document[] = [];
-  filteredDocuments: Document[] = [];
-  loading = false;
-  viewMode: 'grid' | 'list' = 'grid';
+  readonly caseId = input.required<string>();
+  readonly refreshTrigger = input(0);
 
-  // Filters
-  searchTerm = '';
-  selectedCategory: DocumentCategory | 'all' = 'all';
-  sortBy: 'date' | 'name' | 'size' | 'category' = 'date';
-  sortDirection: 'asc' | 'desc' = 'desc';
+  // State
+  readonly documents = signal<Document[]>([]);
+  readonly loading = signal(false);
+  readonly viewMode = signal<ViewMode>('grid');
+  readonly searchTerm = signal('');
+  readonly selectedCategory = signal<DocumentCategory | 'all'>('all');
+  readonly sortBy = signal<SortField>('date');
+  readonly sortDirection = signal<'asc' | 'desc'>('desc');
 
-  categories: { value: DocumentCategory | 'all'; label: string; icon: string }[] = [
-    { value: 'all', label: 'All Documents', icon: 'folder_open' },
-    { value: 'citation', label: 'Citations', icon: 'gavel' },
-    { value: 'evidence', label: 'Evidence', icon: 'fact_check' },
-    { value: 'correspondence', label: 'Correspondence', icon: 'mail' },
-    { value: 'legal_document', label: 'Legal Documents', icon: 'description' },
-    { value: 'photo', label: 'Photos', icon: 'photo_camera' },
-    { value: 'receipt', label: 'Receipts', icon: 'receipt' },
-    { value: 'license', label: 'Licenses', icon: 'badge' },
-    { value: 'other', label: 'Other', icon: 'folder' }
+  readonly CATEGORIES: CategoryFilter[] = [
+    { value: 'all', label: 'All Documents' },
+    { value: 'citation', label: 'Citation' },
+    { value: 'evidence', label: 'Evidence' },
+    { value: 'correspondence', label: 'Correspondence' },
+    { value: 'legal_document', label: 'Court Documents' },
+    { value: 'photo', label: 'Photos' },
+    { value: 'receipt', label: 'Receipts' },
+    { value: 'license', label: 'Licenses' },
+    { value: 'other', label: 'Other' },
   ];
 
-  constructor(
-    private documentService: DocumentService,
-    private dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {}
+  readonly SORT_OPTIONS: { value: SortField; label: string }[] = [
+    { value: 'date', label: 'Date' },
+    { value: 'name', label: 'Name' },
+    { value: 'size', label: 'Size' },
+    { value: 'category', label: 'Category' },
+  ];
 
-  ngOnInit(): void {
-    this.loadDocuments();
-  }
+  // Computed filtered + sorted list
+  readonly filteredDocuments = computed(() => {
+    let docs = [...this.documents()];
+    const cat = this.selectedCategory();
+    const term = this.searchTerm().toLowerCase();
+    const sort = this.sortBy();
+    const dir = this.sortDirection();
 
-  // ============================================
-  // Data Loading
-  // ============================================
-
-  loadDocuments(): void {
-    this.loading = true;
-
-    // Use mock data for development
-    this.documentService.mockGetDocuments(this.caseId).subscribe({
-      next: (docs) => {
-        this.documents = docs;
-        this.applyFilters();
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error loading documents:', err);
-        this.loading = false;
-        this.snackBar.open('Failed to load documents', 'Close', {
-          duration: 5000
-        });
-      }
-    });
-
-    /*
-    // Use this for production:
-    this.documentService.getDocuments(this.caseId).subscribe({
-      next: (docs) => {
-        this.documents = docs;
-        this.applyFilters();
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error loading documents:', err);
-        this.loading = false;
-      }
-    });
-    */
-  }
-
-  // ============================================
-  // Filtering & Sorting
-  // ============================================
-
-  applyFilters(): void {
-    let filtered = [...this.documents];
-
-    // Filter by category
-    if (this.selectedCategory !== 'all') {
-      filtered = filtered.filter(doc => doc.category === this.selectedCategory);
+    if (cat !== 'all') {
+      docs = docs.filter(d => d.category === cat);
     }
 
-    // Filter by search term
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(doc =>
-        doc.fileName.toLowerCase().includes(term) ||
-        doc.description?.toLowerCase().includes(term) ||
-        doc.category.toLowerCase().includes(term)
+    if (term) {
+      docs = docs.filter(d =>
+        d.fileName.toLowerCase().includes(term) ||
+        d.description?.toLowerCase().includes(term) ||
+        d.category.toLowerCase().includes(term),
       );
     }
 
-    // Sort
-    filtered = this.sortDocuments(filtered);
-
-    this.filteredDocuments = filtered;
-  }
-
-  private sortDocuments(docs: Document[]): Document[] {
-    return docs.sort((a, b) => {
-      let comparison = 0;
-
-      switch (this.sortBy) {
+    docs.sort((a, b) => {
+      let cmp = 0;
+      switch (sort) {
         case 'date':
-          comparison = new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime();
+          cmp = new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime();
           break;
         case 'name':
-          comparison = a.fileName.localeCompare(b.fileName);
+          cmp = a.fileName.localeCompare(b.fileName);
           break;
         case 'size':
-          comparison = a.fileSize - b.fileSize;
+          cmp = a.fileSize - b.fileSize;
           break;
         case 'category':
-          comparison = a.category.localeCompare(b.category);
+          cmp = a.category.localeCompare(b.category);
           break;
       }
+      return dir === 'asc' ? cmp : -cmp;
+    });
 
-      return this.sortDirection === 'asc' ? comparison : -comparison;
+    return docs;
+  });
+
+  readonly documentCount = computed(() => this.documents().length);
+
+  readonly categoryCountLabel = computed(() => {
+    const cat = this.selectedCategory();
+    const count = this.filteredDocuments().length;
+    if (cat === 'all') {
+      return `All Documents (${count})`;
+    }
+    const found = this.CATEGORIES.find(c => c.value === cat);
+    return `${found?.label ?? cat} (${count})`;
+  });
+
+  constructor() {
+    effect(() => {
+      const id = this.caseId();
+      this.refreshTrigger(); // track
+      this.loadDocuments(id);
     });
   }
 
-  onSearchChange(): void {
-    this.applyFilters();
+  private loadDocuments(caseId: string): void {
+    this.loading.set(true);
+    this.documentService.mockGetDocuments(caseId).subscribe({
+      next: (docs) => {
+        this.documents.set(docs);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.snackBar.open('Failed to load documents', 'Close', { duration: 4000 });
+      },
+    });
   }
 
-  onCategoryChange(): void {
-    this.applyFilters();
+  // --- Actions ---
+
+  onSearchChange(value: string): void {
+    this.searchTerm.set(value);
   }
 
-  onSortChange(): void {
-    this.applyFilters();
+  onCategoryChange(value: string): void {
+    this.selectedCategory.set(value as DocumentCategory | 'all');
+  }
+
+  onSortChange(value: string): void {
+    this.sortBy.set(value as SortField);
   }
 
   toggleSortDirection(): void {
-    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.applyFilters();
+    this.sortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
   }
 
-  // ============================================
-  // Document Actions
-  // ============================================
-
-  viewDocument(doc: Document): void {
-    this.documentSelected.emit(doc);
-    // Open preview modal (to be implemented)
-    console.log('View document:', doc);
+  setViewMode(mode: ViewMode): void {
+    this.viewMode.set(mode);
   }
 
   downloadDocument(doc: Document): void {
-    // Download file
     const link = document.createElement('a');
     link.href = doc.url;
     link.download = doc.fileName;
     link.click();
-
-    this.snackBar.open(`Downloading ${doc.fileName}`, 'Close', {
-      duration: 3000
-    });
+    this.snackBar.open(`Downloading ${doc.fileName}`, 'Close', { duration: 3000 });
   }
 
   deleteDocument(doc: Document): void {
-    if (confirm(`Are you sure you want to delete ${doc.fileName}?`)) {
+    if (confirm(`Delete ${doc.fileName}?`)) {
       this.documentService.deleteDocument(doc.id).subscribe({
         next: () => {
-          this.documents = this.documents.filter(d => d.id !== doc.id);
-          this.applyFilters();
-          this.snackBar.open('Document deleted', 'Close', {
-            duration: 3000
-          });
+          this.documents.update(docs => docs.filter(d => d.id !== doc.id));
+          this.snackBar.open('Document deleted', 'Close', { duration: 3000 });
         },
-        error: (err) => {
-          console.error('Delete error:', err);
-          this.snackBar.open('Failed to delete document', 'Close', {
-            duration: 5000
-          });
-        }
+        error: () => {
+          this.snackBar.open('Failed to delete document', 'Close', { duration: 4000 });
+        },
       });
     }
   }
 
-  extractText(doc: Document): void {
-    this.snackBar.open('Extracting text...', '', { duration: 2000 });
-    
-    this.documentService.extractText(doc.id).subscribe({
-      next: (text) => {
-        console.log('Extracted text:', text);
-        this.snackBar.open('Text extracted successfully', 'Close', {
-          duration: 3000
-        });
-      },
-      error: (err) => {
-        console.error('OCR error:', err);
-        this.snackBar.open('Failed to extract text', 'Close', {
-          duration: 5000
-        });
-      }
-    });
-  }
+  // --- Utilities ---
 
-  shareDocument(doc: Document): void {
-    // Copy link to clipboard
-    navigator.clipboard.writeText(doc.url).then(() => {
-      this.snackBar.open('Link copied to clipboard', 'Close', {
-        duration: 3000
-      });
-    });
-  }
-
-  // ============================================
-  // Utilities
-  // ============================================
-
-  getFileIcon(doc: Document): string {
-    return this.documentService.getFileIcon(doc.fileType);
-  }
-
-  getFileSize(doc: Document): string {
-    return this.documentService.formatFileSize(doc.fileSize);
+  getFileSize(bytes: number): string {
+    return this.documentService.formatFileSize(bytes);
   }
 
   getCategoryLabel(category: DocumentCategory): string {
     return this.documentService.getCategoryLabel(category);
   }
 
-  getCategoryIcon(category: DocumentCategory): string {
-    return this.documentService.getCategoryIcon(category);
+  getCategoryBadgeClass(category: DocumentCategory): string {
+    const map: Record<string, string> = {
+      citation: 'cat-citation',
+      evidence: 'cat-evidence',
+      legal_document: 'cat-court',
+      correspondence: 'cat-court',
+      photo: 'cat-evidence',
+      receipt: 'cat-other',
+      license: 'cat-other',
+      other: 'cat-other',
+    };
+    return map[category] || 'cat-other';
+  }
+
+  getCategoryEmoji(category: DocumentCategory): string {
+    const map: Record<string, string> = {
+      citation: '\u{1F4C4}',
+      evidence: '\u{1F4F7}',
+      correspondence: '\u{1F464}',
+      legal_document: '\u{2696}\uFE0F',
+      photo: '\u{1F4F7}',
+      receipt: '\u{1F9FE}',
+      license: '\u{1F4CB}',
+      other: '\u{1F4C1}',
+    };
+    return map[category] || '\u{1F4C1}';
+  }
+
+  getTypeStripeGradient(category: DocumentCategory): string {
+    const map: Record<string, string> = {
+      citation: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+      evidence: 'linear-gradient(90deg, #10b981, #34d399)',
+      correspondence: 'linear-gradient(90deg, #8b5cf6, #a78bfa)',
+      legal_document: 'linear-gradient(90deg, #7c3aed, #a78bfa)',
+      photo: 'linear-gradient(90deg, #06b6d4, #22d3ee)',
+      receipt: 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+      license: 'linear-gradient(90deg, #10b981, #34d399)',
+      other: 'linear-gradient(90deg, #6b7280, #9ca3af)',
+    };
+    return map[category] || map['other'];
+  }
+
+  getThumbBackground(category: DocumentCategory): string {
+    const map: Record<string, string> = {
+      citation: '#eff6ff',
+      evidence: '#f0fdf4',
+      correspondence: '#f5f3ff',
+      legal_document: '#f5f3ff',
+      photo: '#ecfeff',
+      receipt: '#fffbeb',
+      license: '#f0fdf4',
+      other: '#f9fafb',
+    };
+    return map[category] || '#f9fafb';
+  }
+
+  getFileIconBg(category: DocumentCategory): string {
+    return this.getThumbBackground(category);
+  }
+
+  getFileEmoji(doc: Document): string {
+    if (doc.fileType.startsWith('image/')) return '\u{1F4F7}';
+    if (doc.fileType === 'application/pdf') return '\u{1F4C4}';
+    if (doc.fileType.includes('word') || doc.fileType.includes('document')) return '\u{1F4DD}';
+    return '\u{1F4CB}';
+  }
+
+  getFileExtLabel(doc: Document): string {
+    const ext = doc.fileName.split('.').pop()?.toUpperCase() || '';
+    const map: Record<string, string> = {
+      JPG: 'JPEG Image', JPEG: 'JPEG Image', PNG: 'PNG Image',
+      GIF: 'GIF Image', WEBP: 'WebP Image', HEIC: 'HEIC Image',
+      PDF: 'PDF Document', DOC: 'Word Document', DOCX: 'Word Document',
+      TXT: 'Text File', CSV: 'CSV File',
+    };
+    return map[ext] || `${ext} File`;
   }
 
   isImage(doc: Document): boolean {
     return doc.fileType.startsWith('image/');
   }
 
-  isPDF(doc: Document): boolean {
-    return doc.fileType === 'application/pdf';
-  }
-
   formatDate(date: Date): string {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
-  getDocumentCount(category: DocumentCategory | 'all'): number {
-    if (category === 'all') {
-      return this.documents.length;
-    }
-    return this.documents.filter(doc => doc.category === category).length;
+  getRelativeTime(date: Date): string {
+    const now = new Date();
+    const d = new Date(date);
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays} days ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths === 1) return '1 month ago';
+    if (diffMonths < 12) return `${diffMonths} months ago`;
+    const diffYears = Math.floor(diffMonths / 12);
+    return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
   }
 }

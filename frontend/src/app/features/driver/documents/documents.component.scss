@@ -1,19 +1,9 @@
-// ============================================
-// Documents Page Styles
-// ============================================
-
-$teal: #1dad8c;
-$teal-border: #c0e8dd;
-$text-primary: #0f2137;
-$text-secondary: #8a94a6;
-$text-body: #5a6578;
-$bg: #f4f7f9;
-$border: #edf2f6;
+@use '../../../../assets/styles/variables' as *;
 
 .documents-page {
   min-height: 100vh;
   background: $bg;
-  font-family: 'Mulish', sans-serif;
+  font-family: $font-primary;
 }
 
 // ============================================
@@ -21,114 +11,107 @@ $border: #edf2f6;
 // ============================================
 
 .page-header {
-  background: white;
-  padding: 24px 32px;
-  border-bottom: 1.5px solid $border;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 28px 32px;
+  gap: $spacing-lg;
+
+  @media (max-width: #{$breakpoint-mobile - 1}) {
+    flex-direction: column;
+    padding: $spacing-lg;
+  }
+}
+
+.page-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $teal;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  gap: 7px;
+  margin-bottom: 5px;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px;
+  &::before {
+    content: '';
+    width: 18px;
+    height: 2px;
+    background: $teal;
   }
+}
 
-  .header-content {
-    flex: 1;
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: $text-primary;
+  margin: 0;
+}
 
-    .header-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+.page-sub {
+  font-size: 13px;
+  color: $text-muted;
+  font-weight: 500;
+  margin: 3px 0 0;
+}
 
-      mat-icon {
-        font-size: 32px;
-        width: 32px;
-        height: 32px;
-        color: $teal;
-      }
+// ============================================
+// Buttons
+// ============================================
 
-      h1 {
-        font-size: 28px;
-        font-weight: 700;
-        color: $text-primary;
-        margin: 0;
-      }
-    }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: $font-primary;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s;
+  white-space: nowrap;
 
-    p {
-      font-size: 15px;
-      color: $text-body;
-      margin: 0;
-    }
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
   }
+}
 
-  button {
-    mat-icon {
-      margin-right: 8px;
-    }
+.btn-primary {
+  background: $teal;
+  color: #ffffff;
+  box-shadow: $shadow-teal;
 
-    @media (max-width: 768px) {
-      width: 100%;
-    }
+  &:hover {
+    background: $teal-mid;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba($teal, 0.35);
   }
 }
 
 // ============================================
-// Tabs
+// Upload Panel
 // ============================================
 
-::ng-deep {
-  .mat-mdc-tab-group {
-    background: white;
+.upload-panel-wrap {
+  margin: 0 32px 20px;
 
-    .mat-mdc-tab-label {
-      min-width: 120px;
-
-      mat-icon {
-        margin-right: 8px;
-      }
-    }
+  @media (max-width: #{$breakpoint-mobile - 1}) {
+    margin: 0 $spacing-lg $spacing-lg;
   }
 }
 
-.tab-content {
-  background: $bg;
-  min-height: calc(100vh - 200px);
-}
-
 // ============================================
-// Dark Mode
+// Content Area
 // ============================================
 
-@media (prefers-color-scheme: dark) {
-  .documents-page {
-    background: #111827;
-  }
+.documents-content {
+  padding: 0 32px 32px;
 
-  .page-header {
-    background: #1f2937;
-    border-bottom-color: #374151;
-
-    .header-title h1 {
-      color: #f9fafb;
-    }
-
-    .header-content p {
-      color: #d1d5db;
-    }
-  }
-
-  ::ng-deep {
-    .mat-mdc-tab-group {
-      background: #1f2937;
-    }
-  }
-
-  .tab-content {
-    background: #111827;
+  @media (max-width: #{$breakpoint-mobile - 1}) {
+    padding: 0 $spacing-lg $spacing-lg;
   }
 }

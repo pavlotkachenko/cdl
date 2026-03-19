@@ -17,6 +17,17 @@ If no Product Brief exists yet, run `decompose-requirement` first.
 
 This skill runs **once per user story** from the Product Brief, in the dependency order specified.
 
+## Progress Checkpoints
+
+After completing each major step (1, 2, 3, 4/5, 6, 7, 8, 9), update `claude-progress.txt` with:
+- Which step just completed and its output summary
+- Which step is next
+- Any decisions made that are not captured in story files
+
+This prevents context loss if compaction occurs mid-pipeline.
+
+---
+
 ## Pipeline Steps
 
 ### Step 1: Story Confirmation (Product Manager)
@@ -28,8 +39,8 @@ ls sprints/ | sort | tail -1   # confirm sprint folder exists
 ls sprints/sprint_XXX/         # confirm individual story files exist
 ```
 
-- Sprint folder missing → **STOP. Run `decompose-requirement` first**, create the sprint folder and story files, then return here.
-- Sprint folder exists but contains only an overview (no `story-<PREFIX>-N-*.md` files) → **STOP. Create the missing story files** from the product brief, then return here.
+- Sprint folder missing → **STOP. Run `decompose-requirement` first.** That skill's Step 7 creates the sprint folder and all story files automatically after user approval. Then return here.
+- Sprint folder exists but contains only an overview (no `story-<PREFIX>-N-*.md` files) → **STOP.** Re-run `decompose-requirement` Step 7 to create the missing individual story files from the approved product brief. File naming: `story-<PREFIX>-<N>-<title>.md` (see template in `.claude/templates/sprint-story-template.md`).
 - Only continue once the specific story file for the current work exists on disk.
 
 Once confirmed:
@@ -39,6 +50,23 @@ Once confirmed:
 3. Check `docs/HARD_BUGS_REGISTRY.md` for related known issues
 
 **Output:** Confirmed story scope with acceptance criteria — story file path stated explicitly
+
+### Step 1b: Hidden Requirements Check (Product Manager)
+
+**Required when implementing from an HTML template or design mockup.**
+
+Before architecture design, verify the Product Brief captured all hidden requirements:
+
+1. **Data Layer Gaps** — Compare template fields against `supabase_schema.sql`. Flag missing columns, enum mismatches, new validation rules.
+2. **API Contract Gaps** — Compare template form submissions against route validation in `backend/src/routes/`. Flag missing fields in request validators, payload key mismatches (camelCase vs snake_case), new validation rules not yet in controllers.
+3. **Asset & Icon Inventory** — Extract every `<img>`, `<svg>`, icon class, and background-image from the template. Cross-reference against `frontend/src/assets/`. Flag missing icons/images and add them as story scope items.
+4. **Integration Points** — Identify all service calls, WebSocket events, third-party API references. Verify each has a corresponding backend endpoint.
+5. **Stale File Detection** — If the template replaces an existing component, check for orphaned `.html`, `.scss`, or `.ts` files that should be deleted.
+6. **Conditional Logic** — Identify show/hide rules, conditional fields, dynamic form behavior. Ensure each is captured in acceptance criteria.
+
+If gaps are found that weren't in the original sprint stories, update the story files before proceeding.
+
+**Output:** Confirmed — all hidden requirements captured in sprint stories, or stories updated with newly discovered requirements.
 
 ### Step 2: Architecture Design (Architect)
 
@@ -82,6 +110,19 @@ Build the server-side first (APIs need to exist before the frontend can call the
 6. Verify with: `cd backend && node src/server.js` (smoke test)
 
 **Output:** Working API endpoints
+
+### Step 4b: Asset & Icon Creation (Dev Lead)
+
+**Required when Step 1b identified missing icons or assets.**
+
+Before frontend implementation, create all required visual assets:
+
+1. **SVG Icons** — Create inline SVG components or add SVG files to `frontend/src/assets/icons/`. Prefer inline SVGs for small icons (< 2KB). Use the project's color tokens — never hardcode hex values in SVGs.
+2. **Images** — Add to `frontend/src/assets/images/`. Optimize for web (< 50KB per image). Provide 1x and 2x variants for raster images.
+3. **Fonts/Icon Fonts** — If the template references an icon font not yet installed (e.g., Material Symbols, Lucide), add it to `angular.json` styles array. Prefer SVG over icon fonts for custom icons.
+4. **Verify** — Confirm every asset referenced in the template exists in the assets directory before proceeding to frontend implementation.
+
+**Output:** All missing assets created and verified
 
 ### Step 5: Frontend Implementation (Dev Lead)
 
@@ -129,21 +170,39 @@ cd frontend && npm run cy:run
 
 Run the full review checklist from `.claude/agents/critic.md`:
 
-1. Security audit (OWASP, RLS, auth)
-2. DRY check
-3. Performance review
-4. Accessibility audit
-5. Architecture alignment check
-6. **UX compliance** — verify implementation matches the UX Expert's spec
+1. Run `code-review` plugin as automated first pass
+2. Security audit (OWASP, RLS, auth)
+3. DRY check
+4. Performance review
+5. Accessibility audit
+6. Architecture alignment check
+7. **UX compliance** — verify implementation matches the UX Expert's spec
 
 **Output:** Review verdict (APPROVED / CHANGES REQUIRED / BLOCKED)
 
-### Step 8: Ship (DevOps — requires human approval)
+**On CHANGES REQUIRED or BLOCKED → enter Remediation Loop (see below)**
 
-If critic approves:
+### Step 8: Documentation Update (Docs Writer)
+
+After Critic approves, update project documentation to reflect what was built:
+
+1. **API Specification** — If new/modified endpoints were created in Steps 4, add or update entries in `docs/API_SPECIFICATION.md` following the format in `.claude/agents/docs-writer.md`
+2. **Functional Requirements** — If the implementation changes behavior described in `docs/04_FUNCTIONAL_REQUIREMENTS.md`, update the relevant section
+3. **Bug Registry** — If bug fixes were included, add entries to `docs/HARD_BUGS_REGISTRY.md`
+4. **Glossary** — If new domain terms were introduced (new status values, role types, feature names), add to `docs/GLOSSARY.md`
+5. **Schema Reference** — If migrations were created, note the new migration in the relevant doc section (do NOT modify `supabase_schema.sql` directly — it's hook-protected)
+6. **Sprint Story Closure** — Mark all acceptance criteria as checked in the story file, set status to `DONE`
+
+**Skip docs that weren't affected.** Only update what changed. Do not create speculative documentation for unbuilt features.
+
+**Output:** List of docs updated with brief summary of changes
+
+### Step 9: Ship (DevOps — requires human approval)
+
+If critic approves and docs are updated:
 
 1. Create feature branch: `feat/<feature-name>`
-2. Stage only relevant files
+2. Stage only relevant files (including updated docs)
 3. Commit with conventional message
 4. Push to remote
 5. Create PR with quality gates checklist
@@ -151,10 +210,69 @@ If critic approves:
 
 **Output:** PR URL ready for human review
 
+---
+
+## Escalation & Remediation Loops
+
+When a gate rejects work, follow these loops instead of stopping dead.
+
+### UX Rejection Loop (Step 3 → Step 2)
+
+**Trigger:** UX Expert finds 3-click violations, accessibility failures, or design system inconsistencies.
+
+```
+Step 3 (UX rejects) → Architect revises design (Step 2) → UX re-reviews (Step 3)
+Max iterations: 2
+```
+
+1. UX Expert documents specific issues with file/component references
+2. Architect revises ONLY the flagged items (not a full redesign)
+3. UX Expert re-reviews ONLY the revised items
+4. If still failing after 2 iterations → **escalate to user** with both perspectives
+
+### Critic Remediation Loop (Step 7 → Step 4/5/6)
+
+**Trigger:** Critic verdict is CHANGES REQUIRED or BLOCKED.
+
+```
+Step 7 (Critic flags issues) → Dev Lead fixes (Step 4/5) → QA updates tests (Step 6) → Critic re-reviews (Step 7)
+Max iterations: 3
+```
+
+1. Critic produces structured issue list (Critical / Warning / Suggestion)
+2. Dev Lead fixes all Critical and Warning items. Suggestions are optional.
+3. QA Tester updates tests if the fix changed behavior
+4. Critic re-reviews ONLY the changed files (not full review)
+5. **BLOCKED** issues (security, missing RLS, hardcoded secrets) must be fixed before ANY other work
+6. If still failing after 3 iterations → **escalate to user** with full history
+
+### Test Failure Loop (Step 6 → Step 4/5)
+
+**Trigger:** Tests fail after implementation.
+
+```
+Step 6 (tests fail) → Dev Lead debugs using Debugging Protocol → Dev Lead fixes → QA re-runs tests
+Max iterations: 3 (matches Circuit Breaker)
+```
+
+1. Dev Lead follows the 4-phase Debugging Protocol from `dev-lead.md`
+2. Fix is applied, full test suite re-run
+3. If 3 fixes fail → Circuit Breaker activates → escalate to user
+
+### Escalation to User
+
+When any loop hits its max iterations, present:
+- **What was attempted** (numbered list of changes made)
+- **What the reviewer/test still flags** (exact error or review comment)
+- **Your recommendation** (what you think the right fix is and why)
+- **Options:** (a) approve current state with known issues, (b) provide guidance, (c) defer the story
+
+---
+
 ## Abort Conditions
 
 - **Stop before Step 1** if no Product Brief exists — run `decompose-requirement` first
 - **Stop at Step 1** if prerequisite stories are not complete — implement them first
-- **Stop at Step 3** if UX review finds 3-click violations or accessibility failures — revise design first
-- **Stop at Step 7** if the critic verdict is BLOCKED — fix issues before proceeding
-- **Stop at Step 8** if tests are failing — fix before creating PR
+- **Stop at Step 3** if UX rejection loop exhausted (2 iterations) — escalate to user
+- **Stop at Step 7** if critic remediation loop exhausted (3 iterations) — escalate to user
+- **Stop at Step 9** if tests are failing — fix before creating PR

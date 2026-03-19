@@ -5,7 +5,7 @@
   <div class="page-header">
     <div class="page-header-left">
       <button class="back-btn" routerLink="/driver/dashboard" aria-label="Back to dashboard">
-        <mat-icon>chevron_left</mat-icon>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div>
         <div class="page-title">{{ 'CASE_LIST.TITLE' | translate }}</div>
@@ -16,11 +16,11 @@
       <button class="btn btn-secondary"
               (click)="exportToCSV()"
               [disabled]="filteredCases.length === 0">
-        <mat-icon>cloud_download</mat-icon>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         {{ 'CASE_LIST.EXPORT_CSV' | translate }}
       </button>
       <button class="btn btn-primary" (click)="submitNewTicket()">
-        <mat-icon>add</mat-icon>
+        <span aria-hidden="true">&#x2795;</span>
         {{ 'CASE_LIST.SUBMIT_NEW' | translate }}
       </button>
     </div>
@@ -31,7 +31,7 @@
     <div class="stat-card"
          [class.active-filter]="statusFilter.value === 'all'"
          (click)="statusFilter.setValue('all')">
-      <div class="stat-icon all"><mat-icon>list_alt</mat-icon></div>
+      <div class="stat-icon all"><span aria-hidden="true">&#x1F4CB;</span></div>
       <div>
         <div class="stat-num">{{ cases.length }}</div>
         <div class="stat-label">All Tickets</div>
@@ -40,7 +40,7 @@
     <div class="stat-card"
          [class.active-filter]="statusFilter.value === 'new'"
          (click)="statusFilter.setValue('new')">
-      <div class="stat-icon new"><mat-icon>fiber_new</mat-icon></div>
+      <div class="stat-icon new"><span aria-hidden="true">&#x1F535;</span></div>
       <div>
         <div class="stat-num s-new">{{ getStatusCount('new') }}</div>
         <div class="stat-label">New</div>
@@ -49,7 +49,7 @@
     <div class="stat-card"
          [class.active-filter]="statusFilter.value === 'in_progress'"
          (click)="statusFilter.setValue('in_progress')">
-      <div class="stat-icon prog"><mat-icon>hourglass_top</mat-icon></div>
+      <div class="stat-icon prog"><span aria-hidden="true">&#x23F3;</span></div>
       <div>
         <div class="stat-num s-progress">{{ getStatusCount('in_progress') }}</div>
         <div class="stat-label">In Progress</div>
@@ -58,7 +58,7 @@
     <div class="stat-card"
          [class.active-filter]="statusFilter.value === 'resolved'"
          (click)="statusFilter.setValue('resolved')">
-      <div class="stat-icon done"><mat-icon>check_circle</mat-icon></div>
+      <div class="stat-icon done"><span aria-hidden="true">&#x2705;</span></div>
       <div>
         <div class="stat-num s-completed">{{ getStatusCount('resolved') }}</div>
         <div class="stat-label">Completed</div>
@@ -67,7 +67,7 @@
     <div class="stat-card"
          [class.active-filter]="statusFilter.value === 'closed'"
          (click)="statusFilter.setValue('closed')">
-      <div class="stat-icon closed"><mat-icon>lock</mat-icon></div>
+      <div class="stat-icon closed"><span aria-hidden="true">&#x1F512;</span></div>
       <div>
         <div class="stat-num s-closed">{{ getStatusCount('closed') }}</div>
         <div class="stat-label">Closed</div>
@@ -79,7 +79,7 @@
   <div class="filter-panel">
     <div class="filter-top">
       <div class="search-field">
-        <mat-icon class="search-icon">search</mat-icon>
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text"
                [formControl]="searchControl"
                placeholder="Search by ticket #, violation, location…"
@@ -94,7 +94,7 @@
             <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
-        <span class="select-arrow"><mat-icon>expand_more</mat-icon></span>
+        <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
       </div>
 
       <div class="filter-select-wrap">
@@ -105,11 +105,11 @@
             <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
-        <span class="select-arrow"><mat-icon>expand_more</mat-icon></span>
+        <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
       </div>
 
       <button class="adv-toggle" [class.active]="showAdvancedFilters" (click)="toggleAdvancedFilters()">
-        <mat-icon>tune</mat-icon>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         Advanced Filters
         @if (advancedFiltersCount > 0) {
           <span class="adv-count">{{ advancedFiltersCount }}</span>
@@ -124,7 +124,7 @@
           <div class="adv-field">
             <label class="adv-label">Date From</label>
             <div class="adv-input-wrap">
-              <mat-icon class="adv-input-icon">event</mat-icon>
+              <span class="adv-input-icon" aria-hidden="true">&#x1F4C5;</span>
               <input type="date"
                      class="adv-input"
                      [formControl]="dateFromControl"
@@ -134,7 +134,7 @@
           <div class="adv-field">
             <label class="adv-label">Date To</label>
             <div class="adv-input-wrap">
-              <mat-icon class="adv-input-icon">event</mat-icon>
+              <span class="adv-input-icon" aria-hidden="true">&#x1F4C5;</span>
               <input type="date"
                      class="adv-input"
                      [formControl]="dateToControl"
@@ -144,7 +144,7 @@
           <div class="adv-field">
             <label class="adv-label">Location</label>
             <div class="adv-input-wrap">
-              <mat-icon class="adv-input-icon">place</mat-icon>
+              <span class="adv-input-icon" aria-hidden="true">&#x1F4CD;</span>
               <input type="text"
                      class="adv-input"
                      [formControl]="locationControl"
@@ -155,7 +155,7 @@
           <div class="adv-field">
             <label class="adv-label">Citation #</label>
             <div class="adv-input-wrap">
-              <mat-icon class="adv-input-icon">tag</mat-icon>
+              <span class="adv-input-icon" aria-hidden="true">&#x1F3F7;</span>
               <input type="text"
                      class="adv-input"
                      [formControl]="citationControl"
@@ -166,11 +166,11 @@
         </div>
         <div class="adv-actions">
           <button class="btn btn-secondary btn-sm" (click)="clearAdvancedFilters()">
-            <mat-icon>clear</mat-icon>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Reset
           </button>
           <button class="btn btn-primary btn-sm" (click)="showAdvancedFilters = false">
-            <mat-icon>check</mat-icon>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
             Apply
           </button>
         </div>
@@ -184,7 +184,7 @@
           <div class="filter-chip">
             Status: {{ getStatusLabel(statusFilter.value!) }}
             <span class="chip-remove" (click)="statusFilter.setValue('all')" role="button" aria-label="Remove status filter">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -192,7 +192,7 @@
           <div class="filter-chip">
             Type: {{ typeFilter.value }}
             <span class="chip-remove" (click)="typeFilter.setValue('all')" role="button" aria-label="Remove type filter">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -200,7 +200,7 @@
           <div class="filter-chip">
             Search: "{{ searchControl.value }}"
             <span class="chip-remove" (click)="searchControl.setValue('')" role="button" aria-label="Clear search">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -208,7 +208,7 @@
           <div class="filter-chip">
             From: {{ formatDate(dateFromControl.value) }}
             <span class="chip-remove" (click)="dateFromControl.setValue(null)" role="button" aria-label="Remove date from filter">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -216,7 +216,7 @@
           <div class="filter-chip">
             To: {{ formatDate(dateToControl.value) }}
             <span class="chip-remove" (click)="dateToControl.setValue(null)" role="button" aria-label="Remove date to filter">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -224,7 +224,7 @@
           <div class="filter-chip">
             Location: "{{ locationControl.value }}"
             <span class="chip-remove" (click)="locationControl.setValue('')" role="button" aria-label="Remove location filter">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -232,7 +232,7 @@
           <div class="filter-chip">
             Citation: "{{ citationControl.value }}"
             <span class="chip-remove" (click)="citationControl.setValue('')" role="button" aria-label="Remove citation filter">
-              <mat-icon>close</mat-icon>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </span>
           </div>
         }
@@ -254,7 +254,7 @@
   <!-- Error state -->
   @if (error && !loading) {
     <div class="empty-state">
-      <mat-icon>error_outline</mat-icon>
+      <span class="empty-emoji" aria-hidden="true">&#x26A0;</span>
       <h2>{{ error }}</h2>
       <button class="btn btn-primary" (click)="refresh()">Try Again</button>
     </div>
@@ -263,11 +263,11 @@
   <!-- Empty state -->
   @if (!loading && !error && filteredCases.length === 0 && cases.length === 0) {
     <div class="empty-state">
-      <mat-icon>inbox</mat-icon>
+      <span class="empty-emoji" aria-hidden="true">&#x1F4ED;</span>
       <h2>{{ 'CASE_LIST.EMPTY' | translate }}</h2>
       <p>{{ 'CASE_LIST.EMPTY_CTA' | translate }}</p>
       <button class="btn btn-primary" (click)="submitNewTicket()">
-        <mat-icon>add</mat-icon>
+        <span aria-hidden="true">&#x2795;</span>
         Submit Your First Ticket
       </button>
     </div>
@@ -276,11 +276,11 @@
   <!-- No results state -->
   @if (!loading && !error && filteredCases.length === 0 && cases.length > 0) {
     <div class="empty-state">
-      <mat-icon>search_off</mat-icon>
+      <span class="empty-emoji" aria-hidden="true">&#x1F50D;</span>
       <h2>{{ 'CASE_LIST.NO_RESULTS' | translate }}</h2>
       <p>{{ 'CASE_LIST.NO_RESULTS_HINT' | translate }}</p>
       <button class="btn btn-primary" (click)="clearFilters()">
-        <mat-icon>clear</mat-icon>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Clear Filters
       </button>
     </div>
@@ -296,7 +296,7 @@
         </div>
         <div class="table-actions">
           <button class="icon-btn" (click)="refresh()" [disabled]="loading" aria-label="Refresh">
-            <mat-icon>refresh</mat-icon>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           </button>
         </div>
       </div>
@@ -318,7 +318,7 @@
             <tr (click)="viewCase(c)" class="clickable-row">
               <td>
                 <div class="ticket-cell">
-                  <div class="ticket-icon-box"><mat-icon>receipt_long</mat-icon></div>
+                  <div class="ticket-icon-box"><span aria-hidden="true">&#x1F3AB;</span></div>
                   <div>
                     <div class="ticket-num">{{ c.ticketNumber || c.id.substring(0, 8).toUpperCase() }}</div>
                     <div class="ticket-sub">Submitted {{ formatDate(c.createdAt || c.created_at) }}</div>
@@ -334,12 +334,12 @@
               <td>
                 @if (c.location) {
                   <div class="location-cell">
-                    <mat-icon>place</mat-icon>
+                    <span aria-hidden="true">&#x1F4CD;</span>
                     {{ c.location }}
                   </div>
                 } @else {
                   <div class="empty-loc">
-                    <mat-icon>place</mat-icon> Pending
+                    <span aria-hidden="true">&#x1F4CD;</span> Pending
                   </div>
                 }
               </td>
@@ -350,14 +350,14 @@
                           [matMenuTriggerFor]="rowMenu"
                           (click)="$event.stopPropagation()"
                           aria-label="More actions">
-                    <mat-icon>more_horiz</mat-icon>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                   </button>
                   <mat-menu #rowMenu="matMenu">
                     <button mat-menu-item (click)="viewCase(c)">
-                      <mat-icon>visibility</mat-icon> View Details
+                      <span aria-hidden="true">&#x1F441;</span> View Details
                     </button>
                     <button mat-menu-item>
-                      <mat-icon>file_download</mat-icon> Export PDF
+                      <span aria-hidden="true">&#x1F4E5;</span> Export PDF
                     </button>
                   </mat-menu>
                 </div>
@@ -379,9 +379,9 @@
               <span class="status-badge" [attr.data-status]="c.status">{{ getStatusLabel(c.status) }}</span>
             </div>
             <div class="mobile-card-details">
-              <span><mat-icon>event</mat-icon> {{ formatDate(c.createdAt || c.created_at) }}</span>
+              <span><span aria-hidden="true">&#x1F4C5;</span> {{ formatDate(c.createdAt || c.created_at) }}</span>
               @if (c.location) {
-                <span><mat-icon>place</mat-icon> {{ c.location }}</span>
+                <span><span aria-hidden="true">&#x1F4CD;</span> {{ c.location }}</span>
               }
             </div>
           </div>
@@ -394,13 +394,13 @@
           <div class="page-info">Showing {{ pageStart }}–{{ pageEnd }} of {{ filteredCases.length }} results</div>
           <div class="page-btns">
             <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
-              <mat-icon>chevron_left</mat-icon>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             @for (p of pageNumbers; track p) {
               <button class="page-btn" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p }}</button>
             }
             <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Next page">
-              <mat-icon>chevron_right</mat-icon>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
         </div>

@@ -91,6 +91,42 @@ Use this format for every story:
 - Blocks: [Story Y, or "None"]
 ```
 
+### Step 3b: Hidden Requirements Discovery (Template/Mockup Analysis)
+
+**Mandatory when the input includes an HTML template, Figma export, or design mockup.**
+
+Perform a systematic gap analysis between the template and the current codebase:
+
+#### Data Layer Check
+- [ ] Every form field in the template has a corresponding column in `supabase_schema.sql`
+- [ ] Enum values in dropdowns/chips match DB enum definitions exactly
+- [ ] Validation rules (min/max, required/optional, patterns) are documented in acceptance criteria
+- [ ] Conditional fields (show/hide based on other field values) are captured as explicit criteria
+
+#### API Contract Check
+- [ ] Every form submission maps to an existing API endpoint
+- [ ] All template field names map to API request field names (watch for camelCase vs snake_case)
+- [ ] New fields are added to route validation middleware
+- [ ] Response fields needed for display are returned by the API
+
+#### Asset & Icon Inventory
+- [ ] List every icon, image, SVG, and background asset in the template
+- [ ] Cross-reference each against `frontend/src/assets/`
+- [ ] Create a story for any missing assets (SVG icons, images, fonts)
+- [ ] Note any icon fonts referenced that aren't installed (Material Icons, Lucide, etc.)
+
+#### Integration Points Check
+- [ ] OCR field mappings updated for new/renamed form fields
+- [ ] Real-time subscriptions handle new data shapes
+- [ ] Third-party services (Stripe, Twilio, etc.) don't need updates
+
+#### Stale File Detection
+- [ ] If the template replaces an existing component, flag the old file for deletion
+- [ ] Check for orphaned `.html` files when templates are moved inline (or vice versa)
+- [ ] Check for orphaned `.scss` files when styles are restructured
+
+Add any discovered gaps as new acceptance criteria to existing stories, or create a new story if the gap is significant.
+
 ### Step 4: Define Implementation Order
 
 Produce a dependency graph showing the build sequence:
@@ -167,3 +203,23 @@ When requirements are ambiguous or conflicting, **ask the user** rather than gue
 - "The roadmap lists this as V2, but you're asking for it now. Should I reprioritize, or defer?"
 - "This feature serves both Miguel (driver) and Sarah (carrier) differently. Which persona should we optimize for first?"
 - "This would require a new table not in the current schema. Should I scope a database migration story?"
+
+## Self-Learning Protocol
+
+This agent continuously improves by learning from each session. After completing any task:
+
+### Observe
+- **Scope misses:** Did the Architect or Dev Lead discover requirements I didn't capture? (missing DB columns, enum mismatches, API gaps, stale files)
+- **Sizing errors:** Were stories too large (touched >5 files) or too small (trivial, not worth tracking)?
+- **Dependency misses:** Did a story get blocked by an undiscovered prerequisite?
+- **User corrections:** Did the user reject, reorder, or heavily modify the breakdown?
+
+### Learn
+When any of the above occurs, update this agent file:
+1. Add the missed pattern to the relevant checklist (Step 1, Step 3, or Step 3b)
+2. Add a new entry to the "Scope Control Rules" if a recurring miss is identified
+3. Update sizing guidance if story estimates consistently miss
+
+### Improve
+- After every 3 sprints, review the last 3 sprint overviews for patterns: What types of hidden requirements keep appearing? Add them as standard checks.
+- If the same type of user correction happens twice, it's a process gap — fix the process, don't just note it.

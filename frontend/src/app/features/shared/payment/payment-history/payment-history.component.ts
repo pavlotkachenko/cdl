@@ -1,315 +1,458 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule, UpperCasePipe } from '@angular/common';
+import { Component, OnInit, ChangeDetectionStrategy, signal, computed, inject } from '@angular/core';
 import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatCardModule } from '@angular/material/card';
-import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { timeout, catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
-import { TranslateModule } from '@ngx-translate/core';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-
-export interface UnpaidCase {
-  id: string;
-  case_number: string;
-  violation_type: string;
-  attorney_name: string;
-  amount_due: number;
-  currency: string;
-  due_date: string;
-}
 
 export interface PaymentTransaction {
   id: string;
   user_id: string;
-  attorney_name?: string;
   amount: number;
   currency: string;
-  status: string;
-  payment_method: string;
+  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'refunded' | 'cancelled';
   description?: string;
+  card_brand?: string;
+  card_last4?: string;
   receipt_url?: string;
   created_at: string;
-  metadata?: any;
+  paid_at?: string;
+  case?: {
+    id: string;
+    case_number: string;
+    violation_type: string;
+  };
+  attorney?: {
+    name: string;
+  };
+}
+
+export interface PaymentStats {
+  total_amount: number;
+  paid_amount: number;
+  pending_amount: number;
+  failed_amount: number;
+  refunded_amount: number;
+  transaction_count: number;
+  paid_count: number;
+  pending_count: number;
+  failed_count: number;
+  refunded_count: number;
+  currency: string;
 }
 
 @Component({
   selector: 'app-payment-history',
-  standalone: true,
   templateUrl: './payment-history.component.html',
   styleUrls: ['./payment-history.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
-    UpperCasePipe,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatIconModule,
-    MatButtonModule,
-    MatChipsModule,
-    MatTooltipModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatCardModule,
-    MatSelectModule,
     MatProgressSpinnerModule,
-    TranslateModule,
+    MatTooltipModule,
   ],
 })
 export class PaymentHistoryComponent implements OnInit {
-  displayedColumns: string[] = ['date', 'description', 'amount', 'method', 'status', 'actions'];
-  dataSource: MatTableDataSource<PaymentTransaction>;
-  loading = false;
-  unpaidCases: UnpaidCase[] = [];
-
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
-
-  // Filters
-  filterForm = new FormGroup({
-    startDate: new FormControl(null),
-    endDate: new FormControl(null),
-    status: new FormControl('all'),
-    minAmount: new FormControl(null),
-    maxAmount: new FormControl(null),
-    searchTerm: new FormControl('')
-  });
-
-  statusOptions = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'succeeded', label: 'Succeeded' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'refunded', label: 'Refunded' }
-  ];
-
+  private http = inject(HttpClient);
+  private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
   private apiUrl = `${environment.apiUrl}/payments`;
 
-  constructor(
-    private http: HttpClient,
-    private snackBar: MatSnackBar,
-    private router: Router
-  ) {
-    this.dataSource = new MatTableDataSource<PaymentTransaction>([]);
-  }
+  // Loading states
+  loading = signal(false);
+  loadingStats = signal(false);
+  error = signal(false);
+
+  // Data
+  payments = signal<PaymentTransaction[]>([]);
+  stats = signal<PaymentStats | null>(null);
+
+  // Pagination
+  currentPage = signal(1);
+  perPage = signal(10);
+  totalItems = signal(0);
+  totalPages = computed(() => Math.ceil(this.totalItems() / this.perPage()) || 0);
+
+  // Sort
+  sortState = signal<{ column: string; direction: 'asc' | 'desc' }>({
+    column: 'created_at',
+    direction: 'desc',
+  });
+
+  // Applied filters snapshot (set on Apply click)
+  appliedFilters = signal<Record<string, unknown>>({});
+
+  // Retry loading
+  retryingId = signal<string | null>(null);
+
+  // Filter form
+  filterForm = new FormGroup({
+    searchTerm: new FormControl(''),
+    status: new FormControl('all'),
+    startDate: new FormControl(''),
+    endDate: new FormControl(''),
+    minAmount: new FormControl<number | null>(null),
+    maxAmount: new FormControl<number | null>(null),
+  });
+
+  readonly statusOptions = [
+    { value: 'all', label: 'All Statuses' },
+    { value: 'succeeded', label: 'Paid' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'failed', label: 'Failed' },
+    { value: 'refunded', label: 'Refunded' },
+  ];
+
+  readonly perPageOptions = [10, 25, 50];
+  readonly skeletonItems = [0, 1, 2, 3];
+
+  // Derived
+  isEmpty = computed(() => !this.loading() && this.payments().length === 0);
+
+  activeFilterChips = computed(() => {
+    const v = this.appliedFilters();
+    const chips: { key: string; label: string; value: string }[] = [];
+    if (v['status'] && v['status'] !== 'all') {
+      const opt = this.statusOptions.find(o => o.value === v['status']);
+      chips.push({ key: 'status', label: 'Status', value: opt?.label || String(v['status']) });
+    }
+    if (v['searchTerm']) chips.push({ key: 'searchTerm', label: 'Search', value: String(v['searchTerm']) });
+    if (v['startDate']) chips.push({ key: 'startDate', label: 'From', value: String(v['startDate']) });
+    if (v['endDate']) chips.push({ key: 'endDate', label: 'To', value: String(v['endDate']) });
+    if (v['minAmount'] != null) chips.push({ key: 'minAmount', label: 'Min Amount', value: `$${v['minAmount']}` });
+    if (v['maxAmount'] != null) chips.push({ key: 'maxAmount', label: 'Max Amount', value: `$${v['maxAmount']}` });
+    return chips;
+  });
+
+  hasActiveFilters = computed(() => this.activeFilterChips().length > 0);
+
+  pageInfo = computed(() => {
+    const total = this.totalItems();
+    if (total === 0) return '0 of 0';
+    const start = (this.currentPage() - 1) * this.perPage() + 1;
+    const end = Math.min(this.currentPage() * this.perPage(), total);
+    return `${start}\u2013${end} of ${total}`;
+  });
+
+  pageNumbers = computed(() => {
+    const total = this.totalPages();
+    const current = this.currentPage();
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    let start = Math.max(1, current - 2);
+    const end = Math.min(total, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  });
 
   ngOnInit(): void {
-    this.loadPaymentHistory();
-    this.loadUnpaidCases();
-    this.setupFilterListeners();
+    this.loadStats();
+    this.loadPayments();
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
-
-    // Custom filter predicate
-    this.dataSource.filterPredicate = (data: PaymentTransaction, filter: string) => {
-      const searchTerm = filter.toLowerCase();
-      return (
-        data.description?.toLowerCase().includes(searchTerm) ||
-        data.attorney_name?.toLowerCase().includes(searchTerm) ||
-        data.payment_method.toLowerCase().includes(searchTerm) ||
-        data.status.toLowerCase().includes(searchTerm)
-      );
-    };
-  }
-
-  setupFilterListeners(): void {
-    this.filterForm.valueChanges.subscribe(() => {
-      this.applyFilters();
-    });
-  }
-
-  loadPaymentHistory(): void {
-    this.loading = true;
-
-    let params = new HttpParams();
-    const filters = this.filterForm.value;
-
-    if (filters.startDate) {
-      params = params.set('start_date', new Date(filters.startDate).toISOString());
-    }
-    if (filters.endDate) {
-      params = params.set('end_date', new Date(filters.endDate).toISOString());
-    }
-    if (filters.status && filters.status !== 'all') {
-      params = params.set('status', filters.status);
-    }
-    if (filters.minAmount) {
-      params = params.set('min_amount', (filters.minAmount * 100).toString());
-    }
-    if (filters.maxAmount) {
-      params = params.set('max_amount', (filters.maxAmount * 100).toString());
-    }
-
-    this.http.get<PaymentTransaction[]>(`${this.apiUrl}/history`, { params }).pipe(
-      timeout(2000),
-      catchError(() => of([] as PaymentTransaction[]))
-    ).subscribe({
-      next: (transactions) => {
-        this.dataSource.data = transactions;
-        this.loading = false;
+  loadStats(): void {
+    this.loadingStats.set(true);
+    this.http.get<{ success: boolean; data: PaymentStats }>(`${this.apiUrl}/user/me/stats`).subscribe({
+      next: (res) => {
+        this.stats.set(res.data);
+        this.loadingStats.set(false);
       },
       error: () => {
-        this.dataSource.data = [];
-        this.loading = false;
-      }
+        this.loadingStats.set(false);
+      },
     });
   }
 
-  loadUnpaidCases(): void {
-    this.http.get<UnpaidCase[]>(`${environment.apiUrl}/cases/unpaid`).pipe(
-      timeout(2000),
-      catchError(() => of([] as UnpaidCase[]))
-    ).subscribe({
-      next: (cases) => {
-        this.unpaidCases = cases;
+  loadPayments(): void {
+    this.loading.set(true);
+    this.error.set(false);
+
+    let params = new HttpParams()
+      .set('page', this.currentPage().toString())
+      .set('per_page', this.perPage().toString())
+      .set('sort_by', this.sortState().column)
+      .set('sort_dir', this.sortState().direction);
+
+    const f = this.filterForm.value;
+    if (f.status && f.status !== 'all') params = params.set('status', f.status);
+    if (f.searchTerm) params = params.set('search', f.searchTerm);
+    if (f.startDate) params = params.set('date_from', f.startDate);
+    if (f.endDate) params = params.set('date_to', f.endDate);
+    if (f.minAmount != null) params = params.set('amount_min', f.minAmount.toString());
+    if (f.maxAmount != null) params = params.set('amount_max', f.maxAmount.toString());
+
+    this.http.get<{
+      success: boolean;
+      data: PaymentTransaction[];
+      pagination: { page: number; per_page: number; total: number; total_pages: number };
+    }>(`${this.apiUrl}/user/me`, { params }).subscribe({
+      next: (res) => {
+        this.payments.set(res.data);
+        this.totalItems.set(res.pagination.total);
+        this.loading.set(false);
       },
       error: () => {
-        this.unpaidCases = [];
-      }
+        this.error.set(true);
+        this.loading.set(false);
+      },
     });
-  }
-
-  goToPayment(caseItem: UnpaidCase): void {
-    this.router.navigate(['/driver/cases', caseItem.id, 'pay']);
-  }
-
-  getUnpaidTotal(): number {
-    return this.unpaidCases.reduce((sum, c) => sum + c.amount_due, 0);
   }
 
   applyFilters(): void {
-    const searchTerm = this.filterForm.value.searchTerm || '';
-    this.dataSource.filter = searchTerm.trim().toLowerCase();
-
-    if (this.dataSource.paginator) {
-      this.dataSource.paginator.firstPage();
-    }
+    this.appliedFilters.set({ ...this.filterForm.value });
+    this.currentPage.set(1);
+    this.loadPayments();
   }
 
   resetFilters(): void {
     this.filterForm.reset({
-      status: 'all'
+      status: 'all', searchTerm: '', startDate: '', endDate: '',
+      minAmount: null, maxAmount: null,
     });
-    this.loadPaymentHistory();
+    this.appliedFilters.set({});
+    this.currentPage.set(1);
+    this.loadPayments();
+    this.loadStats();
   }
 
-  downloadReceipt(transaction: PaymentTransaction): void {
-    if (!transaction.receipt_url) {
-      this.snackBar.open('Receipt not available', 'Close', { duration: 3000 });
-      return;
-    }
+  removeChip(key: string): void {
+    const defaults: Record<string, unknown> = {
+      status: 'all', searchTerm: '', startDate: '', endDate: '',
+      minAmount: null, maxAmount: null,
+    };
+    this.filterForm.get(key)?.setValue(defaults[key] ?? null);
+    this.applyFilters();
+  }
 
-    this.http.get(`${this.apiUrl}/${transaction.id}/receipt`, {
-      responseType: 'blob'
-    }).subscribe({
+  toggleSort(column: string): void {
+    const current = this.sortState();
+    if (current.column === column) {
+      this.sortState.set({ column, direction: current.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      this.sortState.set({ column, direction: 'desc' });
+    }
+    this.currentPage.set(1);
+    this.loadPayments();
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages()) return;
+    this.currentPage.set(page);
+    this.loadPayments();
+  }
+
+  changePerPage(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.perPage.set(parseInt(select.value, 10));
+    this.currentPage.set(1);
+    this.loadPayments();
+  }
+
+  refreshData(): void {
+    this.loadPayments();
+    this.loadStats();
+  }
+
+  downloadReceipt(payment: PaymentTransaction, event: Event): void {
+    event.stopPropagation();
+    if (!payment.receipt_url) return;
+
+    this.http.get(`${this.apiUrl}/${payment.id}/receipt`, { responseType: 'blob' }).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `receipt-${transaction.id}.pdf`;
+        link.download = `receipt-${payment.id}.pdf`;
         link.click();
         window.URL.revokeObjectURL(url);
         this.snackBar.open('Receipt downloaded', 'Close', { duration: 2000 });
       },
-      error: (error) => {
-        console.error('Error downloading receipt:', error);
+      error: () => {
         this.snackBar.open('Error downloading receipt', 'Close', { duration: 3000 });
-      }
+      },
     });
   }
 
-  exportToCsv(): void {
-    const data = this.dataSource.filteredData;
-    
-    if (data.length === 0) {
+  retryPayment(payment: PaymentTransaction, event: Event): void {
+    event.stopPropagation();
+    const amount = this.formatCurrency(payment.amount, payment.currency);
+    if (!confirm(`Retry this payment of ${amount}?`)) return;
+
+    this.retryingId.set(payment.id);
+    this.http.post<{ success: boolean; data: { payment: unknown; client_secret: string } }>(
+      `${this.apiUrl}/${payment.id}/retry`, {},
+    ).subscribe({
+      next: (res) => {
+        this.retryingId.set(null);
+        const caseId = payment.case?.id;
+        if (caseId && res.data?.client_secret) {
+          this.router.navigate(['/driver/cases', caseId, 'pay'], {
+            queryParams: { retry: 'true', intent: res.data.client_secret },
+          });
+        } else {
+          this.snackBar.open('Payment retry initiated', 'Close', { duration: 3000 });
+          this.loadPayments();
+        }
+      },
+      error: (err) => {
+        this.retryingId.set(null);
+        const msg = err.error?.message || 'Failed to retry payment';
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  viewDetails(payment: PaymentTransaction, event: Event): void {
+    event.stopPropagation();
+    const caseId = payment.case?.id;
+    if (caseId) {
+      this.router.navigate(['/driver/cases', caseId, 'pay']);
+    }
+  }
+
+  async exportCsv(): Promise<void> {
+    const total = this.totalItems();
+    if (total === 0) {
       this.snackBar.open('No data to export', 'Close', { duration: 3000 });
       return;
     }
 
-    const headers = ['Date', 'Description', 'Amount', 'Currency', 'Payment Method', 'Status'];
-    const csvData = data.map(t => [
-      new Date(t.created_at).toLocaleString(),
-      t.description || 'N/A',
-      (t.amount / 100).toFixed(2),
-      t.currency.toUpperCase(),
-      t.payment_method,
-      t.status
-    ]);
+    let params = new HttpParams()
+      .set('page', '1')
+      .set('per_page', '9999')
+      .set('sort_by', this.sortState().column)
+      .set('sort_dir', this.sortState().direction);
 
-    const csv = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
+    const f = this.filterForm.value;
+    if (f.status && f.status !== 'all') params = params.set('status', f.status!);
+    if (f.searchTerm) params = params.set('search', f.searchTerm);
+    if (f.startDate) params = params.set('date_from', f.startDate);
+    if (f.endDate) params = params.set('date_to', f.endDate);
+    if (f.minAmount != null) params = params.set('amount_min', f.minAmount.toString());
+    if (f.maxAmount != null) params = params.set('amount_max', f.maxAmount.toString());
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `payment-history-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+    try {
+      const res = await firstValueFrom(this.http.get<{
+        success: boolean;
+        data: PaymentTransaction[];
+        pagination: { page: number; per_page: number; total: number; total_pages: number };
+      }>(`${this.apiUrl}/user/me`, { params }));
 
-    this.snackBar.open('Data exported successfully', 'Close', { duration: 2000 });
+      const all = res.data;
+      if (all.length === 0) {
+        this.snackBar.open('No data to export', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const headers = ['Date', 'Time', 'Description', 'Case Number', 'Violation', 'Amount', 'Currency', 'Payment Method', 'Card Last 4', 'Status'];
+      const rows = all.map(p => [
+        this.formatDateShort(p.created_at),
+        this.formatTime(p.created_at),
+        p.description || 'Payment',
+        p.case?.case_number || '',
+        p.case?.violation_type || '',
+        p.amount.toFixed(2),
+        (p.currency || 'USD').toUpperCase(),
+        this.getCardBrandName(p.card_brand),
+        p.card_last4 || '',
+        this.getStatusLabel(p.status),
+      ]);
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `payment-history-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      this.snackBar.open('Data exported successfully', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Export failed', 'Close', { duration: 3000 });
+    }
   }
+
+  // ─── Formatting Helpers ───────────────────────────────────
 
   formatCurrency(amount: number, currency: string = 'USD'): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency
-    }).format(amount / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
   }
 
-  formatDate(date: string): string {
-    return new Date(date).toLocaleString();
+  formatDateShort(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  getStatusColor(status: string): string {
-    const colors: { [key: string]: string } = {
-      'succeeded': 'primary',
-      'pending': 'accent',
-      'failed': 'warn',
-      'refunded': 'basic'
+  formatTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+
+  getStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      succeeded: 'Paid', pending: 'Pending', processing: 'Processing',
+      failed: 'Failed', refunded: 'Refunded', cancelled: 'Cancelled',
     };
-    return colors[status.toLowerCase()] || 'basic';
+    return map[status] || status;
   }
 
-  getStatusIcon(status: string): string {
-    const icons: { [key: string]: string } = {
-      'succeeded': 'check_circle',
-      'pending': 'schedule',
-      'failed': 'error',
-      'refunded': 'undo'
+  getStatusClass(status: string): string {
+    const map: Record<string, string> = {
+      succeeded: 'status-paid', pending: 'status-pending',
+      failed: 'status-failed', refunded: 'status-refunded',
     };
-    return icons[status.toLowerCase()] || 'help';
+    return map[status] || 'status-default';
   }
 
-  getTotalAmount(): number {
-    return this.dataSource.filteredData
-      .filter(t => t.status === 'succeeded')
-      .reduce((sum, t) => sum + t.amount, 0);
+  getTransactionType(payment: PaymentTransaction): string {
+    if (payment.description?.toLowerCase().includes('refund')) return 'refund';
+    if (payment.status === 'failed') return 'failed';
+    if (payment.description?.toLowerCase().includes('filing fee')) return 'filing';
+    return 'attorney_fee';
   }
 
-  getTransactionCount(): number {
-    return this.dataSource.filteredData.length;
+  getTransactionEmoji(payment: PaymentTransaction): string {
+    const map: Record<string, string> = {
+      attorney_fee: '\u2696\uFE0F',
+      filing: '\uD83D\uDCCB',
+      refund: '\uD83D\uDD01',
+      failed: '\u274C',
+    };
+    return map[this.getTransactionType(payment)] || '\uD83D\uDCB3';
+  }
+
+  getAmountPrefix(payment: PaymentTransaction): string {
+    return payment.status === 'refunded' ? '+' : '-';
+  }
+
+  getAmountClass(payment: PaymentTransaction): string {
+    const map: Record<string, string> = {
+      succeeded: 'amount-paid', pending: 'amount-pending',
+      failed: 'amount-failed', refunded: 'amount-refunded',
+    };
+    return map[payment.status] || '';
+  }
+
+  getCardBrandAbbr(brand?: string): string {
+    if (!brand) return 'CARD';
+    const map: Record<string, string> = { visa: 'VISA', mastercard: 'MC', amex: 'AMEX', discover: 'DISC' };
+    return map[brand.toLowerCase()] || brand.toUpperCase();
+  }
+
+  getCardBrandName(brand?: string): string {
+    if (!brand) return 'Card';
+    const map: Record<string, string> = { visa: 'Visa', mastercard: 'Mastercard', amex: 'Amex', discover: 'Discover' };
+    return map[brand.toLowerCase()] || brand;
+  }
+
+  getSortDirection(column: string): string {
+    const s = this.sortState();
+    if (s.column !== column) return 'none';
+    return s.direction;
   }
 }

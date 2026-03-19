@@ -1,55 +1,92 @@
+@use '../../../../../assets/styles/variables' as *;
+
 // ============================================
-// Document Upload Styles
+// Panel Container
 // ============================================
 
-$teal: #1dad8c;
-$teal-mid: #17a07f;
-$teal-bg: #f0faf7;
-$teal-border: #c0e8dd;
-$text-primary: #0f2137;
-$text-body: #5a6578;
-$text-secondary: #8a94a6;
-$bg: #f4f7f9;
-$border: #edf2f6;
-$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-
-.upload-container {
-  padding: 24px;
-  max-width: 900px;
-  margin: 0 auto;
-  font-family: 'Mulish', sans-serif;
+.upload-panel {
+  background: $surface;
+  border: 1.5px solid $border-light;
+  border-radius: $radius-md;
+  box-shadow: $shadow-card-md;
+  overflow: hidden;
 }
 
 // ============================================
-// Header
+// Panel Header
 // ============================================
 
-.upload-header {
-  text-align: center;
-  margin-bottom: 32px;
+.panel-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid $border-light;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-  h2 {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    font-size: 28px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 8px 0;
+.panel-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: $teal-bg2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: $teal;
+}
 
-    mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      color: $teal;
-    }
+.panel-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: $text-primary;
+}
+
+.panel-sub {
+  font-size: 12px;
+  color: $text-muted;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.panel-close {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1.5px solid $border;
+  background: $surface;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: $text-muted;
+  transition: all 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: $border;
+    background: $bg;
   }
 
-  p {
-    font-size: 16px;
-    color: $text-body;
-    margin: 0;
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
+  }
+}
+
+// ============================================
+// Panel Body (two columns)
+// ============================================
+
+.panel-body {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+
+  @media (max-width: #{$breakpoint-mobile - 1}) {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -58,347 +95,441 @@ $shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
 // ============================================
 
 .drop-zone {
-  border: 3px dashed $teal-border;
-  border-radius: 10px;
-  padding: 60px 32px;
+  border: 2px dashed $teal-border;
+  border-radius: $radius-md;
+  background: $teal-bg;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background: white;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s;
 
-  @media (max-width: 768px) {
-    padding: 40px 20px;
+  &:hover,
+  &:focus-visible,
+  &.drag-over {
+    border-color: $teal;
+    background: $teal-bg2;
+    box-shadow: 0 0 0 4px rgba($teal, 0.1);
   }
+
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
+  }
+}
+
+.drop-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, $teal, $teal-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba($teal, 0.3);
+}
+
+.drop-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: $text-primary;
+  margin-bottom: 6px;
+}
+
+.drop-sub {
+  font-size: 13px;
+  color: $text-muted;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.drop-browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: $teal;
+  color: #ffffff;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-family: $font-primary;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: $shadow-teal;
+  transition: all 0.15s;
 
   &:hover {
-    border-color: $teal;
-    background: $teal-bg;
-    transform: scale(1.01);
-  }
-
-  &.dragging {
-    border-color: $teal;
-    background: linear-gradient(135deg, $teal-bg 0%, #e4f5f1 100%);
-    border-style: solid;
-    box-shadow: 0 8px 32px rgba(29, 173, 140, 0.2);
-
-    .drop-zone-content {
-      transform: scale(1.05);
-    }
-  }
-
-  &.has-files {
-    border-style: solid;
-    border-color: $teal;
-    background: $teal-bg;
-  }
-
-  .drop-zone-content {
-    transition: transform 0.3s ease;
-
-    .upload-icon {
-      font-size: 80px;
-      width: 80px;
-      height: 80px;
-      color: $teal;
-      margin-bottom: 16px;
-      opacity: 0.8;
-    }
-
-    h3 {
-      font-size: 22px;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0 0 8px 0;
-    }
-
-    p {
-      font-size: 16px;
-      color: $text-body;
-      margin: 0 0 16px 0;
-    }
-
-    .file-info {
-      display: inline-block;
-      font-size: 13px;
-      color: $text-secondary;
-      background: $bg;
-      padding: 6px 16px;
-      border-radius: 16px;
-    }
+    background: $teal-mid;
+    transform: translateY(-1px);
   }
 }
 
-// ============================================
-// Selected Files
-// ============================================
+.drop-formats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 16px;
+}
 
-.selected-files {
-  margin: 32px 0;
-  background: white;
-  border-radius: 10px;
-  padding: 24px;
-  border: 1.5px solid $border;
-  box-shadow: $shadow-sm;
+.format-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: $surface;
+  border: 1px solid $teal-border;
+  color: $text-muted;
+}
 
-  .files-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-
-    h3 {
-      font-size: 18px;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0;
-    }
-
-    button {
-      mat-icon {
-        margin-right: 8px;
-      }
-    }
-  }
-
-  .files-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    .file-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px;
-      background: $bg;
-      border-radius: 10px;
-      border: 1.5px solid $border;
-      transition: all 0.2s ease;
-
-      &:hover {
-        border-color: $teal-border;
-        background: $teal-bg;
-      }
-
-      .file-icon {
-        font-size: 32px;
-        width: 32px;
-        height: 32px;
-        color: $teal;
-        flex-shrink: 0;
-      }
-
-      .file-details {
-        flex: 1;
-        min-width: 0;
-
-        .file-name {
-          font-size: 15px;
-          font-weight: 600;
-          color: $text-primary;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          margin-bottom: 4px;
-        }
-
-        .file-size {
-          font-size: 13px;
-          color: $text-secondary;
-          margin-bottom: 8px;
-        }
-
-        mat-progress-bar {
-          height: 4px;
-          border-radius: 2px;
-        }
-      }
-
-      .remove-button {
-        flex-shrink: 0;
-        mat-icon {
-          color: #ef4444;
-        }
-      }
-    }
-  }
+.format-tag-max {
+  color: $teal;
+  border-color: $teal-border;
+  background: $teal-bg;
 }
 
 // ============================================
-// Upload Form
+// File Queue
 // ============================================
 
-.upload-form {
-  background: white;
-  border-radius: 10px;
-  padding: 24px;
-  border: 1.5px solid $border;
-  box-shadow: $shadow-sm;
-  margin-bottom: 24px;
-
-  mat-form-field {
-    margin-bottom: 16px;
-
-    &.full-width {
-      width: 100%;
-    }
-
-    mat-icon {
-      margin-right: 8px;
-    }
-  }
-
-  .form-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 24px;
-
-    @media (max-width: 768px) {
-      flex-direction: column;
-    }
-
-    button {
-      mat-icon {
-        margin-right: 8px;
-      }
-
-      @media (max-width: 768px) {
-        width: 100%;
-      }
-    }
-  }
+.queue-section {
+  margin-top: 14px;
 }
 
-// ============================================
-// Upload Tips
-// ============================================
-
-.upload-tips {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-left: 4px solid #f59e0b;
-  border-radius: 10px;
-  padding: 20px 24px;
-
-  h4 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #92400e;
-    margin: 0 0 12px 0;
-
-    mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-  }
-
-  ul {
-    margin: 0;
-    padding-left: 24px;
-
-    li {
-      font-size: 14px;
-      color: #92400e;
-      margin-bottom: 6px;
-      line-height: 1.6;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-  }
+.queue-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $text-muted;
+  margin-bottom: 8px;
 }
 
-// ============================================
-// Animations
-// ============================================
+.file-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: $bg;
+  border: 1px solid $border-light;
+  border-radius: $radius-sm;
+}
+
+.queue-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: $teal-bg2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.queue-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: $text-primary;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-size {
+  font-size: 11px;
+  color: $text-muted;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.queue-remove {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: $text-muted;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background: #fef2f2;
+    color: #dc2626;
   }
-  50% {
+
+  &:disabled {
     opacity: 0.5;
-  }
-}
-
-.drop-zone.dragging {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-// ============================================
-// Snackbar Styles
-// ============================================
-
-::ng-deep {
-  .success-snackbar {
-    background: $teal !important;
-    color: white !important;
-
-    .mat-mdc-button {
-      color: white !important;
-    }
+    cursor: not-allowed;
   }
 
-  .error-snackbar {
-    background: #ef4444 !important;
-    color: white !important;
-
-    .mat-mdc-button {
-      color: white !important;
-    }
+  &:focus-visible {
+    outline: 3px solid rgba($error, 0.3);
   }
 }
 
 // ============================================
-// Dark Mode
+// Right Side: Form Fields
 // ============================================
 
-@media (prefers-color-scheme: dark) {
-  .upload-container {
-    .drop-zone {
-      background: #1f2937;
-      border-color: #374151;
+.panel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
-      &:hover {
-        background: #1f2937;
-        border-color: $teal;
-      }
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-      &.dragging,
-      &.has-files {
-        background: #1f2937;
-      }
-    }
+.field-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $text-secondary;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 
-    .selected-files,
-    .upload-form {
-      background: #1f2937;
-      border-color: #374151;
+.required-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+}
 
-      .files-header h3 {
-        color: #f9fafb;
-      }
+.optional-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-muted;
+  text-transform: lowercase;
+  letter-spacing: 0;
+  background: $border-light;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
 
-      .file-item {
-        background: #374151;
-        border-color: #4b5563;
+.select-wrap {
+  position: relative;
+}
 
-        .file-name {
-          color: #f9fafb;
-        }
+.field-select2 {
+  width: 100%;
+  height: 42px;
+  background: $bg;
+  border: 1.5px solid $border;
+  border-radius: $radius-sm;
+  padding: 0 36px 0 14px;
+  font-family: $font-primary;
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  transition: border-color 0.15s;
 
-        .file-size {
-          color: #d1d5db;
-        }
-      }
-    }
+  &:focus {
+    border-color: $teal;
+    background: $surface;
+    box-shadow: 0 0 0 3px rgba($teal, 0.1);
+  }
+}
+
+.select-arr {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: $text-muted;
+}
+
+.field-textarea {
+  width: 100%;
+  min-height: 90px;
+  background: $bg;
+  border: 1.5px solid $border;
+  border-radius: $radius-sm;
+  padding: 12px 14px;
+  font-family: $font-primary;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-primary;
+  outline: none;
+  resize: vertical;
+  line-height: 1.6;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $teal;
+    background: $surface;
+    box-shadow: 0 0 0 3px rgba($teal, 0.1);
+  }
+
+  &::placeholder {
+    color: $text-muted;
+    font-weight: 400;
+  }
+}
+
+.field-hint {
+  font-size: 12px;
+  color: $text-muted;
+  font-weight: 500;
+}
+
+// ============================================
+// Tips Card
+// ============================================
+
+.tips-card {
+  background: linear-gradient(135deg, #fffbeb, #fef9ec);
+  border: 1.5px solid #fde68a;
+  border-radius: $radius-md;
+  padding: 18px 20px;
+}
+
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.tips-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.tip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.55;
+  margin-bottom: 9px;
+  font-weight: 500;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.tip-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fef3c7;
+  border: 1.5px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+// ============================================
+// Panel Footer
+// ============================================
+
+.panel-footer {
+  padding: 16px 24px;
+  border-top: 1px solid $border-light;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafbfc;
+}
+
+.upload-note {
+  font-size: 12px;
+  color: $text-muted;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 10px;
+}
+
+// ============================================
+// Buttons
+// ============================================
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: $font-primary;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 3px solid rgba($teal, 0.3);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  mat-spinner {
+    display: inline-block;
+  }
+}
+
+.btn-primary {
+  background: $teal;
+  color: #ffffff;
+  box-shadow: $shadow-teal;
+
+  &:hover:not(:disabled) {
+    background: $teal-mid;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba($teal, 0.35);
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: $text-secondary;
+  border: 1.5px solid $border;
+
+  &:hover {
+    border-color: $border;
+    background: $bg;
   }
 }

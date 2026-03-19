@@ -28,7 +28,7 @@ export interface Case {
   documents?: any[];
   statusHistory?: any[];
   assignedAttorney?: string;
-  attorney?: { id: string; full_name: string; email?: string; phone?: string } | null;
+  attorney?: { id: string; full_name: string; email?: string; phone?: string; win_rate?: number; years_experience?: number; cases_won?: number } | null;
   attorney_price?: number;
   resolution?: string;
   createdAt?: Date | string;
@@ -220,6 +220,26 @@ export class CaseService {
 
   sendCaseMessage(caseId: string, content: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/operator/cases/${caseId}/messages`, { content });
+  }
+
+  // ── CD-2: Driver-accessible case messaging ─────────────────────
+
+  getCaseConversationForDriver(caseId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cases/${caseId}/conversation`);
+  }
+
+  getCaseMessagesForDriver(caseId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cases/${caseId}/messages`);
+  }
+
+  sendCaseMessageForDriver(caseId: string, content: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cases/${caseId}/messages`, { content });
+  }
+
+  // ── CD-5: Activity log ─────────────────────────────────────────
+
+  getCaseActivity(caseId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cases/${caseId}/activity`);
   }
 
   // ── CT-5: Operator All-Cases Table ──────────────────────────────

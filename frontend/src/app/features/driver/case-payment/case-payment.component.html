@@ -1,0 +1,246 @@
+<div class="pay-page">
+  <!-- Header -->
+  <header class="pay-header">
+    <button class="back-btn" (click)="goBack()" aria-label="Go back">
+      <span aria-hidden="true">←</span>
+    </button>
+    <h1 class="pay-title">Pay Attorney Fee</h1>
+  </header>
+
+  @if (loadingCase()) {
+    <div class="loading-center" aria-label="Loading case details">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else {
+    <div class="pay-layout">
+
+      <!-- ───────────────── LEFT COLUMN ───────────────── -->
+      <div class="pay-left">
+
+        <!-- Case Summary -->
+        <section class="card case-card" aria-label="Case summary">
+          <h2 class="card-title">Case Summary</h2>
+          <div class="info-grid">
+            <div class="info-row">
+              <span class="info-label">Case Number</span>
+              <span class="info-value case-number">{{ caseNumber() }}</span>
+            </div>
+            @if (violationType()) {
+              <div class="info-row">
+                <span class="info-label">Violation</span>
+                <span class="info-value">{{ violationType() }}</span>
+              </div>
+            }
+            @if (courtDate()) {
+              <div class="info-row">
+                <span class="info-label">Court Date</span>
+                <span class="info-value">{{ courtDate() }}</span>
+              </div>
+            }
+            @if (courtLocation()) {
+              <div class="info-row">
+                <span class="info-label">Location</span>
+                <span class="info-value">{{ courtLocation() }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- Attorney Card -->
+        @if (attorney()) {
+          <section class="card attorney-card" aria-label="Assigned attorney">
+            <div class="attorney-badge">
+              <span class="badge-recommended">✓ RECOMMENDED</span>
+            </div>
+            <div class="attorney-header">
+              <div class="attorney-avatar" aria-hidden="true">
+                {{ attorney()!.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="attorney-meta">
+                <span class="attorney-name">{{ attorney()!.name }}</span>
+                <span class="attorney-title">CDL Defense Attorney</span>
+              </div>
+            </div>
+            <div class="attorney-stats" role="list">
+              <div class="stat-item" role="listitem">
+                <span class="stat-value">{{ attorney()!.win_rate }}%</span>
+                <span class="stat-label">Win Rate</span>
+              </div>
+              <div class="stat-divider" aria-hidden="true"></div>
+              <div class="stat-item" role="listitem">
+                <span class="stat-value">{{ attorney()!.years_experience }}+</span>
+                <span class="stat-label">Years Exp.</span>
+              </div>
+              <div class="stat-divider" aria-hidden="true"></div>
+              <div class="stat-item" role="listitem">
+                <span class="stat-value">{{ attorney()!.cases_won }}</span>
+                <span class="stat-label">Cases Won</span>
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- Payment Plan Selector -->
+        <section class="card plan-card" aria-label="Payment options">
+          <h2 class="card-title">Payment Option</h2>
+          @if (loadingPlans()) {
+            <div class="plan-loading">
+              <mat-spinner diameter="24"></mat-spinner>
+              <span>Loading options…</span>
+            </div>
+          } @else {
+            <div class="plan-options" role="radiogroup" aria-label="Choose payment plan">
+
+              <!-- Pay in Full -->
+              <label class="plan-option" [class.selected]="selectedPlan() === 'full'">
+                <input type="radio" name="plan" value="full"
+                  [checked]="selectedPlan() === 'full'"
+                  (change)="selectPlan('full')"
+                  class="sr-only" />
+                <div class="plan-radio" aria-hidden="true">
+                  <div class="radio-dot" [class.active]="selectedPlan() === 'full'"></div>
+                </div>
+                <div class="plan-info">
+                  <div class="plan-name-row">
+                    <span class="plan-name">Pay in Full</span>
+                    <span class="plan-savings">Best value</span>
+                  </div>
+                  <span class="plan-price">{{ amount() | currency }} today</span>
+                </div>
+              </label>
+
+              <!-- Installment plans -->
+              @for (opt of planOptions(); track opt.key) {
+                @if (opt.key !== 'full') {
+                  <label class="plan-option" [class.selected]="selectedPlan() === opt.key">
+                    <input type="radio" name="plan" [value]="opt.key"
+                      [checked]="selectedPlan() === opt.key"
+                      (change)="selectPlan(opt.key)"
+                      class="sr-only" />
+                    <div class="plan-radio" aria-hidden="true">
+                      <div class="radio-dot" [class.active]="selectedPlan() === opt.key"></div>
+                    </div>
+                    <div class="plan-info">
+                      <div class="plan-name-row">
+                        <span class="plan-name">{{ opt.label }}</span>
+                        @if (opt.popular) {
+                          <span class="plan-badge">Most Popular</span>
+                        }
+                      </div>
+                      <span class="plan-price">{{ opt.weeklyAmount | currency }}/week × {{ opt.installments }} payments</span>
+                    </div>
+                  </label>
+                }
+              }
+            </div>
+          }
+        </section>
+
+      </div>
+
+      <!-- ───────────────── RIGHT COLUMN ───────────────── -->
+      <div class="pay-right">
+
+        <section class="card payment-form-card" aria-label="Payment details">
+          <h2 class="card-title">
+            <span aria-hidden="true">🔒</span> Card Details
+          </h2>
+
+          <!-- Split Stripe Elements -->
+          <div class="stripe-fields">
+            <div class="field-group">
+              <label class="field-label" for="card-number">Card Number</label>
+              <div #cardNumber id="card-number" class="stripe-input" aria-label="Card number input"></div>
+              @if (cardNumberError()) {
+                <p class="field-error" role="alert">{{ cardNumberError() }}</p>
+              }
+            </div>
+
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label" for="card-expiry">Expiry Date</label>
+                <div #cardExpiry id="card-expiry" class="stripe-input" aria-label="Card expiry date input"></div>
+                @if (cardExpiryError()) {
+                  <p class="field-error" role="alert">{{ cardExpiryError() }}</p>
+                }
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="card-cvc">CVC</label>
+                <div #cardCvc id="card-cvc" class="stripe-input" aria-label="Card security code input"></div>
+                @if (cardCvcError()) {
+                  <p class="field-error" role="alert">{{ cardCvcError() }}</p>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Summary -->
+          <div class="order-summary" aria-label="Order summary">
+            <h3 class="summary-title">Order Summary</h3>
+            <div class="summary-row">
+              <span>Attorney Fee</span>
+              <span>{{ amount() | currency }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Processing Fee <span class="fee-note">(2.9% + $0.30)</span></span>
+              <span>{{ processingFee() | currency }}</span>
+            </div>
+            <div class="summary-divider" role="separator"></div>
+            <div class="summary-row total-row">
+              <span>Total Due Today</span>
+              <span class="total-amount">{{ totalAmount() | currency }}</span>
+            </div>
+            @if (selectedPlan() !== 'full') {
+              <p class="installment-note">
+                First installment: <strong>{{ firstInstallment() | currency }}</strong> — remaining paid weekly
+              </p>
+            }
+          </div>
+
+          <!-- Pay Button -->
+          <button
+            class="pay-btn"
+            [disabled]="paying() || !stripeReady() || loadingCase()"
+            (click)="pay()"
+            [attr.aria-label]="payButtonLabel()"
+            [attr.aria-busy]="paying()">
+            @if (paying()) {
+              <mat-spinner diameter="20"></mat-spinner>
+              <span>Processing…</span>
+            } @else if (!stripeReady()) {
+              <span>Loading payment form…</span>
+            } @else {
+              <span aria-hidden="true">🔒</span>
+              <span>{{ payButtonLabel() }}</span>
+            }
+          </button>
+
+          <p class="secure-note">
+            <span aria-hidden="true">🔒</span>
+            Payments secured by Stripe. Your card is never stored on our servers.
+          </p>
+        </section>
+
+        <!-- Payment Schedule (shown after installment plan created) -->
+        @if (planSchedule().length > 0) {
+          <section class="card schedule-card" aria-label="Payment schedule">
+            <h2 class="card-title">Payment Schedule</h2>
+            <div class="schedule-list">
+              @for (item of planSchedule(); track item.installment_num) {
+                <div class="schedule-item" [class.paid]="item.status === 'paid'">
+                  <span class="sched-num">#{{ item.installment_num }}</span>
+                  <span class="sched-date">{{ item.due_date }}</span>
+                  <span class="sched-amount">{{ item.amount | currency }}</span>
+                  <span class="sched-status" [attr.aria-label]="item.status === 'paid' ? 'Paid' : 'Pending'">
+                    {{ item.status === 'paid' ? '✅' : '⏳' }}
+                  </span>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+      </div>
+    </div>
+  }
+</div>

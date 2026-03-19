@@ -259,4 +259,65 @@ describe('CaseService — Sprint 003 methods', () => {
       req.flush(raw);
     });
   });
+
+  // ----------------------------------------------------------------
+  // CD-2: getCaseConversationForDriver
+  // ----------------------------------------------------------------
+  describe('getCaseConversationForDriver', () => {
+    it('GET /cases/:id/conversation', () => {
+      const mockResponse = { success: true, data: { id: 'conv-1', case_id: 'case-1' } };
+      service.getCaseConversationForDriver('case-1').subscribe(res => {
+        expect(res).toEqual(mockResponse);
+      });
+      const req = http.expectOne(`${API}/cases/case-1/conversation`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // CD-2: getCaseMessagesForDriver
+  // ----------------------------------------------------------------
+  describe('getCaseMessagesForDriver', () => {
+    it('GET /cases/:id/messages', () => {
+      const mockResponse = { success: true, data: { messages: [], total: 0 } };
+      service.getCaseMessagesForDriver('case-1').subscribe(res => {
+        expect(res).toEqual(mockResponse);
+      });
+      const req = http.expectOne(`${API}/cases/case-1/messages`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // CD-2: sendCaseMessageForDriver
+  // ----------------------------------------------------------------
+  describe('sendCaseMessageForDriver', () => {
+    it('POST /cases/:id/messages with content body', () => {
+      const mockResponse = { success: true, data: { id: 'msg-1', content: 'Hello' } };
+      service.sendCaseMessageForDriver('case-1', 'Hello').subscribe(res => {
+        expect(res).toEqual(mockResponse);
+      });
+      const req = http.expectOne(`${API}/cases/case-1/messages`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ content: 'Hello' });
+      req.flush(mockResponse);
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // CD-5: getCaseActivity
+  // ----------------------------------------------------------------
+  describe('getCaseActivity', () => {
+    it('GET /cases/:id/activity', () => {
+      const mockResponse = { activities: [{ id: 'a1', action: 'Case created' }] };
+      service.getCaseActivity('case-1').subscribe(res => {
+        expect(res).toEqual(mockResponse);
+      });
+      const req = http.expectOne(`${API}/cases/case-1/activity`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
 });
