@@ -1,254 +1,259 @@
 import {
-  Component, OnInit, signal, inject, ChangeDetectionStrategy,
+  Component, OnInit, signal, computed, inject, ChangeDetectionStrategy,
 } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { UpperCasePipe, CurrencyPipe, DatePipe } from '@angular/common';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { DatePipe } from '@angular/common';
 
 import {
-  SubscriptionService, Subscription, SubscriptionPlan, CheckoutResult, BillingInvoice,
+  SubscriptionService, Subscription, CheckoutResult,
 } from '../../../services/subscription.service';
+
+export interface PlanTier {
+  id: string;
+  tier: 'free' | 'plus' | 'unlim';
+  tierLabel: string;
+  name: string;
+  monthlyPrice: number;
+  tagline: string;
+  description: string;
+  features: PlanFeature[];
+  ctaLabel: string;
+  ctaStyle: 'free-btn' | 'current-btn' | 'primary-btn' | 'premium-btn';
+}
+
+export interface PlanFeature {
+  text: string;
+  bold?: boolean;
+}
+
+export interface TrustCard {
+  emoji: string;
+  title: string;
+  description: string;
+  bgClass: string;
+}
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface UsageStat {
+  emoji: string;
+  label: string;
+  value: string;
+  bgClass: string;
+}
+
+const PLAN_TIERS: readonly PlanTier[] = [
+  {
+    id: 'starter',
+    tier: 'free',
+    tierLabel: 'Starter',
+    name: 'Free Forever',
+    monthlyPrice: 0,
+    tagline: 'New accounts start here',
+    description: 'Free forever — use it only when you need it.',
+    features: [
+      { text: 'Unlimited ticket submissions' },
+      { text: 'Evaluation within 24 hours' },
+      { text: '1 free phone consultation' },
+    ],
+    ctaLabel: 'Downgrade to Free',
+    ctaStyle: 'free-btn',
+  },
+  {
+    id: 'driver_plus',
+    tier: 'plus',
+    tierLabel: 'Driver Plus',
+    name: 'Driver Plus',
+    monthlyPrice: 15,
+    tagline: 'Get covered',
+    description: 'Access the best traffic lawyers and safety advisers.',
+    features: [
+      { text: 'Unlimited ticket submissions' },
+      { text: 'Evaluation within 1 hour', bold: true },
+      { text: 'Phone consultations included' },
+      { text: '1-on-1 lawyer or complete case support' },
+      { text: 'PSP examination included' },
+    ],
+    ctaLabel: 'Current Plan',
+    ctaStyle: 'current-btn',
+  },
+  {
+    id: 'driver_unlimited',
+    tier: 'unlim',
+    tierLabel: 'Driver Unlimited',
+    name: 'Driver Unlimited',
+    monthlyPrice: 40,
+    tagline: 'Everything included',
+    description: 'All-around CDL support with no extra fees or charges.',
+    features: [
+      { text: 'Unlimited ticket submissions' },
+      { text: 'Evaluation within 1 hour', bold: true },
+      { text: 'Unlimited phone consultations' },
+      { text: '1-on-1 lawyer or complete case support' },
+      { text: 'Lawyer & Court fees included for 2 tickets/year', bold: true },
+      { text: 'MVR & PSP examination included' },
+      { text: '24/7 support', bold: true },
+      { text: 'Serious cases covered up to $1,000', bold: true },
+    ],
+    ctaLabel: 'Upgrade to Unlimited',
+    ctaStyle: 'premium-btn',
+  },
+] as const;
+
+const TRUST_CARDS: readonly TrustCard[] = [
+  {
+    emoji: '🔒',
+    title: 'Cancel Anytime',
+    description: 'No lock-in contracts. Cancel your plan with one click, effective end of billing cycle.',
+    bgClass: 'bg-teal',
+  },
+  {
+    emoji: '💰',
+    title: 'No Hidden Fees',
+    description: 'The price you see is what you pay. No setup fees, no activation charges.',
+    bgClass: 'bg-green',
+  },
+  {
+    emoji: '⚡',
+    title: 'Instant Activation',
+    description: 'Your plan upgrades take effect immediately — no waiting period.',
+    bgClass: 'bg-blue',
+  },
+  {
+    emoji: '🛡️',
+    title: 'Secure Billing',
+    description: 'All payments processed via Stripe. Your card data is never stored on our servers.',
+    bgClass: 'bg-amber',
+  },
+] as const;
+
+const FAQ_ITEMS: readonly FaqItem[] = [
+  {
+    question: 'Can I switch between plans at any time?',
+    answer: 'Yes. You can upgrade or downgrade at any time. Upgrades take effect immediately and are prorated. Downgrades take effect at the end of your current billing cycle.',
+  },
+  {
+    question: 'What happens to my cases if I cancel?',
+    answer: 'Your active cases remain open and your attorney continues working on them. You simply lose access to premium features like priority evaluation and consultation calls. Your data is retained for 12 months after cancellation.',
+  },
+  {
+    question: 'Does the Unlimited plan cover court fees?',
+    answer: 'Yes. The Driver Unlimited plan includes lawyer and court fees for up to 2 tickets per year, and covers serious case costs up to $1,000. Additional cases beyond the 2-ticket allowance are handled at standard rates.',
+  },
+  {
+    question: 'What is PSP/MVR examination?',
+    answer: 'PSP (Pre-Employment Screening Program) and MVR (Motor Vehicle Record) examinations are official record checks used to assess your driving history. Our attorneys use these to build stronger defense strategies for your cases.',
+  },
+] as const;
+
+const USAGE_STATS: readonly UsageStat[] = [
+  { emoji: '📋', label: 'Cases this month:', value: '12 active', bgClass: 'bg-teal' },
+  { emoji: '⏱️', label: 'Evaluation SLA:', value: 'Within 1h', bgClass: 'bg-blue' },
+  { emoji: '📞', label: 'Consultations:', value: 'Included', bgClass: 'bg-amber' },
+  { emoji: '🔍', label: 'PSP Examination:', value: 'Included', bgClass: 'bg-green' },
+] as const;
 
 @Component({
   selector: 'app-subscription-management',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [UpperCasePipe, CurrencyPipe, DatePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
-  template: `
-    <div class="sub-page">
-      <h1>Subscription</h1>
-
-      @if (loading()) {
-        <div class="loading"><mat-spinner diameter="36"></mat-spinner></div>
-      } @else {
-        <mat-card class="current-plan">
-          <mat-card-content>
-            @if (subscription()) {
-              <div class="plan-row">
-                <div>
-                  <p class="plan-name">{{ currentPlanName() }}</p>
-                  <p class="plan-status status-{{ subscription()!.status }}">
-                    {{ subscription()!.status | uppercase }}
-                  </p>
-                </div>
-                <div class="plan-actions">
-                  <button mat-stroked-button (click)="openBillingPortal()" aria-label="Manage billing in Stripe portal">
-                    <mat-icon aria-hidden="true">open_in_new</mat-icon> Manage Billing
-                  </button>
-                  @if (subscription()!.status === 'active' || subscription()!.status === 'trialing') {
-                    <button mat-stroked-button color="warn" (click)="cancelSubscription()">
-                      Cancel Plan
-                    </button>
-                  }
-                </div>
-              </div>
-              @if (subscription()!.cancel_at_period_end) {
-                <p class="cancel-notice">
-                  <mat-icon aria-hidden="true">info</mat-icon>
-                  Your plan will cancel at the end of the billing period.
-                </p>
-              }
-            } @else {
-              <p class="no-sub">No active subscription.</p>
-            }
-          </mat-card-content>
-        </mat-card>
-
-        @if (plans().length > 0) {
-          <h2>Available Plans</h2>
-          <div class="plan-grid">
-            @for (plan of plans(); track plan.id) {
-              <mat-card class="plan-card" [class.current]="isCurrentPlan(plan)">
-                <mat-card-content>
-                  <p class="plan-card-name">{{ plan.name }}</p>
-                  <p class="plan-price">
-                    \${{ plan.price }}<span class="interval">/{{ plan.interval }}</span>
-                  </p>
-                  <ul class="features" aria-label="Plan features">
-                    @for (f of plan.features; track f) {
-                      <li><mat-icon aria-hidden="true">check</mat-icon> {{ f }}</li>
-                    }
-                  </ul>
-                  @if (isCurrentPlan(plan)) {
-                    <p class="current-badge">Current Plan</p>
-                  } @else {
-                    <button mat-raised-button color="primary"
-                            (click)="selectPlan(plan)"
-                            [attr.aria-label]="'Select ' + plan.name + ' plan'">
-                      Select
-                    </button>
-                  }
-                </mat-card-content>
-              </mat-card>
-            }
-          </div>
-        }
-
-        @if (invoices().length > 0) {
-          <h2>Billing History</h2>
-          <mat-card class="invoices-card">
-            <mat-card-content>
-              <table class="invoice-table" aria-label="Billing history">
-                <thead>
-                  <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Amount</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Invoice</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (inv of invoices(); track inv.id) {
-                    <tr>
-                      <td>{{ inv.date | date:'mediumDate' }}</td>
-                      <td>{{ inv.amount | currency:inv.currency.toUpperCase() }}</td>
-                      <td class="inv-status">{{ inv.status | uppercase }}</td>
-                      <td>
-                        @if (inv.pdf_url) {
-                          <a [href]="inv.pdf_url" target="_blank" rel="noopener noreferrer"
-                             aria-label="Download invoice PDF">PDF</a>
-                        }
-                        @if (inv.hosted_url) {
-                          <a [href]="inv.hosted_url" target="_blank" rel="noopener noreferrer"
-                             aria-label="View invoice online" class="hosted-link">View</a>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </mat-card-content>
-          </mat-card>
-        }
-      }
-    </div>
-  `,
-  styles: [`
-    .sub-page { max-width: 680px; margin: 0 auto; padding: 24px 16px; font-family: 'Mulish', sans-serif; }
-    h1 { margin: 0 0 20px; font-size: 1.4rem; font-weight: 700; color: #0f2137; }
-    h2 { margin: 24px 0 12px; font-size: 1.1rem; font-weight: 700; color: #0f2137; }
-    .loading { display: flex; justify-content: center; padding: 48px; }
-    .current-plan { margin-bottom: 8px; border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
-    .plan-row { display: flex; justify-content: space-between; align-items: flex-start; }
-    .plan-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-    .plan-name { margin: 0; font-size: 1.1rem; font-weight: 600; color: #0f2137; }
-    .plan-status { margin: 4px 0 0; font-size: 0.75rem; font-weight: 700; }
-    .status-active { color: #1dad8c; }
-    .status-trialing { color: #1dad8c; }
-    .status-past_due { color: #d32f2f; }
-    .status-canceled { color: #8a94a6; }
-    .cancel-notice { display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
-      color: #f57c00; margin: 10px 0 0; }
-    .cancel-notice mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .no-sub { color: #8a94a6; margin: 0; }
-    .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-    .plan-card { border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); transition: border-color 0.15s; }
-    .plan-card:hover { border-color: #c0e8dd; }
-    .plan-card.current { border-color: #1dad8c; background: #f0faf7; }
-    .plan-card-name { margin: 0 0 4px; font-weight: 600; font-size: 0.95rem; color: #0f2137; }
-    .plan-price { font-size: 1.4rem; font-weight: 700; margin: 4px 0 8px; color: #0f2137; }
-    .interval { font-size: 0.8rem; font-weight: 400; color: #8a94a6; }
-    .features { list-style: none; padding: 0; margin: 0 0 12px; font-size: 0.8rem; }
-    .features li { display: flex; align-items: center; gap: 4px; padding: 2px 0; color: #5a6578; }
-    .features mat-icon { font-size: 14px; width: 14px; height: 14px; color: #1dad8c; }
-    .current-badge { font-size: 0.75rem; font-weight: 700; color: #1dad8c; margin: 0; }
-    .invoices-card { margin-top: 4px; border: 1.5px solid #edf2f6; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
-    .invoice-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .invoice-table th { text-align: left; padding: 8px 12px; font-weight: 700;
-      border-bottom: 1.5px solid #edf2f6; color: #8a94a6; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    .invoice-table td { padding: 8px 12px; border-bottom: 1px solid #f4f7f9; color: #0f2137; }
-    .invoice-table a { color: #1dad8c; text-decoration: none; margin-right: 8px; font-weight: 600; }
-    .invoice-table a:hover { text-decoration: underline; }
-    .inv-status { font-size: 0.75rem; font-weight: 700; color: #1dad8c; }
-  `],
+  imports: [DatePipe],
+  templateUrl: './subscription-management.component.html',
+  styleUrl: './subscription-management.component.scss',
 })
 export class SubscriptionManagementComponent implements OnInit {
   private subscriptionService = inject(SubscriptionService);
-  private snackBar = inject(MatSnackBar);
 
   loading = signal(true);
   subscription = signal<Subscription | null>(null);
-  plans = signal<SubscriptionPlan[]>([]);
-  invoices = signal<BillingInvoice[]>([]);
+  billingInterval = signal<'monthly' | 'annual'>('monthly');
+  expandedFaqIndex = signal<number | null>(null);
+
+  readonly planTiers = PLAN_TIERS;
+  readonly trustCards = TRUST_CARDS;
+  readonly faqItems = FAQ_ITEMS;
+  readonly usageStats = USAGE_STATS;
+
+  currentPlanName = computed(() => {
+    const sub = this.subscription();
+    if (!sub) return 'No Plan';
+    const match = this.planTiers.find(p => p.id === sub.plan_name);
+    return match?.name ?? sub.plan_name ?? 'Unknown Plan';
+  });
 
   ngOnInit(): void {
-    this.loadAll();
+    this.loadSubscription();
   }
 
-  private loadAll(): void {
+  private loadSubscription(): void {
     this.loading.set(true);
     this.subscriptionService.getCurrentSubscription().subscribe({
-      next: (s) => { this.subscription.set(s); this.loadPlansAndInvoices(); },
+      next: (s) => { this.subscription.set(s); this.loading.set(false); },
       error: (err) => {
         if (err.status === 404) {
           this.subscription.set(null);
-          this.loadPlansAndInvoices();
-        } else {
-          this.loading.set(false);
-          this.snackBar.open('Failed to load subscription.', 'Close', { duration: 3000 });
         }
-      },
-    });
-  }
-
-  private loadPlansAndInvoices(): void {
-    this.subscriptionService.getPlans().subscribe({
-      next: (p) => {
-        this.plans.set(p);
-        this.loadInvoices();
-      },
-      error: () => {
-        this.plans.set([]);
         this.loading.set(false);
       },
     });
   }
 
-  private loadInvoices(): void {
-    this.subscriptionService.getInvoices().subscribe({
-      next: (inv) => { this.invoices.set(inv); this.loading.set(false); },
-      error: () => { this.invoices.set([]); this.loading.set(false); },
-    });
-  }
-
-  currentPlanName(): string {
-    const sub = this.subscription();
-    if (!sub) return 'No Plan';
-    const match = this.plans().find(p => p.id === sub.plan_name);
-    return match?.name ?? sub.plan_name ?? 'Unknown Plan';
-  }
-
-  isCurrentPlan(plan: SubscriptionPlan): boolean {
+  isCurrentPlan(plan: PlanTier): boolean {
     return plan.id === this.subscription()?.plan_name;
+  }
+
+  getDisplayPrice(plan: PlanTier): number {
+    if (plan.monthlyPrice === 0) return 0;
+    return this.billingInterval() === 'annual'
+      ? Math.round(plan.monthlyPrice * 0.8)
+      : plan.monthlyPrice;
+  }
+
+  toggleBilling(): void {
+    this.billingInterval.update(v => v === 'monthly' ? 'annual' : 'monthly');
+  }
+
+  onToggleKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleBilling();
+    }
+  }
+
+  toggleFaq(index: number): void {
+    this.expandedFaqIndex.update(v => v === index ? null : index);
+  }
+
+  onFaqKeydown(event: KeyboardEvent, index: number): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleFaq(index);
+    }
   }
 
   openBillingPortal(): void {
     this.subscriptionService.getBillingPortalUrl().subscribe({
       next: ({ url }) => { window.open(url, '_blank', 'noopener,noreferrer'); },
-      error: () => {
-        this.snackBar.open('Failed to open billing portal.', 'Close', { duration: 3000 });
-      },
+      error: () => {},
     });
   }
 
-  selectPlan(plan: SubscriptionPlan): void {
+  selectPlan(plan: PlanTier): void {
+    if (this.isCurrentPlan(plan)) return;
     if (!confirm(`Switch to ${plan.name}?`)) return;
     this.loading.set(true);
-    this.subscriptionService.createCheckoutSession(plan.price_id).subscribe({
+    this.subscriptionService.createCheckoutSession(plan.id).subscribe({
       next: (result: CheckoutResult) => {
         if (result.subscription) {
           this.subscription.set(result.subscription);
           this.loading.set(false);
-          this.snackBar.open(`Switched to ${plan.name}!`, 'Close', { duration: 3000 });
         } else if (result.url) {
           window.location.href = result.url;
         }
       },
       error: () => {
         this.loading.set(false);
-        this.snackBar.open('Failed to change plan.', 'Close', { duration: 3000 });
       },
     });
   }
@@ -260,11 +265,9 @@ export class SubscriptionManagementComponent implements OnInit {
       next: (s) => {
         this.subscription.set(s);
         this.loading.set(false);
-        this.snackBar.open('Subscription will cancel at period end.', 'Close', { duration: 4000 });
       },
       error: () => {
         this.loading.set(false);
-        this.snackBar.open('Failed to cancel subscription.', 'Close', { duration: 3000 });
       },
     });
   }

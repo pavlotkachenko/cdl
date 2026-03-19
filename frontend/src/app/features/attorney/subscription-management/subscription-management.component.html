@@ -1,0 +1,219 @@
+<div class="sub-page">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Billing &amp; Plans
+    </div>
+    <h1>Subscription</h1>
+    <p class="page-subtitle">Manage your plan and billing preferences</p>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+    </div>
+  } @else {
+
+    <!-- Current plan banner -->
+    <div class="current-plan-banner">
+      @if (subscription()) {
+        <div class="banner-inner">
+          <div class="plan-badge-icon"><span aria-hidden="true">⚡</span></div>
+          <div class="plan-info">
+            <div class="plan-name-row">
+              <div class="plan-name">{{ currentPlanName() }}</div>
+              <div class="active-badge">
+                <div class="active-dot"></div>
+                Active
+              </div>
+            </div>
+            <div class="plan-price-row">
+              <span class="plan-price-big">${{ subscription()!.price_per_month ?? 0 }}</span>
+              <span class="plan-period">/ month</span>
+              <span class="separator">·</span>
+              @if (subscription()!.current_period_end) {
+                <div class="plan-renews">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Renews {{ subscription()!.current_period_end | date:'MMMM d, y' }}
+                </div>
+              }
+            </div>
+          </div>
+          <div class="banner-actions">
+            <button class="btn btn-secondary" (click)="openBillingPortal()" aria-label="Manage billing in Stripe portal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              Manage Billing
+            </button>
+            @if (subscription()!.status === 'active' || subscription()!.status === 'trialing') {
+              <button class="btn btn-danger-ghost" (click)="cancelSubscription()" aria-label="Cancel subscription">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Cancel Plan
+              </button>
+            }
+          </div>
+        </div>
+        @if (subscription()!.cancel_at_period_end) {
+          <div class="cancel-notice">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Your plan will cancel at the end of the billing period.
+          </div>
+        }
+        <div class="usage-row">
+          @for (stat of usageStats; track stat.label) {
+            <div class="usage-item">
+              <div class="usage-icon" [class]="stat.bgClass"><span aria-hidden="true">{{ stat.emoji }}</span></div>
+              <span>{{ stat.label }}</span>
+              <span class="usage-val">{{ stat.value }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="banner-inner">
+          <p class="no-sub">No active subscription.</p>
+        </div>
+      }
+    </div>
+
+    <!-- Billing toggle -->
+    <div class="billing-toggle-wrap">
+      <span class="billing-label" [class.active]="billingInterval() === 'monthly'">Monthly</span>
+      <div class="toggle-pill"
+           role="switch"
+           tabindex="0"
+           [attr.aria-checked]="billingInterval() === 'annual'"
+           aria-label="Toggle annual billing"
+           (click)="toggleBilling()"
+           (keydown)="onToggleKeydown($event)">
+        <div class="toggle-pill-knob" [class.annual]="billingInterval() === 'annual'"></div>
+      </div>
+      <span class="billing-label" [class.active]="billingInterval() === 'annual'">Annual</span>
+      <div class="save-badge" [class.active]="billingInterval() === 'annual'">Save 20%</div>
+    </div>
+
+    <!-- Plans label -->
+    <div class="plans-section-label">Available Plans</div>
+
+    <!-- Plans grid -->
+    <div class="plans-grid">
+      @for (plan of planTiers; track plan.id) {
+        <div class="plan-card"
+             [class.current]="isCurrentPlan(plan)"
+             [class.featured]="plan.tier === 'unlim'"
+             [class.has-badge]="isCurrentPlan(plan) && plan.tier === 'plus'">
+
+          @if (isCurrentPlan(plan) && plan.tier !== 'free') {
+            <div class="plan-popular-badge">
+              <span aria-hidden="true">⚡</span> Your Current Plan
+            </div>
+          }
+
+          <div class="plan-card-header">
+            <div class="plan-tier" [class]="'tier-' + plan.tier">{{ plan.tierLabel }}</div>
+            <div class="plan-card-name">{{ plan.name }}</div>
+            <div class="plan-price-wrap">
+              @if (plan.monthlyPrice === 0) {
+                <div class="plan-price free-price">FREE</div>
+              } @else {
+                <span class="plan-price-currency" [class]="'currency-' + plan.tier">$</span>
+                <div class="plan-price" [class]="'price-' + plan.tier">{{ getDisplayPrice(plan) }}</div>
+                <span class="plan-price-period">/month</span>
+              }
+            </div>
+            <div class="plan-tagline">{{ plan.tagline }}</div>
+            <div class="plan-desc" [class]="'desc-' + plan.tier">{{ plan.description }}</div>
+          </div>
+
+          <div class="plan-divider"></div>
+
+          <div class="plan-features">
+            @for (feature of plan.features; track feature.text) {
+              <div class="feature-item">
+                <div class="feature-check" [class]="'check-' + plan.tier">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <span class="feature-text">
+                  @if (feature.bold) {
+                    <strong>{{ feature.text }}</strong>
+                  } @else {
+                    {{ feature.text }}
+                  }
+                </span>
+                <div class="feature-tooltip" aria-label="More info">?</div>
+              </div>
+            }
+          </div>
+
+          <div class="plan-cta">
+            @if (isCurrentPlan(plan)) {
+              <button class="plan-btn current-btn" disabled aria-label="Current plan">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Current Plan
+              </button>
+              <div class="current-label">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Active since {{ subscription()!.created_at | date:'MMMM y' }}
+              </div>
+            } @else {
+              <button class="plan-btn" [class]="plan.ctaStyle"
+                      (click)="selectPlan(plan)"
+                      [attr.aria-label]="'Switch to ' + plan.name + ' plan'">
+                @if (plan.tier === 'free') {
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                } @else if (plan.tier === 'unlim') {
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                }
+                {{ plan.ctaLabel }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Trust row -->
+    <div class="trust-row">
+      @for (card of trustCards; track card.title) {
+        <div class="trust-card">
+          <div class="trust-icon" [class]="card.bgClass"><span aria-hidden="true">{{ card.emoji }}</span></div>
+          <div>
+            <div class="trust-title">{{ card.title }}</div>
+            <div class="trust-sub">{{ card.description }}</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- FAQ -->
+    <div class="faq-card">
+      <div class="faq-header">Frequently Asked Questions</div>
+      @for (faq of faqItems; track faq.question; let i = $index) {
+        <div class="faq-item"
+             role="button"
+             tabindex="0"
+             [attr.aria-expanded]="expandedFaqIndex() === i"
+             [attr.aria-controls]="'faq-answer-' + i"
+             (click)="toggleFaq(i)"
+             (keydown)="onFaqKeydown($event, i)">
+          <div class="faq-q">
+            {{ faq.question }}
+            <svg class="faq-chevron" [class.expanded]="expandedFaqIndex() === i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          @if (expandedFaqIndex() === i) {
+            <div class="faq-a" [id]="'faq-answer-' + i">{{ faq.answer }}</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Footer note -->
+    <div class="footer-note">
+      &copy; 2026 CDL Advisor · Professional traffic violation defense for commercial drivers ·
+      <a href="/driver/privacy-policy">Privacy Policy</a> ·
+      <a href="/driver/terms-of-service">Terms of Service</a>
+    </div>
+
+  }
+</div>
