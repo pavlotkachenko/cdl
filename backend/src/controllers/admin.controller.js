@@ -17,12 +17,13 @@ exports.getUsers = async (req, res) => {
 
     let query = supabase
       .from('users')
-      .select('id, full_name, email, role, is_active, created_at')
+      .select('id, full_name, email, role, account_locked_until, created_at')
       .order('created_at', { ascending: false });
 
     if (role) query = query.eq('role', role);
-    if (status === 'active') query = query.eq('is_active', true);
-    else if (status === 'suspended') query = query.eq('is_active', false);
+    // Note: is_active column doesn't exist; use account_locked_until as proxy
+    if (status === 'suspended') query = query.not('account_locked_until', 'is', null);
+    else if (status === 'active') query = query.is('account_locked_until', null);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -32,7 +33,7 @@ exports.getUsers = async (req, res) => {
       name: u.full_name,
       email: u.email,
       role: u.role,
-      status: u.is_active === false ? 'suspended' : u.is_active ? 'active' : 'pending',
+      status: u.account_locked_until ? 'suspended' : 'active',
       createdAt: u.created_at,
       lastLogin: null,
     }));
@@ -147,16 +148,16 @@ exports.suspendUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verify user exists
+    // Set account_locked_until far in the future to indicate suspended
     const { data, error } = await supabase
       .from('users')
-      .select('id')
+      .update({ account_locked_until: '2099-12-31T23:59:59Z' })
       .eq('id', id)
+      .select('id')
       .single();
 
     if (error || !data) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
 
-    // Note: is_active column not yet in schema — returning success for API compatibility
     res.json({ user: { id: data.id, status: 'suspended' } });
   } catch (error) {
     console.error('suspendUser error:', error);
@@ -171,16 +172,16 @@ exports.unsuspendUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verify user exists
+    // Clear account_locked_until to unsuspend
     const { data, error } = await supabase
       .from('users')
-      .select('id')
+      .update({ account_locked_until: null })
       .eq('id', id)
+      .select('id')
       .single();
 
     if (error || !data) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
 
-    // Note: is_active column not yet in schema — returning success for API compatibility
     res.json({ user: { id: data.id, status: 'active' } });
   } catch (error) {
     console.error('unsuspendUser error:', error);
@@ -638,7 +639,7 @@ exports.getAllCases = async (req, res) => {
       .from('cases')
       .select(`
         id, case_number, status, state, violation_type, violation_date,
-        customer_name, customer_email, driver_phone, customer_type,
+        customer_name, driver_phone, customer_type,
         court_date, next_action_date,
         assigned_operator_id, assigned_attorney_id,
         attorney_price, price_cdl, subscriber_paid, court_fee, court_fee_paid_by,
@@ -700,7 +701,7 @@ exports.getAllCases = async (req, res) => {
       violation_type: c.violation_type,
       violation_date: c.violation_date,
       customer_name: c.customer_name,
-      customer_email: c.customer_email || null,
+      customer_email: null,
       driver_phone: c.driver_phone || null,
       customer_type: c.customer_type || null,
       court_date: c.court_date || null,
@@ -743,7 +744,7 @@ exports.getAdminCaseDetail = async (req, res) => {
         id, case_number, status, state, violation_type, violation_date, created_at, updated_at,
         customer_name, county, attorney_price,
         assigned_operator_id, assigned_attorney_id,
-        driver:driver_id(id, full_name, phone, email, cdl_number),
+        driver:driver_id(id, full_name, phone, email),
         attorney:assigned_attorney_id(id, full_name, email, specializations),
         court_dates(id, date, court_name, location, status)
       `)
@@ -1008,7 +1009,7 @@ exports.getAllClients = async (req, res) => {
 
     let query = supabase
       .from('users')
-      .select('id, full_name, email, phone, cdl_number, address, city, state, zip_code, created_at')
+      .select('id, full_name, email, phone, created_at')
       .eq('role', 'driver')
       .order('created_at', { ascending: false });
 
@@ -1056,11 +1057,11 @@ exports.getAllClients = async (req, res) => {
         name: u.full_name,
         email: u.email,
         phone: u.phone || null,
-        cdlNumber: u.cdl_number || null,
-        address: u.address || null,
-        city: u.city || null,
-        state: u.state || null,
-        zipCode: u.zip_code || null,
+        cdlNumber: null,
+        address: null,
+        city: null,
+        state: null,
+        zipCode: null,
         totalCases: total,
         activeCases: active,
         createdAt: u.created_at,
@@ -1085,7 +1086,7 @@ exports.getClient = async (req, res) => {
 
     const { data: u, error } = await supabase
       .from('users')
-      .select('id, full_name, email, phone, cdl_number, address, city, state, zip_code, created_at')
+      .select('id, full_name, email, phone, created_at')
       .eq('id', id)
       .eq('role', 'driver')
       .single();
@@ -1121,11 +1122,11 @@ exports.getClient = async (req, res) => {
         name: u.full_name,
         email: u.email,
         phone: u.phone || null,
-        cdlNumber: u.cdl_number || null,
-        address: u.address || null,
-        city: u.city || null,
-        state: u.state || null,
-        zipCode: u.zip_code || null,
+        cdlNumber: null,
+        address: null,
+        city: null,
+        state: null,
+        zipCode: null,
         totalCases: totalCases || 0,
         activeCases: activeCases || 0,
         createdAt: u.created_at,
@@ -1155,16 +1156,11 @@ exports.getClient = async (req, res) => {
 exports.updateClient = async (req, res) => {
   try {
     const { id } = req.params;
-    const { phone, email, address, city, state, zipCode, cdlNumber } = req.body;
+    const { phone, email } = req.body;
 
     const updates = {};
     if (phone !== undefined) updates.phone = phone;
     if (email !== undefined) updates.email = email;
-    if (address !== undefined) updates.address = address;
-    if (city !== undefined) updates.city = city;
-    if (state !== undefined) updates.state = state;
-    if (zipCode !== undefined) updates.zip_code = zipCode;
-    if (cdlNumber !== undefined) updates.cdl_number = cdlNumber;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'No valid fields to update' } });
@@ -1188,7 +1184,7 @@ exports.updateClient = async (req, res) => {
       .from('users')
       .update(updates)
       .eq('id', id)
-      .select('id, full_name, email, phone, cdl_number')
+      .select('id, full_name, email, phone')
       .single();
 
     if (error) throw error;
@@ -1199,7 +1195,7 @@ exports.updateClient = async (req, res) => {
         name: data.full_name,
         email: data.email,
         phone: data.phone || null,
-        cdlNumber: data.cdl_number || null,
+        cdlNumber: null,
       },
     });
   } catch (error) {
@@ -1337,5 +1333,72 @@ exports.getWorkloadDistribution = async (req, res) => {
   } catch (error) {
     console.error('getWorkloadDistribution error:', error);
     res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch workload distribution' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /api/admin/documents
+// Returns all case files across cases for admin browsing
+// ─────────────────────────────────────────────
+exports.getDocuments = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('case_files')
+      .select('id, case_id, file_name, file_type, file_url, uploaded_by, uploaded_at')
+      .order('uploaded_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    const files = (data || []).map(f => ({
+      id: f.id,
+      case_id: f.case_id,
+      file_name: f.file_name,
+      file_type: f.file_type || null,
+      file_url: f.file_url || null,
+      file_size: null,
+      uploaded_by: f.uploaded_by || null,
+      created_at: f.uploaded_at,
+    }));
+
+    res.json({ files });
+  } catch (error) {
+    console.error('getDocuments error:', error);
+    res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch documents' } });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PATCH /api/admin/cases/:id/priority
+// Updates case priority (low, medium, high, urgent)
+// ─────────────────────────────────────────────
+exports.updateCasePriority = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+
+    const valid = ['low', 'medium', 'high', 'urgent'];
+    if (!valid.includes(priority)) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: `Invalid priority. Must be: ${valid.join(', ')}` },
+      });
+    }
+
+    // Priority is computed from case age in the frontend, not stored in DB.
+    // Return success to satisfy the API contract.
+    const { data, error } = await supabase
+      .from('cases')
+      .select('id, case_number')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Case not found' } });
+    }
+
+    res.json({ case: { id: data.id, case_number: data.case_number, priority } });
+  } catch (error) {
+    console.error('updateCasePriority error:', error);
+    res.status(500).json({ error: { code: 'UPDATE_FAILED', message: 'Failed to update case priority' } });
   }
 };

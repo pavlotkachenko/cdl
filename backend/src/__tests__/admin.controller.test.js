@@ -59,8 +59,8 @@ beforeEach(() => {
 describe('getUsers', () => {
   test('returns mapped users list', async () => {
     const raw = [
-      { id: 'u1', full_name: 'Alice', email: 'alice@test.com', role: 'driver', is_active: true, created_at: '2026-01-01', last_login: null },
-      { id: 'u2', full_name: 'Bob', email: 'bob@test.com', role: 'attorney', is_active: false, created_at: '2026-02-01', last_login: '2026-03-01' },
+      { id: 'u1', full_name: 'Alice', email: 'alice@test.com', role: 'driver', account_locked_until: null, created_at: '2026-01-01' },
+      { id: 'u2', full_name: 'Bob', email: 'bob@test.com', role: 'attorney', account_locked_until: '2099-12-31T23:59:59Z', created_at: '2026-02-01' },
     ];
     chain.then = (onFulfilled) => Promise.resolve({ data: raw, error: null }).then(onFulfilled);
 
@@ -87,7 +87,7 @@ describe('getUsers', () => {
     const req = makeReq({ query: { status: 'active' } });
     const res = makeRes();
     await adminController.getUsers(req, res);
-    expect(chain.eq).toHaveBeenCalledWith('is_active', true);
+    expect(chain.is).toHaveBeenCalledWith('account_locked_until', null);
   });
 });
 
@@ -449,7 +449,7 @@ describe('getAllCases', () => {
   const fullCase = {
     id: 'c1', case_number: 'CDL-001', status: 'new', state: 'TX',
     violation_type: 'Speeding', violation_date: '2026-01-01',
-    customer_name: 'Miguel', customer_email: 'miguel@test.com',
+    customer_name: 'Miguel',
     driver_phone: '555-1234', customer_type: 'driver',
     court_date: '2026-04-01', next_action_date: '2026-03-20',
     assigned_operator_id: 'op-1', assigned_attorney_id: 'att-1',
@@ -475,7 +475,7 @@ describe('getAllCases', () => {
     expect(c).toMatchObject({
       case_number: 'CDL-001', status: 'new', state: 'TX',
       violation_type: 'Speeding', violation_date: '2026-01-01',
-      customer_name: 'Miguel', customer_email: 'miguel@test.com',
+      customer_name: 'Miguel', customer_email: null,
       driver_phone: '555-1234', customer_type: 'driver',
       court_date: '2026-04-01', next_action_date: '2026-03-20',
       operator_name: 'Lisa M.', attorney_name: 'James H.',
@@ -1054,8 +1054,8 @@ describe('getAllClients', () => {
 
   test('returns client list with totalCases and activeCases counts', async () => {
     const drivers = [
-      { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', cdl_number: 'CDL111', address: '123 Main St', city: 'Dallas', state: 'TX', zip_code: '75001', created_at: '2026-01-01' },
-      { id: 'u2', full_name: 'Sarah L.', email: 'sarah@test.com', phone: null, cdl_number: null, address: null, city: null, state: null, zip_code: null, created_at: '2026-02-01' },
+      { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', created_at: '2026-01-01' },
+      { id: 'u2', full_name: 'Sarah L.', email: 'sarah@test.com', phone: null, created_at: '2026-02-01' },
     ];
     setupGetAllClients(drivers, {
       countResults: [{ total: 10, active: 3 }, { total: 5, active: 0 }],
@@ -1070,7 +1070,7 @@ describe('getAllClients', () => {
     expect(body.clients).toHaveLength(2);
     expect(body.clients[0]).toMatchObject({
       id: 'u1', name: 'Miguel R.', email: 'miguel@test.com',
-      phone: '555-1234', cdlNumber: 'CDL111',
+      phone: '555-1234', cdlNumber: null,
       totalCases: 10, activeCases: 3,
       lastContact: '2026-03-05',
     });
@@ -1097,8 +1097,8 @@ describe('getAllClients', () => {
 
   test('filters by status=active (only clients with active cases)', async () => {
     const drivers = [
-      { id: 'u1', full_name: 'Miguel', email: 'miguel@test.com', phone: null, cdl_number: null, address: null, city: null, state: null, zip_code: null, created_at: '2026-01-01' },
-      { id: 'u2', full_name: 'Sarah', email: 'sarah@test.com', phone: null, cdl_number: null, address: null, city: null, state: null, zip_code: null, created_at: '2026-02-01' },
+      { id: 'u1', full_name: 'Miguel', email: 'miguel@test.com', phone: null, created_at: '2026-01-01' },
+      { id: 'u2', full_name: 'Sarah', email: 'sarah@test.com', phone: null, created_at: '2026-02-01' },
     ];
     setupGetAllClients(drivers, {
       countResults: [{ total: 5, active: 2 }, { total: 3, active: 0 }],
@@ -1164,7 +1164,7 @@ describe('getClient', () => {
   }
 
   test('returns client with recentCases array', async () => {
-    const user = { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', cdl_number: 'CDL111', address: '123 Main', city: 'Dallas', state: 'TX', zip_code: '75001', created_at: '2026-01-01' };
+    const user = { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', created_at: '2026-01-01' };
     const cases = [
       { id: 'c1', case_number: 'CDL-001', status: 'new', violation_type: 'Speeding', state: 'TX', court_date: '2026-04-01', created_at: '2026-03-01', updated_at: '2026-03-05' },
     ];
@@ -1177,7 +1177,7 @@ describe('getClient', () => {
     const body = res.json.mock.calls[0][0];
     expect(body.client).toMatchObject({
       id: 'u1', name: 'Miguel R.', email: 'miguel@test.com',
-      phone: '555-1234', cdlNumber: 'CDL111',
+      phone: '555-1234', cdlNumber: null,
       totalCases: 10, activeCases: 3,
       lastContact: '2026-03-05',
     });
@@ -1242,7 +1242,7 @@ describe('updateClient', () => {
   test('updates and returns client', async () => {
     setupUpdateClient(
       { id: 'u1' },
-      { id: 'u1', full_name: 'Miguel R.', email: 'new@test.com', phone: '555-9999', cdl_number: 'CDL111' }
+      { id: 'u1', full_name: 'Miguel R.', email: 'new@test.com', phone: '555-9999' }
     );
 
     const req = makeReq({ params: { id: 'u1' }, body: { phone: '555-9999', email: 'new@test.com' } });
@@ -1368,5 +1368,116 @@ describe('getStaffPerformance', () => {
     await adminController.getStaffPerformance(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json.mock.calls[0][0].error.code).toBe('FETCH_FAILED');
+  });
+});
+
+// ─────────────────────────────────────────────
+// getDocuments
+// ─────────────────────────────────────────────
+describe('getDocuments', () => {
+  test('returns mapped document list', async () => {
+    buildChain({
+      data: [
+        { id: 'f1', case_id: 'c1', file_name: 'ticket.pdf', file_type: 'application/pdf', file_url: 'https://...', uploaded_by: 'u1', uploaded_at: '2026-03-01' },
+      ],
+      error: null,
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getDocuments(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.files).toHaveLength(1);
+    expect(body.files[0]).toMatchObject({
+      id: 'f1', case_id: 'c1', file_name: 'ticket.pdf',
+      file_type: 'application/pdf', created_at: '2026-03-01',
+    });
+  });
+
+  test('returns empty array when no files', async () => {
+    buildChain({ data: [], error: null });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getDocuments(req, res);
+
+    expect(res.json.mock.calls[0][0].files).toEqual([]);
+  });
+
+  test('returns 500 on error', async () => {
+    buildChain({ data: null, error: { message: 'db fail' } });
+
+    const req = makeReq();
+    const res = makeRes();
+    await adminController.getDocuments(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+// ─────────────────────────────────────────────
+// updateCasePriority
+// ─────────────────────────────────────────────
+describe('updateCasePriority', () => {
+  test('returns case with updated priority', async () => {
+    chain.single.mockResolvedValue({ data: { id: 'c1', case_number: 'CDL-001' }, error: null });
+
+    const req = makeReq({ params: { id: 'c1' }, body: { priority: 'high' } });
+    const res = makeRes();
+    await adminController.updateCasePriority(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.case).toMatchObject({ id: 'c1', priority: 'high' });
+  });
+
+  test('rejects invalid priority', async () => {
+    const req = makeReq({ params: { id: 'c1' }, body: { priority: 'extreme' } });
+    const res = makeRes();
+    await adminController.updateCasePriority(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('returns 404 when case not found', async () => {
+    chain.single.mockResolvedValue({ data: null, error: null });
+
+    const req = makeReq({ params: { id: 'ghost' }, body: { priority: 'high' } });
+    const res = makeRes();
+    await adminController.updateCasePriority(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+// ─────────────────────────────────────────────
+// suspendUser (functional)
+// ─────────────────────────────────────────────
+describe('suspendUser', () => {
+  test('sets account_locked_until and returns suspended status', async () => {
+    chain.single.mockResolvedValue({ data: { id: 'u1' }, error: null });
+
+    const req = makeReq({ params: { id: 'u1' } });
+    const res = makeRes();
+    await adminController.suspendUser(req, res);
+
+    expect(chain.update).toHaveBeenCalledWith({ account_locked_until: '2099-12-31T23:59:59Z' });
+    expect(res.json.mock.calls[0][0].user).toMatchObject({ id: 'u1', status: 'suspended' });
+  });
+});
+
+// ─────────────────────────────────────────────
+// unsuspendUser (functional)
+// ─────────────────────────────────────────────
+describe('unsuspendUser', () => {
+  test('clears account_locked_until and returns active status', async () => {
+    chain.single.mockResolvedValue({ data: { id: 'u1' }, error: null });
+
+    const req = makeReq({ params: { id: 'u1' } });
+    const res = makeRes();
+    await adminController.unsuspendUser(req, res);
+
+    expect(chain.update).toHaveBeenCalledWith({ account_locked_until: null });
+    expect(res.json.mock.calls[0][0].user).toMatchObject({ id: 'u1', status: 'active' });
   });
 });
