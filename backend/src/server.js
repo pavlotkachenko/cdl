@@ -47,6 +47,7 @@ const invoiceRoutes = require('./routes/invoice.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 const webauthnRoutes = require('./routes/webauthn.routes');
 const revenueRoutes = require('./routes/revenue.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -211,6 +212,9 @@ app.use('/api/auth/webauthn', webauthnRoutes);
 
 // Revenue analytics (admin)
 app.use('/api/revenue', revenueRoutes);
+
+// Dashboard (operator + admin dashboard service)
+app.use('/api/dashboard', dashboardRoutes);
 
 // ============================================
 // PRODUCTION STATIC FILE SERVING

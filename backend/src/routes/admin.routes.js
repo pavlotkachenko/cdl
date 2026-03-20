@@ -30,6 +30,7 @@ router.get('/charts/:type', adminOnly, adminController.getChartData);
 router.get('/cases', adminOnly, adminController.getAllCases);
 router.get('/cases/:id', adminOnly, adminController.getAdminCaseDetail);
 router.patch('/cases/:id/status', adminOnly, adminController.updateCaseStatus);
+router.patch('/cases/:id/priority', adminOnly, adminController.updateCasePriority);
 
 // Operators (AC-1)
 router.get('/operators', adminOnly, adminController.getOperators);
@@ -38,6 +39,9 @@ router.get('/operators', adminOnly, adminController.getOperators);
 router.get('/clients', adminOnly, adminController.getAllClients);
 router.get('/clients/:id', adminOnly, adminController.getClient);
 router.patch('/clients/:id', adminOnly, adminController.updateClient);
+
+// Documents — admin browsing across all cases
+router.get('/documents', adminOnly, adminController.getDocuments);
 
 // Staff performance
 router.get('/performance', adminOnly, adminController.getStaffPerformance);
