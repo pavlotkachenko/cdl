@@ -345,20 +345,37 @@ describe('rejectAssignmentRequest', () => {
 
 describe('getDashboardStats', () => {
   test('returns aggregate case and staff counts', async () => {
-    // getDashboardStats calls supabase.from() 9 times (9 count queries)
-    // Each uses chain.then for the count result
+    // getDashboardStats calls supabase.from() 15 times:
+    // 1=totalCases, 2=activeCases, 3=pending, 4=closedCount, 5=attorneyPaidCount,
+    // 6=casesThisWeek, 7=casesLastWeek, 8=closedCaseDates(data), 9=thisMonthPayments(data),
+    // 10=lastMonthPayments(data), 11=violationData(data), 12=totalClients,
+    // 13=totalOperators, 14=totalAttorneys, 15=totalAdmins
     let callCount = 0;
+    const results = [
+      { count: 100, data: [], error: null }, // 1 totalCases
+      { count: 60, data: [], error: null },  // 2 activeCases
+      { count: 10, data: [], error: null },  // 3 pending
+      { count: 15, data: [], error: null },  // 4 closedCount
+      { count: 10, data: [], error: null },  // 5 attorneyPaidCount
+      { count: 8, data: [], error: null },   // 6 casesThisWeek
+      { count: 3, data: [], error: null },   // 7 casesLastWeek
+      { count: 0, data: [], error: null },   // 8 closedCaseDates
+      { count: 0, data: [{ amount: 500 }], error: null }, // 9 thisMonthPayments
+      { count: 0, data: [{ amount: 300 }], error: null }, // 10 lastMonthPayments
+      { count: 0, data: [{ violation_type: 'speeding' }, { violation_type: 'speeding' }], error: null }, // 11 violationData
+      { count: 50, data: [], error: null },  // 12 totalClients
+      { count: 5, data: [], error: null },   // 13 totalOperators
+      { count: 12, data: [], error: null },  // 14 totalAttorneys
+      { count: 3, data: [], error: null },   // 15 totalAdmins
+    ];
     supabase.from.mockImplementation(() => {
       callCount++;
+      const idx = callCount - 1; // capture current index for closure
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in'].forEach(m => { c[m] = jest.fn().mockReturnValue(c); });
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'lt', 'lte', 'limit', 'order', 'range'].forEach(m => { c[m] = jest.fn().mockReturnValue(c); });
       c.head = jest.fn().mockReturnValue(c);
-      // Return different counts per call:
-      // 1=totalCases, 2=activeCases, 3=pending, 4=resolved, 5=closed,
-      // 6=casesThisWeek, 7=totalClients, 8=totalOperators, 9=totalAttorneys
-      const counts = [100, 60, 10, 25, 15, 8, 50, 5, 12];
       c.then = (onFulfilled) =>
-        Promise.resolve({ count: counts[callCount - 1] || 0, error: null }).then(onFulfilled);
+        Promise.resolve(results[idx] || { count: 0, data: [], error: null }).then(onFulfilled);
       c.catch = jest.fn().mockReturnValue(Promise.resolve());
       return c;
     });
@@ -371,20 +388,25 @@ describe('getDashboardStats', () => {
     expect(body.totalCases).toBe(100);
     expect(body.activeCases).toBe(60);
     expect(body.pendingCases).toBe(10);
-    expect(body.resolvedCases).toBe(25);
+    expect(body.resolvedCases).toBe(25); // closed(15) + attorney_paid(10)
     expect(body.closedCases).toBe(15);
     expect(body.casesThisWeek).toBe(8);
+    expect(body.casesLastWeek).toBe(3);
     expect(body.totalClients).toBe(50);
     expect(body.totalOperators).toBe(5);
     expect(body.totalAttorneys).toBe(12);
+    expect(body.totalStaff).toBe(20); // 5 + 12 + 3
+    expect(body.revenueThisMonth).toBe(500);
+    expect(body.revenueLastMonth).toBe(300);
+    expect(body.violationDistribution).toEqual([{ type: 'speeding', count: 2 }]);
   });
 
   test('returns zeros when no data exists', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in'].forEach(m => { c[m] = jest.fn().mockReturnValue(c); });
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'lt', 'lte', 'limit', 'order', 'range'].forEach(m => { c[m] = jest.fn().mockReturnValue(c); });
       c.head = jest.fn().mockReturnValue(c);
-      c.then = (onFulfilled) => Promise.resolve({ count: 0, error: null }).then(onFulfilled);
+      c.then = (onFulfilled) => Promise.resolve({ count: 0, data: [], error: null }).then(onFulfilled);
       c.catch = jest.fn().mockReturnValue(Promise.resolve());
       return c;
     });
@@ -401,9 +423,9 @@ describe('getDashboardStats', () => {
   test('returns 500 on database error', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in'].forEach(m => { c[m] = jest.fn().mockReturnValue(c); });
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'lt', 'lte', 'limit', 'order', 'range'].forEach(m => { c[m] = jest.fn().mockReturnValue(c); });
       c.head = jest.fn().mockReturnValue(c);
-      c.then = (onFulfilled) => Promise.resolve({ count: null, error: { message: 'db fail' } }).then(onFulfilled);
+      c.then = (onFulfilled) => Promise.resolve({ count: null, data: null, error: { message: 'db fail' } }).then(onFulfilled);
       c.catch = jest.fn().mockReturnValue(Promise.resolve());
       return c;
     });
@@ -630,7 +652,7 @@ describe('getAdminCaseDetail', () => {
     supabase.from.mockImplementation((table) => {
       fromCallCount++;
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -661,7 +683,7 @@ describe('getAdminCaseDetail', () => {
   test('returns 404 for non-existent case', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.single = jest.fn().mockResolvedValue({ data: null, error: { message: 'not found' } });
@@ -679,7 +701,7 @@ describe('getAdminCaseDetail', () => {
   test('returns 500 on database error', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.single = jest.fn().mockRejectedValue(new Error('db crash'));
@@ -705,7 +727,7 @@ describe('getOperators', () => {
     supabase.from.mockImplementation(() => {
       fromCallCount++;
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -734,7 +756,7 @@ describe('getOperators', () => {
   test('returns empty array when no operators exist', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -752,7 +774,7 @@ describe('getOperators', () => {
   test('returns 500 on database error', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -878,7 +900,7 @@ describe('getChartData', () => {
   function setupChartQuery(data) {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -955,7 +977,7 @@ describe('getWorkloadDistribution', () => {
     supabase.from.mockImplementation(() => {
       fromCallCount++;
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -993,7 +1015,7 @@ describe('getWorkloadDistribution', () => {
   test('returns empty array when no staff exist', async () => {
     supabase.from.mockImplementation(() => {
       const c = {};
-      ['select', 'eq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
+      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
       });
       c.head = jest.fn().mockReturnValue(c);
@@ -1014,9 +1036,10 @@ describe('getWorkloadDistribution', () => {
 // ═══════════════════════════════════════════════
 
 describe('getAllClients', () => {
-  function setupGetAllClients(drivers, { countResults = [], lastCaseRows = [] } = {}) {
+  // New approach: first query fetches all cases, second query fetches paginated drivers
+  function setupGetAllClients(drivers, { cases = [], error = null } = {}) {
     let fromCallCount = 0;
-    supabase.from.mockImplementation(() => {
+    supabase.from.mockImplementation((table) => {
       fromCallCount++;
       const c = {};
       ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
@@ -1026,27 +1049,17 @@ describe('getAllClients', () => {
       c.single = jest.fn().mockResolvedValue({ data: null, error: null });
       c.catch = jest.fn().mockReturnValue(Promise.resolve());
 
+      if (error) {
+        c.then = (onFulfilled) => Promise.resolve({ data: null, error }).then(onFulfilled);
+        return c;
+      }
+
       if (fromCallCount === 1) {
-        // Users query (drivers)
-        c.then = (onFulfilled) => Promise.resolve({ data: drivers, error: null }).then(onFulfilled);
+        // Cases query (all cases for metrics computation)
+        c.then = (onFulfilled) => Promise.resolve({ data: cases, error: null }).then(onFulfilled);
       } else {
-        // Per-driver queries: totalCases count, activeCases count, lastCase query
-        // Pattern repeats per driver: count, count, data
-        const perDriverIdx = (fromCallCount - 2) % 3; // 0 = total, 1 = active, 2 = last case
-        const driverIdx = Math.floor((fromCallCount - 2) / 3);
-        if (perDriverIdx === 0) {
-          // Total cases count
-          const cnt = countResults[driverIdx]?.total ?? 5;
-          c.then = (onFulfilled) => Promise.resolve({ count: cnt, error: null }).then(onFulfilled);
-        } else if (perDriverIdx === 1) {
-          // Active cases count
-          const cnt = countResults[driverIdx]?.active ?? 2;
-          c.then = (onFulfilled) => Promise.resolve({ count: cnt, error: null }).then(onFulfilled);
-        } else {
-          // Last case query (returns data array)
-          const rows = lastCaseRows[driverIdx] ?? [{ updated_at: '2026-03-10' }];
-          c.then = (onFulfilled) => Promise.resolve({ data: rows, error: null }).then(onFulfilled);
-        }
+        // Users/drivers query (paginated)
+        c.then = (onFulfilled) => Promise.resolve({ data: drivers, count: drivers.length, error: null }).then(onFulfilled);
       }
       return c;
     });
@@ -1057,10 +1070,14 @@ describe('getAllClients', () => {
       { id: 'u1', full_name: 'Miguel R.', email: 'miguel@test.com', phone: '555-1234', created_at: '2026-01-01' },
       { id: 'u2', full_name: 'Sarah L.', email: 'sarah@test.com', phone: null, created_at: '2026-02-01' },
     ];
-    setupGetAllClients(drivers, {
-      countResults: [{ total: 10, active: 3 }, { total: 5, active: 0 }],
-      lastCaseRows: [[{ updated_at: '2026-03-05' }], []],
-    });
+    const cases = [
+      { driver_id: 'u1', status: 'new', updated_at: '2026-03-05' },
+      { driver_id: 'u1', status: 'reviewed', updated_at: '2026-03-03' },
+      { driver_id: 'u1', status: 'closed', updated_at: '2026-02-01' },
+      { driver_id: 'u2', status: 'closed', updated_at: '2026-01-15' },
+      { driver_id: 'u2', status: 'closed', updated_at: '2026-01-10' },
+    ];
+    setupGetAllClients(drivers, { cases });
 
     const req = makeReq();
     const res = makeRes();
@@ -1071,25 +1088,25 @@ describe('getAllClients', () => {
     expect(body.clients[0]).toMatchObject({
       id: 'u1', name: 'Miguel R.', email: 'miguel@test.com',
       phone: '555-1234', cdlNumber: null,
-      totalCases: 10, activeCases: 3,
+      totalCases: 3, activeCases: 2,
       lastContact: '2026-03-05',
     });
     expect(body.clients[1]).toMatchObject({
-      id: 'u2', name: 'Sarah L.', totalCases: 5, activeCases: 0,
-      phone: null, cdlNumber: null, lastContact: null,
+      id: 'u2', name: 'Sarah L.', totalCases: 2, activeCases: 0,
+      phone: null, cdlNumber: null, lastContact: '2026-01-15',
     });
   });
 
   test('filters by search term', async () => {
-    setupGetAllClients([]);
+    setupGetAllClients([], { cases: [] });
 
     const req = makeReq({ query: { search: 'miguel' } });
     const res = makeRes();
     await adminController.getAllClients(req, res);
 
-    // The first from() call builds the users query; verify or() was called with search ilike
-    const firstChainCalls = supabase.from.mock.results[0].value;
-    expect(firstChainCalls.or).toHaveBeenCalledWith(
+    // The second from() call builds the users query; verify or() was called with search ilike
+    const secondChainCalls = supabase.from.mock.results[1].value;
+    expect(secondChainCalls.or).toHaveBeenCalledWith(
       expect.stringContaining('full_name.ilike.%miguel%')
     );
     expect(res.json.mock.calls[0][0].clients).toEqual([]);
@@ -1100,31 +1117,25 @@ describe('getAllClients', () => {
       { id: 'u1', full_name: 'Miguel', email: 'miguel@test.com', phone: null, created_at: '2026-01-01' },
       { id: 'u2', full_name: 'Sarah', email: 'sarah@test.com', phone: null, created_at: '2026-02-01' },
     ];
-    setupGetAllClients(drivers, {
-      countResults: [{ total: 5, active: 2 }, { total: 3, active: 0 }],
-    });
+    const cases = [
+      { driver_id: 'u1', status: 'new', updated_at: '2026-03-01' },
+      { driver_id: 'u1', status: 'reviewed', updated_at: '2026-03-05' },
+      { driver_id: 'u2', status: 'closed', updated_at: '2026-01-10' },
+    ];
+    setupGetAllClients(drivers, { cases });
 
     const req = makeReq({ query: { status: 'active' } });
     const res = makeRes();
     await adminController.getAllClients(req, res);
 
     const body = res.json.mock.calls[0][0];
-    // Only Miguel has active cases
+    // Only Miguel has active cases (Sarah's only case is closed)
     expect(body.clients).toHaveLength(1);
     expect(body.clients[0].name).toBe('Miguel');
   });
 
   test('returns 500 on error', async () => {
-    supabase.from.mockImplementation(() => {
-      const c = {};
-      ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
-        c[m] = jest.fn().mockReturnValue(c);
-      });
-      c.head = jest.fn().mockReturnValue(c);
-      c.then = (onFulfilled) => Promise.resolve({ data: null, error: { message: 'db fail' } }).then(onFulfilled);
-      c.catch = jest.fn().mockReturnValue(Promise.resolve());
-      return c;
-    });
+    setupGetAllClients([], { error: { message: 'db fail' } });
 
     const req = makeReq();
     const res = makeRes();
@@ -1276,10 +1287,12 @@ describe('updateClient', () => {
 });
 
 describe('getStaffPerformance', () => {
-  function setupStaffPerformance(staffUsers, { perStaffCounts = [], resolvedData = [] } = {}) {
+  // Optimized version: 2 queries total (staff + all cases via Promise.all)
+  function setupStaffPerformance(staffUsers, allCases) {
     let fromCallCount = 0;
     supabase.from.mockImplementation(() => {
       fromCallCount++;
+      const callIdx = fromCallCount; // capture for closure
       const c = {};
       ['select', 'eq', 'neq', 'not', 'gte', 'is', 'in', 'or', 'order', 'range', 'limit'].forEach(m => {
         c[m] = jest.fn().mockReturnValue(c);
@@ -1287,29 +1300,10 @@ describe('getStaffPerformance', () => {
       c.head = jest.fn().mockReturnValue(c);
       c.catch = jest.fn().mockReturnValue(Promise.resolve());
 
-      if (fromCallCount === 1) {
-        // Staff users query
+      if (callIdx === 1) {
         c.then = (onFulfilled) => Promise.resolve({ data: staffUsers, error: null }).then(onFulfilled);
       } else {
-        // Per-staff queries: total count, active count, resolved count, resolvedData
-        // Pattern per staff member: count, count, count, data
-        const perStaffIdx = (fromCallCount - 2) % 4;
-        const staffIdx = Math.floor((fromCallCount - 2) / 4);
-        const counts = perStaffCounts[staffIdx] || { total: 10, active: 3, resolved: 7 };
-        if (perStaffIdx === 0) {
-          // Total cases
-          c.then = (onFulfilled) => Promise.resolve({ count: counts.total, error: null }).then(onFulfilled);
-        } else if (perStaffIdx === 1) {
-          // Active cases
-          c.then = (onFulfilled) => Promise.resolve({ count: counts.active, error: null }).then(onFulfilled);
-        } else if (perStaffIdx === 2) {
-          // Resolved cases
-          c.then = (onFulfilled) => Promise.resolve({ count: counts.resolved, error: null }).then(onFulfilled);
-        } else {
-          // Resolved data (for avg resolution time)
-          const data = resolvedData[staffIdx] || [];
-          c.then = (onFulfilled) => Promise.resolve({ data, error: null }).then(onFulfilled);
-        }
+        c.then = (onFulfilled) => Promise.resolve({ data: allCases, error: null }).then(onFulfilled);
       }
       return c;
     });
@@ -1320,17 +1314,20 @@ describe('getStaffPerformance', () => {
       { id: 'op-1', full_name: 'Lisa M.', email: 'lisa@test.com', role: 'operator' },
       { id: 'att-1', full_name: 'James H.', email: 'james@test.com', role: 'attorney' },
     ];
-    const resolvedRows = [
-      { created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-11T00:00:00Z' }, // 10 days
-      { created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-21T00:00:00Z' }, // 20 days
+    // Build case data: op-1 has 20 cases (15 closed, 5 active), att-1 has 10 (8 closed, 2 active)
+    const allCases = [
+      // op-1: 15 closed cases (2 with known dates for avg resolution)
+      { assigned_operator_id: 'op-1', status: 'closed', violation_type: 'speeding', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-11T00:00:00Z' },
+      { assigned_operator_id: 'op-1', status: 'closed', violation_type: 'speeding', created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-21T00:00:00Z' },
+      ...Array(13).fill(null).map(() => ({ assigned_operator_id: 'op-1', status: 'closed', violation_type: 'speeding', created_at: '2026-01-15T00:00:00Z', updated_at: '2026-01-20T00:00:00Z' })),
+      // op-1: 5 active cases
+      ...Array(5).fill(null).map(() => ({ assigned_operator_id: 'op-1', status: 'new', violation_type: 'parking', created_at: '2026-03-01T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' })),
+      // att-1: 8 closed cases
+      ...Array(8).fill(null).map(() => ({ assigned_attorney_id: 'att-1', status: 'closed', violation_type: 'speeding', created_at: '2026-01-10T00:00:00Z', updated_at: '2026-01-20T00:00:00Z' })),
+      // att-1: 2 active cases
+      ...Array(2).fill(null).map(() => ({ assigned_attorney_id: 'att-1', status: 'new', violation_type: 'speeding', created_at: '2026-03-01T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' })),
     ];
-    setupStaffPerformance(staff, {
-      perStaffCounts: [
-        { total: 20, active: 5, resolved: 15 },
-        { total: 10, active: 2, resolved: 8 },
-      ],
-      resolvedData: [resolvedRows, []],
-    });
+    setupStaffPerformance(staff, allCases);
 
     const req = makeReq();
     const res = makeRes();
