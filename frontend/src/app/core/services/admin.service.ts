@@ -6,7 +6,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 // ============================================
@@ -219,7 +219,9 @@ export class AdminService {
     const url = staffId
       ? `${this.apiUrl}/admin/performance/${staffId}`
       : `${this.apiUrl}/admin/performance`;
-    return this.http.get<PerformanceMetrics[]>(url);
+    return this.http.get<{ metrics: PerformanceMetrics[] }>(url).pipe(
+      map(res => res.metrics || [])
+    );
   }
 
   // ============================================

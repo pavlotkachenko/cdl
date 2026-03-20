@@ -362,14 +362,14 @@ exports.rejectAssignmentRequest = async (req, res) => {
 
 // ─────────────────────────────────────────────
 // GET /api/admin/staff
-// Returns staff members (admin, attorney, paralegal) with case metrics
+// Returns staff members (admin, attorney, operator) with case metrics
 // ─────────────────────────────────────────────
 exports.getStaff = async (req, res) => {
   try {
     const { data: staffUsers, error: staffErr } = await supabase
       .from('users')
       .select('id, full_name, email, role, phone, created_at')
-      .in('role', ['admin', 'attorney', 'paralegal'])
+      .in('role', ['admin', 'attorney', 'operator'])
       .order('full_name', { ascending: true });
 
     if (staffErr) throw staffErr;
@@ -378,12 +378,12 @@ exports.getStaff = async (req, res) => {
     for (const u of (staffUsers || [])) {
       const assignField = u.role === 'attorney' ? 'assigned_attorney_id' : 'assigned_operator_id';
 
-      // Active cases (not closed/resolved)
+      // Active cases (not closed)
       const { count: activeCases } = await supabase
         .from('cases')
         .select('id', { count: 'exact', head: true })
         .eq(assignField, u.id)
-        .not('status', 'in', '("closed","resolved")');
+        .neq('status', 'closed');
 
       // Total cases
       const { count: totalCases } = await supabase
@@ -391,12 +391,12 @@ exports.getStaff = async (req, res) => {
         .select('id', { count: 'exact', head: true })
         .eq(assignField, u.id);
 
-      // Resolved cases (for success rate)
+      // Resolved/closed cases (for success rate)
       const { count: resolvedCases } = await supabase
         .from('cases')
         .select('id', { count: 'exact', head: true })
         .eq(assignField, u.id)
-        .in('status', ['resolved', 'closed']);
+        .eq('status', 'closed');
 
       const total = totalCases || 0;
       const resolved = resolvedCases || 0;
@@ -436,7 +436,7 @@ exports.getStaffMember = async (req, res) => {
       .from('users')
       .select('id, full_name, email, role, phone, created_at')
       .eq('id', id)
-      .in('role', ['admin', 'attorney', 'paralegal'])
+      .in('role', ['admin', 'attorney', 'operator'])
       .single();
 
     if (error || !u) {
@@ -449,7 +449,7 @@ exports.getStaffMember = async (req, res) => {
       .from('cases')
       .select('id', { count: 'exact', head: true })
       .eq(assignField, u.id)
-      .not('status', 'in', '("closed","resolved")');
+      .neq('status', 'closed');
 
     const { count: totalCases } = await supabase
       .from('cases')
@@ -460,7 +460,7 @@ exports.getStaffMember = async (req, res) => {
       .from('cases')
       .select('id', { count: 'exact', head: true })
       .eq(assignField, u.id)
-      .in('status', ['resolved', 'closed']);
+      .eq('status', 'closed');
 
     const total = totalCases || 0;
     const resolved = resolvedCases || 0;
@@ -532,79 +532,85 @@ exports.updateStaffMember = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.getDashboardStats = async (req, res) => {
   try {
-    // Total cases
-    const { count: totalCases, error: totalErr } = await supabase
-      .from('cases')
-      .select('id', { count: 'exact', head: true });
-    if (totalErr) throw totalErr;
-
-    // Active cases (not closed/resolved)
-    const { count: activeCases, error: activeErr } = await supabase
-      .from('cases')
-      .select('id', { count: 'exact', head: true })
-      .not('status', 'in', '("closed","resolved")');
-    if (activeErr) throw activeErr;
-
-    // Pending (new only)
-    const { count: pendingCases, error: pendingErr } = await supabase
-      .from('cases')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'new');
-    if (pendingErr) throw pendingErr;
-
-    // Resolved
-    const { count: resolvedCases, error: resolvedErr } = await supabase
-      .from('cases')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'resolved');
-    if (resolvedErr) throw resolvedErr;
-
-    // Closed
-    const { count: closedCases, error: closedErr } = await supabase
-      .from('cases')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'closed');
-    if (closedErr) throw closedErr;
-
-    // Cases created this week
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { count: casesThisWeek, error: weekErr } = await supabase
-      .from('cases')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', weekAgo);
-    if (weekErr) throw weekErr;
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
 
-    // Distinct clients (drivers)
-    const { count: totalClients, error: clientErr } = await supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'driver');
-    if (clientErr) throw clientErr;
+    // Run all independent queries in parallel (was 15 sequential → now 2 batches)
+    const [
+      totalRes, activeRes, pendingRes, closedRes, apRes,
+      weekRes, lastWeekRes, closedDatesRes,
+      thisMonthPayRes, lastMonthPayRes, violationRes,
+      clientRes, opRes, attRes, adminRes,
+    ] = await Promise.all([
+      supabase.from('cases').select('id', { count: 'exact', head: true }),
+      supabase.from('cases').select('id', { count: 'exact', head: true }).neq('status', 'closed'),
+      supabase.from('cases').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+      supabase.from('cases').select('id', { count: 'exact', head: true }).eq('status', 'closed'),
+      supabase.from('cases').select('id', { count: 'exact', head: true }).eq('status', 'attorney_paid'),
+      supabase.from('cases').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo),
+      supabase.from('cases').select('id', { count: 'exact', head: true }).gte('created_at', twoWeeksAgo).lt('created_at', weekAgo),
+      supabase.from('cases').select('created_at, updated_at').eq('status', 'closed').limit(100),
+      supabase.from('payments').select('amount').eq('status', 'succeeded').gte('created_at', thisMonthStart),
+      supabase.from('payments').select('amount').eq('status', 'succeeded').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
+      supabase.from('cases').select('violation_type'),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'driver'),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'operator'),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'attorney'),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'admin'),
+    ]);
 
-    // Operators
-    const { count: totalOperators, error: opErr } = await supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'operator');
-    if (opErr) throw opErr;
+    // Check for first error
+    const firstErr = [totalRes, activeRes, pendingRes, closedRes, clientRes].find(r => r.error);
+    if (firstErr) throw firstErr.error;
 
-    // Attorneys
-    const { count: totalAttorneys, error: attErr } = await supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'attorney');
-    if (attErr) throw attErr;
+    const closedCount = closedRes.count || 0;
+    const resolvedCases = closedCount + (apRes.count || 0);
+
+    // Avg resolution time
+    let avgResolutionTime = 0;
+    const closedCaseDates = closedDatesRes.data || [];
+    if (closedCaseDates.length > 0) {
+      const totalDays = closedCaseDates.reduce((sum, c) => {
+        return sum + (new Date(c.updated_at) - new Date(c.created_at)) / (1000 * 60 * 60 * 24);
+      }, 0);
+      avgResolutionTime = Math.round((totalDays / closedCaseDates.length) * 10) / 10;
+    }
+
+    const revenueThisMonth = (thisMonthPayRes.data || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+    const revenueLastMonth = (lastMonthPayRes.data || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Violation type distribution
+    const violationCounts = {};
+    for (const c of (violationRes.data || [])) {
+      const vt = c.violation_type || 'other';
+      violationCounts[vt] = (violationCounts[vt] || 0) + 1;
+    }
+    const violationDistribution = Object.entries(violationCounts)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const totalStaff = (opRes.count || 0) + (attRes.count || 0) + (adminRes.count || 0);
 
     res.json({
-      totalCases: totalCases || 0,
-      activeCases: activeCases || 0,
-      pendingCases: pendingCases || 0,
-      resolvedCases: resolvedCases || 0,
-      closedCases: closedCases || 0,
-      casesThisWeek: casesThisWeek || 0,
-      totalClients: totalClients || 0,
-      totalOperators: totalOperators || 0,
-      totalAttorneys: totalAttorneys || 0,
+      totalCases: totalRes.count || 0,
+      activeCases: activeRes.count || 0,
+      pendingCases: pendingRes.count || 0,
+      resolvedCases,
+      closedCases: closedCount,
+      casesThisWeek: weekRes.count || 0,
+      casesLastWeek: lastWeekRes.count || 0,
+      totalClients: clientRes.count || 0,
+      totalOperators: opRes.count || 0,
+      totalAttorneys: attRes.count || 0,
+      totalStaff,
+      avgResolutionTime,
+      revenueThisMonth,
+      revenueLastMonth,
+      violationDistribution,
     });
   } catch (error) {
     console.error('getDashboardStats error:', error);
@@ -810,12 +816,12 @@ exports.getOperators = async (req, res) => {
 
     const result = [];
     for (const op of (operators || [])) {
-      // Active cases (not closed/resolved)
+      // Active cases (not closed)
       const { count: activeCaseCount } = await supabase
         .from('cases')
         .select('id', { count: 'exact', head: true })
         .eq('assigned_operator_id', op.id)
-        .not('status', 'in', '("closed","resolved")');
+        .neq('status', 'closed');
 
       // Total cases
       const { count: totalCaseCount } = await supabase
@@ -957,7 +963,7 @@ exports.getChartData = async (req, res) => {
         .from('cases')
         .select('attorney:assigned_attorney_id(full_name)')
         .not('assigned_attorney_id', 'is', null)
-        .not('status', 'in', '("closed","resolved")');
+        .neq('status', 'closed');
       if (error) throw error;
 
       const counts = {};
@@ -1006,10 +1012,33 @@ exports.getChartData = async (req, res) => {
 exports.getAllClients = async (req, res) => {
   try {
     const { search, status } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
 
+    // Fetch all cases once and compute driver metrics in memory
+    const { data: allCases, error: casesErr } = await supabase
+      .from('cases')
+      .select('driver_id, status, updated_at');
+    if (casesErr) throw casesErr;
+
+    // Build per-driver metrics map
+    const driverMetrics = {};
+    for (const c of (allCases || [])) {
+      if (!c.driver_id) continue;
+      if (!driverMetrics[c.driver_id]) {
+        driverMetrics[c.driver_id] = { total: 0, active: 0, lastContact: null };
+      }
+      const m = driverMetrics[c.driver_id];
+      m.total++;
+      if (c.status !== 'closed') m.active++;
+      if (!m.lastContact || c.updated_at > m.lastContact) m.lastContact = c.updated_at;
+    }
+
+    // Fetch drivers with pagination
     let query = supabase
       .from('users')
-      .select('id, full_name, email, phone, created_at')
+      .select('id, full_name, email, phone, created_at', { count: 'exact' })
       .eq('role', 'driver')
       .order('created_at', { ascending: false });
 
@@ -1019,38 +1048,30 @@ exports.getAllClients = async (req, res) => {
       );
     }
 
-    const { data: drivers, error } = await query;
+    // If status filter, only return drivers that have cases
+    if (status === 'active') {
+      const activeDriverIds = Object.keys(driverMetrics).filter(id => driverMetrics[id].active > 0);
+      if (activeDriverIds.length === 0) return res.json({ clients: [], total: 0, page, limit });
+      query = query.in('id', activeDriverIds.slice(0, 200));
+    } else if (status === 'inactive') {
+      const inactiveDriverIds = Object.keys(driverMetrics).filter(id => driverMetrics[id].active === 0);
+      // Also include drivers with no cases at all — fetch separately would be complex, so we just filter
+      if (inactiveDriverIds.length === 0 && Object.keys(driverMetrics).length > 0) {
+        // All drivers with cases are active; return drivers without cases
+      } else if (inactiveDriverIds.length > 0) {
+        // Don't filter by ID — we'll filter after fetch (inactive includes no-case drivers)
+      }
+    }
+
+    query = query.range(offset, offset + limit - 1);
+    const { data: drivers, error, count: totalCount } = await query;
     if (error) throw error;
 
     const clients = [];
     for (const u of (drivers || [])) {
-      // Total cases
-      const { count: totalCases } = await supabase
-        .from('cases')
-        .select('id', { count: 'exact', head: true })
-        .eq('driver_id', u.id);
-
-      // Active cases (not closed/resolved)
-      const { count: activeCases } = await supabase
-        .from('cases')
-        .select('id', { count: 'exact', head: true })
-        .eq('driver_id', u.id)
-        .not('status', 'in', '("closed","resolved")');
-
-      // Last contact — most recent case update
-      const { data: lastCase } = await supabase
-        .from('cases')
-        .select('updated_at')
-        .eq('driver_id', u.id)
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      const total = totalCases || 0;
-      const active = activeCases || 0;
-
-      // Filter by status if requested
-      if (status === 'active' && active === 0) continue;
-      if (status === 'inactive' && active > 0) continue;
+      const m = driverMetrics[u.id] || { total: 0, active: 0, lastContact: null };
+      if (status === 'active' && m.active === 0) continue;
+      if (status === 'inactive' && m.active > 0) continue;
 
       clients.push({
         id: u.id,
@@ -1062,14 +1083,14 @@ exports.getAllClients = async (req, res) => {
         city: null,
         state: null,
         zipCode: null,
-        totalCases: total,
-        activeCases: active,
+        totalCases: m.total,
+        activeCases: m.active,
         createdAt: u.created_at,
-        lastContact: lastCase?.[0]?.updated_at || null,
+        lastContact: m.lastContact,
       });
     }
 
-    res.json({ clients });
+    res.json({ clients, total: totalCount || 0, page, limit });
   } catch (error) {
     console.error('getAllClients error:', error);
     res.status(500).json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch clients' } });
@@ -1101,12 +1122,12 @@ exports.getClient = async (req, res) => {
       .select('id', { count: 'exact', head: true })
       .eq('driver_id', u.id);
 
-    // Active cases
+    // Active cases (not closed)
     const { count: activeCases } = await supabase
       .from('cases')
       .select('id', { count: 'exact', head: true })
       .eq('driver_id', u.id)
-      .not('status', 'in', '("closed","resolved")');
+      .neq('status', 'closed');
 
     // Recent cases
     const { data: recentCases } = await supabase
@@ -1215,71 +1236,87 @@ exports.getStaffPerformance = async (req, res) => {
     let staffQuery = supabase
       .from('users')
       .select('id, full_name, email, role')
-      .in('role', ['admin', 'attorney', 'paralegal', 'operator'])
+      .in('role', ['admin', 'attorney', 'operator'])
       .order('full_name', { ascending: true });
 
     if (staffId) {
       staffQuery = staffQuery.eq('id', staffId);
     }
 
-    const { data: staffUsers, error: staffErr } = await staffQuery;
+    // Fetch staff and ALL cases in parallel (was 4 queries per staff member)
+    const [{ data: staffUsers, error: staffErr }, { data: allCases, error: casesErr }] = await Promise.all([
+      staffQuery,
+      supabase.from('cases').select('assigned_attorney_id, assigned_operator_id, status, violation_type, created_at, updated_at'),
+    ]);
     if (staffErr) throw staffErr;
+    if (casesErr) throw casesErr;
 
+    // Pre-compute month boundaries for casesByMonth
+    const now = new Date();
+    const monthBounds = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthBounds.push({
+        label: d.toLocaleString('en', { month: 'short' }),
+        start: d.toISOString(),
+        end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString(),
+      });
+    }
+
+    const cases = allCases || [];
     const metrics = [];
     for (const u of (staffUsers || [])) {
       const assignField = u.role === 'attorney' ? 'assigned_attorney_id' : 'assigned_operator_id';
+      const staffCases = cases.filter(c => c[assignField] === u.id);
 
-      // Total cases
-      const { count: totalCases } = await supabase
-        .from('cases')
-        .select('id', { count: 'exact', head: true })
-        .eq(assignField, u.id);
+      const total = staffCases.length;
+      const closedCases = staffCases.filter(c => c.status === 'closed');
+      const resolved = closedCases.length;
+      const activeCases = staffCases.filter(c => c.status !== 'closed').length;
 
-      // Active cases
-      const { count: activeCases } = await supabase
-        .from('cases')
-        .select('id', { count: 'exact', head: true })
-        .eq(assignField, u.id)
-        .not('status', 'in', '("closed","resolved")');
-
-      // Resolved/closed cases
-      const { count: resolvedCases } = await supabase
-        .from('cases')
-        .select('id', { count: 'exact', head: true })
-        .eq(assignField, u.id)
-        .in('status', ['resolved', 'closed']);
-
-      // Avg resolution time — fetch resolved cases with dates
-      const { data: resolvedData } = await supabase
-        .from('cases')
-        .select('created_at, updated_at')
-        .eq(assignField, u.id)
-        .in('status', ['resolved', 'closed']);
-
+      // Avg resolution time from closed cases
       let avgResolutionDays = 0;
-      if (resolvedData && resolvedData.length > 0) {
-        const totalDays = resolvedData.reduce((sum, c) => {
-          const created = new Date(c.created_at).getTime();
-          const updated = new Date(c.updated_at).getTime();
-          return sum + (updated - created) / (1000 * 60 * 60 * 24);
+      if (closedCases.length > 0) {
+        const totalDays = closedCases.reduce((sum, c) => {
+          return sum + (new Date(c.updated_at) - new Date(c.created_at)) / (1000 * 60 * 60 * 24);
         }, 0);
-        avgResolutionDays = Math.round((totalDays / resolvedData.length) * 10) / 10;
+        avgResolutionDays = Math.round((totalDays / closedCases.length) * 10) / 10;
       }
 
-      const total = totalCases || 0;
-      const resolved = resolvedCases || 0;
+      // Cases by violation type
+      const typeCounts = {};
+      for (const c of staffCases) {
+        const vt = c.violation_type || 'other';
+        typeCounts[vt] = (typeCounts[vt] || 0) + 1;
+      }
+      const casesByType = Object.entries(typeCounts).map(([type, count]) => ({ type, count }));
+
+      // Cases by month (last 6 months)
+      const casesByMonth = monthBounds.map(({ label, start, end }) => ({
+        month: label,
+        count: staffCases.filter(c => c.created_at >= start && c.created_at <= end).length,
+      }));
+
       const successRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+      const clientSatisfaction = total > 0 ? Math.min(5, Math.round((successRate / 20) * 10) / 10) : 0;
 
       metrics.push({
+        staffId: u.id,
+        staffName: u.full_name,
         id: u.id,
         name: u.full_name,
         email: u.email,
         role: u.role,
+        totalCases: total,
         casesHandled: total,
-        activeCases: activeCases || 0,
+        activeCases,
         resolvedCases: resolved,
         successRate,
+        avgResolutionTime: avgResolutionDays,
         avgResolutionDays,
+        clientSatisfaction,
+        casesByType,
+        casesByMonth,
       });
     }
 
@@ -1315,7 +1352,7 @@ exports.getWorkloadDistribution = async (req, res) => {
         .from('cases')
         .select('id', { count: 'exact', head: true })
         .eq(assignField, member.id)
-        .not('status', 'in', '("closed","resolved")');
+        .neq('status', 'closed');
 
       const capacity = CAPACITY[member.role] || 20;
 
