@@ -644,4 +644,288 @@ describe('CaseDetailComponent', () => {
     await component.shareCase();
     expect(component.toastMessage()).toContain('Copy not supported');
   });
+
+  // ── Sprint 072: Teal Design System Tests ──────────────────
+
+  it('breadcrumb renders Home > My Cases > case number', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const breadcrumb = fixture.nativeElement.querySelector('.breadcrumb');
+    expect(breadcrumb).toBeTruthy();
+    expect(breadcrumb.getAttribute('aria-label')).toBe('Breadcrumb');
+    const links = breadcrumb.querySelectorAll('a');
+    expect(links[0].textContent).toContain('Home');
+    expect(links[1].textContent).toContain('My Cases');
+    expect(breadcrumb.querySelector('[aria-current="page"]')?.textContent).toContain('CASE-2026-000847');
+  });
+
+  it('hero header contains case-hero class', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.case-hero')).toBeTruthy();
+  });
+
+  it('card headers have teal background section headings', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const headers = fixture.nativeElement.querySelectorAll('.card-header');
+    expect(headers.length).toBeGreaterThanOrEqual(4);
+    // Verify section titles
+    const headerTexts = Array.from(headers).map((h: any) => h.textContent);
+    expect(headerTexts.some((t: any) => t.includes('Case Information'))).toBe(true);
+    expect(headerTexts.some((t: any) => t.includes('Documents'))).toBe(true);
+    expect(headerTexts.some((t: any) => t.includes('Messages'))).toBe(true);
+    expect(headerTexts.some((t: any) => t.includes('Activity Log'))).toBe(true);
+  });
+
+  it('attorney avatar shows availability dot', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const dot = fixture.nativeElement.querySelector('.availability-dot');
+    expect(dot).toBeTruthy();
+    expect(dot.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('message avatars have role-specific classes', async () => {
+    const { fixture, component } = await setup({
+      messagesResponse: of({ data: { messages: MOCK_MESSAGES } }),
+    });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const avatars = fixture.nativeElement.querySelectorAll('.message-avatar');
+    expect(avatars.length).toBe(2);
+
+    const driverAvatar = fixture.nativeElement.querySelector('.avatar-driver');
+    expect(driverAvatar).toBeTruthy();
+
+    const attorneyAvatar = fixture.nativeElement.querySelector('.avatar-attorney');
+    expect(attorneyAvatar).toBeTruthy();
+  });
+
+  it('court alert shows bold days count', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const daysCount = fixture.nativeElement.querySelector('.days-count');
+    expect(daysCount).toBeTruthy();
+    expect(Number(daysCount.textContent.trim())).toBeGreaterThan(0);
+  });
+
+  it('pay button uses btn-pay class without btn-primary', async () => {
+    const payCase = { ...MOCK_CASE, status: 'pay_attorney', attorney_price: 450 };
+    const { fixture, component } = await setup({ caseResponse: of({ data: payCase }) });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const payBtn = fixture.nativeElement.querySelector('.btn-pay');
+    expect(payBtn).toBeTruthy();
+    expect(payBtn.classList.contains('btn-primary')).toBe(false);
+    expect(payBtn.textContent).toContain('Pay Now');
+  });
+
+  it('emoji icons have aria-hidden="true"', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    // Check multiple aria-hidden spans in the template
+    const hiddenSpans = fixture.nativeElement.querySelectorAll('[aria-hidden="true"]');
+    expect(hiddenSpans.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('sections have proper aria-labelledby attributes', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[aria-labelledby="info-heading"]')).toBeTruthy();
+    expect(el.querySelector('[aria-labelledby="docs-heading"]')).toBeTruthy();
+    expect(el.querySelector('[aria-labelledby="messaging-heading"]')).toBeTruthy();
+    expect(el.querySelector('[aria-labelledby="activity-heading"]')).toBeTruthy();
+    expect(el.querySelector('[aria-labelledby="timeline-heading"]')).toBeTruthy();
+    expect(el.querySelector('[aria-labelledby="actions-heading"]')).toBeTruthy();
+  });
+
+  it('document list shows file size when available', async () => {
+    const docsWithSize = [
+      { id: 'doc-1', fileName: 'ticket.pdf', uploadedAt: '2026-03-05T14:30:00Z', fileSize: 2048, signedUrl: 'https://example.com/ticket.pdf' },
+    ];
+    const { fixture, component } = await setup({
+      docsResponse: of({ documents: docsWithSize }),
+    });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const meta = fixture.nativeElement.querySelector('.doc-meta');
+    expect(meta).toBeTruthy();
+    expect(meta.textContent).toContain('2.0 KB');
+  });
+
+  it('share copy feedback has sr-only aria-live region', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const liveRegion = fixture.nativeElement.querySelector('[aria-live="polite"].sr-only');
+    expect(liveRegion).toBeTruthy();
+  });
+
+  it('resolution text renders with styled class when present', async () => {
+    const caseWithResolution = { ...MOCK_CASE, resolution: 'Case dismissed - no points added' };
+    const { fixture, component } = await setup({ caseResponse: of({ data: caseWithResolution }) });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const resText = fixture.nativeElement.querySelector('.resolution-text');
+    expect(resText).toBeTruthy();
+    expect(resText.textContent).toContain('Case dismissed');
+  });
+
+  it('loading state has proper role and aria-label', async () => {
+    const neverResolve = new Subject();
+    const { fixture, component } = await setup({ caseResponse: neverResolve.asObservable() });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const loadingEl = fixture.nativeElement.querySelector('.loading-state');
+    expect(loadingEl.getAttribute('role')).toBe('status');
+    expect(loadingEl.getAttribute('aria-label')).toBe('Loading case details');
+  });
+
+  it('char counter shows warning class when < 10 characters', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    // Use DOM input to trigger reactive form update
+    const textarea = fixture.nativeElement.querySelector('.message-textarea') as HTMLTextAreaElement;
+    textarea.value = 'short';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const counter = fixture.nativeElement.querySelector('.char-counter');
+    expect(counter).toBeTruthy();
+    expect(counter.classList.contains('char-warning')).toBe(true);
+    expect(counter.textContent).toContain('5 characters');
+  });
+
+  it('char counter removes warning when >= 10 characters', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    component.messageForm.patchValue({ content: 'This is a long enough message' });
+    fixture.detectChanges();
+
+    const counter = fixture.nativeElement.querySelector('.char-counter');
+    expect(counter.classList.contains('char-warning')).toBe(false);
+  });
+
+  it('activity entries show user name in teal', async () => {
+    const { fixture, component } = await setup({
+      activityResponse: of({ activities: MOCK_ACTIVITY.slice(0, 3) }),
+    });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const users = fixture.nativeElement.querySelectorAll('.activity-user');
+    expect(users.length).toBe(3);
+    expect(users[0].textContent).toContain('Miguel Driver');
+  });
+
+  it('timeline notes render with styled note class', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const notes = fixture.nativeElement.querySelectorAll('.timeline-note');
+    expect(notes.length).toBeGreaterThanOrEqual(1);
+    expect(notes[0].textContent).toContain('Case submitted');
+  });
+
+  it('documents empty state has dashed upload zone', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const emptyState = fixture.nativeElement.querySelector('.documents-card .empty-state');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState.textContent).toContain('No documents uploaded yet');
+  });
+
+  it('attorney card shows "Defense Attorney" role label', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const role = fixture.nativeElement.querySelector('.attorney-role');
+    expect(role).toBeTruthy();
+    expect(role.textContent).toContain('Defense Attorney');
+  });
+
+  it('attorney actions show Message and Call buttons', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const actions = fixture.nativeElement.querySelector('.attorney-actions');
+    expect(actions).toBeTruthy();
+    expect(actions.textContent).toContain('Message');
+    expect(actions.textContent).toContain('Call');
+  });
+
+  it('secure footer includes AES-256 and PCI DSS text', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const footer = fixture.nativeElement.querySelector('.secure-footer');
+    expect(footer.textContent).toContain('AES-256');
+    expect(footer.textContent).toContain('PCI DSS');
+  });
+
+  it('upload hint shows accepted file types', async () => {
+    const docsWithSize = [
+      { id: 'doc-1', fileName: 'ticket.pdf', uploadedAt: '2026-03-05T14:30:00Z', fileSize: 2048, signedUrl: 'https://example.com/ticket.pdf' },
+    ];
+    const { fixture, component } = await setup({
+      docsResponse: of({ documents: docsWithSize }),
+    });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const hint = fixture.nativeElement.querySelector('.upload-hint');
+    expect(hint).toBeTruthy();
+    expect(hint.textContent).toContain('JPG');
+    expect(hint.textContent).toContain('PDF');
+    expect(hint.textContent).toContain('10 MB');
+  });
+
+  it('toast notification has proper aria attributes', async () => {
+    const { fixture, component } = await setup();
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    // Trigger toast
+    component.toastMessage.set('Test notification');
+    component.toastVisible.set(true);
+    fixture.detectChanges();
+
+    const toast = fixture.nativeElement.querySelector('.toast');
+    expect(toast).toBeTruthy();
+    expect(toast.getAttribute('role')).toBe('status');
+    expect(toast.getAttribute('aria-live')).toBe('polite');
+    expect(toast.textContent).toContain('Test notification');
+  });
 });

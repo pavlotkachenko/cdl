@@ -1,5 +1,5 @@
-<!-- Case Detail Template — Sprint 065 CD-4/5/6/7 -->
-<!-- No mat-icon / no Material components — emoji + inline SVG only -->
+<!-- Case Detail Template — Sprint 072 Redesign -->
+<!-- Teal design system, emoji + inline SVG, WCAG 2.1 AA -->
 <div class="case-detail-container">
 
   <!-- Loading State -->
@@ -104,7 +104,7 @@
         <span class="alert-icon" aria-hidden="true">&#128197;</span>
         <div class="alert-body">
           <strong>Court Date Approaching</strong>
-          <p>{{ daysUntilCourt() }} days until your court date on {{ formatDate(caseData()!.courtDate || caseData()!.court_date) }}</p>
+          <p><span class="days-count">{{ daysUntilCourt() }}</span> days until your court date on {{ formatDate(caseData()!.courtDate || caseData()!.court_date) }}</p>
         </div>
       </div>
     }
@@ -121,7 +121,7 @@
             <p>Payment required to proceed</p>
           }
         </div>
-        <button class="btn-primary btn-pay" (click)="payAttorneyFee()">Pay Now</button>
+        <button class="btn-pay" (click)="payAttorneyFee()">Pay Now</button>
       </div>
     }
 
@@ -238,7 +238,7 @@
                     <span class="doc-icon" aria-hidden="true">{{ getFileEmoji(doc.fileName) }}</span>
                     <div class="doc-info">
                       <p class="doc-name">{{ doc.fileName }}</p>
-                      <p class="doc-meta">{{ formatDate(doc.uploadedAt) }}</p>
+                      <p class="doc-meta">{{ formatDate(doc.uploadedAt) }}@if (doc.fileSize) { &middot; {{ formatFileSize(doc.fileSize) }}}</p>
                     </div>
                     <div class="doc-actions">
                       @if (doc.signedUrl) {
@@ -289,7 +289,7 @@
                 @for (msg of messages(); track msg.id || $index) {
                   <div class="message-bubble" [class.message-driver]="msg.sender_role === 'driver'" [class.message-staff]="msg.sender_role !== 'driver'">
                     <div class="message-header">
-                      <span class="message-avatar" aria-hidden="true">{{ getInitials(msg.sender_name || 'User') }}</span>
+                      <span class="message-avatar" [class.avatar-driver]="msg.sender_role === 'driver'" [class.avatar-attorney]="msg.sender_role === 'attorney'" aria-hidden="true">{{ getInitials(msg.sender_name || 'User') }}</span>
                       <span class="message-sender">{{ msg.sender_name || 'User' }}</span>
                       <span class="message-role-badge" [class.badge-attorney]="msg.sender_role === 'attorney'" [class.badge-driver]="msg.sender_role === 'driver'">{{ msg.sender_role === 'attorney' ? 'Attorney' : msg.sender_role === 'driver' ? 'Driver' : 'Staff' }}</span>
                       <span class="message-time">{{ formatDateTime(msg.created_at || msg.timestamp) }}</span>
@@ -388,6 +388,7 @@
               <div class="attorney-profile">
                 <div class="attorney-avatar" aria-hidden="true">
                   {{ attorneyInitials() }}
+                  <span class="availability-dot" aria-hidden="true"></span>
                 </div>
                 <div class="attorney-details">
                   <h3>{{ attorneyName() }}</h3>
