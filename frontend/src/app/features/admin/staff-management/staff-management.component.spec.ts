@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect } from 'vitest';
 
@@ -34,6 +35,7 @@ async function setup(spy = makeServiceSpy()) {
   await TestBed.configureTestingModule({
     imports: [StaffManagementComponent, NoopAnimationsModule],
     providers: [
+      provideTranslateService(),
       { provide: AdminService, useValue: spy },
       { provide: Router, useValue: routerSpy },
     ],

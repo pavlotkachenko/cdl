@@ -1,5 +1,6 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of, Subject, BehaviorSubject } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -64,6 +65,7 @@ describe('OperatorDashboardComponent (admin)', () => {
       imports: [OperatorDashboardComponent],
       providers: [
         provideAnimationsAsync(),
+        provideTranslateService(),
         { provide: DashboardService, useValue: dashboardService },
         { provide: AuthService, useValue: { currentUserValue: { id: 'user-1' } } },
         { provide: MatSnackBar, useValue: snackBar },

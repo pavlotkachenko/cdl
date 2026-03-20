@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideTranslateService } from '@ngx-translate/core';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 import { UserManagementComponent } from './user-management.component';
@@ -30,6 +31,7 @@ describe('UserManagementComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideAnimationsAsync(),
+        provideTranslateService(),
       ],
     }).compileComponents();
 
