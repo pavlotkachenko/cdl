@@ -11,6 +11,8 @@ const caseController = require('../controllers/case.controller');
 const { body, param, query } = require('express-validator');
 const multer = require('multer');
 const path = require('path');
+const { ALL_TYPES, SEVERITY_VALUES } = require('../constants/violation-types');
+const { validateTypeSpecificDataMiddleware } = require('../middleware/violation-validation.middleware');
 
 const documentUpload = multer({
   storage: multer.memoryStorage(),
@@ -37,22 +39,13 @@ const createCaseValidation = [
   ]),
   body('state').optional().isLength({ min: 2, max: 2 }).withMessage('State must be 2 letters'),
   body('violation_date').optional().isISO8601().withMessage('Valid date required'),
-  body('violation_type').optional().isIn([
-    'speeding',
-    'parking',
-    'traffic_signal',
-    'reckless_driving',
-    'dui',
-    'hos_logbook',
-    'dot_inspection',
-    'suspension',
-    'csa_score',
-    'dqf',
-    'other'
-  ]),
+  body('violation_type').optional().isIn(ALL_TYPES),
   body('citation_number').optional().isString().isLength({ max: 50 }).withMessage('Citation number must be 50 characters or less'),
   body('fine_amount').optional().isFloat({ min: 0 }).withMessage('Fine amount must be a non-negative number'),
   body('alleged_speed').optional().isInt({ min: 1, max: 300 }).withMessage('Alleged speed must be between 1 and 300'),
+  body('type_specific_data').optional().isObject().withMessage('type_specific_data must be a JSON object'),
+  body('violation_regulation_code').optional().isString().isLength({ max: 50 }).withMessage('Regulation code must be 50 characters or less'),
+  body('violation_severity').optional().isIn(SEVERITY_VALUES).withMessage('Invalid severity value'),
 ];
 
 const publicSubmitValidation = [
@@ -67,7 +60,7 @@ const updateCaseValidation = [
   body('court_date').optional().isISO8601(),
   body('attorney_price').optional().isFloat({ min: 0 }),
   body('court_fee').optional().isFloat({ min: 0 }),
-  body('violation_type').optional().isString(),
+  body('violation_type').optional().isIn(ALL_TYPES),
   body('violation_date').optional().isISO8601(),
   body('violation_details').optional().isString().isLength({ max: 2000 }),
   body('state').optional().isLength({ min: 2, max: 2 }),
@@ -78,6 +71,9 @@ const updateCaseValidation = [
   body('citation_number').optional().isString().isLength({ max: 50 }),
   body('fine_amount').optional().isFloat({ min: 0 }),
   body('alleged_speed').optional().isInt({ min: 1, max: 300 }),
+  body('type_specific_data').optional().isObject().withMessage('type_specific_data must be a JSON object'),
+  body('violation_regulation_code').optional().isString().isLength({ max: 50 }).withMessage('Regulation code must be 50 characters or less'),
+  body('violation_severity').optional().isIn(SEVERITY_VALUES).withMessage('Invalid severity value'),
 ];
 
 // ============================================
@@ -103,6 +99,7 @@ router.post(
   '/',
   authenticate,
   createCaseValidation,
+  validateTypeSpecificDataMiddleware,
   caseController.createCase
 );
 
@@ -178,6 +175,7 @@ router.patch(
   canAccessCase,
   authorize(['driver', 'operator', 'attorney', 'admin']),
   updateCaseValidation,
+  validateTypeSpecificDataMiddleware,
   caseController.updateCase
 );
 

@@ -1,16 +1,24 @@
 import {
-  Component, OnInit, signal, computed, inject, effect,
+  Component, OnInit, OnDestroy, signal, computed, inject, effect,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Subscription } from 'rxjs';
 
 import { CaseService } from '../../../core/services/case.service';
 import { OcrService, OCRResult } from '../../../core/services/ocr.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { WizardStepperComponent, WizardStep } from '../../../shared/components/wizard-stepper/wizard-stepper.component';
+import {
+  VIOLATION_TYPE_REGISTRY,
+  VIOLATION_CATEGORIES,
+  type ConditionalField,
+  type ViolationSeverity,
+  resolveSelectLabel,
+} from '../../../core/constants/violation-type-registry';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/heic'];
@@ -28,12 +36,32 @@ const OCR_TYPE_MAP: Record<string, string> = {
   'csa': 'csa_score',
   'dqf': 'dqf',
   'disqualification': 'dqf',
+  'reckless': 'reckless_driving',
+  'dui': 'dui',
+  'dwi': 'dui',
+  'seatbelt': 'seatbelt_cell_phone',
+  'cell phone': 'seatbelt_cell_phone',
+  'texting': 'seatbelt_cell_phone',
+  'equipment': 'equipment_defect',
+  'overweight': 'overweight_oversize',
+  'oversize': 'overweight_oversize',
+  'hazmat': 'hazmat',
+  'hazardous': 'hazmat',
+  'railroad': 'railroad_crossing',
+  'railway': 'railroad_crossing',
 };
 
 interface ViolationChip {
   value: string;
   label: string;
   icon: string;
+  severity: ViolationSeverity;
+}
+
+interface ViolationCategoryGroup {
+  key: string;
+  label: string;
+  chips: ViolationChip[];
 }
 
 interface StateOption {
@@ -52,7 +80,7 @@ interface StateOption {
   templateUrl: './submit-ticket.component.html',
   styleUrl: './submit-ticket.component.scss',
 })
-export class SubmitTicketComponent implements OnInit {
+export class SubmitTicketComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private caseService = inject(CaseService);
   private ocrService = inject(OcrService);
@@ -69,16 +97,20 @@ export class SubmitTicketComponent implements OnInit {
   ];
   readonly currentStep = signal(0);
 
-  // Violation type chips
-  readonly VIOLATION_CHIPS: ViolationChip[] = [
-    { value: 'speeding', label: 'Speeding', icon: '🚗' },
-    { value: 'hos_logbook', label: 'HOS / Logbook', icon: '📋' },
-    { value: 'dot_inspection', label: 'DOT Inspection', icon: '🔍' },
-    { value: 'suspension', label: 'Suspension', icon: '🚫' },
-    { value: 'csa_score', label: 'CSA Score', icon: '📊' },
-    { value: 'dqf', label: 'DQF', icon: '⚖️' },
-    { value: 'other', label: 'Other', icon: '•••' },
-  ];
+  // Violation type chips — derived from registry, grouped by category
+  readonly VIOLATION_CATEGORIES: ViolationCategoryGroup[] = VIOLATION_CATEGORIES.map(cat => ({
+    key: cat.key,
+    label: cat.label,
+    chips: cat.types
+      .map(type => VIOLATION_TYPE_REGISTRY[type])
+      .filter(Boolean)
+      .map(config => ({
+        value: config.value,
+        label: config.label,
+        icon: config.icon,
+        severity: config.severity,
+      })),
+  }));
 
   // US States (full names + 2-letter codes)
   readonly STATES: StateOption[] = [
@@ -120,9 +152,15 @@ export class SubmitTicketComponent implements OnInit {
     courtDate: [''],
     location: ['', Validators.required],
     fineAmount: [null as number | null],
-    allegedSpeed: [null as number | null],
     description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
   });
+
+  // Dynamic conditional fields form — rebuilt when violation type changes
+  conditionalFieldsForm: FormGroup = this.fb.group({});
+  readonly activeConditionalFields = signal<ConditionalField[]>([]);
+  readonly conditionalFormValid = signal(true);
+  private typeChangeSub?: Subscription;
+  private conditionalValidSub?: Subscription;
 
   // OCR state
   ticketFile = signal<File | null>(null);
@@ -158,7 +196,7 @@ export class SubmitTicketComponent implements OnInit {
 
   readonly selectedTypeName = computed(() => {
     const val = this.ticketTypeForm.get('type')?.value;
-    return this.VIOLATION_CHIPS.find(c => c.value === val)?.label || val || '';
+    return VIOLATION_TYPE_REGISTRY[val ?? '']?.label || val || '';
   });
 
   readonly selectedStateName = computed(() => {
@@ -171,18 +209,8 @@ export class SubmitTicketComponent implements OnInit {
   });
 
   readonly canProceedFromDetails = computed(() => {
-    return this.ticketDetailsForm.valid;
+    return this.ticketDetailsForm.valid && this.conditionalFormValid();
   });
-
-  constructor() {
-    // Clear alleged speed when violation type changes away from speeding
-    effect(() => {
-      // Read isSpeedingType to track changes
-      if (!this.isSpeedingType()) {
-        this.ticketDetailsForm.get('allegedSpeed')?.setValue(null, { emitEvent: false });
-      }
-    });
-  }
 
   ngOnInit(): void {
     // Track description length
@@ -190,10 +218,60 @@ export class SubmitTicketComponent implements OnInit {
       this.descriptionLength.set((val || '').length);
     });
 
-    // Re-evaluate isSpeedingType when type changes
-    this.ticketTypeForm.get('type')?.valueChanges.subscribe(() => {
-      // Trigger change detection for computed signals
+    // Rebuild conditional fields when violation type changes
+    this.typeChangeSub = this.ticketTypeForm.get('type')?.valueChanges.subscribe(type => {
+      this.buildConditionalFields(type ?? '');
     });
+  }
+
+  ngOnDestroy(): void {
+    this.typeChangeSub?.unsubscribe();
+    this.conditionalValidSub?.unsubscribe();
+  }
+
+  /** Build a dynamic FormGroup for the selected violation type's conditional fields */
+  private buildConditionalFields(violationType: string): void {
+    this.conditionalValidSub?.unsubscribe();
+    const config = VIOLATION_TYPE_REGISTRY[violationType];
+    const fields = config?.conditionalFields ?? [];
+    this.activeConditionalFields.set(fields);
+
+    const group: Record<string, FormControl> = {};
+    for (const field of fields) {
+      const validators = [];
+      if (field.required) validators.push(Validators.required);
+      if (field.type === 'number' && field.validation) {
+        if (field.validation.min !== undefined) validators.push(Validators.min(field.validation.min));
+        if (field.validation.max !== undefined) validators.push(Validators.max(field.validation.max));
+      }
+      if (field.type === 'text' && field.validation?.maxLength) {
+        validators.push(Validators.maxLength(field.validation.maxLength));
+      }
+      const initial = field.type === 'boolean' ? false : (field.type === 'number' ? null : '');
+      group[field.key] = new FormControl(initial, validators);
+    }
+
+    this.conditionalFieldsForm = this.fb.group(group);
+    this.conditionalFormValid.set(this.conditionalFieldsForm.valid);
+
+    this.conditionalValidSub = this.conditionalFieldsForm.statusChanges.subscribe(() => {
+      this.conditionalFormValid.set(this.conditionalFieldsForm.valid);
+    });
+  }
+
+  /** Toggle a boolean conditional field value */
+  toggleBooleanField(key: string): void {
+    const ctrl = this.conditionalFieldsForm.get(key);
+    if (ctrl) ctrl.setValue(!ctrl.value);
+  }
+
+  /** Get the display value for a conditional field in the review step */
+  getConditionalFieldDisplayValue(field: ConditionalField): string {
+    const value = this.conditionalFieldsForm.get(field.key)?.value;
+    if (value === null || value === undefined || value === '') return '';
+    if (field.type === 'boolean') return value ? 'Yes' : 'No';
+    if (field.type === 'select') return resolveSelectLabel(field, String(value));
+    return String(value);
   }
 
   // --- Navigation ---
@@ -270,20 +348,23 @@ export class SubmitTicketComponent implements OnInit {
     if (d.location) patch['location'] = d.location;
     if (d.courtDate) patch['courtDate'] = d.courtDate;
 
-    // New mappings
     const ext = d as Record<string, unknown>;
     if (ext['fineAmount']) patch['fineAmount'] = ext['fineAmount'];
-    if (ext['allegedSpeed']) patch['allegedSpeed'] = ext['allegedSpeed'];
 
     this.ticketDetailsForm.patchValue(patch);
 
-    // Map OCR violation type to chip
+    // Map OCR violation type to chip (triggers conditional field rebuild)
     if (ext['violationType']) {
       const raw = String(ext['violationType']).toLowerCase().trim();
       const mapped = OCR_TYPE_MAP[raw];
       if (mapped) {
         this.ticketTypeForm.get('type')?.setValue(mapped);
       }
+    }
+
+    // Apply OCR-extracted alleged speed to conditional field if speeding
+    if (ext['allegedSpeed'] && this.conditionalFieldsForm.get('alleged_speed')) {
+      this.conditionalFieldsForm.get('alleged_speed')?.setValue(ext['allegedSpeed']);
     }
   }
 
@@ -326,7 +407,7 @@ export class SubmitTicketComponent implements OnInit {
   // --- Submission ---
 
   submitTicket(): void {
-    if (this.ticketTypeForm.invalid || this.ticketDetailsForm.invalid) {
+    if (this.ticketTypeForm.invalid || this.ticketDetailsForm.invalid || this.conditionalFieldsForm.invalid) {
       this.error.set('Please fill in all required fields.');
       return;
     }
@@ -336,7 +417,7 @@ export class SubmitTicketComponent implements OnInit {
 
     const user = this.authService.currentUserValue;
     const details = this.ticketDetailsForm.value;
-    const type = this.ticketTypeForm.value.type;
+    const type = this.ticketTypeForm.value.type ?? '';
 
     const payload: Record<string, unknown> = {
       customer_name: user?.name || 'Unknown',
@@ -348,14 +429,39 @@ export class SubmitTicketComponent implements OnInit {
       town: details.location,
     };
 
-    // Optional fields
+    // Optional common fields
     if (details.citationNumber) payload['citation_number'] = details.citationNumber;
     if (details.fineAmount != null) payload['fine_amount'] = details.fineAmount;
-    if (type === 'speeding' && details.allegedSpeed != null) {
-      payload['alleged_speed'] = details.allegedSpeed;
-    }
     if (details.courtDate) payload['court_date'] = details.courtDate;
     if (user?.phone) payload['driver_phone'] = user.phone;
+
+    // Build type_specific_data from conditional fields (exclude empty values)
+    const conditionalValues = this.conditionalFieldsForm.value;
+    const typeSpecificData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(conditionalValues)) {
+      if (value !== null && value !== undefined && value !== '') {
+        typeSpecificData[key] = value;
+      }
+    }
+    if (Object.keys(typeSpecificData).length > 0) {
+      payload['type_specific_data'] = typeSpecificData;
+    }
+
+    // Backward compat: speeding alleged_speed also as top-level
+    if (type === 'speeding' && typeSpecificData['alleged_speed'] != null) {
+      payload['alleged_speed'] = typeSpecificData['alleged_speed'];
+    }
+
+    // Auto-populate severity from registry
+    const config = VIOLATION_TYPE_REGISTRY[type];
+    if (config) {
+      payload['violation_severity'] = config.severity;
+    }
+
+    // If conditional fields include a regulation code, send it as top-level too
+    if (typeSpecificData['violation_regulation_code']) {
+      payload['violation_regulation_code'] = typeSpecificData['violation_regulation_code'];
+    }
 
     this.caseService.createCase(payload).subscribe({
       next: (response: any) => {
@@ -379,6 +485,9 @@ export class SubmitTicketComponent implements OnInit {
     this.currentStep.set(0);
     this.ticketTypeForm.reset();
     this.ticketDetailsForm.reset();
+    this.conditionalFieldsForm = this.fb.group({});
+    this.activeConditionalFields.set([]);
+    this.conditionalFormValid.set(true);
     this.uploadedFiles.set([]);
     this.ocrResult.set(null);
     this.ticketFile.set(null);

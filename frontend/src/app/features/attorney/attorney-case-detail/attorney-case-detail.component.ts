@@ -16,6 +16,8 @@ import { MatInputModule } from '@angular/material/input';
 import {
   AttorneyService, AttorneyCase, CaseDocument, CaseNote, CourtDate,
 } from '../../../core/services/attorney.service';
+import { CaseService } from '../../../core/services/case.service';
+import { ViolationDetailEditComponent, ViolationDetailSaveEvent } from '../../../shared/components/violation-detail-edit/violation-detail-edit.component';
 
 @Component({
   selector: 'app-attorney-case-detail',
@@ -24,6 +26,7 @@ import {
     MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatDividerModule, MatProgressSpinnerModule,
     MatSelectModule, MatFormFieldModule, MatInputModule,
+    ViolationDetailEditComponent,
   ],
   template: `
     <div class="detail-page">
@@ -84,6 +87,17 @@ import {
             }
           </mat-card-content>
         </mat-card>
+
+        <!-- VD-6: Violation Details (edit) -->
+        @if (caseData()!.violation_type) {
+          <app-violation-detail-edit
+            [violationType]="caseData()!.violation_type"
+            [typeSpecificData]="caseData()!.type_specific_data"
+            [violationRegulationCode]="caseData()!.violation_regulation_code"
+            [violationSeverity]="caseData()!.violation_severity"
+            [caseId]="caseId()"
+            (saved)="onViolationDetailSaved($event)" />
+        }
 
         <!-- Court Date card -->
         <mat-card class="court-card">
@@ -221,6 +235,7 @@ export class AttorneyCaseDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private attorneyService = inject(AttorneyService);
+  private caseService = inject(CaseService);
   private snackBar = inject(MatSnackBar);
 
   caseId = signal('');
@@ -384,6 +399,24 @@ export class AttorneyCaseDetailComponent implements OnInit {
       error: () => {
         this.snackBar.open('Failed to upload document.', 'Close', { duration: 3000 });
         this.uploading.set(false);
+      },
+    });
+  }
+
+  onViolationDetailSaved(event: ViolationDetailSaveEvent): void {
+    const id = this.caseId();
+    if (!id) return;
+    this.caseService.updateCase(id, event).subscribe({
+      next: () => {
+        this.snackBar.open('Violation details updated', 'Close', { duration: 3000 });
+        this.loadCase();
+      },
+      error: (err: any) => {
+        this.snackBar.open(
+          err?.error?.error?.message || 'Failed to update violation details',
+          'Close',
+          { duration: 4000 },
+        );
       },
     });
   }

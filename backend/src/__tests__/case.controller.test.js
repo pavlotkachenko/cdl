@@ -1012,7 +1012,7 @@ describe('updateCase — driver field restrictions (CD-6)', () => {
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description and location' },
+      error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description, location, and violation details' },
     });
   });
 
@@ -1027,7 +1027,7 @@ describe('updateCase — driver field restrictions (CD-6)', () => {
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description and location' },
+      error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description, location, and violation details' },
     });
   });
 
@@ -1481,5 +1481,208 @@ describe('sendCaseMessage', () => {
 
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({ success: true, data: newMessage });
+  });
+});
+
+// ============================================================
+// Sprint 074 / VT-8: Violation Type System Tests
+// ============================================================
+describe('createCase — violation type system (VT-8)', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    buildChain();
+    const smsService = require('../services/sms.service');
+    const oneSignalService = require('../services/onesignal.service');
+    const webhookService = require('../services/webhook.service');
+    const emailService = require('../services/email.service');
+    emailService.sendCaseSubmissionEmail = jest.fn().mockResolvedValue({});
+    emailService.sendCaseStatusEmail = jest.fn().mockResolvedValue({});
+    smsService.sendCaseSubmissionSms = jest.fn().mockResolvedValue({});
+    smsService.sendStatusChangeSms = jest.fn().mockResolvedValue({});
+    oneSignalService.notifyUser = jest.fn().mockResolvedValue({});
+    webhookService.dispatch = jest.fn();
+  });
+
+  test('stores type_specific_data JSONB correctly', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-vt', case_number: 'CDL-VT1', status: 'new' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'driver-1', role: 'driver' },
+      body: {
+        customer_name: 'Test Driver',
+        customer_type: 'one_time_driver',
+        violation_type: 'dui',
+        violation_date: '2026-03-01',
+        state: 'TX',
+        town: 'Austin',
+        violation_details: 'DUI stop',
+        type_specific_data: { bac_level: 0.08, substance_type: 'alcohol' },
+      },
+    });
+    const res = makeRes();
+
+    await caseController.createCase(req, res);
+
+    const insertArg = chain.insert.mock.calls[0][0][0];
+    expect(insertArg.type_specific_data).toEqual({ bac_level: 0.08, substance_type: 'alcohol' });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  test('accepts new violation types (overweight_oversize, equipment_defect, hazmat, railroad_crossing, seatbelt_cell_phone)', async () => {
+    const newTypes = ['overweight_oversize', 'equipment_defect', 'hazmat', 'railroad_crossing', 'seatbelt_cell_phone'];
+    for (const type of newTypes) {
+      jest.resetAllMocks();
+      buildChain();
+      const smsService = require('../services/sms.service');
+      const oneSignalService = require('../services/onesignal.service');
+      const webhookService = require('../services/webhook.service');
+      const emailService = require('../services/email.service');
+      emailService.sendCaseSubmissionEmail = jest.fn().mockResolvedValue({});
+      smsService.sendCaseSubmissionSms = jest.fn().mockResolvedValue({});
+      smsService.sendStatusChangeSms = jest.fn().mockResolvedValue({});
+      oneSignalService.notifyUser = jest.fn().mockResolvedValue({});
+      webhookService.dispatch = jest.fn();
+
+      chain.single.mockResolvedValueOnce({
+        data: { id: `case-${type}`, case_number: 'CDL-VT', status: 'new' },
+        error: null,
+      });
+
+      const req = makeReq({
+        user: { id: 'driver-1', role: 'driver' },
+        body: {
+          customer_name: 'Test', customer_type: 'one_time_driver',
+          violation_type: type, violation_date: '2026-03-01',
+          state: 'TX', town: 'Austin', violation_details: `${type} violation`,
+        },
+      });
+      const res = makeRes();
+
+      await caseController.createCase(req, res);
+
+      const insertArg = chain.insert.mock.calls[0][0][0];
+      expect(insertArg.violation_type).toBe(type);
+      expect(res.status).toHaveBeenCalledWith(201);
+    }
+  });
+
+  test('speeding case stores alleged_speed both as column and in type_specific_data', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-spd', case_number: 'CDL-SPD', status: 'new' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'driver-1', role: 'driver' },
+      body: {
+        customer_name: 'Test', customer_type: 'one_time_driver',
+        violation_type: 'speeding', violation_date: '2026-03-01',
+        state: 'TX', town: 'Austin', violation_details: 'Speeding',
+        alleged_speed: 85,
+        type_specific_data: { alleged_speed: 85, posted_speed_limit: 65 },
+      },
+    });
+    const res = makeRes();
+
+    await caseController.createCase(req, res);
+
+    const insertArg = chain.insert.mock.calls[0][0][0];
+    expect(insertArg.alleged_speed).toBe(85);
+    expect(insertArg.type_specific_data.alleged_speed).toBe(85);
+    expect(insertArg.type_specific_data.posted_speed_limit).toBe(65);
+  });
+
+  test('succeeds without type_specific_data', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-no-tsd', case_number: 'CDL-NT', status: 'new' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'driver-1', role: 'driver' },
+      body: {
+        customer_name: 'Test', customer_type: 'one_time_driver',
+        violation_type: 'other', violation_date: '2026-03-01',
+        state: 'TX', town: 'Austin', violation_details: 'Other violation',
+      },
+    });
+    const res = makeRes();
+
+    await caseController.createCase(req, res);
+
+    const insertArg = chain.insert.mock.calls[0][0][0];
+    expect(insertArg.type_specific_data).toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  test('stores violation_severity when provided', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-sev', case_number: 'CDL-SEV', status: 'new' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'driver-1', role: 'driver' },
+      body: {
+        customer_name: 'Test', customer_type: 'one_time_driver',
+        violation_type: 'speeding', violation_date: '2026-03-01',
+        state: 'TX', town: 'Austin', violation_details: 'Speeding',
+        violation_severity: 'critical',
+      },
+    });
+    const res = makeRes();
+
+    await caseController.createCase(req, res);
+
+    const insertArg = chain.insert.mock.calls[0][0][0];
+    expect(insertArg.violation_severity).toBe('critical');
+  });
+
+  test('auto-populates violation_severity from registry when not provided', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-auto-sev', case_number: 'CDL-AS', status: 'new' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'driver-1', role: 'driver' },
+      body: {
+        customer_name: 'Test', customer_type: 'one_time_driver',
+        violation_type: 'dui', violation_date: '2026-03-01',
+        state: 'TX', town: 'Austin', violation_details: 'DUI',
+      },
+    });
+    const res = makeRes();
+
+    await caseController.createCase(req, res);
+
+    const insertArg = chain.insert.mock.calls[0][0][0];
+    expect(insertArg.violation_severity).toBe('critical');
+  });
+
+  test('stores violation_regulation_code when provided', async () => {
+    chain.single.mockResolvedValueOnce({
+      data: { id: 'case-reg', case_number: 'CDL-REG', status: 'new' },
+      error: null,
+    });
+
+    const req = makeReq({
+      user: { id: 'driver-1', role: 'driver' },
+      body: {
+        customer_name: 'Test', customer_type: 'one_time_driver',
+        violation_type: 'hos_logbook', violation_date: '2026-03-01',
+        state: 'TX', town: 'Austin', violation_details: 'HOS violation',
+        violation_regulation_code: '49 CFR 395.3(a)',
+      },
+    });
+    const res = makeRes();
+
+    await caseController.createCase(req, res);
+
+    const insertArg = chain.insert.mock.calls[0][0][0];
+    expect(insertArg.violation_regulation_code).toBe('49 CFR 395.3(a)');
   });
 });

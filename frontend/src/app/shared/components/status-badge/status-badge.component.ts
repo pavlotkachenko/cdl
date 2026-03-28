@@ -28,7 +28,8 @@ export class StatusBadgeComponent {
     'call_court': 'phone',
     'check_with_manager': 'support_agent',
     'pay_attorney': 'attach_money',
-    'closed': 'done_all'
+    'closed': 'done_all',
+    'resolved': 'verified'
   };
   
   get backgroundColor(): string {

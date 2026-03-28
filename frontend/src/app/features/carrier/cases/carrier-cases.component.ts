@@ -13,6 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { CarrierService, FleetCase } from '../../../core/services/carrier.service';
+import { VIOLATION_TYPE_REGISTRY } from '../../../core/constants/violation-type-registry';
 
 type CaseFilter = 'all' | 'active' | 'pending' | 'resolved';
 
@@ -87,7 +88,8 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
                     <p class="driver-name">{{ c.driver_name }}</p>
                   </div>
                   <div class="case-meta">
-                    <span class="violation">{{ c.violation_type }}</span>
+                    <span class="violation">{{ getViolationLabel(c.violation_type) }}</span>
+                    <span [class]="getSeverityClass(c)" [attr.aria-label]="'Severity: ' + getSeverityLevel(c)">{{ getSeverityLevel(c) }}</span>
                     <span class="state-badge">{{ c.state }}</span>
                     <span class="status-chip status-{{ c.status }}">{{ c.status | slice:0:12 }}</span>
                   </div>
@@ -125,6 +127,11 @@ const PENDING_STATUSES = new Set(['new', 'reviewed', 'waiting_for_driver', 'pay_
     .state-badge { font-size: 0.75rem; font-weight: 600; color: #666; }
     .status-chip { font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; background: #e0e0e0; }
     .attorney { margin: 6px 0 0; font-size: 0.8rem; color: #666; }
+    .severity-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+    .severity-critical { background: #fef2f2; color: #dc2626; }
+    .severity-serious { background: #fff7ed; color: #ea580c; }
+    .severity-standard { background: #eff6ff; color: #2563eb; }
+    .severity-minor { background: #f0fdf4; color: #16a34a; }
   `],
 })
 export class CarrierCasesComponent implements OnInit {
@@ -199,4 +206,18 @@ export class CarrierCasesComponent implements OnInit {
   goToImport(): void { this.router.navigate(['/carrier/bulk-import']); }
 
   viewCase(id: string): void { this.router.navigate(['/driver/cases', id]); }
+
+  getViolationLabel(type: string | undefined): string {
+    if (!type) return 'Unknown';
+    const config = VIOLATION_TYPE_REGISTRY[type];
+    return config ? `${config.icon} ${config.label}` : type;
+  }
+
+  getSeverityLevel(c: FleetCase): string {
+    return (c as any).violation_severity || VIOLATION_TYPE_REGISTRY[c.violation_type]?.severity || 'standard';
+  }
+
+  getSeverityClass(c: FleetCase): string {
+    return `severity-badge severity-${this.getSeverityLevel(c)}`;
+  }
 }

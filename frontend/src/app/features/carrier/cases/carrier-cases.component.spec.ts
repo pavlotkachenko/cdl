@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import { vi, describe, it, expect } from 'vitest';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { CarrierCasesComponent } from './carrier-cases.component';
 import { CarrierService, FleetCase } from '../../../core/services/carrier.service';
@@ -27,6 +28,7 @@ async function setup(spy = makeServiceSpy()) {
     providers: [
       { provide: CarrierService, useValue: spy },
       provideRouter([]),
+      provideTranslateService(),
     ],
   }).compileComponents();
 
@@ -70,7 +72,7 @@ describe('CarrierCasesComponent', () => {
     const { component, fixture } = await setup(makeServiceSpy([]));
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('No');
+    expect(el.querySelector('.empty-state')).toBeTruthy();
   });
 
   // ─── BO-2: Selection + bulk archive ──────────────────────────────────────
@@ -119,6 +121,46 @@ describe('CarrierCasesComponent', () => {
   it('shows Import CSV button linking to bulk-import route', async () => {
     const { fixture } = await setup();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('Import CSV');
+    expect(el.textContent).toContain('CARRIER.IMPORT_CSV');
+  });
+
+  // ── VD-7: Violation label & severity helpers ────────────────────
+
+  it('getViolationLabel returns emoji + label for known type', async () => {
+    const { component } = await setup();
+    const label = component.getViolationLabel('speeding');
+    expect(label).toContain('🚗');
+    expect(label).toContain('Speeding');
+  });
+
+  it('getViolationLabel returns raw type for unknown type', async () => {
+    const { component } = await setup();
+    expect(component.getViolationLabel('unknown_xyz')).toBe('unknown_xyz');
+  });
+
+  it('getViolationLabel returns "Unknown" for undefined', async () => {
+    const { component } = await setup();
+    expect(component.getViolationLabel(undefined)).toBe('Unknown');
+  });
+
+  it('getSeverityLevel falls back to registry severity', async () => {
+    const { component } = await setup();
+    // Use a case with lowercase violation_type matching the registry key
+    const c = { ...MOCK_CASES[0], violation_type: 'speeding' } as FleetCase;
+    expect(component.getSeverityLevel(c)).toBe('serious');
+  });
+
+  it('getSeverityLevel uses case violation_severity when present', async () => {
+    const { component } = await setup();
+    const c = { ...MOCK_CASES[0], violation_severity: 'critical' } as any;
+    expect(component.getSeverityLevel(c)).toBe('critical');
+  });
+
+  it('getSeverityClass returns correct CSS class string', async () => {
+    const { component } = await setup();
+    const c = { ...MOCK_CASES[0], violation_type: 'dui' } as FleetCase;
+    const cls = component.getSeverityClass(c);
+    expect(cls).toContain('severity-badge');
+    expect(cls).toContain('severity-critical');
   });
 });

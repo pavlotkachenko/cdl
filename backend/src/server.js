@@ -48,6 +48,7 @@ const webhookRoutes = require('./routes/webhook.routes');
 const webauthnRoutes = require('./routes/webauthn.routes');
 const revenueRoutes = require('./routes/revenue.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const violationTypeRoutes = require('./routes/violation-type.routes');
 
 // Import error handler
 const { errorHandler } = require('./middleware/error.middleware');
@@ -215,6 +216,9 @@ app.use('/api/revenue', revenueRoutes);
 
 // Dashboard (operator + admin dashboard service)
 app.use('/api/dashboard', dashboardRoutes);
+
+// Violation type metadata (public, no auth)
+app.use('/api/violation-types', violationTypeRoutes);
 
 // ============================================
 // PRODUCTION STATIC FILE SERVING

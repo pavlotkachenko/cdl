@@ -36,6 +36,11 @@ export interface Case {
   updatedAt?: Date | string;
   full_name?: string;
   driver_id?: string;
+  type_specific_data?: Record<string, unknown>;
+  violation_regulation_code?: string;
+  violation_severity?: string;
+  fine_amount?: number;
+  alleged_speed?: number;
 }
 
 @Injectable({

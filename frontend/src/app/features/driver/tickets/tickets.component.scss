@@ -678,3 +678,20 @@ td {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
+
+// ── VD-7: Severity badges ──
+.severity-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  text-transform: capitalize;
+}
+
+.severity-critical { background: #fef2f2; color: #dc2626; }
+.severity-serious { background: #fff7ed; color: #ea580c; }
+.severity-standard { background: #eff6ff; color: #2563eb; }
+.severity-minor { background: #f0fdfa; color: $teal; }

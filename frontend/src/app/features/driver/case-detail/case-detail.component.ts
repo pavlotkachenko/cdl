@@ -31,6 +31,17 @@ import { SocketService } from '../../../core/services/socket.service';
 // Shared Components
 import { DocumentViewerComponent } from '../../../shared/components/document-viewer/document-viewer.component';
 import { ImageLightboxComponent } from '../../../shared/components/image-lightbox/image-lightbox.component';
+import { PenaltyImpactCardComponent } from '../../../shared/components/penalty-impact-card/penalty-impact-card.component';
+import { CsaImpactCardComponent } from '../../../shared/components/csa-impact-card/csa-impact-card.component';
+import { DisqualificationTimelineComponent } from '../../../shared/components/disqualification-timeline/disqualification-timeline.component';
+
+// Violation Type Registry
+import {
+  VIOLATION_TYPE_REGISTRY,
+  resolveSelectLabel,
+  type ConditionalField,
+  type ViolationTypeConfig,
+} from '../../../core/constants/violation-type-registry';
 
 // ── Status emoji mapping (replaces mat-icon names) ──────────────
 const STATUS_EMOJIS: Record<string, string> = {
@@ -58,6 +69,9 @@ const STATUS_EMOJIS: Record<string, string> = {
     UpperCasePipe,
     DocumentViewerComponent,
     ImageLightboxComponent,
+    PenaltyImpactCardComponent,
+    CsaImpactCardComponent,
+    DisqualificationTimelineComponent,
   ],
 })
 export class CaseDetailComponent implements OnInit, OnDestroy {
@@ -122,6 +136,40 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
     };
   });
 
+  // ── VD-2: Severity Banner ─────────────────────────────────────
+  severityInfo = computed<{ level: string; label: string; icon: string; cssClass: string } | null>(() => {
+    const type = this.violationType();
+    if (!type) return null;
+    const severity = this.caseData()?.violation_severity
+      || VIOLATION_TYPE_REGISTRY[type]?.severity
+      || 'standard';
+    const map: Record<string, { label: string; icon: string; cssClass: string }> = {
+      critical: { label: 'Critical Violation \u2014 CDL at risk', icon: '\u26D4', cssClass: 'severity-critical' },
+      serious:  { label: 'Serious Violation \u2014 May affect CDL status', icon: '\u26A0\uFE0F', cssClass: 'severity-serious' },
+      standard: { label: 'Standard Violation', icon: '\u2139\uFE0F', cssClass: 'severity-standard' },
+      minor:    { label: 'Minor Violation', icon: '\u2713', cssClass: 'severity-minor' },
+    };
+    const info = map[severity] || map['standard'];
+    return { level: severity, ...info };
+  });
+
+  // ── VD-2: Regulation Badge ────────────────────────────────────
+  regulationRef = computed<string>(() => {
+    const c = this.caseData();
+    const type = this.violationType();
+    return c?.violation_regulation_code
+      || VIOLATION_TYPE_REGISTRY[type]?.regulationRef
+      || '';
+  });
+
+  regulationUrl = computed<string>(() => {
+    const ref = this.regulationRef();
+    if (!ref) return '';
+    const match = ref.match(/(\d+)/);
+    if (!match) return '';
+    return `https://www.ecfr.gov/current/title-49/subtitle-B/chapter-III/subchapter-B/part-${match[1]}`;
+  });
+
   attorney = computed(() => {
     const c = this.caseData();
     return c?.attorney || null;
@@ -179,6 +227,47 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
     const courtDate = this.caseData()?.courtDate || this.caseData()?.court_date;
     const days = this.daysUntilCourt();
     return !!courtDate && days !== null && days > 0;
+  });
+
+  // ── VD-1: Violation Detail Card ───────────────────────────────
+  violationTypeConfig = computed<ViolationTypeConfig | null>(() => {
+    const type = this.violationType();
+    return type ? (VIOLATION_TYPE_REGISTRY[type] ?? null) : null;
+  });
+
+  /** Visible violation detail fields: registry fields with values in type_specific_data */
+  violationDetailFields = computed<{ field: ConditionalField; value: unknown }[]>(() => {
+    const config = this.violationTypeConfig();
+    const tsd = this.caseData()?.type_specific_data as Record<string, unknown> | undefined;
+    if (!config || !tsd) return [];
+    return config.conditionalFields
+      .map(field => ({ field, value: tsd[field.key] }))
+      .filter(item => item.value !== undefined && item.value !== null && item.value !== '');
+  });
+
+  showViolationDetailCard = computed(() => {
+    return this.violationDetailFields().length > 0
+      || !!this.caseData()?.violation_regulation_code;
+  });
+
+  /** Speeding: mph over the limit */
+  speedingMphOver = computed<number | null>(() => {
+    const tsd = this.caseData()?.type_specific_data as Record<string, unknown> | undefined;
+    if (this.violationType() !== 'speeding' || !tsd) return null;
+    const alleged = Number(tsd['alleged_speed']);
+    const posted = Number(tsd['posted_speed_limit']);
+    if (isNaN(alleged) || isNaN(posted)) return null;
+    return alleged - posted;
+  });
+
+  /** Overweight: pounds over permitted */
+  overweightPoundsOver = computed<number | null>(() => {
+    const tsd = this.caseData()?.type_specific_data as Record<string, unknown> | undefined;
+    if (this.violationType() !== 'overweight_oversize' || !tsd) return null;
+    const actual = Number(tsd['actual_weight']);
+    const permitted = Number(tsd['permitted_weight']);
+    if (isNaN(actual) || isNaN(permitted)) return null;
+    return actual - permitted;
   });
 
   // ── CD-5: Message form ──────────────────────────────────────────
@@ -702,6 +791,28 @@ export class CaseDetailComponent implements OnInit, OnDestroy {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // ── VD-1: Violation Detail Card helpers ──────────────────────
+  formatFieldValue(field: ConditionalField, value: unknown): string {
+    if (value === null || value === undefined || value === '') return 'Not provided';
+    if (field.type === 'boolean') return value ? 'Yes' : 'No';
+    if (field.type === 'select') return resolveSelectLabel(field, String(value));
+    if (field.type === 'number') return Number(value).toLocaleString();
+    if (field.type === 'date') return this.formatDate(String(value));
+    return String(value);
+  }
+
+  getSpeedOverClass(mphOver: number): string {
+    if (mphOver >= 15) return 'speed-over-high';
+    if (mphOver >= 10) return 'speed-over-medium';
+    return 'speed-over-low';
+  }
+
+  getRoadZoneIcon(zone: string): string {
+    if (zone === 'school') return '\uD83C\uDFEB';
+    if (zone === 'construction') return '\uD83D\uDEA7';
+    return '';
   }
 
   // ── Private helpers ────────────────────────────────────────────

@@ -12,6 +12,9 @@ export interface AttorneyCase {
   driver_name: string;
   created_at: string;
   attorney_price?: number;
+  type_specific_data?: Record<string, unknown>;
+  violation_regulation_code?: string;
+  violation_severity?: string;
 }
 
 export interface CaseDocument {

@@ -17,6 +17,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { AdminService, Case, StaffMember } from '../../../core/services/admin.service';
 import { StatusWorkflowService } from '../../../core/services/status-workflow.service';
+import { VIOLATION_TYPE_REGISTRY } from '../../../core/constants/violation-type-registry';
 import { StatusNoteDialogComponent } from '../../operator/status-pipeline/status-note-dialog.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
@@ -116,7 +117,8 @@ const PRIORITY_KEYS: Record<Case['priority'], string> = {
                 <div class="case-meta">
                   <span class="case-num">{{ c.caseNumber || c.case_number }}</span>
                   <span class="case-client">{{ c.clientName || c.customer_name }}</span>
-                  <span class="case-type">{{ c.violationType || c.violation_type }}</span>
+                  <span class="case-type">{{ getViolationLabel(c.violationType || c.violation_type) }}</span>
+                  <span [class]="getSeverityClass(c)" [attr.aria-label]="'Severity: ' + getSeverityLevel(c)">{{ getSeverityLevel(c) }}</span>
                 </div>
                 <div class="case-badges">
                   <span [class]="'badge status-' + c.status">{{ getStatusKey(c.status) | translate }}</span>
@@ -340,6 +342,17 @@ const PRIORITY_KEYS: Record<Case['priority'], string> = {
     .override-current { font-size: 0.85rem; color: #555; margin: 0 0 16px; }
     .override-field { width: 100%; }
     .override-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+
+    /* VD-7: Severity badges */
+    .severity-badge {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      padding: 2px 8px; border-radius: 4px; margin-left: 4px;
+      vertical-align: middle; text-transform: capitalize;
+    }
+    .severity-critical { background: #fef2f2; color: #dc2626; }
+    .severity-serious { background: #fff7ed; color: #ea580c; }
+    .severity-standard { background: #eff6ff; color: #2563eb; }
+    .severity-minor { background: #f0fdfa; color: #1dad8c; }
   `],
 })
 export class CaseManagementComponent implements OnInit {
@@ -539,6 +552,24 @@ export class CaseManagementComponent implements OnInit {
 
   openNewCase(): void {
     this.snackBar.open('Case creation coming soon.', 'Close', { duration: 3000 });
+  }
+
+  getViolationLabel(type: string | undefined): string {
+    if (!type) return 'Unknown';
+    const config = VIOLATION_TYPE_REGISTRY[type];
+    return config ? `${config.icon} ${config.label}` : type;
+  }
+
+  getSeverityLevel(c: any): string {
+    const type = c.violationType || c.violation_type || '';
+    return c.violation_severity
+      || VIOLATION_TYPE_REGISTRY[type]?.severity
+      || 'standard';
+  }
+
+  getSeverityClass(c: any): string {
+    const level = this.getSeverityLevel(c);
+    return `severity-badge severity-${level}`;
   }
 
   private executeStatusChange(caseId: string, status: string, comment?: string): void {

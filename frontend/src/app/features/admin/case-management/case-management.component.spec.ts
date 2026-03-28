@@ -275,4 +275,45 @@ describe('CaseManagementComponent', () => {
     expect(adminSpy.updateCaseStatus).toHaveBeenCalledWith('c1', 'reviewed', undefined);
     expect(snackBar.open).toHaveBeenCalledWith('Status updated.', 'Close', expect.any(Object));
   });
+
+  // ── VD-7: Violation label & severity helpers ────────────────────
+
+  it('getViolationLabel returns emoji + label for known type', async () => {
+    const { component } = await setup();
+    const label = component.getViolationLabel('speeding');
+    expect(label).toContain('🚗');
+    expect(label).toContain('Speeding');
+  });
+
+  it('getViolationLabel returns raw type for unknown type', async () => {
+    const { component } = await setup();
+    expect(component.getViolationLabel('unknown_xyz')).toBe('unknown_xyz');
+  });
+
+  it('getViolationLabel returns "Unknown" for undefined', async () => {
+    const { component } = await setup();
+    expect(component.getViolationLabel(undefined)).toBe('Unknown');
+  });
+
+  it('getSeverityLevel uses case violation_severity when present', async () => {
+    const { component } = await setup();
+    expect(component.getSeverityLevel({ violation_type: 'speeding', violation_severity: 'critical' })).toBe('critical');
+  });
+
+  it('getSeverityLevel falls back to registry severity', async () => {
+    const { component } = await setup();
+    expect(component.getSeverityLevel({ violation_type: 'speeding' })).toBe('serious');
+  });
+
+  it('getSeverityLevel returns "standard" for unknown type', async () => {
+    const { component } = await setup();
+    expect(component.getSeverityLevel({ violation_type: 'nonexistent' })).toBe('standard');
+  });
+
+  it('getSeverityClass returns correct CSS classes', async () => {
+    const { component } = await setup();
+    const cls = component.getSeverityClass({ violation_type: 'dui' });
+    expect(cls).toContain('severity-badge');
+    expect(cls).toContain('severity-critical');
+  });
 });

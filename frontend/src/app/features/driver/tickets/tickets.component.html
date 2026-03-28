@@ -325,7 +325,13 @@
                   </div>
                 </div>
               </td>
-              <td><span class="type-badge" [attr.data-type]="c.type">{{ getTypeLabel(c.type) }}</span></td>
+              <td>
+                <span class="type-badge" [attr.data-type]="c.type">{{ getTypeLabel(c.type) }}</span>
+                <span [class]="getSeverityBadge(c).cssClass"
+                      [attr.aria-label]="'Violation severity: ' + getSeverityBadge(c).label">
+                  {{ getSeverityBadge(c).label }}
+                </span>
+              </td>
               <td><span class="status-badge" [attr.data-status]="c.status">{{ getStatusLabel(c.status) }}</span></td>
               <td>
                 <div class="date-cell-val">{{ formatDate(c.violationDate || c.violation_date || c.createdAt) }}</div>
@@ -376,7 +382,13 @@
                 <div class="ticket-num">{{ c.ticketNumber || c.id.substring(0, 8).toUpperCase() }}</div>
                 <span class="type-badge" [attr.data-type]="c.type">{{ getTypeLabel(c.type) }}</span>
               </div>
-              <span class="status-badge" [attr.data-status]="c.status">{{ getStatusLabel(c.status) }}</span>
+              <div>
+                <span class="status-badge" [attr.data-status]="c.status">{{ getStatusLabel(c.status) }}</span>
+                <span [class]="getSeverityBadge(c).cssClass"
+                      [attr.aria-label]="'Violation severity: ' + getSeverityBadge(c).label">
+                  {{ getSeverityBadge(c).label }}
+                </span>
+              </div>
             </div>
             <div class="mobile-card-details">
               <span><span aria-hidden="true">&#x1F4C5;</span> {{ formatDate(c.createdAt || c.created_at) }}</span>

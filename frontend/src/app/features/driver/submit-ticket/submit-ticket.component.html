@@ -111,19 +111,28 @@
             </div>
 
             <div class="chips-body" [formGroup]="ticketTypeForm">
-              <div class="chip-grid" role="radiogroup" aria-label="Violation type selection">
-                @for (chip of VIOLATION_CHIPS; track chip.value) {
-                  <button type="button"
-                          class="violation-chip"
-                          [class.selected]="ticketTypeForm.value.type === chip.value"
-                          role="radio"
-                          [attr.aria-checked]="ticketTypeForm.value.type === chip.value"
-                          tabindex="0"
-                          (click)="selectViolationType(chip.value)"
-                          (keydown)="onChipKeydown($event, chip.value)">
-                    <span class="chip-icon" aria-hidden="true">{{ chip.icon }}</span>
-                    <span class="chip-label">{{ chip.label }}</span>
-                  </button>
+              <div role="radiogroup" aria-label="Violation type selection">
+                @for (category of VIOLATION_CATEGORIES; track category.key) {
+                  <div class="chip-category">
+                    <h3 class="chip-category-heading">{{ category.label }}</h3>
+                    <div class="chip-grid">
+                      @for (chip of category.chips; track chip.value) {
+                        <button type="button"
+                                class="violation-chip"
+                                [class.selected]="ticketTypeForm.value.type === chip.value"
+                                role="radio"
+                                [attr.aria-checked]="ticketTypeForm.value.type === chip.value"
+                                [attr.aria-label]="chip.label + ' \u2014 ' + chip.severity + ' violation'"
+                                tabindex="0"
+                                (click)="selectViolationType(chip.value)"
+                                (keydown)="onChipKeydown($event, chip.value)">
+                          <span class="chip-severity-dot" [class]="'severity-' + chip.severity" aria-hidden="true"></span>
+                          <span class="chip-icon" aria-hidden="true">{{ chip.icon }}</span>
+                          <span class="chip-label">{{ chip.label }}</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
                 }
               </div>
               @if (ticketTypeForm.touched && ticketTypeForm.invalid) {
@@ -246,21 +255,123 @@
                            placeholder="0.00" min="0" step="0.01" />
                   </div>
                 </div>
-
-                @if (isSpeedingType()) {
-                  <div class="field-group">
-                    <label class="field-label" for="allegedSpeed">
-                      Alleged Speed <span class="optional-tag">optional</span>
-                    </label>
-                    <div class="field-input-wrap">
-                      <input id="allegedSpeed" type="number" class="field-input has-suffix"
-                             formControlName="allegedSpeed"
-                             placeholder="0" min="1" max="300" />
-                      <span class="field-suffix" aria-hidden="true">mph</span>
-                    </div>
-                  </div>
-                }
               </div>
+
+              <!-- Conditional Fields per Violation Type -->
+              @if (activeConditionalFields().length > 0) {
+                <div class="form-divider">
+                  <span class="divider-label"><span aria-hidden="true">📝</span> Violation Details</span>
+                </div>
+                <p class="conditional-subtitle">Provide details specific to your violation type</p>
+                <div class="conditional-fields-grid" [formGroup]="conditionalFieldsForm">
+                  @for (field of activeConditionalFields(); track field.key) {
+                    @if (field.type === 'boolean') {
+                      <div class="field-group full-width">
+                        <div class="toggle-row">
+                          <label class="field-label" [attr.for]="field.key">
+                            {{ field.label }}
+                          </label>
+                          <button type="button"
+                                  class="toggle-switch"
+                                  [class.active]="conditionalFieldsForm.get(field.key)?.value === true"
+                                  role="switch"
+                                  [attr.aria-checked]="conditionalFieldsForm.get(field.key)?.value === true"
+                                  [attr.id]="field.key"
+                                  (click)="toggleBooleanField(field.key)">
+                            <span class="toggle-knob"></span>
+                          </button>
+                        </div>
+                        @if (field.helpText) {
+                          <p class="field-help">{{ field.helpText }}</p>
+                        }
+                      </div>
+                    } @else if (field.type === 'select') {
+                      <div class="field-group">
+                        <label class="field-label" [attr.for]="field.key">
+                          {{ field.label }}
+                          @if (field.required) { <span class="req-dot" aria-hidden="true"></span> }
+                          @if (!field.required) { <span class="optional-tag">optional</span> }
+                        </label>
+                        <div class="field-input-wrap">
+                          <select [id]="field.key" class="field-select" [formControlName]="field.key">
+                            <option value="" disabled>Select...</option>
+                            @for (opt of field.options; track opt.value) {
+                              <option [value]="opt.value">{{ opt.label }}</option>
+                            }
+                          </select>
+                        </div>
+                        @if (field.helpText) {
+                          <p class="field-help">{{ field.helpText }}</p>
+                        }
+                        @if (conditionalFieldsForm.get(field.key)?.touched && conditionalFieldsForm.get(field.key)?.hasError('required')) {
+                          <p class="field-error" role="alert">This field is required</p>
+                        }
+                      </div>
+                    } @else if (field.type === 'number') {
+                      <div class="field-group">
+                        <label class="field-label" [attr.for]="field.key">
+                          {{ field.label }}
+                          @if (field.required) { <span class="req-dot" aria-hidden="true"></span> }
+                          @if (!field.required) { <span class="optional-tag">optional</span> }
+                        </label>
+                        <div class="field-input-wrap">
+                          <input [id]="field.key" type="number" class="field-input"
+                                 [formControlName]="field.key"
+                                 [attr.min]="field.validation?.min ?? null"
+                                 [attr.max]="field.validation?.max ?? null"
+                                 [attr.step]="field.validation?.step ?? 'any'"
+                                 placeholder="0" />
+                        </div>
+                        @if (field.helpText) {
+                          <p class="field-help">{{ field.helpText }}</p>
+                        }
+                        @if (conditionalFieldsForm.get(field.key)?.touched && conditionalFieldsForm.get(field.key)?.hasError('required')) {
+                          <p class="field-error" role="alert">This field is required</p>
+                        }
+                        @if (conditionalFieldsForm.get(field.key)?.touched && (conditionalFieldsForm.get(field.key)?.hasError('min') || conditionalFieldsForm.get(field.key)?.hasError('max'))) {
+                          <p class="field-error" role="alert">Must be between {{ field.validation?.min }} and {{ field.validation?.max }}</p>
+                        }
+                      </div>
+                    } @else if (field.type === 'date') {
+                      <div class="field-group">
+                        <label class="field-label" [attr.for]="field.key">
+                          {{ field.label }}
+                          @if (field.required) { <span class="req-dot" aria-hidden="true"></span> }
+                          @if (!field.required) { <span class="optional-tag">optional</span> }
+                        </label>
+                        <div class="field-input-wrap">
+                          <input [id]="field.key" type="date" class="field-input"
+                                 [formControlName]="field.key" />
+                        </div>
+                        @if (field.helpText) {
+                          <p class="field-help">{{ field.helpText }}</p>
+                        }
+                      </div>
+                    } @else {
+                      <!-- text -->
+                      <div class="field-group">
+                        <label class="field-label" [attr.for]="field.key">
+                          {{ field.label }}
+                          @if (field.required) { <span class="req-dot" aria-hidden="true"></span> }
+                          @if (!field.required) { <span class="optional-tag">optional</span> }
+                        </label>
+                        <div class="field-input-wrap">
+                          <input [id]="field.key" type="text" class="field-input"
+                                 [formControlName]="field.key"
+                                 [attr.maxlength]="field.validation?.maxLength ?? null"
+                                 placeholder="" />
+                        </div>
+                        @if (field.helpText) {
+                          <p class="field-help">{{ field.helpText }}</p>
+                        }
+                        @if (conditionalFieldsForm.get(field.key)?.touched && conditionalFieldsForm.get(field.key)?.hasError('required')) {
+                          <p class="field-error" role="alert">This field is required</p>
+                        }
+                      </div>
+                    }
+                  }
+                </div>
+              }
 
               <div class="field-group full-width">
                 <label class="field-label" for="description">
@@ -362,18 +473,32 @@
                       <span class="review-value">${{ ticketDetailsForm.value.fineAmount }}</span>
                     </div>
                   }
-                  @if (isSpeedingType() && ticketDetailsForm.value.allegedSpeed != null) {
-                    <div class="review-item">
-                      <span class="review-label">Alleged Speed</span>
-                      <span class="review-value">{{ ticketDetailsForm.value.allegedSpeed }} mph</span>
-                    </div>
-                  }
                   <div class="review-item full-width">
                     <span class="review-label">Description</span>
                     <span class="review-value review-desc">{{ ticketDetailsForm.value.description }}</span>
                   </div>
                 </div>
               </div>
+
+              <!-- Violation Details (conditional fields) -->
+              @if (activeConditionalFields().length > 0) {
+                <div class="review-section">
+                  <div class="review-section-header">
+                    <h3>Violation Details</h3>
+                    <button class="btn-edit" (click)="goToStep(2)">Edit</button>
+                  </div>
+                  <div class="review-grid">
+                    @for (field of activeConditionalFields(); track field.key) {
+                      @if (getConditionalFieldDisplayValue(field)) {
+                        <div class="review-item" [class.full-width]="field.type === 'boolean'">
+                          <span class="review-label">{{ field.label }}</span>
+                          <span class="review-value">{{ getConditionalFieldDisplayValue(field) }}</span>
+                        </div>
+                      }
+                    }
+                  </div>
+                </div>
+              }
 
               <!-- Documents -->
               <div class="review-section">

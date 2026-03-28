@@ -36,13 +36,33 @@
       <div class="hero-main">
         <div class="hero-info">
           <h1>{{ caseNumber() }}</h1>
-          @if (violationType()) {
-            <span class="violation-label">{{ violationType() }}</span>
-          }
-          <span class="status-badge" [class]="statusInfo().cssClass">
-            <span aria-hidden="true">{{ statusInfo().emoji }}</span>
-            {{ statusInfo().label }}
-          </span>
+          <div class="hero-badges">
+            @if (violationType()) {
+              <span class="violation-label">{{ violationType() }}</span>
+            }
+            @if (regulationRef()) {
+              <a class="regulation-badge"
+                 [href]="regulationUrl()"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 title="View full regulation text on eCFR.gov"
+                 [attr.aria-label]="'Regulation reference: ' + regulationRef() + ' — opens in new tab'">
+                {{ regulationRef() }}
+              </a>
+            }
+            <span class="status-badge" [class]="statusInfo().cssClass">
+              <span aria-hidden="true">{{ statusInfo().emoji }}</span>
+              {{ statusInfo().label }}
+            </span>
+            @if (severityInfo()) {
+              <span class="severity-banner" [class]="severityInfo()!.cssClass"
+                    role="status"
+                    [attr.aria-label]="severityInfo()!.label">
+                <span aria-hidden="true">{{ severityInfo()!.icon }}</span>
+                {{ severityInfo()!.label }}
+              </span>
+            }
+          </div>
         </div>
         <div class="hero-actions">
           <!-- CD-6: Edit button -->
@@ -191,6 +211,155 @@
             }
           </div>
         </section>
+
+        <!-- VD-1: Violation Detail Card -->
+        @if (showViolationDetailCard()) {
+          <section class="card violation-detail-card" aria-labelledby="vd-heading">
+            <div class="card-header">
+              <h2 id="vd-heading"><span aria-hidden="true">&#128221;</span> Violation Details</h2>
+            </div>
+            <div class="card-body">
+
+              <!-- Speeding-specific display -->
+              @if (violationType() === 'speeding') {
+                @let tsd = caseData()!.type_specific_data;
+                @if (tsd && tsd['alleged_speed'] && tsd['posted_speed_limit']) {
+                  <div class="speed-comparison" [attr.aria-label]="'Speed comparison: ' + tsd['alleged_speed'] + ' mph in a ' + tsd['posted_speed_limit'] + ' mph zone'">
+                    <div class="speed-main">
+                      <span class="speed-value">{{ tsd['alleged_speed'] }}</span>
+                      <span class="speed-unit">mph</span>
+                      <span class="speed-separator">in a</span>
+                      <span class="speed-limit">{{ tsd['posted_speed_limit'] }}</span>
+                      <span class="speed-unit">mph zone</span>
+                    </div>
+                    @if (speedingMphOver() !== null) {
+                      <div class="speed-over" [class]="getSpeedOverClass(speedingMphOver()!)">
+                        {{ speedingMphOver() }} mph over the limit
+                      </div>
+                    }
+                  </div>
+                }
+                @if (tsd && tsd['road_zone'] && tsd['road_zone'] !== 'normal') {
+                  <div class="road-zone-alert" role="status">
+                    <span aria-hidden="true">{{ getRoadZoneIcon('' + tsd['road_zone']) }}</span>
+                    {{ tsd['road_zone'] === 'school' ? 'School Zone' : tsd['road_zone'] === 'construction' ? 'Construction Zone' : 'Residential Zone' }}
+                    — doubled fines may apply
+                  </div>
+                }
+              }
+
+              <!-- DUI-specific display -->
+              @if (violationType() === 'dui') {
+                @let tsd = caseData()!.type_specific_data;
+                @if (tsd && tsd['bac_level'] !== undefined && tsd['bac_level'] !== null) {
+                  <div class="bac-display" [attr.aria-label]="'BAC level ' + tsd['bac_level'] + ' percent, CDL limit is 0.04 percent'">
+                    <span class="bac-value" [class.bac-over]="+(tsd['bac_level'] ?? 0) > 0.04">
+                      {{ tsd['bac_level'] }}%
+                    </span>
+                    <span class="bac-threshold">(CDL limit: 0.04%)</span>
+                  </div>
+                }
+                @if (tsd && tsd['hazmat_at_time'] === true) {
+                  <div class="hazmat-warning" role="alert">
+                    <span aria-hidden="true">&#9888;&#65039;</span>
+                    Hazmat endorsement active — 3-year disqualification applies
+                  </div>
+                }
+              }
+
+              <!-- DOT Inspection-specific display -->
+              @if (violationType() === 'dot_inspection') {
+                @let tsd = caseData()!.type_specific_data;
+                @if (tsd) {
+                  @if (tsd['vehicle_oos'] === true) {
+                    <div class="oos-alert" role="status">
+                      <span aria-hidden="true">&#9940;</span> Vehicle Out of Service
+                    </div>
+                  }
+                  @if (tsd['driver_oos'] === true) {
+                    <div class="oos-alert" role="status">
+                      <span aria-hidden="true">&#9940;</span> Driver Out of Service
+                    </div>
+                  }
+                  @if (tsd['cvsa_decal_issued'] === true) {
+                    <div class="cvsa-status cvsa-issued">
+                      <span aria-hidden="true">&#9989;</span> CVSA Decal Issued
+                    </div>
+                  } @else if (tsd['cvsa_decal_issued'] === false) {
+                    <div class="cvsa-status cvsa-not-issued">
+                      <span aria-hidden="true">&#10060;</span> No CVSA Decal
+                    </div>
+                  }
+                }
+              }
+
+              <!-- Overweight-specific display -->
+              @if (violationType() === 'overweight_oversize') {
+                @let tsd = caseData()!.type_specific_data;
+                @if (tsd && tsd['actual_weight'] && tsd['permitted_weight']) {
+                  <div class="weight-comparison" [attr.aria-label]="'Actual weight ' + tsd['actual_weight'] + ' lbs, permitted ' + tsd['permitted_weight'] + ' lbs'">
+                    <span class="weight-value">{{ (+tsd['actual_weight']!).toLocaleString() }} lbs</span>
+                    <span class="weight-sep">/</span>
+                    <span class="weight-limit">{{ (+tsd['permitted_weight']!).toLocaleString() }} lbs permitted</span>
+                    @if (overweightPoundsOver() !== null && overweightPoundsOver()! > 0) {
+                      <div class="weight-over" [class.weight-over-high]="overweightPoundsOver()! > 5000">
+                        {{ overweightPoundsOver()!.toLocaleString() }} lbs over
+                      </div>
+                    }
+                  </div>
+                }
+              }
+
+              <!-- Generic field grid for all types -->
+              @if (violationDetailFields().length > 0) {
+                <div class="info-grid vd-grid">
+                  @for (item of violationDetailFields(); track item.field.key) {
+                    @if (!(violationType() === 'speeding' && (item.field.key === 'alleged_speed' || item.field.key === 'posted_speed_limit' || item.field.key === 'road_zone'))
+                      && !(violationType() === 'dui' && (item.field.key === 'bac_level' || item.field.key === 'hazmat_at_time'))
+                      && !(violationType() === 'dot_inspection' && (item.field.key === 'vehicle_oos' || item.field.key === 'driver_oos' || item.field.key === 'cvsa_decal_issued'))
+                      && !(violationType() === 'overweight_oversize' && (item.field.key === 'actual_weight' || item.field.key === 'permitted_weight'))) {
+                      <div class="info-item">
+                        <label>{{ item.field.label }}</label>
+                        @if (item.field.type === 'boolean') {
+                          <p>
+                            <span class="badge" [class.badge-yes]="item.value === true" [class.badge-no]="item.value === false">
+                              {{ item.value ? 'Yes' : 'No' }}
+                            </span>
+                          </p>
+                        } @else {
+                          <p>{{ formatFieldValue(item.field, item.value) }}</p>
+                        }
+                      </div>
+                    }
+                  }
+                </div>
+              }
+
+              <!-- Regulation code -->
+              @if (caseData()!.violation_regulation_code) {
+                <div class="regulation-ref">
+                  <label>Regulation Reference</label>
+                  <p class="reg-code">{{ caseData()!.violation_regulation_code }}</p>
+                </div>
+              }
+
+              <!-- Fine amount or fine range -->
+              @if (caseData()!.fine_amount !== undefined && caseData()!.fine_amount !== null) {
+                <div class="fine-display">
+                  <label>Fine Amount</label>
+                  <p class="fine-value">${{ caseData()!.fine_amount!.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
+                </div>
+              } @else if (violationTypeConfig()?.fineRange) {
+                <div class="fine-display fine-range">
+                  <label>Typical Fine Range</label>
+                  <p class="fine-range-text">
+                    ${{ violationTypeConfig()!.fineRange.min.toLocaleString() }} – ${{ violationTypeConfig()!.fineRange.max.toLocaleString() }}
+                  </p>
+                </div>
+              }
+            </div>
+          </section>
+        }
 
         <!-- Documents Card -->
         <section class="card documents-card" aria-labelledby="docs-heading">
@@ -431,6 +600,31 @@
               </div>
             </div>
           </section>
+        }
+
+        <!-- VD-3: Penalty Impact Card -->
+        @if (violationType()) {
+          <app-penalty-impact-card
+            [violationType]="violationType()"
+            [typeSpecificData]="caseData()!.type_specific_data"
+            [fineAmount]="caseData()!.fine_amount"
+            [hasAttorney]="!!(attorney() || caseData()!.assignedAttorney)" />
+        }
+
+        <!-- VD-4: CSA Impact Card -->
+        @if (violationType()) {
+          <app-csa-impact-card
+            [violationType]="violationType()"
+            [typeSpecificData]="caseData()!.type_specific_data"
+            [violationDate]="'' + (caseData()!.violationDate || caseData()!.violation_date || '')" />
+        }
+
+        <!-- VD-5: Disqualification Timeline -->
+        @if (violationType()) {
+          <app-disqualification-timeline
+            [violationType]="violationType()"
+            [typeSpecificData]="caseData()!.type_specific_data"
+            [violationDate]="'' + (caseData()!.violationDate || caseData()!.violation_date || '')" />
         }
 
         <!-- Status Timeline -->

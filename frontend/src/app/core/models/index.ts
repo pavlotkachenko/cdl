@@ -40,7 +40,7 @@ export type CustomerType =
   | 'one_time_driver' 
   | 'one_time_carrier';
 
-export type CaseStatus = 
+export type CaseStatus =
   | 'new'
   | 'reviewed'
   | 'assigned_to_attorney'
@@ -50,15 +50,33 @@ export type CaseStatus =
   | 'call_court'
   | 'check_with_manager'
   | 'pay_attorney'
-  | 'closed';
+  | 'closed'
+  | 'resolved';
 
-export type ViolationType = 
+export type ViolationType =
+  // Moving violations
   | 'speeding'
+  | 'dui'
+  | 'reckless_driving'
+  | 'seatbelt_cell_phone'
+  // CDL-specific
+  | 'hos_logbook'
+  | 'dot_inspection'
+  | 'dqf'
+  | 'suspension'
+  | 'csa_score'
+  // Vehicle & cargo
+  | 'equipment_defect'
+  | 'overweight_oversize'
+  | 'hazmat'
+  | 'railroad_crossing'
+  // Legacy (hidden in UI)
   | 'parking'
   | 'traffic_signal'
-  | 'reckless_driving'
-  | 'dui'
+  // Other
   | 'other';
+
+export type ViolationSeverity = 'critical' | 'serious' | 'standard' | 'minor';
 
 export interface Case {
   id: string;
@@ -87,6 +105,12 @@ export interface Case {
   violation_type: ViolationType;
   violation_details?: string;
   description?: string; // Added from new version (alias for violation_details)
+  citation_number?: string;
+  fine_amount?: number;
+  alleged_speed?: number;
+  type_specific_data?: Record<string, unknown>;
+  violation_regulation_code?: string;
+  violation_severity?: ViolationSeverity;
   
   // Assignment
   status: CaseStatus;
@@ -243,6 +267,12 @@ export interface SubmitTicketForm {
   violation_type: ViolationType;
   violation_details?: string;
   carrier?: string;
+  citation_number?: string;
+  court_date?: string;
+  fine_amount?: number;
+  alleged_speed?: number;
+  type_specific_data?: Record<string, unknown>;
+  violation_regulation_code?: string;
 }
 
 export interface LoginForm {
@@ -339,7 +369,8 @@ export const STATUS_COLORS: Record<CaseStatus, string> = {
   'call_court': '#f97316',
   'check_with_manager': '#eab308',
   'pay_attorney': '#22c55e',
-  'closed': '#6b7280'
+  'closed': '#6b7280',
+  'resolved': '#059669'
 };
 
 export const STATUS_LABELS: Record<CaseStatus, string> = {
@@ -352,7 +383,8 @@ export const STATUS_LABELS: Record<CaseStatus, string> = {
   'call_court': 'Call Court',
   'check_with_manager': 'Check with Manager',
   'pay_attorney': 'Pay Attorney',
-  'closed': 'Closed'
+  'closed': 'Closed',
+  'resolved': 'Resolved'
 };
 
 export const US_STATES = [

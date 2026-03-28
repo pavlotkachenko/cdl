@@ -34,6 +34,12 @@ import { TranslateModule } from '@ngx-translate/core';
 import { CaseService } from '../../../core/services/case.service';
 import { Case } from '../../../core/models';
 
+// Violation Type Registry
+import {
+  VIOLATION_TYPE_REGISTRY,
+  ACTIVE_VIOLATION_TYPES,
+} from '../../../core/constants/violation-type-registry';
+
 @Component({
   selector: 'app-tickets',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,13 +101,7 @@ export class TicketsComponent implements OnInit, OnDestroy {
 
   typeOptions = [
     { value: 'all', label: 'All Types' },
-    { value: 'speeding', label: 'Speeding' },
-    { value: 'cdl_violation', label: 'CDL Violation' },
-    { value: 'traffic', label: 'Traffic' },
-    { value: 'accident', label: 'Accident' },
-    { value: 'parking', label: 'Parking' },
-    { value: 'weight_station', label: 'Weight Station' },
-    { value: 'other', label: 'Other' }
+    ...ACTIVE_VIOLATION_TYPES.map(t => ({ value: t.value, label: `${t.icon} ${t.label}` })),
   ];
 
   // UI State
@@ -414,17 +414,22 @@ formatDate(date: Date | string | undefined): string {
 
   // ── Labels ──
   getTypeLabel(type: string | undefined): string {
-    const labels: Record<string, string> = {
-      'speeding': 'Speeding',
-      'cdl_violation': 'CDL Violation',
-      'traffic': 'Traffic',
-      'accident': 'Accident',
-      'parking': 'Parking',
-      'weight_station': 'Weight Station',
-      'other': 'Other',
-    };
     if (!type) return 'Unknown';
-    return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+    const config = VIOLATION_TYPE_REGISTRY[type];
+    return config ? `${config.icon} ${config.label}` : type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  getSeverityBadge(c: any): { label: string; cssClass: string } {
+    const severity = c.violation_severity
+      || VIOLATION_TYPE_REGISTRY[c.type || c.violation_type]?.severity
+      || 'standard';
+    const map: Record<string, { label: string; cssClass: string }> = {
+      critical: { label: 'Critical', cssClass: 'severity-badge severity-critical' },
+      serious: { label: 'Serious', cssClass: 'severity-badge severity-serious' },
+      standard: { label: 'Standard', cssClass: 'severity-badge severity-standard' },
+      minor: { label: 'Minor', cssClass: 'severity-badge severity-minor' },
+    };
+    return map[severity] || map['standard'];
   }
 
   formatRelative(date: Date | string | undefined): string {

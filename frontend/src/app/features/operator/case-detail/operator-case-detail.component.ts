@@ -23,6 +23,7 @@ import { AttorneyAssignmentComponent, AttorneyAssignmentDialogResult } from '../
 import { StatusPipelineComponent } from '../status-pipeline/status-pipeline.component';
 import { CaseEditFormComponent } from '../case-edit/case-edit-form.component';
 import { FileManagerComponent } from '../file-manager/file-manager.component';
+import { ViolationDetailEditComponent, ViolationDetailSaveEvent } from '../../../shared/components/violation-detail-edit/violation-detail-edit.component';
 
 const STATUS_LABELS: Record<string, string> = {
   new: 'OPR.STATUS_NEW',
@@ -60,7 +61,7 @@ const PRIORITY_COLORS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatTooltipModule, MatChipsModule,
-    TranslateModule, StatusPipelineComponent, CaseEditFormComponent, FileManagerComponent,
+    TranslateModule, StatusPipelineComponent, CaseEditFormComponent, FileManagerComponent, ViolationDetailEditComponent,
   ],
   template: `
     <!-- Loading -->
@@ -124,6 +125,17 @@ const PRIORITY_COLORS: Record<string, string> = {
               </app-case-edit-form>
             </mat-card-content>
           </mat-card>
+
+          <!-- VD-6: Violation Details (edit) -->
+          @if (caseData()!.violation_type) {
+            <app-violation-detail-edit
+              [violationType]="caseData()!.violation_type"
+              [typeSpecificData]="caseData()!.type_specific_data"
+              [violationRegulationCode]="caseData()!.violation_regulation_code"
+              [violationSeverity]="caseData()!.violation_severity"
+              [caseId]="caseData()!.id"
+              (saved)="onViolationDetailSaved($event)" />
+          }
 
           <!-- Court dates -->
           <mat-card appearance="outlined" class="detail-card">
@@ -500,6 +512,27 @@ export class OperatorCaseDetailComponent implements OnInit {
 
   onCaseEdited(_updated: unknown): void {
     this.loadCase();
+  }
+
+  onViolationDetailSaved(event: ViolationDetailSaveEvent): void {
+    const caseId = this.caseData()?.id;
+    if (!caseId) return;
+
+    this.caseService.updateCase(caseId, event).pipe(
+      catchError(err => {
+        this.snackBar.open(
+          err?.error?.error?.message || 'Failed to update violation details',
+          'OK',
+          { duration: 4000, panelClass: 'snack-error' },
+        );
+        return of(null);
+      }),
+    ).subscribe(result => {
+      if (result) {
+        this.snackBar.open('Violation details updated', 'OK', { duration: 3000 });
+        this.loadCase();
+      }
+    });
   }
 
   updateStatus(): void {

@@ -13,6 +13,7 @@ const assignmentService = require('../services/assignment.service');
 const webhookService = require('../services/webhook.service');
 const statusWorkflow = require('../services/status-workflow.service');
 const workflowService = require('../services/workflow.service');
+const { getDefaultSeverity } = require('../constants/violation-types');
 
 /**
  * PUBLIC SUBMIT
@@ -88,7 +89,10 @@ exports.createCase = async (req, res) => {
       carrier,
       citation_number,
       fine_amount,
-      alleged_speed
+      alleged_speed,
+      type_specific_data,
+      violation_regulation_code,
+      violation_severity,
     } = req.body;
 
     const driver_id = req.user.id;
@@ -111,13 +115,37 @@ exports.createCase = async (req, res) => {
       status: 'new'
     };
 
-    // Add new optional fields
+    // Add optional fields
     if (citation_number) insertPayload.citation_number = citation_number;
     if (fine_amount !== undefined && fine_amount !== null) insertPayload.fine_amount = fine_amount;
     // alleged_speed only applies to speeding violations
     if (violation_type === 'speeding' && alleged_speed !== undefined && alleged_speed !== null) {
       insertPayload.alleged_speed = alleged_speed;
     }
+
+    // Type-specific JSONB data
+    if (type_specific_data && Object.keys(type_specific_data).length > 0) {
+      insertPayload.type_specific_data = type_specific_data;
+      // Backward compat: also store alleged_speed in JSONB for speeding
+      if (violation_type === 'speeding' && type_specific_data.alleged_speed !== undefined) {
+        insertPayload.alleged_speed = type_specific_data.alleged_speed;
+      }
+    }
+    // Backward compat: if alleged_speed at top level for speeding, mirror into type_specific_data
+    if (violation_type === 'speeding' && alleged_speed !== undefined && alleged_speed !== null) {
+      insertPayload.type_specific_data = {
+        ...(insertPayload.type_specific_data || {}),
+        alleged_speed,
+      };
+    }
+
+    // Regulation code
+    if (violation_regulation_code) {
+      insertPayload.violation_regulation_code = violation_regulation_code;
+    }
+
+    // Severity: use provided value, or auto-populate from registry
+    insertPayload.violation_severity = violation_severity || getDefaultSeverity(violation_type) || 'standard';
 
     // Create the case
     const { data: newCase, error } = await supabase
@@ -418,15 +446,34 @@ exports.updateCase = async (req, res) => {
     delete updates.assigned_attorney_id;
     delete updates.updated_at;
 
-    // CD-6: Drivers can only edit description and location
+    // Driver edit restrictions
     if (req.user.role === 'driver') {
-      const DRIVER_EDITABLE = ['description', 'location'];
+      // Drivers can edit type_specific_data only when case status is 'new'
+      const hasTypeSpecificData = updates.type_specific_data !== undefined;
+      if (hasTypeSpecificData) {
+        const { data: currentCase } = await supabase
+          .from('cases')
+          .select('status')
+          .eq('id', id)
+          .single();
+        if (currentCase && currentCase.status !== 'new') {
+          return res.status(403).json({
+            error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit violation details on new cases' }
+          });
+        }
+      }
+      const DRIVER_EDITABLE = ['description', 'location', 'type_specific_data', 'violation_details'];
       const disallowed = Object.keys(updates).filter(k => !DRIVER_EDITABLE.includes(k));
       if (disallowed.length > 0) {
         return res.status(403).json({
-          error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description and location' }
+          error: { code: 'FIELD_NOT_EDITABLE', message: 'Drivers can only edit description, location, and violation details' }
         });
       }
+    }
+
+    // Auto-populate severity from registry if violation_type is being changed and no severity provided
+    if (updates.violation_type && !updates.violation_severity) {
+      updates.violation_severity = getDefaultSeverity(updates.violation_type) || 'standard';
     }
 
     const { data, error } = await supabase

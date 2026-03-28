@@ -347,10 +347,17 @@ describe('SubmitTicketComponent', () => {
   // ----------------------------------------------------------------
   // New form fields
   // ----------------------------------------------------------------
-  it('ticketDetailsForm includes fineAmount and allegedSpeed', async () => {
+  it('ticketDetailsForm includes fineAmount but not allegedSpeed (moved to conditional fields)', async () => {
     const { component } = await setup();
     expect(component.ticketDetailsForm.get('fineAmount')).toBeTruthy();
-    expect(component.ticketDetailsForm.get('allegedSpeed')).toBeTruthy();
+    expect(component.ticketDetailsForm.get('allegedSpeed')).toBeFalsy();
+  });
+
+  it('conditionalFieldsForm is rebuilt when violation type changes to speeding', async () => {
+    const { component } = await setup();
+    component.selectViolationType('speeding');
+    expect(component.conditionalFieldsForm.get('alleged_speed')).toBeTruthy();
+    expect(component.activeConditionalFields().length).toBeGreaterThan(0);
   });
 
   // ----------------------------------------------------------------
@@ -362,8 +369,10 @@ describe('SubmitTicketComponent', () => {
     component.ticketDetailsForm.setValue({
       citationNumber: 'TX-1', violationDate: '2026-03-01',
       state: 'TX', location: 'I-35', description: 'Going too fast',
-      courtDate: '', fineAmount: 250, allegedSpeed: 80,
+      courtDate: '', fineAmount: 250,
     });
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(80);
+    component.conditionalFieldsForm.get('posted_speed_limit')?.setValue(65);
     component.submitTicket();
     expect(caseService.createCase).toHaveBeenCalled();
     expect(component.submitted()).toBe(true);
@@ -377,14 +386,18 @@ describe('SubmitTicketComponent', () => {
     component.ticketDetailsForm.setValue({
       citationNumber: 'TX-99', violationDate: '2026-03-01',
       state: 'TX', location: 'Highway', description: 'Going fast',
-      courtDate: '2026-04-01', fineAmount: 350, allegedSpeed: 90,
+      courtDate: '2026-04-01', fineAmount: 350,
     });
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(90);
+    component.conditionalFieldsForm.get('posted_speed_limit')?.setValue(65);
     component.submitTicket();
     const payload = caseService.createCase.mock.calls[0][0];
     expect(payload.violation_type).toBe('speeding');
     expect(payload.citation_number).toBe('TX-99');
     expect(payload.fine_amount).toBe(350);
     expect(payload.alleged_speed).toBe(90);
+    expect(payload.type_specific_data).toBeDefined();
+    expect(payload.type_specific_data.alleged_speed).toBe(90);
     expect(payload.customer_name).toBe('Test Driver');
     expect(payload.town).toBe('Highway');
     expect(payload.court_date).toBe('2026-04-01');
@@ -397,7 +410,7 @@ describe('SubmitTicketComponent', () => {
     component.ticketDetailsForm.setValue({
       citationNumber: '', violationDate: '2026-03-01',
       state: 'TX', location: 'Highway', description: 'HOS violation details',
-      courtDate: '', fineAmount: null, allegedSpeed: 80,
+      courtDate: '', fineAmount: null,
     });
     component.submitTicket();
     const payload = caseService.createCase.mock.calls[0][0];
@@ -418,8 +431,10 @@ describe('SubmitTicketComponent', () => {
     component.ticketDetailsForm.setValue({
       citationNumber: '', violationDate: '2026-03-01',
       state: 'TX', location: 'Highway', description: 'Went too fast',
-      courtDate: '', fineAmount: null, allegedSpeed: null,
+      courtDate: '', fineAmount: null,
     });
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(80);
+    component.conditionalFieldsForm.get('posted_speed_limit')?.setValue(65);
     component.submitTicket();
     expect(component.submitted()).toBe(false);
     expect(component.submitting()).toBe(false);
@@ -460,5 +475,140 @@ describe('SubmitTicketComponent', () => {
     expect(component.error()).toBe('');
     expect(component.currentStep()).toBe(0);
     expect(component.ticketTypeForm.value.type).toBeNull();
+  });
+
+  // ----------------------------------------------------------------
+  // VT-8: Conditional fields tests
+  // ----------------------------------------------------------------
+  it('selecting speeding shows 4 conditional fields', async () => {
+    const { component } = await setup();
+    component.selectViolationType('speeding');
+    expect(component.activeConditionalFields()).toHaveLength(4);
+    expect(component.activeConditionalFields().map(f => f.key)).toEqual([
+      'alleged_speed', 'posted_speed_limit', 'speed_detection_method', 'road_zone',
+    ]);
+  });
+
+  it('selecting dui shows 4 conditional fields (different from speeding)', async () => {
+    const { component } = await setup();
+    component.selectViolationType('dui');
+    expect(component.activeConditionalFields()).toHaveLength(4);
+    expect(component.activeConditionalFields().map(f => f.key)).toContain('bac_level');
+    expect(component.activeConditionalFields().map(f => f.key)).toContain('substance_type');
+  });
+
+  it('selecting other shows no conditional fields', async () => {
+    const { component } = await setup();
+    component.selectViolationType('other');
+    expect(component.activeConditionalFields()).toHaveLength(0);
+  });
+
+  it('changing type clears previous conditional field values', async () => {
+    const { component } = await setup();
+    component.selectViolationType('speeding');
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(85);
+    expect(component.conditionalFieldsForm.get('alleged_speed')?.value).toBe(85);
+
+    component.selectViolationType('dui');
+    expect(component.conditionalFieldsForm.get('alleged_speed')).toBeNull();
+    expect(component.conditionalFieldsForm.get('bac_level')).toBeTruthy();
+  });
+
+  it('required conditional field prevents form submission', async () => {
+    const { component, caseService } = await setup();
+    component.ticketTypeForm.setValue({ type: 'speeding' });
+    component.ticketDetailsForm.setValue({
+      citationNumber: '', violationDate: '2026-03-01',
+      state: 'TX', location: 'I-35', description: 'Going too fast',
+      courtDate: '', fineAmount: null,
+    });
+    // Don't fill required alleged_speed / posted_speed_limit
+    component.submitTicket();
+    expect(caseService.createCase).not.toHaveBeenCalled();
+    expect(component.error()).toContain('required');
+  });
+
+  it('conditionalFormValid signal reflects form validity', async () => {
+    const { component } = await setup();
+    component.selectViolationType('speeding');
+    // Required fields not filled → invalid
+    expect(component.conditionalFormValid()).toBe(false);
+
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(80);
+    component.conditionalFieldsForm.get('posted_speed_limit')?.setValue(65);
+    expect(component.conditionalFormValid()).toBe(true);
+  });
+
+  it('toggleBooleanField toggles a boolean conditional value', async () => {
+    const { component } = await setup();
+    component.selectViolationType('dui');
+    expect(component.conditionalFieldsForm.get('hazmat_at_time')?.value).toBe(false);
+    component.toggleBooleanField('hazmat_at_time');
+    expect(component.conditionalFieldsForm.get('hazmat_at_time')?.value).toBe(true);
+    component.toggleBooleanField('hazmat_at_time');
+    expect(component.conditionalFieldsForm.get('hazmat_at_time')?.value).toBe(false);
+  });
+
+  it('getConditionalFieldDisplayValue returns formatted values', async () => {
+    const { component } = await setup();
+    component.selectViolationType('speeding');
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(80);
+
+    const speedField = component.activeConditionalFields().find(f => f.key === 'alleged_speed')!;
+    expect(component.getConditionalFieldDisplayValue(speedField)).toBe('80');
+
+    // Boolean display
+    component.selectViolationType('dui');
+    const hazmatField = component.activeConditionalFields().find(f => f.key === 'hazmat_at_time')!;
+    expect(component.getConditionalFieldDisplayValue(hazmatField)).toBe('No');
+    component.toggleBooleanField('hazmat_at_time');
+    expect(component.getConditionalFieldDisplayValue(hazmatField)).toBe('Yes');
+  });
+
+  it('submitAnother resets conditional fields', async () => {
+    const { component } = await setup();
+    component.selectViolationType('speeding');
+    component.conditionalFieldsForm.get('alleged_speed')?.setValue(80);
+    component.submitAnother();
+    expect(component.activeConditionalFields()).toHaveLength(0);
+    expect(Object.keys(component.conditionalFieldsForm.controls)).toHaveLength(0);
+  });
+
+  it('VIOLATION_CATEGORIES has 4 category groups', async () => {
+    const { component } = await setup();
+    expect(component.VIOLATION_CATEGORIES).toHaveLength(4);
+  });
+
+  it('total violation chips across all categories equals 14', async () => {
+    const { component } = await setup();
+    const total = component.VIOLATION_CATEGORIES.reduce(
+      (sum, cat) => sum + cat.chips.length, 0,
+    );
+    expect(total).toBe(14);
+  });
+
+  it('OCR_TYPE_MAP handles new keywords like dui, overweight, hazmat', async () => {
+    const { component } = await setup();
+    // Verify via applyOcrResults with fuzzy types
+    const ocrDui = {
+      ...MOCK_OCR,
+      extractedData: { ...MOCK_OCR.extractedData, violationType: 'dui' },
+    };
+    component.applyOcrResults(ocrDui as any);
+    expect(component.ticketTypeForm.get('type')?.value).toBe('dui');
+
+    const ocrOverweight = {
+      ...MOCK_OCR,
+      extractedData: { ...MOCK_OCR.extractedData, violationType: 'overweight' },
+    };
+    component.applyOcrResults(ocrOverweight as any);
+    expect(component.ticketTypeForm.get('type')?.value).toBe('overweight_oversize');
+
+    const ocrHazmat = {
+      ...MOCK_OCR,
+      extractedData: { ...MOCK_OCR.extractedData, violationType: 'hazmat' },
+    };
+    component.applyOcrResults(ocrHazmat as any);
+    expect(component.ticketTypeForm.get('type')?.value).toBe('hazmat');
   });
 });
