@@ -226,21 +226,25 @@ app.use('/api/violation-types', violationTypeRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   const path = require('path');
+  const fs = require('fs');
   const frontendPath = path.join(__dirname, '..', 'public');
 
-  app.use(express.static(frontendPath, {
-    maxAge: '1y',
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html') || filePath.includes('ngsw')) {
-        res.setHeader('Cache-Control', 'no-cache');
+  // Only serve static files if the public directory exists (monolith deploy)
+  if (fs.existsSync(frontendPath)) {
+    app.use(express.static(frontendPath, {
+      maxAge: '1y',
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.includes('ngsw')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
       }
-    }
-  }));
+    }));
 
-  // Angular client-side routing fallback
-  app.get('/{*path}', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
-  });
+    // Angular client-side routing fallback
+    app.get('/{*path}', (req, res) => {
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    });
+  }
 }
 
 // ============================================
