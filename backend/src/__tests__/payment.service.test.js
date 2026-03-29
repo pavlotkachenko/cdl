@@ -1,5 +1,8 @@
 'use strict';
 
+// Ensure stripe conditional guard passes in payment.service.js
+process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
+
 // Mock stripe before any requires
 const mockStripe = {
   paymentIntents: {

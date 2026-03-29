@@ -26,15 +26,15 @@ So that I can plan ahead and take the necessary steps to get my CDL reinstated.
 
 ### Component: `DisqualificationTimelineComponent`
 
-- [ ] Standalone component with inline template and styles
-- [ ] Inputs: `violationType` (required string), `typeSpecificData` (optional Record), `violationDate` (optional string)
-- [ ] OnPush change detection
-- [ ] Only renders when `violationType` is one of: `dui`, `railroad_crossing`, `suspension`
+- [x] Standalone component with inline template and styles
+- [x] Inputs: `violationType` (required string), `typeSpecificData` (optional Record), `violationDate` (optional string)
+- [x] OnPush change detection
+- [x] Only renders when `violationType` is one of: `dui`, `railroad_crossing`, `suspension`
 
 ### Timeline Structure
 
-- [ ] Vertical timeline with left-aligned markers and right-aligned content
-- [ ] Timeline nodes (top to bottom):
+- [x] Vertical timeline with left-aligned markers and right-aligned content
+- [x] Timeline nodes (top to bottom):
   1. **Offense Date** — violation_date, marker: red circle
   2. **Disqualification Begins** — computed or from type_specific_data, marker: red circle
   3. **Disqualification Period** — duration bar between begin and end dates, red background
@@ -43,15 +43,15 @@ So that I can plan ahead and take the necessary steps to get my CDL reinstated.
 
 ### Duration Calculation
 
-- [ ] **DUI:**
+- [x] **DUI:**
   - Default: 1 year from offense date
   - If `type_specific_data.hazmat_at_time === true`: 3 years
   - If `type_specific_data.prior_dui_offenses >= 1`: lifetime (with 10-year petition note)
-- [ ] **Railroad Crossing:**
+- [x] **Railroad Crossing:**
   - `prior_rr_offenses === 0`: 60 days
   - `prior_rr_offenses === 1`: 120 days
   - `prior_rr_offenses >= 2`: 1 year
-- [ ] **Suspension:**
+- [x] **Suspension:**
   - From `type_specific_data.disqualification_duration`:
     - `60_day` → 60 days
     - `120_day` → 120 days
@@ -62,42 +62,42 @@ So that I can plan ahead and take the necessary steps to get my CDL reinstated.
 
 ### Reinstatement Requirements Checklist
 
-- [ ] Below the timeline, show requirements based on type:
+- [x] Below the timeline, show requirements based on type:
   - **DUI:** SAP evaluation, return-to-duty testing, follow-up testing plan, state reinstatement fee, CDL skills test (some states)
   - **Railroad:** Completion of disqualification period, state reinstatement fee, Operation Lifesaver training (recommended)
   - **Suspension:** Resolution of underlying issues, state reinstatement fee, possible CDL retesting
-- [ ] Each requirement is a checklist item (not interactive — informational only)
-- [ ] Checked/unchecked based on `type_specific_data` fields where available (e.g., `sap_enrollment_status === 'completed'`)
+- [x] Each requirement is a checklist item (not interactive — informational only)
+- [x] Checked/unchecked based on `type_specific_data` fields where available (e.g., `sap_enrollment_status === 'completed'`)
 
 ### Status Indicators
 
-- [ ] Active disqualification (current date within period): pulsing red dot, "DISQUALIFIED" badge
-- [ ] Eligible for reinstatement (past end date, not reinstated): orange badge "ELIGIBLE FOR REINSTATEMENT"
-- [ ] Reinstated: green badge "REINSTATED" with date
-- [ ] Pending (no dates calculated): gray badge "PENDING — Contact Attorney"
+- [x] Active disqualification (current date within period): pulsing red dot, "DISQUALIFIED" badge
+- [x] Eligible for reinstatement (past end date, not reinstated): orange badge "ELIGIBLE FOR REINSTATEMENT"
+- [x] Reinstated: green badge "REINSTATED" with date
+- [x] Pending (no dates calculated): gray badge "PENDING — Contact Attorney"
 
 ### Visual Design
 
-- [ ] Timeline line: 2px solid, color matches severity (red for active, gray for past)
-- [ ] Timeline nodes: 12px circles with status-appropriate colors
-- [ ] Duration bar: fills space between start and end nodes, red with 50% opacity
-- [ ] Dates formatted as `MMM d, yyyy`
-- [ ] Card background: light red tint for active disqualification, light green for reinstated
+- [x] Timeline line: 2px solid, color matches severity (red for active, gray for past)
+- [x] Timeline nodes: 12px circles with status-appropriate colors
+- [x] Duration bar: fills space between start and end nodes, red with 50% opacity
+- [x] Dates formatted as `MMM d, yyyy`
+- [x] Card background: light red tint for active disqualification, light green for reinstated
 
 ### Card Integration
 
-- [ ] Card header: `<span aria-hidden="true">⏳</span> Disqualification Timeline`
-- [ ] Placed in right column, below CSA Impact Card (or below Penalty Impact if no CSA card)
-- [ ] Card only visible for `dui`, `railroad_crossing`, `suspension` violation types
-- [ ] If violation is contested and case is active, show note: "If this violation is successfully contested, disqualification may be avoided"
+- [x] Card header: `<span aria-hidden="true">⏳</span> Disqualification Timeline`
+- [x] Placed in right column, below CSA Impact Card (or below Penalty Impact if no CSA card)
+- [x] Card only visible for `dui`, `railroad_crossing`, `suspension` violation types
+- [x] If violation is contested and case is active, show note: "If this violation is successfully contested, disqualification may be avoided"
 
 ### Accessibility
 
-- [ ] Timeline has `role="list"` with `role="listitem"` for each node
-- [ ] Status badges have `aria-label` with full text
-- [ ] Duration period has screen-reader text: "Disqualification period: [start] to [end], [N] days"
-- [ ] Active/pulsing indicators have `aria-live="polite"` for status changes
-- [ ] Checklist items are not interactive — use `<li>` not `<input type="checkbox">`
+- [x] Timeline has `role="list"` with `role="listitem"` for each node
+- [x] Status badges have `aria-label` with full text
+- [x] Duration period has screen-reader text: "Disqualification period: [start] to [end], [N] days"
+- [x] Active/pulsing indicators have `aria-live="polite"` for status changes
+- [x] Checklist items are not interactive — use `<li>` not `<input type="checkbox">`
 
 ## Test Coverage Matrix
 
