@@ -60,6 +60,11 @@ const { startPaymentRemindersJob } = require('./jobs/payment-reminders.job');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust first proxy (Railway, Render, etc.) so rate-limiter sees real client IPs
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Create HTTP server
 const server = http.createServer(app);
 
