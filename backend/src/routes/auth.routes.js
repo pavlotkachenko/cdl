@@ -20,6 +20,77 @@ router.post('/refresh', authController.refresh);
 // OAuth callback (exchange Supabase OAuth token for app JWT)
 router.post('/oauth/callback', authController.oauthCallback);
 
+// Temporary seed endpoint — DELETE after use
+router.post('/seed-users', async (req, res) => {
+  const { supabase } = require('../config/supabase');
+  const results = [];
+  const users = [
+    { email: 'driver@test.com',   name: 'Test Driver',   role: 'driver' },
+    { email: 'admin@test.com',    name: 'Test Admin',    role: 'admin' },
+    { email: 'attorney@test.com', name: 'Test Attorney', role: 'attorney' },
+    { email: 'carrier@test.com',  name: 'Test Carrier',  role: 'carrier' },
+    { email: 'operator@test.com', name: 'Test Operator', role: 'operator' },
+  ];
+
+  for (const u of users) {
+    try {
+      // 1. Create auth user (or find existing)
+      let authId;
+      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+        email: u.email,
+        password: 'Test1234!',
+        email_confirm: true,
+        user_metadata: { full_name: u.name, role: u.role },
+      });
+
+      if (authErr) {
+        // User might already exist in auth — try to find them
+        const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const found = (list?.users || []).find(x => x.email === u.email);
+        if (found) {
+          authId = found.id;
+          // Reset password to Test1234!
+          await supabase.auth.admin.updateUserById(found.id, { password: 'Test1234!' });
+        } else {
+          results.push({ email: u.email, status: 'FAILED', error: authErr.message });
+          continue;
+        }
+      } else {
+        authId = authData.user.id;
+      }
+
+      // 2. Create or update public.users row
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', u.email)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('users').update({
+          auth_user_id: authId, full_name: u.name, role: u.role,
+        }).eq('id', existing.id);
+        results.push({ email: u.email, status: 'UPDATED', authId: authId.substring(0, 8), pubId: existing.id.substring(0, 8) });
+      } else {
+        const { data: newRow, error: insertErr } = await supabase.from('users').insert({
+          email: u.email, full_name: u.name, role: u.role,
+          auth_user_id: authId, email_verified: true,
+        }).select('id').single();
+
+        if (insertErr) {
+          results.push({ email: u.email, status: 'AUTH_OK_DB_FAILED', error: insertErr.message });
+        } else {
+          results.push({ email: u.email, status: 'CREATED', authId: authId.substring(0, 8), pubId: newRow.id.substring(0, 8) });
+        }
+      }
+    } catch (e) {
+      results.push({ email: u.email, status: 'ERROR', error: e.message });
+    }
+  }
+
+  res.json({ password: 'Test1234!', users: results });
+});
+
 // Temporary auth diagnostic endpoint — DELETE after debugging
 router.get('/debug', async (req, res) => {
   const { supabase, supabaseAnon, supabaseAdmin } = require('../config/supabase');
