@@ -12,6 +12,4 @@ WORKDIR /app
 RUN npm init -y && npm install express http-proxy-middleware
 COPY --from=build /app/dist/frontend/browser ./public
 COPY serve.js .
-ENV PORT=80
-EXPOSE 80
 CMD ["node", "serve.js"]
