@@ -35,6 +35,7 @@ exports.signIn = async (req, res) => {
     });
 
     if (authError || !authData.user) {
+      console.error('Supabase signInWithPassword failed:', authError?.message, authError?.status);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
