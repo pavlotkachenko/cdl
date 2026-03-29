@@ -54,15 +54,15 @@ All display components read from `caseData().type_specific_data` and derive disp
 
 ## Definition of Done
 
-- [ ] All 8 stories marked DONE
-- [ ] Violation detail card renders type-specific data for all 14 active types
-- [ ] Severity banner displays in case hero with correct color coding
-- [ ] Regulation badge links to eCFR.gov
-- [ ] Penalty impact card shows fine range, points, disqual risk
-- [ ] CSA impact card shows BASIC category and severity weight
-- [ ] Disqualification timeline renders for DUI, railroad, suspension types
-- [ ] Operators and attorneys can edit type-specific fields
-- [ ] Admin/carrier/operator case tables show severity badges
-- [ ] `npx ng test --no-watch` passes (all existing + new tests)
-- [ ] `cd backend && npm test` passes (all existing + new tests)
-- [ ] WCAG 2.1 AA compliance verified for all new components
+- [x] All 8 stories marked DONE
+- [x] Violation detail card renders type-specific data for all 14 active types
+- [x] Severity banner displays in case hero with correct color coding
+- [x] Regulation badge links to eCFR.gov
+- [x] Penalty impact card shows fine range, points, disqual risk
+- [x] CSA impact card shows BASIC category and severity weight
+- [x] Disqualification timeline renders for DUI, railroad, suspension types
+- [x] Operators and attorneys can edit type-specific fields
+- [x] Admin/carrier/operator case tables show severity badges
+- [x] `npx ng test --no-watch` passes (all existing + new tests)
+- [x] `cd backend && npm test` passes (all existing + new tests)
+- [x] WCAG 2.1 AA compliance verified for all new components

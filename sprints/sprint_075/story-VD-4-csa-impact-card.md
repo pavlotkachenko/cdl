@@ -26,20 +26,20 @@ So that I understand the broader impact beyond just my personal penalties and ca
 
 ### Component: `CsaImpactCardComponent`
 
-- [ ] Standalone component with inline template and styles
-- [ ] Inputs: `violationType` (required string), `typeSpecificData` (optional Record), `violationDate` (optional string)
-- [ ] Reads CSA data from `VIOLATION_TYPE_REGISTRY[violationType]`
-- [ ] OnPush change detection
+- [x] Standalone component with inline template and styles
+- [x] Inputs: `violationType` (required string), `typeSpecificData` (optional Record), `violationDate` (optional string)
+- [x] Reads CSA data from `VIOLATION_TYPE_REGISTRY[violationType]`
+- [x] OnPush change detection
 
 ### Card Structure
 
-- [ ] Card header: `<span aria-hidden="true">📊</span> CSA Score Impact`
-- [ ] Placed in right column, below Penalty Impact Card
-- [ ] Only shown if the violation type has a `csaBasic` value in the registry (not all types affect CSA)
+- [x] Card header: `<span aria-hidden="true">📊</span> CSA Score Impact`
+- [x] Placed in right column, below Penalty Impact Card
+- [x] Only shown if the violation type has a `csaBasic` value in the registry (not all types affect CSA)
 
 ### BASIC Category Display
 
-- [ ] Show which CSA BASIC category this violation falls under:
+- [x] Show which CSA BASIC category this violation falls under:
   - Unsafe Driving → speeding, reckless_driving, seatbelt_cell_phone
   - HOS Compliance → hos_logbook
   - Vehicle Maintenance → equipment_defect, dot_inspection
@@ -47,65 +47,65 @@ So that I understand the broader impact beyond just my personal penalties and ca
   - Hazmat Compliance → hazmat
   - Driver Fitness → dqf, suspension
   - Crash Indicator → (if applicable)
-- [ ] BASIC name displayed as colored badge matching category
-- [ ] Intervention threshold shown: "Threshold: 65th percentile" (or 80th for Crash/Hazmat)
+- [x] BASIC name displayed as colored badge matching category
+- [x] Intervention threshold shown: "Threshold: 65th percentile" (or 80th for Crash/Hazmat)
 
 ### Severity Weight Display
 
-- [ ] If `type_specific_data.severity_weight` exists (operator/attorney entered): show exact value
-- [ ] Otherwise: show estimated range from registry: e.g., "Estimated severity: 5-7 points"
-- [ ] Visual: horizontal bar showing severity on 1-10 scale with marker
-- [ ] Bar color gradient: green (1-3) → yellow (4-6) → orange (7-8) → red (9-10)
+- [x] If `type_specific_data.severity_weight` exists (operator/attorney entered): show exact value
+- [x] Otherwise: show estimated range from registry: e.g., "Estimated severity: 5-7 points"
+- [x] Visual: horizontal bar showing severity on 1-10 scale with marker
+- [x] Bar color gradient: green (1-3) → yellow (4-6) → orange (7-8) → red (9-10)
 
 ### Time Weight Calculation
 
-- [ ] Calculate time weight based on `violation_date` relative to today:
+- [x] Calculate time weight based on `violation_date` relative to today:
   - 0-6 months ago → **3x** weight (red badge: "Recent — Maximum Impact")
   - 6-12 months ago → **2x** weight (orange badge: "Moderate Impact")
   - 12-24 months ago → **1x** weight (green badge: "Reduced Impact")
   - >24 months → **0x** (gray badge: "Expired — No CSA Impact")
-- [ ] If no violation_date, show "Date needed for time weight calculation"
+- [x] If no violation_date, show "Date needed for time weight calculation"
 
 ### Percentile Display (if data available)
 
-- [ ] If `type_specific_data.current_percentile` and `projected_percentile` exist:
+- [x] If `type_specific_data.current_percentile` and `projected_percentile` exist:
   - Show gauge or bar: "Current: 52nd → Projected: 67th percentile"
   - If projected exceeds 65 (or 80 for Crash/Hazmat): red warning "Above intervention threshold"
-- [ ] If percentile data not available: show informational text:
+- [x] If percentile data not available: show informational text:
   - "CSA percentiles are calculated by FMCSA based on your carrier's full inspection history"
   - "Ask your carrier for their current BASIC scores"
 
 ### OOS Bonus Points
 
-- [ ] If `type_specific_data.vehicle_oos === true` OR `driver_oos === true`:
+- [x] If `type_specific_data.vehicle_oos === true` OR `driver_oos === true`:
   - Show "+2 OOS bonus points" in red text
   - "Out-of-service violations carry additional severity points"
 
 ### Informational Footer
 
-- [ ] "CSA scores affect carrier safety ratings and can trigger FMCSA interventions"
-- [ ] "Contesting this violation may prevent CSA points from being recorded"
-- [ ] Link: "Learn more about CSA scores" → internal help page (or external FMCSA link)
+- [x] "CSA scores affect carrier safety ratings and can trigger FMCSA interventions"
+- [x] "Contesting this violation may prevent CSA points from being recorded"
+- [x] Link: "Learn more about CSA scores" → internal help page (or external FMCSA link)
 
 ### Visibility Rules
 
-- [ ] Card shown for all violation types that have a `csaBasic` mapping (most CDL violations)
-- [ ] Card hidden for `seatbelt_cell_phone` if subtype is personal vehicle (not CMV)
-- [ ] Card hidden for `other` type (no BASIC mapping)
+- [x] Card shown for all violation types that have a `csaBasic` mapping (most CDL violations)
+- [x] Card hidden for `seatbelt_cell_phone` if subtype is personal vehicle (not CMV)
+- [x] Card hidden for `other` type (no BASIC mapping)
 
 ### Responsive Design
 
-- [ ] Desktop: right column card
-- [ ] Mobile: full-width, positioned after Penalty Impact Card
-- [ ] Severity bar has minimum height 8px with rounded corners
-- [ ] Percentile gauge adapts to card width
+- [x] Desktop: right column card
+- [x] Mobile: full-width, positioned after Penalty Impact Card
+- [x] Severity bar has minimum height 8px with rounded corners
+- [x] Percentile gauge adapts to card width
 
 ### Accessibility
 
-- [ ] Severity bar has `role="meter"` with `aria-valuenow`, `aria-valuemin="1"`, `aria-valuemax="10"`
-- [ ] Time weight badge has `aria-label` with full description
-- [ ] Percentile comparison has `aria-label`: "Current percentile: 52, Projected: 67"
-- [ ] Color-coded elements have text labels (not color-only)
+- [x] Severity bar has `role="meter"` with `aria-valuenow`, `aria-valuemin="1"`, `aria-valuemax="10"`
+- [x] Time weight badge has `aria-label` with full description
+- [x] Percentile comparison has `aria-label`: "Current percentile: 52, Projected: 67"
+- [x] Color-coded elements have text labels (not color-only)
 
 ## Test Coverage Matrix
 

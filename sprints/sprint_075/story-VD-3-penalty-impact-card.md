@@ -26,25 +26,25 @@ So that I understand what's at stake and why hiring an attorney matters.
 
 ### Component: `PenaltyImpactCardComponent`
 
-- [ ] Standalone component with inline template and styles
-- [ ] Inputs: `violationType` (required string input), `typeSpecificData` (optional Record), `fineAmount` (optional number)
-- [ ] Reads penalty data from `VIOLATION_TYPE_REGISTRY[violationType]`
-- [ ] OnPush change detection
+- [x] Standalone component with inline template and styles
+- [x] Inputs: `violationType` (required string input), `typeSpecificData` (optional Record), `fineAmount` (optional number)
+- [x] Reads penalty data from `VIOLATION_TYPE_REGISTRY[violationType]`
+- [x] OnPush change detection
 
 ### Card Structure
 
-- [ ] Card header: `<span aria-hidden="true">⚡</span> Potential Penalties`
-- [ ] Placed in right column of case-detail, below Attorney card (or below Status Timeline if no attorney)
+- [x] Card header: `<span aria-hidden="true">⚡</span> Potential Penalties`
+- [x] Placed in right column of case-detail, below Attorney card (or below Status Timeline if no attorney)
 
 ### Penalty Sections
 
 **Fine Range:**
-- [ ] If `fineAmount` is set: show actual fine prominently `"$1,250.00"` with "Fine Assessed" label
-- [ ] Below: show typical range from registry `"Typical range: $150 – $2,500"` in muted text
-- [ ] If no fine set: show only range with "Estimated Range" label
+- [x] If `fineAmount` is set: show actual fine prominently `"$1,250.00"` with "Fine Assessed" label
+- [x] Below: show typical range from registry `"Typical range: $150 – $2,500"` in muted text
+- [x] If no fine set: show only range with "Estimated Range" label
 
 **Disqualification Risk:**
-- [ ] If `disqualificationRisk: true` in registry:
+- [x] If `disqualificationRisk: true` in registry:
   - Red warning section with icon `⛔`
   - "CDL Disqualification Risk"
   - Duration specifics based on type:
@@ -52,42 +52,42 @@ So that I understand what's at stake and why hiring an attorney matters.
     - Railroad: "60-day immediate" — show "120-day" if `prior_rr_offenses >= 1`, "1-year" if >= 2
     - Suspension: show `disqualification_duration` from type_specific_data if available
   - Text: "Your CDL may be suspended or revoked"
-- [ ] If `disqualificationRisk: false`: section hidden
+- [x] If `disqualificationRisk: false`: section hidden
 
 **License Points:**
-- [ ] Estimated points impact based on violation type:
+- [x] Estimated points impact based on violation type:
   - Speeding: "4-6 points (varies by state and mph over)"
   - DUI: "6-8 points"
   - Reckless: "4-6 points"
   - Others: "2-4 points" or "Varies by state"
-- [ ] Note: "Point values vary by state. Check your state DMV."
+- [x] Note: "Point values vary by state. Check your state DMV."
 
 **FMCSA Consequences:**
-- [ ] For CDL-specific violations, show FMCSA-specific consequences:
+- [x] For CDL-specific violations, show FMCSA-specific consequences:
   - "Two serious traffic violations within 3 years → 60-day CDL disqualification"
   - "Three serious traffic violations within 3 years → 120-day CDL disqualification"
-- [ ] Only shown for types where FMCSA consequences apply (moving violations + HOS + DQF)
+- [x] Only shown for types where FMCSA consequences apply (moving violations + HOS + DQF)
 
 **Attorney Value Proposition:**
-- [ ] Bottom section with teal background:
+- [x] Bottom section with teal background:
   - Icon: `🛡️`
   - "An attorney may help reduce or dismiss these penalties"
   - CTA button: "Message Your Attorney" (if attorney assigned) or "Learn More" (if not)
 
 ### Responsive Design
 
-- [ ] Desktop: card width matches right column (sidebar)
-- [ ] Mobile: card spans full width, positioned after main content cards
-- [ ] Penalty sections stacked vertically with 12px gaps
-- [ ] Fine amount: 24px font-weight 700
-- [ ] Section headers: 14px font-weight 600
+- [x] Desktop: card width matches right column (sidebar)
+- [x] Mobile: card spans full width, positioned after main content cards
+- [x] Penalty sections stacked vertically with 12px gaps
+- [x] Fine amount: 24px font-weight 700
+- [x] Section headers: 14px font-weight 600
 
 ### Accessibility
 
-- [ ] Warning sections have `role="alert"` for disqualification risk
-- [ ] Color-coded sections have accompanying text (not color-only)
-- [ ] Fine amounts have `aria-label` with full text (e.g., "Fine assessed: one thousand two hundred fifty dollars")
-- [ ] CTA button has descriptive `aria-label`
+- [x] Warning sections have `role="alert"` for disqualification risk
+- [x] Color-coded sections have accompanying text (not color-only)
+- [x] Fine amounts have `aria-label` with full text (e.g., "Fine assessed: one thousand two hundred fifty dollars")
+- [x] CTA button has descriptive `aria-label`
 
 ## Test Coverage Matrix
 

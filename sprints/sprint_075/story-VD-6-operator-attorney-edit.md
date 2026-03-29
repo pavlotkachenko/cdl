@@ -27,46 +27,46 @@ So that I can correct information, add details from court documents, and maintai
 
 ### Driver View (case-detail)
 
-- [ ] Violation Detail Card (VD-1) is **read-only** for drivers
-- [ ] No edit button on the Violation Details card for driver role
-- [ ] Drivers can still edit description and location via existing edit mode
+- [x] Violation Detail Card (VD-1) is **read-only** for drivers
+- [x] No edit button on the Violation Details card for driver role
+- [x] Drivers can still edit description and location via existing edit mode
 
 ### Operator View (operator-case-detail)
 
-- [ ] Violation Detail Card displayed with same layout as driver view (VD-1)
-- [ ] "Edit" button on Violation Details card header (pencil icon)
-- [ ] Edit mode renders type-specific fields as form inputs (same rendering as VT-6 submit-ticket conditional fields):
+- [x] Violation Detail Card displayed with same layout as driver view (VD-1)
+- [x] "Edit" button on Violation Details card header (pencil icon)
+- [x] Edit mode renders type-specific fields as form inputs (same rendering as VT-6 submit-ticket conditional fields):
   - text → `<input type="text">`
   - number → `<input type="number">`
   - select → `<select>` dropdown
   - date → `<input type="date">`
   - boolean → toggle switch
-- [ ] Edit mode also allows editing:
+- [x] Edit mode also allows editing:
   - `violation_regulation_code` (text input, helpText: "e.g., 395.3(a)(1)")
   - `violation_severity` (select: critical, serious, standard, minor)
-- [ ] Save button sends PATCH to `/api/cases/:id` with updated `type_specific_data`, `violation_regulation_code`, `violation_severity`
-- [ ] Cancel reverts to read-only with original values
-- [ ] Toast on success: "Violation details updated"
-- [ ] Toast on error: "Failed to update violation details"
-- [ ] Operator can also change `violation_type` — if changed, conditional fields rebuild for new type (existing data cleared with confirmation dialog)
+- [x] Save button sends PATCH to `/api/cases/:id` with updated `type_specific_data`, `violation_regulation_code`, `violation_severity`
+- [x] Cancel reverts to read-only with original values
+- [x] Toast on success: "Violation details updated"
+- [x] Toast on error: "Failed to update violation details"
+- [x] Operator can also change `violation_type` — if changed, conditional fields rebuild for new type (existing data cleared with confirmation dialog)
 
 ### Attorney View (attorney-case-detail)
 
-- [ ] Same edit capabilities as operator view
-- [ ] Attorney can additionally set `violation_regulation_code` with auto-complete suggestions from a predefined list of common CFR sections
-- [ ] Attorney can add case notes alongside violation details (uses existing notes system, not a new field)
+- [x] Same edit capabilities as operator view
+- [x] Attorney can additionally set `violation_regulation_code` with auto-complete suggestions from a predefined list of common CFR sections
+- [x] Attorney can add case notes alongside violation details (uses existing notes system, not a new field)
 
 ### Shared Edit Form Logic
 
-- [ ] Extract edit form building into a shared utility or mixin that both operator-case-detail and attorney-case-detail can use
-- [ ] Form built from `VIOLATION_TYPE_REGISTRY[violation_type].conditionalFields` — same as submit-ticket (VT-6)
-- [ ] Existing `type_specific_data` values pre-populate the form
-- [ ] Validation runs per field definition (required, min/max, enum values)
-- [ ] Only changed fields sent in PATCH payload (diff against original)
+- [x] Extract edit form building into a shared utility or mixin that both operator-case-detail and attorney-case-detail can use
+- [x] Form built from `VIOLATION_TYPE_REGISTRY[violation_type].conditionalFields` — same as submit-ticket (VT-6)
+- [x] Existing `type_specific_data` values pre-populate the form
+- [x] Validation runs per field definition (required, min/max, enum values)
+- [x] Only changed fields sent in PATCH payload (diff against original)
 
 ### Type Change Handling
 
-- [ ] If operator/attorney changes `violation_type`:
+- [x] If operator/attorney changes `violation_type`:
   - Confirmation dialog: "Changing the violation type will clear all type-specific fields. Continue?"
   - On confirm: clear `type_specific_data`, rebuild conditional fields for new type
   - On cancel: revert type selection
@@ -74,7 +74,7 @@ So that I can correct information, add details from court documents, and maintai
 
 ### Backend Integration
 
-- [ ] PATCH payload structure:
+- [x] PATCH payload structure:
   ```json
   {
     "type_specific_data": { "alleged_speed": 82, "posted_speed_limit": 65, ... },
@@ -82,8 +82,8 @@ So that I can correct information, add details from court documents, and maintai
     "violation_severity": "serious"
   }
   ```
-- [ ] Backend validation middleware (VT-4) validates the JSONB against the new type's schema
-- [ ] Activity log records: "Violation details updated by [name]" with diff summary
+- [x] Backend validation middleware (VT-4) validates the JSONB against the new type's schema
+- [x] Activity log records: "Violation details updated by [name]" with diff summary
 
 ## Test Coverage Matrix
 

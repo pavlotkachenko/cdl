@@ -27,51 +27,51 @@ So that I can quickly prioritize and filter cases by severity and violation type
 
 ### Severity Badge in Case Tables
 
-- [ ] All case table/list views show a severity badge next to the violation type:
+- [x] All case table/list views show a severity badge next to the violation type:
   - Critical: small red pill badge
   - Serious: small orange pill badge
   - Standard: small blue pill badge
   - Minor: small teal pill badge
-- [ ] Badge text is the severity level: "Critical", "Serious", "Standard", "Minor"
-- [ ] Badge uses 10px font, 4px 8px padding, 4px border-radius
-- [ ] Severity derived from `case.violation_severity` if set, otherwise from `VIOLATION_TYPE_REGISTRY[case.violation_type].severity`
+- [x] Badge text is the severity level: "Critical", "Serious", "Standard", "Minor"
+- [x] Badge uses 10px font, 4px 8px padding, 4px border-radius
+- [x] Severity derived from `case.violation_severity` if set, otherwise from `VIOLATION_TYPE_REGISTRY[case.violation_type].severity`
 
 ### Violation Type Column Enhancement
 
-- [ ] Violation type shown with emoji icon from registry: e.g., "🚗 Speeding" instead of just "speeding"
-- [ ] Display uses `VIOLATION_TYPE_REGISTRY[type].label` for human-readable name
-- [ ] Existing type display logic (raw enum value) replaced with registry-derived label
+- [x] Violation type shown with emoji icon from registry: e.g., "🚗 Speeding" instead of just "speeding"
+- [x] Display uses `VIOLATION_TYPE_REGISTRY[type].label` for human-readable name
+- [x] Existing type display logic (raw enum value) replaced with registry-derived label
 
 ### Admin Case Management
 
-- [ ] Severity filter added to filter panel: dropdown with "All", "Critical", "Serious", "Standard", "Minor"
-- [ ] Filter applies to case list (client-side filtering of loaded data)
-- [ ] `violation_regulation_code` shown in expanded row detail (if available)
-- [ ] Stats row updated: add "By Severity" breakdown (Critical: N, Serious: N, ...)
+- [x] Severity filter added to filter panel: dropdown with "All", "Critical", "Serious", "Standard", "Minor"
+- [x] Filter applies to case list (client-side filtering of loaded data)
+- [x] `violation_regulation_code` shown in expanded row detail (if available)
+- [x] Stats row updated: add "By Severity" breakdown (Critical: N, Serious: N, ...)
 
 ### Carrier Cases
 
-- [ ] Severity badge displayed in driver case rows
-- [ ] CSA BASIC category shown for each violation: e.g., "Unsafe Driving" badge
-- [ ] Fleet-level severity summary at top: "3 Critical, 5 Serious, 2 Standard violations"
+- [x] Severity badge displayed in driver case rows
+- [x] CSA BASIC category shown for each violation: e.g., "Unsafe Driving" badge
+- [x] Fleet-level severity summary at top: "3 Critical, 5 Serious, 2 Standard violations"
 
 ### Driver Tickets List
 
-- [ ] `typeOptions` in filter panel updated to include all 14 active types (from registry)
-- [ ] Severity badge shown on each case card (mobile) and table row (desktop)
-- [ ] Type chips in filter panel use registry icons and labels
+- [x] `typeOptions` in filter panel updated to include all 14 active types (from registry)
+- [x] Severity badge shown on each case card (mobile) and table row (desktop)
+- [x] Type chips in filter panel use registry icons and labels
 
 ### Responsive Considerations
 
-- [ ] Mobile case cards: severity badge shown in card header alongside status badge
-- [ ] Desktop tables: severity as a dedicated column (sortable)
-- [ ] Severity column width: 90px fixed
+- [x] Mobile case cards: severity badge shown in card header alongside status badge
+- [x] Desktop tables: severity as a dedicated column (sortable)
+- [x] Severity column width: 90px fixed
 
 ### Accessibility
 
-- [ ] Severity badges have `aria-label`: e.g., "Violation severity: Critical"
-- [ ] Filter dropdowns have `<label>` elements
-- [ ] Screen reader can distinguish severity from status badges
+- [x] Severity badges have `aria-label`: e.g., "Violation severity: Critical"
+- [x] Filter dropdowns have `<label>` elements
+- [x] Screen reader can distinguish severity from status badges
 
 ## Test Coverage Matrix
 
