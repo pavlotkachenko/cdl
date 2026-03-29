@@ -1,7 +1,20 @@
-:80 {
-    root * /srv
-    file_server
-    try_files {path} /index.html
+:{$PORT:80} {
+    # Proxy API requests to backend service
+    handle /api/* {
+        reverse_proxy {$BACKEND_URL:http://localhost:3000}
+    }
+
+    # Proxy Socket.io to backend
+    handle /socket.io/* {
+        reverse_proxy {$BACKEND_URL:http://localhost:3000}
+    }
+
+    # Serve Angular static files
+    handle {
+        root * /srv
+        file_server
+        try_files {path} /index.html
+    }
 
     @static {
         path *.js *.css *.ico *.svg *.png *.jpg *.jpeg *.gif *.woff *.woff2 *.ttf *.webp *.webmanifest
