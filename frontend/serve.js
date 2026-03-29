@@ -7,9 +7,10 @@ const PORT = process.env.PORT || 3000;
 const BACKEND_URL = process.env.BACKEND_URL;
 
 // Proxy API and WebSocket requests to backend service
+// pathRewrite restores the prefix that Express strips when mounting on a sub-path
 if (BACKEND_URL) {
-  app.use('/api', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true }));
-  app.use('/socket.io', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true, ws: true }));
+  app.use('/api', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true, pathRewrite: (p) => '/api' + p }));
+  app.use('/socket.io', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true, ws: true, pathRewrite: (p) => '/socket.io' + p }));
 }
 
 // Serve static files with caching
